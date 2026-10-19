@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…114), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…115), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -68,6 +68,7 @@ This document defines the words of the project, as the project uses them. Every 
 | terms version | — | A published version of the terms of use or the privacy notice. A resident who has not accepted the latest version can use only sign-in, account and terms endpoints (403 `terms_required`). | FR-39, FR-41, DR-59 |
 | account deletion | — | A resident requests deletion; the Manager approves; execution runs after the cooling-off. Refused while the account is the active owner of a unit (`owner_must_transfer`). | FR-39, DR-59 |
 | cooling-off (`accountDeletionDays`) | — | The building setting, default 30 days, between approval and execution of an account deletion. | DR-59, DR-60 |
+| account deletion execution | — | The daily job `account_deletion` (identity) and the handlers of `identity.account_deletion_executed.v1`: sessions revoked, phone replaced by `deleted:<id>`, personal fields cleared, memberships removed, device tokens and the IP of terms acceptances deleted; ledger and audit rows keep ids and the payer-name snapshot. | DR-59, DR-115, DOC-20 §8 |
 | Owner (project) | — | The owner of this project. Decides in the decision register; decisions are recorded as "Owner". Not a unit owner. | decision log of `00-decision-register.md` |
 | Operator | — | The person who runs the deployment (restores backups, rotates keys); in phase 1 the Owner (project). | NFR-11, DR-66 |
 | client | — | The management company seen as the customer who supplies inputs (bank statement sample, payOS account, hosting accounts, legal texts). | P0-03…P0-06 |

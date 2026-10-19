@@ -35,7 +35,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written, §4–9 owed) | Draft |
 | DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Draft |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Review |
-| DOC-20 | Data lifecycle (`05-data/data-lifecycle.md`) | Not written |
+| DOC-20 | [Data lifecycle](05-data/data-lifecycle.md) (skeleton) | Draft |
 | DOC-21 | Fee batches and import (`06-design/fee-batches-and-import.md`) | Not written |
 | DOC-22 | Ledger, allocation and the money log (`06-design/ledger-and-allocation.md`) | Not written |
 | DOC-23 | Payment intents and settlement (`06-design/payment-intents-and-settlement.md`) | Not written |

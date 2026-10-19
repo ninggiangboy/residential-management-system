@@ -502,7 +502,7 @@ CREATE TABLE building.file_object (
 CREATE INDEX ix_file_object_building_live       ON building.file_object (building_id) INCLUDE (size) WHERE status <> 'deleted';
 CREATE INDEX ix_file_object_building_unattached ON building.file_object (building_id, created_at) WHERE status IN ('pending', 'verified');
 CREATE INDEX ix_file_object_building_owner      ON building.file_object (building_id, owner_ref) WHERE owner_ref IS NOT NULL;
-CREATE INDEX ix_file_object_deleted             ON building.file_object (deleted_at) WHERE status = 'deleted';
+CREATE INDEX ix_file_object_building_deleted    ON building.file_object (building_id, deleted_at) WHERE status = 'deleted';
 
 ALTER TABLE building.building
   ADD CONSTRAINT fk_building_logo_file FOREIGN KEY (logo_file) REFERENCES building.file_object (id);
@@ -548,7 +548,7 @@ The physical removal of the R2 object is DOC-37's (an outbox command written in 
 | `ix_file_object_building_live` `(building_id) INCLUDE (size)` partial on live rows | The quota: `SELECT sum(size) … WHERE building_id = :b AND status <> 'deleted'`, hourly (`storage_quota`) and at every `register`. Index-only after a `VACUUM`. |
 | `ix_file_object_building_unattached` `(building_id, created_at)` partial on `pending`, `verified` | `orphan_uploads`: one building at a time, `created_at < now() - interval '24 hours'`. The partial index holds only the few unattached rows. |
 | `ix_file_object_building_owner` `(building_id, owner_ref)` partial | Files of an object, and the cache lookup of generated PDFs by logical key (DOC-34). |
-| `ix_file_object_deleted` `(deleted_at)` partial on `deleted` | The purge of old `deleted` rows (DOC-20). |
+| `ix_file_object_building_deleted` `(building_id, deleted_at)` partial on `deleted` | The purge of old `deleted` rows, one building at a time (DOC-20, `orphan_uploads`). |
 
 **Sample statements**
 
@@ -679,6 +679,22 @@ CREATE INDEX ix_idempotency_key_created ON platform.idempotency_key (created_at)
 
 - `request_hash` is the SHA-256 (hex) of the method, path and canonical body: the same key with another hash is 422 `idempotency_key_reuse`.
 - The plugin **inserts first** with `ON CONFLICT DO NOTHING`; zero rows means a duplicate, which waits on the row lock if the first request is still in its transaction and then replays the stored response with `Idempotent-Replayed: true`. In a one-transaction create the row is `in_progress` only inside that transaction, so a committed row is always `completed`. A create that commits before an outside call (the intent, DOC-23) commits the row as `in_progress` first and completes it later; what a duplicate arriving in between receives is DOC-50's rule.
+```mermaid
+stateDiagram-v2
+  [*] --> in_progress: plugin inserts the key first
+  in_progress --> completed: handler returns, response stored
+  in_progress --> [*]: the transaction rolls back (the key never existed)
+  completed --> [*]: swept after 24 hours
+```
+
+| From → to | By whom | When |
+| --- | --- | --- |
+| (none) → `in_progress` | The idempotency plugin | The first request with a key, before the handler runs |
+| `in_progress` → `completed` | The same plugin | The handler returned; `response_status` and `response_body` are set in the same statement (the `CHECK` ties them) |
+| `completed` → deleted | The plugin's sweep and `token_purge` | Older than 24 hours |
+
+`job_run.status` (§3.2) has no transitions: a row is written once with its final status.
+
 - `response_body` is stored as sent; the plugin refuses to store a body over 256 KB (the creates it serves return small objects). Rows older than 24 hours are deleted by the plugin's own sweep and by `token_purge` (DR-74, DR-62); `ix_idempotency_key_created` serves both.
 - Keys of a staff account and of a resident account never collide: `account_kind` is part of the primary key.
 
@@ -747,7 +763,7 @@ Every index of §1–§3 with the query it serves, so none is speculative. The t
 | `ix_file_object_building_live` | partial covering | Quota | DR-61 |
 | `ix_file_object_building_unattached` | partial btree | `orphan_uploads` | DR-61, DR-112 |
 | `ix_file_object_building_owner` | partial btree | Files of an object; PDF cache by logical key | DR-86 |
-| `ix_file_object_deleted` | partial btree | Purge of old `deleted` rows | DOC-20 |
+| `ix_file_object_building_deleted` | partial btree | Purge of old `deleted` rows | DOC-20 |
 | `ix_job_run_started` | btree | `job_run` retention delete | DR-101 |
 | `ix_job_run_name_success` | partial btree | Last success per job after a restart | DR-63 |
 | `outbox_pending_idx` | partial btree | Relay claim | ADR-0009 |
