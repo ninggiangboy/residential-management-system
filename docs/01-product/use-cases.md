@@ -1,6 +1,6 @@
 # Use cases
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-04
+> Status: **Review** · Updated: 2026-10-20 (DR-128: no "tries left" on the staff login) · DOC-04
 > Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-05, DOC-21…49 (each detailed flow `FL-xx` expands one use case), DOC-51 (endpoints), DOC-56…67 (screens), P0-29, every task `Pn-xx` that builds a use case
 
@@ -511,7 +511,7 @@ flowchart LR
   | Concurrent pair | Arbiter | Outcome |
   | --- | --- | --- |
   | Two commits of one import job | `UPDATE import_job … WHERE status = 'validated'` | One commit; the draft data appears once |
-  | Two transfers of one unit | Unique index on the active owner | One succeeds; the other fails and rolls back |
+  | Two transfers of one unit | The unit's `version` (`If-Match`; the transfer's first statement bumps it) | One succeeds; the other gets 409 `version_conflict` and rolls back (*revised 2026-10-20, DR-138*) |
   | Transfer and an owner locking a member | `credential_version` and membership status in one transaction | Whichever commits second sees the new state; a locked member is removed by the transfer anyway |
   | A phone change and a sign-in with the old number | Session revocation and `refresh_family` | The old refresh tokens are revoked at the change; the next request with the old token fails |
 
@@ -563,7 +563,7 @@ flowchart LR
 - **Preconditions:** The owner has the active owner membership of the selected unit.
 - **Main flow:**
   1. On `Members` the owner sees the unit's members. They press "Add" (`Member-Add`) and enter a phone, a name, the type (family member, tenant, helper) and, for a tenant, whether the tenant may pay (`can_pay`).
-  2. `POST /me/members`: the API finds the resident account by phone or creates it, inserts the membership and sends one SMS invitation to install the app (counted in the phone's bucket and in the owner's 10 invitations a day).
+  2. `POST /me/members`: the API finds the resident account by phone or creates it, inserts the membership and sends one SMS invitation to install the app (counted in the phone's bucket and in the owner's 10 invitations a day). Only the owner's add sends it: a Manager's add, a transfer and an import send none (*revised 2026-10-20, DR-137*).
   3. The new member signs in (UC-14) and sees only what their type allows.
   4. Later the owner opens `Member-Actions` and changes `family ↔ tenant`, toggles `can_pay`, locks, unlocks or removes the member (`PATCH/DELETE /me/members/{id}`). In the same transaction `membership.credential_version` increases (FR-17.3).
   5. The effect is immediate: the member's next request returns 403 `membership_inactive`, and a QR code issued before the change fails at the gate (UC-16).
@@ -584,8 +584,8 @@ flowchart LR
   | Concurrent pair | Arbiter | Outcome |
   | --- | --- | --- |
   | Owner locks a member, member opens the QR screen | Membership status and `credential_version` read on each request | The lock commits first: QR creation returns 403. QR first: the code dies at the next scan (FL-35, EXP-05) |
-  | Owner and Manager change the same membership | Membership `version` | The second gets 409 `version_conflict`; a Manager lock cannot be undone by the owner |
-  | Two invitations to the same phone | Account unique on phone, membership unique on `(account, unit)` | One account, one membership; the second call returns the existing membership |
+  | Owner and Manager change the same membership | The conditional `UPDATE` on `status`, `locked_by` and `member_type` (a membership has no `version`, DOC-16 §5.3) | The second changes no row and gets 409 `invalid_transition`; a Manager lock cannot be undone by the owner (*revised 2026-10-20, DR-139*) |
+  | Two invitations to the same phone | Account unique on phone, membership unique on `(account, unit)` | One account, one membership; the second call is 409 `member_exists` (*revised 2026-10-20, DR-137*) |
   | Lock then unlock then scan the old code | `credential_version` | `invalid`: the version differs (FR-26.4) |
 
 - **Related:** FR-17, FR-16; screens `Members`, `Member-Add`, `Member-Actions`, `Unit-Owner`, `Unit-Member`; endpoints `GET/POST /me/members`, `PATCH/DELETE /me/members/{id}`; events `residency.membership_changed.v1`; templates `member.added`; flows FL-21, FL-35.
@@ -606,7 +606,7 @@ flowchart LR
   4. The change commits when no intent is active; the audit row records which fields changed, not the secret values.
   5. Every Admin of the building receives an email and the inbox entry `staff.step_up_done` (FR-50.4). The Admin presses "Check connection" (`POST /staff/gateway/check`).
 - **Alternative flows:**
-  - A. **Staff sign-in and lockout.** Five consecutive wrong passwords lock sign-in for 15 min in one statement; `W-Login` shows "2 tries left, then locked 15 minutes". The correct password is refused during the lock. An Admin (or a Manager for a Technician/Guard) unlocks at once (`POST /staff/accounts/{id}/unlock`), or a completed reset clears it (FR-13.1, FR-13.6). A further limit of 30 attempts per IP in 15 min applies (FR-13.2).
+  - A. **Staff sign-in and lockout.** Five consecutive wrong passwords lock sign-in for 15 min in one statement; `W-Login` shows "The email or password is not correct." for each wrong password and, once locked, "Too many attempts. Try again in 15 minutes." (no counter of tries left, so that an unknown email behaves like a known one; *Revised 2026-10-20 (DR-128)*). The correct password is refused during the lock. An Admin (or a Manager for a Technician/Guard) unlocks at once (`POST /staff/accounts/{id}/unlock`), or a completed reset clears it (FR-13.1, FR-13.6). A further limit of 30 attempts per IP in 15 min applies (FR-13.2).
   - B. **Reset.** A staff member requests a reset link (`POST /auth/staff/password-reset`); the answer is identical for a known and an unknown email; the link works once within 30 min and a newer link consumes the older (FR-13.3, FR-13.4).
   - C. **Resend an invite** that expired at 25 h (`POST /auth/staff/invite/resend`); the account stays `invited` until then (FR-14.2).
   - D. **Lock or change a role.** Locking a staff member who holds tickets in `assigned`, `accepted`, `in_progress` or `on_hold` is refused with the list; the Admin may force it with `reassignTo` (FR-14.3). A role change or lock revokes all refresh families; the next request is refused at once (FR-14.4).

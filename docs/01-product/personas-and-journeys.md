@@ -1,6 +1,6 @@
 # Personas and journeys
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-02
+> Status: **Review** · Updated: 2026-10-20 (DR-128: no "tries left" on the staff login) · DOC-02
 > Depends on: original SDD §3.1, §7.4, §18, [DR](../00-decision-register.md) (DR-40, 46, 48, 72, 81, 84), [DOC-01](vision-and-scope.md), [DOC-06](../02-glossary.md), `references/design-screens.md`
 > Main readers: DOC-03, DOC-04, DOC-53, DOC-56…67 (screen specifications cite a journey step), P0-18…P0-34
 
@@ -109,7 +109,7 @@ Use case UC-17, requirements FR-50, FR-38. The Admin must change the bank accoun
 
 | Step | Action | Touchpoint | Emotion | Opportunity |
 | --- | --- | --- | --- | --- |
-| 1 | Signs in with email and password | `W-Login`; `POST /auth/staff/login` | Routine | Show the lockout counter ("2 tries left, then locked 15 minutes") |
+| 1 | Signs in with email and password | `W-Login`; `POST /auth/staff/login` | Routine | Show the lock message only after the lock ("Too many attempts. Try again in 15 minutes."); a wrong password never says how many tries are left, so an unknown email cannot be told from a known one *Revised 2026-10-20 (DR-128):* the earlier text showed a counter |
 | 2 | Opens the gateway settings and edits the receiving account | `W-Gateway`; `GET /staff/gateway` | Careful | Secrets appear masked (`••••` plus the last 4) |
 | 3 | Presses Save; the app asks for a step-up | `W-Step-Up`; `POST /staff/step-up {action: "gateway_config"}` | Slightly annoyed | Say why: money is redirected, a code was mailed |
 | 4 | Reads the 6-digit code from the Admin's own email, enters it with the password | `W-Step-Up` | Focused | The code is valid 10 minutes and works once |

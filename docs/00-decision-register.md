@@ -55,6 +55,8 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-09: DR-116 (three events the template catalog needs: debt reminders, vehicle submitted, staff inbox created; due-date extension tells only units with an open charge; `staff.invited` dropped), DR-117 (commands carry ids not contacts; secrets encrypted with the settings key ring; stale commands skipped), DR-118 (payload rules, 64 KB cap, chunks of 500, retry classes with a per-type hook in the vendored relay), DR-119 (`FilesApi.signedUrl` and `storeGenerated`) | DR-42, DR-52, DR-53, DR-62, DR-87, DR-98, DR-101, DOC-09 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-38 and DOC-37: DR-120 (job catalog: unique names, three added jobs, hourly minutes, grace windows), DR-121 (the lock per transaction, no retry inside a slot, a 15 s scheduler tick, shutdown order), DR-122 (file delete and thumbnail are outbox commands of `building`; thumbnails are `file_object` rows), DR-123 (verification is an endpoint; MB is MiB; generated files bypass the quota refusal; `bulk_zip` 7 days) | DR-21, DR-55, DR-56, DR-61, DR-62, DR-73, DR-111, DR-115, DOC-37, DOC-38 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-35, DOC-36 and DOC-42: DR-124 (audit writer: declared actions, masked personal fields, limits and a bulk form, a closed list of system rows, `pii.read` per response and fail closed, the export row written at completion, who reads the log), DR-125 (terms gate with no cache, `/me/account/deletion` exempt, deletion cancel and the owner check at approval and execution, two contracts), DR-126 (one settings document with a composite ETag, `SecretBox` with a row-bound AAD, the active-intent port and row locks, stored step-up action names, environment feature flags, a restricted Markdown for terms, the demo seed, reset and boot guard), DR-127 (validation 400 and 422 by rule code, the open codes, SQLSTATE mapping, the failure-to-outcome mapping of handlers, logging rules, `POST /client-errors`) | DR-33, DR-37, DR-39, DR-57, DR-59, DR-60, DR-63, DR-74, DR-110, DR-111, DOC-35, DOC-36, DOC-42 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-26: DR-128 (staff sign-in answers: one body, no "tries left"; DOC-02 and DOC-04 revised), DR-129 (ten session-revocation reasons shared by the column and the event; DOC-16, DOC-09 and the JSON schema revised), DR-130 (cookie and body delivery of the refresh token), DR-131 (grace window mints a sibling), DR-132 (step-up: bound code, throttle, `database.autonomous` for failure counts), DR-133 (staff account rules: `last_admin`, no self lock, open-tickets probe), DR-134 (OTP order, demo challenge, rolling cap, provider-down rule), DR-135 (`IdentityApi` additions) | DR-36…39, DR-37, DR-60, DR-85, DOC-02, DOC-04, DOC-09, DOC-12, DOC-16, DOC-26, DOC-42 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-27: DR-136 (a profile is created with the first membership in a building), DR-137 (the invitation SMS only for owner adds, cap counted under an advisory lock), DR-138 (the unit `version` arbitrates a transfer; a promoted member keeps their row), DR-139 (membership edit rules: one change per request, owner row only by transfer, `can_pay` tenants only), DR-140 (`ResidencyApi.listActiveMemberships`, `buildingIdsOfAccounts`, `lookup`; `access` hosts the union lookup), DR-141 (editable unit code; history rows only across vacancy) | DR-22, DR-40, DR-41, DR-114, DOC-09, DOC-16, DOC-26, DOC-27 |
 
 ---
 
@@ -738,6 +740,7 @@ flowchart TB
 - **Decision (proposed):** Code = 6 digits from a CSPRNG (`crypto.getRandomValues`, uniform by rejection). A new request first marks any unconsumed challenge of the phone as consumed, then inserts the new one (one live challenge per phone). SMS text without diacritics (brandname rules), at most 160 characters: `{code} la ma xac thuc dang nhap {brand}. Co hieu luc 5 phut. Khong chia se ma nay.` Resend is refused with 429 `rate_limited` and `Retry-After` until `resend_after` (45 s). A wrong code returns 400 `otp_invalid` with `details.attemptsLeft`; the fifth failure consumes the challenge. The SMS outbox command expires after 5 minutes (a stale OTP is useless, SDD §19.3) and is attempted at most 3 times. Drivers: `SMS_DRIVER=console` (local), `allowlist` (staging: real provider only for listed test numbers, others logged), `provider` (production). The fixed code `123456` is accepted **only** for a `resident_account` with `is_demo = true` (DR-36); such an account sends no SMS (DR-60). The API refuses to boot in production if a flagged account has a membership in a non-demo building (boot guard, DR-60). A global ceiling `OTP_DAILY_CAP=3000` raises an alert and refuses new challenges when reached (SMS-pumping guard beyond SDD §7.3's per-phone and per-IP buckets). The enumeration trade-off of SDD §7.3 is accepted.
 - **Consequences:** Cost is bounded to the cap; go-live needs about 650 SMS (SDD §7.3).
 - **Write to:** DOC-26, DOC-39, DOC-41, ADR-0010.
+  *Revised 2026-10-20 (DR-134):* the order of the checks, the demo challenge, the rolling 24-hour cap and the provider-down rule are DR-134 and DOC-26 §5.
 
 ### DR-38 · Token claims, session lifetimes and cookie rules — **Decided (Owner, 2026-10-18)**
 - **Problem:** SDD §7.6 gives claims `sub, kind, building_id, role` and lifetimes 15 min / 30 d / 180 d, but a resident account spans buildings later (SDD §7.2), so `building_id` in a resident token is meaningless; cookie attributes, CSRF, key rotation, absolute lifetime and the "recent sessions" list of `W-Profile` are unspecified.
@@ -750,6 +753,7 @@ flowchart TB
   - Revocation events per SDD §7.6; the staff role and account status are re-read from the database on each staff request.
 - **Consequences:** A locked staff member is refused at once; a locked resident membership affects the next request (SDD §7.4).
 - **Write to:** DOC-26, DOC-39, DOC-51, ADR-0011.
+  *Revised 2026-10-20 (DR-129, DR-130, DR-131):* ten revocation reasons; the `client` field and the cookie `__Secure-rms_refresh`; the grace window mints a sibling token.
 
 ### DR-39 · Staff passwords, lockout, invite and reset tokens, and step-up — ⚠ adds step-up to the original SDD — **Decided (Owner, 2026-10-18)**
 - **Problem:** SDD §7.5 gives lockout numbers and token lifetimes. Open: hashing parameters, token format, what a resend does to an old link, and the denial-of-service side of locking an email after 5 failures (the reference documents this trade-off).
@@ -758,6 +762,55 @@ flowchart TB
   - **Gateway callbacks** have no password: the HMAC signature is the only gate; a call from an unknown payOS IP is logged, never blocked (DR-32).
 - **Consequences:** An attacker can lock a known staff email for 15 minutes at a time; accepted, with the Admin unlock as the remedy.
 - **Write to:** DOC-26, DOC-39, DOC-03 (FR-50).
+  *Revised 2026-10-20 (DR-128, DR-132, DR-133):* sign-in answers, the bound step-up code with its throttle and autonomous failure counting, the staff account rules.
+
+### DR-128 · Staff sign-in answers: one body for every credential failure, no "tries left" — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** FR-13.4 and ER-20 want a wrong password and an unknown email to look the same, but DOC-02 (journey step 1) and DOC-04 (UC-17 A) say the login screen shows "2 tries left", which only a real account can show. DOC-16 says a locked account answers the same 401, DOC-42 says 423 `account_locked`. DR-39 says nothing on timing or on what a person who is not `active` sees.
+- **Decision:** (1) The answer for a wrong password, an unknown email and an account that is `invited`, `locked` or `disabled` is the same 401 `invalid_credentials`; the unknown and not-active cases run one dummy Argon2id verify so that the timing class is the same. (2) 423 `account_locked` with `details.retryAfter` is returned only for an `active` account whose `locked_until` is in the future, before the password is checked; the attempt that reaches the limit already answers 423. (3) No answer carries a count of tries left; DOC-02 and DOC-04 are revised. (4) A password is NFC-normalized before hashing and must hold a letter and a digit (FR-13.5). (5) `needsRehash` compares the `m` and `t` of the stored string with the configuration.
+- **Consequences:** A stranger learns that an email exists only after five wrong passwords against it, and the per-IP bucket allows six such emails per 15 minutes. The staff lose the counter; the lock message is enough.
+- **Write to:** DOC-26 §4.1, §4.2, DOC-02, DOC-04, DOC-42.
+
+### DR-129 · One vocabulary of ten reasons for revoking a session — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `refresh_family.revoked_reason` (DOC-16) had eight words and the event `identity.session_revoked.v1` (DOC-09) had eight different ones; neither had a word for a disabled account or a password reset, and the event had none for a cap eviction, a lock or a phone change.
+- **Decision:** Column and event share ten words: `sign_out`, `user_revoked`, `token_reuse`, `cap_exceeded`, `account_locked`, `account_disabled`, `role_changed`, `phone_changed`, `password_changed`, `deleted`. A staff password set from a **reset** link revokes every family (`password_changed`); an invite acceptance, an email change and a Manager unlock revoke nothing. Every revocation writes one event per family, a cap eviction included.
+- **Consequences:** DOC-16 §4.5 (CHECK and column table), DOC-09 §6.3 and `identity.session_revoked.v1.schema.json` change in the same commit; the schema and the new example were validated with Ajv 8.20.
+- **Write to:** DOC-26 §3.8, DOC-16 §4.5, DOC-09 §6.3.
+
+### DR-130 · How the refresh token reaches the web CMS and the apps — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-38 says cookie for the web and body for mobile but not how the API knows which, what the cookie is called, which credential wins when both arrive, what logout takes, or what a refresh checks.
+- **Decision:** The staff login body has `client: "web" | "app"` (residents are always `app`); `web` gets the token only in `Set-Cookie: __Secure-rms_refresh=…; Path=/api/v1/auth; Secure; HttpOnly; SameSite=Strict`, host-only, with `Max-Age` equal to the seconds left of the token; `app` gets it only in the body (`__Host-` cannot be used: it forces `Path=/`). A refresh uses the body token when present, else the cookie, and the cookie path needs `X-Requested-With: rms` (else 403 `forbidden`). Logout takes the refresh token (body or cookie), revokes its family with `sign_out` and answers 204 for any token. A refresh re-checks the account: a staff member who is not `active` (a temporary lock does not count) or a resident who is `deleted` has the family revoked and gets 401.
+- **Consequences:** A cross-site form post cannot refresh (no header); a stolen access token cannot log out.
+- **Write to:** DOC-26 §3.3, §3.5, §3.7, DOC-39.
+
+### DR-131 · The refresh grace window mints a sibling token — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-38 keeps a 10-second grace window for a token that was just rotated (a lost response), but the raw token is stored only as SHA-256, so the first answer cannot be replayed.
+- **Decision:** Inside the window, a rotated token is accepted again and a new token is inserted in the same family without a `replaced_by_id`; the earlier successor stays valid. After the window a second use is reuse: the family is revoked with `token_reuse`, committed, then 401.
+- **Consequences:** Two live tokens may exist for up to the sliding lifetime in the lost-response case; the unused one is reuse if used later than 10 seconds after the other rotated. A stolen token replayed inside the window succeeds (ADR-0011 already accepts this).
+- **Write to:** DOC-26 §3.5.
+
+### DR-132 · Step-up internals: bound code, request throttle, failures that survive the rollback — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-39 fixes the rules of step-up but not (a) what the code's HMAC covers, (b) a limit on code requests (each one sends a mail), (c) how a failed proof is counted when the exception rolls back the action's transaction and its counters with it, or (d) who writes the notices to the Admins.
+- **Decision:** (a) The stored value is `HMAC-SHA256(OTP_HMAC_KEY, "stepup:" || staff_id || ":" || action || ":" || code)`; an OTP uses `"otp:" || challenge_id || ":" || code`. (b) `POST /staff/step-up` draws from `stepup:staff:<id>` in `platform.rate_bucket`, 5 per hour. (c) `database.autonomous(fn)` is added to `@core/db`: `IdentityApi.verifyStepUp` counts a failure (the code's attempts and the sign-in counter) in a transaction on a second connection, committed before it throws; it is the single exception to "a contract call joins the caller's transaction". (d) `verifyStepUp` writes one `identity.mail_requested.v1` kind `step_up_notice` per active Admin of the building, actor included, inside the action's transaction.
+- **Consequences:** One extra pool connection for a moment on a failed proof; without it an attacker with a stolen session could try codes without limit. DOC-12 §8.1 gets behavior 5; DOC-09 §7.1 rule 2 and the `verifyStepUp` row are revised.
+- **Write to:** DOC-26 §4.5, §6, DOC-12 §8.1, DOC-09 §7, DOC-17 §3.
+
+### DR-133 · Rules for administering staff accounts — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** FR-14 and DR-39 say who creates and locks but leave: what a Manager may touch, whether someone may lock themselves, what happens when the last Admin is locked, what open tickets block, which accounts can reset a password, and what "unlock" means for the two kinds of lock.
+- **Decision:** (1) A Manager acts only on Technician and Guard accounts (403 `forbidden` otherwise). (2) Nobody locks, disables or changes the role of their own account (403 `forbidden`, `details.reason = "self"`). (3) The last active Admin cannot be locked, disabled or demoted (409 `last_admin`); the transaction first locks the building's active Admin rows with `FOR UPDATE`, because without that two Admins locking each other both succeed (tested). (4) Open tickets (`assigned`, `accepted`, `in_progress`, `on_hold`) block lock, disable and a role change with 409 `staff_has_open_tickets`; only an Admin may force with `reassignTo`; `identity` reaches tickets through the port `OpenTicketsProbe` that `tickets` implements in `integrations/identity`. (5) Only `active` staff sign in or receive a reset mail. (6) `POST /staff/accounts/{id}/unlock` clears a temporary lock and a manual lock. (7) A role change or a lock revokes every family; an email change does not.
+- **Consequences:** One new code, `last_admin`; one new port; the Admin has no way to lock the last Admin out by accident.
+- **Write to:** DOC-26 §4.4, DOC-28 (the probe), DOC-42, DOC-36 §10.1 (the probe binding).
+
+### DR-134 · Resident OTP: order of the checks, demo challenge, daily cap, provider-down rule — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-37 and SDD §7.3 give the limits but not the order of the checks, what a demo account's request does, what a "day" is for a cap on accounts that have no building, how the API knows the SMS provider is down when sending is asynchronous (UC-14 E4), how often `last_app_open_at` is written, the SMS texts, or what the sign-in answer holds.
+- **Decision:** (1) Order: IP bucket (spent by every request, so phone enumeration is throttled), account lookup, resend gate, phone bucket, provider check, daily cap, issue. (2) A demo account gets a real challenge row with a hash nobody knows and no SMS command; the verify statement accepts `123456` only when the phone belongs to a flagged account. (3) The cap of 3,000 counts `otp_challenge` rows of the last 24 hours (rolling). (4) The provider counts as down when at least 3 `identity.sms_requested.v1` commands of the last 10 minutes have failed once and none was delivered; then 503 `sms_unavailable`. (5) `last_app_open_at` is written at most once an hour. (6) The texts are those of DOC-26 §5.4 (`vi` without diacritics, `en`), with `SMS_BRAND` and `APP_DOWNLOAD_URL`. (7) The verify answer returns the access and refresh tokens, the account and the active memberships.
+- **Consequences:** The per-IP ceiling of 20 per hour can refuse residents on one building Wi-Fi at launch; `OTP_PER_IP_PER_HOUR` is configuration for that (DOC-103). The provider rule has a false negative when every command expires unsent; the outbox-lag alert covers it.
+- **Write to:** DOC-26 §5, DOC-41, DOC-42, DOC-103.
+
+### DR-135 · `IdentityApi` additions for the household, the import and the phone change — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `residency` must create a resident account by phone (owner, member, import), change a login phone atomically with the revocation of sessions, and send the invitation SMS, but `identity` owns the tables and the outbox of those; DR-42 and DR-87 list no such call. The sign-in answer needs the account's memberships.
+- **Decision:** `IdentityApi` gains `findOrCreateResidentAccount(phone, displayName)` (idempotent on phone; an existing name is never overwritten), `changeResidentPhone(accountId, newPhone)` (409 `phone_in_use`; revokes every family with `phone_changed`) and `queueMemberInvitation(accountId, {unitCode})` (draws one token from the phone's OTP bucket; the owner's 10 a day is residency's). `ResidencyApi.listActiveMemberships(accountId)` is added (DOC-27) for the sign-in answer.
+- **Consequences:** DOC-09 §7.3 gains three rows; `residency` still never writes an identity table.
+- **Write to:** DOC-26 §2.2, DOC-09 §7, DOC-27.
 
 ## I. Residency and cross-module contracts
 
@@ -844,6 +897,48 @@ flowchart TB
 - **Consequences:** The cooling-off (`accountDeletionDays`) is computed from `deletion_approved_at`.
 - **Write to:** DOC-16 §4.2 and §5.2, DOC-35.
 
+
+### DR-136 · A profile is created with a person's first membership in a building; a person is "in the building" when the profile exists — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** `resident_profile` is entered by the Manager (DR-40), yet name search, the resident list and the scope of a phone change read it, and an owner who adds a member provides only a display name. A person with no profile could not be found by name and a Manager could not be tied to an account, because `resident_account` has no building (DR-36).
+- **Decision:** Every use case that creates a first membership of an account in a building (owner add, Manager add, transfer, import) inserts the profile with `ON CONFLICT DO NOTHING`, `full_name` from the form. Staff reach a resident account only through this row; an account without one in the caller's building is 404. The account's `display_name` and the profile's `full_name` are separate fields with separate editors.
+- **Consequences:** A name entered by an owner is the first profile name until the Manager edits it. Cleared profiles (after deletion) keep the row.
+- **Write to:** DOC-27 §5, DOC-16 §5.2.
+
+### DR-137 · The invitation SMS goes only for members the owner adds; the cap counts `invited_at`; the count is serialised by an advisory lock — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** DR-40 caps invitations at 10 per day per owner; FR-17.1 sends "one SMS invitation" when an owner adds a member; the Manager's add, a transfer and a 2,000-row import could also send, which would spend the SMS budget (about 650 at go-live, DR-37) and surprise people. Two parallel adds at count 9 would both pass.
+- **Decision:** `queueMemberInvitation` is called only by the owner's add. A Manager's add, a transfer and an import send no SMS. The cap counts the memberships the owner added with `invited_at` in the building day, under `pg_advisory_xact_lock(hashtextextended('invite:' || owner, 0))`. The phone's own bucket is drawn inside identity's call.
+- **Consequences:** A Manager tells people they were added. An owner who removes and re-adds still spends the count.
+- **Write to:** DOC-27 §6.2, DOC-26, DOC-04 (UC-15), DOC-03 (FR-17.1).
+
+### DR-138 · The unit's `version` arbitrates a transfer; a member promoted to owner keeps their row — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** UC-13 says two transfers of one unit end with "one succeeds, the other fails" on the unique owner index, but under READ COMMITTED the second would simply transfer again, removing the first transfer's new owner. A tenant who becomes the owner would, with a new row, lose the paid history they could see.
+- **Decision:** The transfer sends `If-Match` with the unit's `version`; the transaction's first statement bumps it. The reason is required (DOC-35 §3.5). When the new owner already has a non-removed membership of the unit, that row becomes the owner row (same `created_at`); otherwise a row is inserted.
+- **Consequences:** A concurrent edit of the unit also conflicts with a transfer (accepted). A promoted tenant's `can_pay` is kept in the row and is ignored for an owner.
+- **Write to:** DOC-27 §7, DOC-51, DOC-04 (UC-13 race table).
+
+### DR-139 · Membership edits: one change per request; the owner row changes only by transfer; type changes only between family member and tenant; `can_pay` for tenants only — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** FR-17.3 lists the edits but not combinations, who may touch the owner row, whether a helper can be retyped, or what `can_pay` means for other types. Without rules, the same request could bump `credential_version` or not depending on its body.
+- **Decision:** A `PATCH` carries exactly one of `memberType`, `canPay`, `status`. The owner row is never retyped or removed by an edit (409 `owner_must_transfer`); the Manager may lock and unlock it. `memberType` moves only between `family` and `tenant`; a helper is removed and added again. `canPay` is accepted only on a tenant (422 rule `can_pay_tenant_only`). A Manager's lock on a membership the owner locked sets `locked_by = 'manager'`.
+- **Consequences:** Retyping a helper restarts their history window. Every status or type change bumps `credential_version`; a `can_pay` change never does.
+- **Write to:** DOC-27 §6, DOC-42 §5.3, DOC-51, DOC-59.
+
+### DR-140 · Three `ResidencyApi` calls, and the union lookup is hosted by `access` — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** The sign-in answer and `GET /me` need the memberships with unit codes (identity has no list of memberships); the boot guard of DOC-36 needs the buildings of the demo accounts; the union lookup needs units, residents and plates from three modules, and `residency` may not call `vehicles`.
+- **Decision:** `ResidencyApi` gains `listActiveMemberships(accountId)`, `buildingIdsOfAccounts(accountIds)` and `lookup(buildingId, q, opts)`. `lookup` returns the full phone; the audience's mapper masks it (DOC-12 §10). `GET /staff/lookup` is a route of `access`, which joins `lookup` with the plate search of `vehicles`; DOC-29 confirms.
+- **Consequences:** DOC-09 §7.2 grows by three calls; `access` depends on `residency` and `vehicles` contracts.
+- **Write to:** DOC-09 §7.2, DOC-29, DOC-36 §10.1, DOC-26.
+
+### DR-141 · Unit rules: editable code, history rows only across vacancy — **Decided (Claude, delegated by Owner, 2026-10-20)**
+
+- **Problem:** DR-40 says a unit is never deleted but does not say whether its code can be corrected, and DOC-16 says every change of occupancy is a history row while the kinds are only `moved_in` and `moved_out`.
+- **Decision:** The code is editable by the Manager (normalised, unique, audited); other modules read it through `getUnits`, snapshots keep their own. An occupancy change writes `moved_out` when it becomes `vacant` and `moved_in` when it leaves `vacant`; `occupied ↔ rented` writes none.
+- **Consequences:** A renamed unit's older PDFs show the old code.
+- **Write to:** DOC-27 §4, DOC-16 §5.1, DOC-22 (snapshots).
 
 ## J. Support tickets
 

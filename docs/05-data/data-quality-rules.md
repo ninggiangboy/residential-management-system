@@ -1,6 +1,6 @@
 # Data quality rules
 
-> Status: **Draft** · Updated: 2026-10-19 · DOC-18
+> Status: **Draft** · Updated: 2026-10-20 (DR-135: the creating contract is named) · DOC-18
 > Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
@@ -319,7 +319,7 @@ Plans with `enable_seqscan = off`: Q-U uses `unit_code_prefix_idx` (`lower(code)
 1. `UPDATE residency.import_job … WHERE id = :id AND status = 'validated' AND expires_at > now()` (DOC-16 §5.5). Zero rows: DQ-51, DQ-52 or the answer of the earlier commit.
 2. Read the file again and run the file, row, set and db layers on it (DQ-01…DQ-46). If `counts` differ from the stored preview: DQ-50, roll back.
 3. Upsert the units of the valid rows: non-blank cells overwrite, blank cells keep (§1.2).
-4. Ask identity for the accounts of the new phones through the creating contract (DOC-27 defines it; it runs in this transaction) and use the existing ones for linked phones.
+4. Ask identity for the accounts of the new phones through the creating contract (`IdentityApi.findOrCreateResidentAccount`, DOC-26 §2.2, called once per new phone because there is no batch form; it runs in this transaction) and use the existing ones for linked phones.
 5. For each owner row: insert or fill the building's `resident_profile` (empty fields only; the ID number encrypted with the PII key, `cccd_last4` set), insert the owner membership (`added_by_kind = 'staff'`), and write a `unit_history` row of kind `owner_changed` with `details {"from": null, "to": "<account>", "source": "import"}`.
 6. One audit row `residency.import.commit` with the counts in `details` (DOC-17 §2), and `FilesApi.remove` on the file.
 7. Run DQ-60; on a difference roll back and answer 500.

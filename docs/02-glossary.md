@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-19 (DR-124…127: audit, terms gate, boot guard, error terms) · DOC-06
+> Status: **Review** · Updated: 2026-10-20 (DR-128…141: sessions, staff accounts and household terms) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -46,6 +46,9 @@ This document defines the words of the project, as the project uses them. Every 
 | household | — | The set of memberships of one unit. | |
 | unit history | — | Rows of `unit_history`: owner changed, moved in, moved out, member added, member removed, with actor and time. | FR-18, DR-40 |
 | ownership transfer | — | A Manager action: the old owner is removed and the new owner inserted. By default all other members are removed; the Manager may tick "keep members" per transfer. Fees, receipts and tickets stay with the unit. | FR-18, DR-40 |
+| invitation cap | — | At most 10 invitation SMS per owner per building day, counted by `invited_at` of the memberships the owner added. Only the owner's add sends an invitation. | DR-40, DR-137 |
+| promoted member | — | A member who becomes the owner by an ownership transfer and keeps their membership row and its start date, so their history window does not restart. | DR-138 |
+| `startedAt` | — | `membership.created_at` as returned to callers by `ResidencyApi`; the date of the history rule. | DR-40, DR-42 |
 | debt follows the unit | — | A resident always sees the open charges of the unit, whoever the owner was when they were issued. | DR-40 |
 | history rule | — | A resident sees paid charges, receipts and payer names only for payments dated on or after `membership.created_at` of their own membership. Manager and Admin see everything. One date filter on `membership.created_at`. | DR-40, DR-73 |
 | resident profile | — | `resident_profile`: full name, email, CCCD, date of birth, entered by the Manager. | DR-40 |
@@ -65,6 +68,10 @@ This document defines the words of the project, as the project uses them. Every 
 | reset link | — | A single-use link valid 30 minutes for a staff password reset. | FR-13, DR-39 |
 | session | — | A sign-in on one device, backed by a refresh family. Users can list and revoke their sessions. | FR-45, DR-38 |
 | refresh family | — | The chain of rotating refresh tokens of one device (`sid`). Reuse of an old token revokes the whole family. | DR-38 |
+| access token | — | The ES256 JWT of 15 minutes that carries `sub`, `kind`, `sid` and, for staff, `role` and `bid`. It carries no unit permission and, for a resident, no building. | DR-38, DOC-26 §3.1 |
+| refresh grace window | — | The 10 seconds after a refresh token is rotated in which the same token is accepted once more and mints a sibling token, because the response of the first call may have been lost. After it, a second use is reuse and revokes the family. | DR-131, DOC-26 §3.5 |
+| last admin guard | — | The rule that refuses to lock, disable or demote the last active Admin of a building (409 `last_admin`), made safe against two Admins acting at once by a row lock. | DR-133, DOC-26 §4.4 |
+| `OpenTicketsProbe` | — | The port `identity` declares and `tickets` implements, to list and reassign a staff member's open tickets before a lock, a disable or a role change. | DR-133, DOC-26 §2.1 |
 | terms version | — | A published version of the terms of use or the privacy notice. A resident who has not accepted the latest version can use only sign-in, account and terms endpoints (403 `terms_required`). | FR-39, FR-41, DR-59 |
 | account deletion | — | A resident requests deletion; the Manager approves; execution runs after the cooling-off. Refused while the account is the active owner of a unit (`owner_must_transfer`). | FR-39, DR-59 |
 | cooling-off (`accountDeletionDays`) | — | The building setting, default 30 days, between approval and execution of an account deletion. | DR-59, DR-60 |
@@ -391,6 +398,7 @@ This document defines the words of the project, as the project uses them. Every 
 | deployment unit | — | A process or container that is started and stopped on its own: `api-1`, `api-2`, `worker`, `caddy`, `cloudflared`, monitoring. | DR-05, DOC-07 §4.3 |
 | ops port | — | The internal port that serves `/health/*` and `/metrics`; neither Caddy nor the Tunnel routes it. Configured by `OPS_PORT`. | DR-07, DOC-07 |
 | `platform` schema | — | The schema owned by the vendored core packages, not by a module: `maintenance`, `idempotency_key` and `rate_bucket` for every limiter except sign-in, OTP and reset. | DR-85 |
+| autonomous transaction | — | A transaction on a separate pool connection (`database.autonomous`) that commits before the ambient one ends. Only `identity` uses it, to count failed step-up proofs so that the count survives the rollback of the action. | DR-132, DOC-12 §8.1 |
 | composition root | — | The place where an app wires modules together (`apps/api`): the only code allowed to import several modules' manifests. | DOC-07, DOC-12 |
 | Access service token | — | The Cloudflare Access credential that lets the CI deploy job reach the VPS over the Tunnel. | DR-83 |
 | integration (`integrations/<consumer>`) | — | An entry point of a producer module written for one named consumer module; it is the only code that translates the producer's contract for that consumer. | DR-04, DR-42 |

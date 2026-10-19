@@ -1,6 +1,6 @@
 # Requirements
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-03
+> Status: **Review** · Updated: 2026-10-20 (DR-137: invitation SMS only for owner adds) · DOC-03
 > Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-04, DOC-05, DOC-21…42 (every design document cites an FR), P0-19, every task `Pn-xx` (acceptance), `docs/10-testing` (test cases)
 
@@ -259,7 +259,7 @@ This document lists what the system must do (FR-01…50) and how well (NFR-01…
 
 | ID | Requirement | Acceptance criteria | Priority | Verification |
 | --- | --- | --- | --- | --- |
-| FR-17.1 | Add by phone | **G** the owner of A-1508 **W** adds a phone that already has an account, as a tenant with `can_pay` off **T** that account gets a membership of A-1508; no second account exists; one SMS invitation is sent | M | `RM-` tests |
+| FR-17.1 | Add by phone | **G** the owner of A-1508 **W** adds a phone that already has an account, as a tenant with `can_pay` off **T** that account gets a membership of A-1508; no second account exists; one SMS invitation is sent (only when the owner adds: a Manager's add, a transfer and an import send none, DR-137) | M | `RM-` tests |
 | FR-17.2 | Invitation cap | **G** an owner who sent 10 invitations today **W** an 11th is attempted **T** it is refused (the cap of 10 per day per owner) | S | `RM-` tests |
 | FR-17.3 | Edit, lock, remove | **G** a non-owner member **W** the owner changes `family`↔`tenant`, toggles `can_pay`, locks, unlocks, removes **T** each succeeds and `credential_version` increases in the same transaction; the owner cannot act on themself | M | `RM-` tests |
 | FR-17.4 | Manager's lock wins | **G** a membership locked by the Manager **W** the owner unlocks it **T** refused; only the Manager can | M | `RM-` tests |

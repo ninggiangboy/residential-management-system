@@ -41,8 +41,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-23 | Payment intents and settlement (`06-design/payment-intents-and-settlement.md`) | Not written |
 | DOC-24 | payOS gateway adapter (`06-design/payos-gateway-adapter.md`) | Not written |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |
-| DOC-26 | Identity and sessions (`06-design/identity-and-sessions.md`) | Not written |
-| DOC-27 | Residency and memberships (`06-design/residency-and-memberships.md`) | Not written |
+| DOC-26 | [Identity and sessions](06-design/identity-and-sessions.md) | Review |
+| DOC-27 | [Residency and memberships](06-design/residency-and-memberships.md) | Review |
 | DOC-28 | Tickets (`06-design/tickets.md`) | Not written |
 | DOC-29 | Resident QR (`06-design/resident-qr.md`) | Not written |
 | DOC-30 | Vehicles (`06-design/vehicles.md`) | Not written |

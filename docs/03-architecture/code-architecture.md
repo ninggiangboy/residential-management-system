@@ -512,6 +512,7 @@ Behavior the vendored `@core/db` must have (P1-02 confirms in the copy and adds 
 2. `database.transaction` inside an open transaction is a **savepoint** (the Drizzle nested-transaction behavior). `settle()` uses it for the rollback to the savepoint taken after the `gateway_event` claim (DR-14, DOC-23).
 3. `OutboxWriter.add` throws when no transaction is open: an event written outside the aggregate's transaction would defeat the outbox.
 4. A transaction fails with SQLSTATE `40001` or `40P01` are retried by the use case wrapper, not by the repository (FR-08.8: up to 3 times, 20–60 ms jitter).
+5. `database.autonomous(fn)` runs `fn` in a transaction on a **separate pool connection**, outside the ambient one, and commits it before returning. Only `identity` uses it, to count a failed step-up proof so that the count survives the rollback of the action that asked (DR-132, DOC-26 §4.5). *Revised 2026-10-20 (DR-132).*
 
 ### 8.2 Where a transaction begins
 

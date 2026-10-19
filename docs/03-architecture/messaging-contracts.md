@@ -1,6 +1,6 @@
 # Messaging contracts
 
-> Status: **Review** · Updated: 2026-10-19 (DR-125, DR-126, DR-127: contracts added, step-up action names corrected) · DOC-09
+> Status: **Review** · Updated: 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
 > Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 
@@ -727,7 +727,7 @@ Example payload:
 | `accountKind` | accountKind | Staff or resident. |
 | `accountId` | uuid | The account. |
 | `sessionId` | uuid | The refresh family. |
-| `reason` | `logout` · `revoked_by_user` · `revoked_by_admin` · `reuse_detected` · `password_changed` · `role_changed` · `account_disabled` · `account_deleted` | Why; for the log. |
+| `reason` | `sign_out` · `user_revoked` · `token_reuse` · `cap_exceeded` · `account_locked` · `account_disabled` · `role_changed` · `phone_changed` · `password_changed` · `deleted` | Why; the same words as `refresh_family.revoked_reason` (DOC-26 §3.8). *Revised 2026-10-20 (DR-129):* the earlier list (`logout`, `revoked_by_user`, `revoked_by_admin`, `reuse_detected`, `account_deleted`) had no word for a cap eviction, a lock or a phone change. |
 
 Example payload:
 
@@ -737,7 +737,7 @@ Example payload:
   "accountKind": "staff",
   "accountId": "0192f3c4-5a1e-7000-8000-000000000051",
   "sessionId": "0192f3c4-5a1e-7000-8000-000000000062",
-  "reason": "reuse_detected"
+  "reason": "token_reuse"
 }
 ```
 
@@ -1069,7 +1069,7 @@ Example payload:
 ### 7.1 Rules (DR-42)
 
 1. A contract is an interface in `modules/<provider>/src/contracts/<provider>-api.ts` with plain DTOs in and out: no entity, no Drizzle type, no `Date` (instants are ISO strings), money as integer đồng.
-2. A call **joins the caller's ambient transaction** and never takes a transaction argument (DOC-12 §8.2). It does not open a second one.
+2. A call **joins the caller's ambient transaction** and never takes a transaction argument (DOC-12 §8.2). It does not open a second one. The only exception is the failure counting of `IdentityApi.verifyStepUp`, which must survive the caller's rollback (`database.autonomous`, DR-132).
 3. A list call is **keyset-paginated**: `{ items, next }` with an opaque cursor and `limit` from 1 to 500 (default 100). A call that takes a list of ids takes at most 500 (5,000 for the one import call), and an unknown id is simply absent from the answer.
 4. A read of one thing returns `null` when it does not exist; it does not throw. A command that can be refused throws a typed exception (DOC-12 §12) that the caller does not catch: `FilesApi.attach` on another account's file, `IdentityApi.verifyStepUp` with a wrong code.
 5. A contract **never filters on the caller's behalf**: the caller passes the building where the data has one and the contract trusts it. Authorization is the caller's (DOC-12 §11).
@@ -1098,7 +1098,12 @@ interface ResidencyApi {
   getUnits(ids: Uuid[]): Promise<UnitDto[]>
   getMembershipForScan(membershipId: Uuid): Promise<ScanMembershipDto | null>
   ownedUnitIds(accountId: Uuid): Promise<Uuid[]>            // DR-125: units where the account is the active owner
+  listActiveMemberships(accountId: Uuid): Promise<ActiveMembershipDto[]>                  // DR-140
+  buildingIdsOfAccounts(accountIds: Uuid[]): Promise<Array<{ accountId: Uuid; buildingId: Uuid }>>   // DR-140
+  lookup(buildingId: Uuid, q: string, opts?: { limitPerKind?: number }): Promise<LookupDto>          // DR-140
 }
+interface ActiveMembershipDto { membershipId: Uuid; buildingId: Uuid; unitId: Uuid; unitCode: string; memberType: MemberType; canPay: boolean }
+interface LookupDto { units: UnitHitDto[]; residents: ResidentHitDto[] }    // the hit DTOs are in DOC-27 §2.1; the phone is full E.164, masked by the caller's audience
 interface MembershipDto {                 // the request guard reads it on every request
   membershipId: Uuid; buildingId: Uuid; unitId: Uuid; accountId: Uuid
   memberType: MemberType; canPay: boolean; status: 'active' | 'locked'
@@ -1122,6 +1127,9 @@ interface ScanMembershipDto {
 | `getUnits` | Unit code, floor and occupancy for up to 500 ids; reports and the debt list use it for one page at a time (DR-42). |
 | `getMembershipForScan` | The membership by id with its `credentialVersion`, whatever its status; the QR scan compares status and version (DR-48). `null` for an unknown id. |
 | `ownedUnitIds` | The ids of the units whose active owner is the account; `[]` when none. Identity asks it at the approval and at the execution of an account deletion (`owner_must_transfer`, DOC-35 §10). |
+| `listActiveMemberships` | The `active` memberships of the account with the unit code, ordered by unit code; a `locked` one is not returned. More than 500 rows is a data defect and the call throws. The sign-in answer, `GET /me` and `Unit-Pick` use it (DOC-26 §3.4, DOC-27 §2.1). |
+| `buildingIdsOfAccounts` | The distinct buildings of the non-removed memberships of up to 500 accounts; an account with none is absent. The boot guard check 1 of DOC-36 §10.1 uses it. |
+| `lookup` | The union search of units and residents (DOC-27 §11), `limitPerKind` 1…20, default 20. The DTO holds the full phone; the route that serves `GET /staff/lookup` (in `access`, DR-140) maps it to the audience (a Guard gets it masked, DOC-29). |
 
 ### 7.3 `IdentityApi` (provider `identity`)
 
@@ -1134,6 +1142,9 @@ interface IdentityApi {
   findResidentAccountsByPhones(phones: string[]): Promise<Array<{ phone: string; accountId: Uuid }>>
   listDeletionRequests(page?: PageRequest): Promise<Page<{ accountId: Uuid; requestedAt: Instant; approvedAt: Instant | null }>>   // DR-125
   verifyStepUp(staff: StaffContext, action: StepUpAction, proof: { password: string; code: string }): Promise<void>
+  findOrCreateResidentAccount(phone: string, displayName: string): Promise<{ accountId: Uuid; created: boolean }>   // DR-135
+  changeResidentPhone(accountId: Uuid, newPhone: string): Promise<void>                                          // DR-135
+  queueMemberInvitation(accountId: Uuid, params: { unitCode: string }): Promise<void>                          // DR-135
 }
 type StepUpAction = 'gateway_config' | 'admin_change' | 'staff_email'     // DR-39, the stored names of password_token.action (DR-126)
 interface StaffDto { staffId: Uuid; fullName: string; role: StaffRole; status: 'invited' | 'active' | 'locked' | 'disabled'
@@ -1146,10 +1157,13 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | --- | --- |
 | `getStaff`, `listActiveStaff` | `listActiveStaff` returns only `active` staff of the roles asked, keyset on `staff_id`. No email in the DTO: nobody but `identity` mails staff. |
 | `getResidentAccounts` | Up to 500 ids. The DTO has the phone (E.164) because `residency` shows it masked in the unit detail; a caller never logs it. A `deleted` account is returned with its `deleted:<id>` phone so a caller can tell. |
-| `findResidentAccountsByPhoneFragment` | Contains-match on the digits, at least 3 characters, `limit` up to 500 (the lookup uses 20 per kind, DR-41). |
+| `findResidentAccountsByPhoneFragment` | Suffix match on the digits, at least 4 characters (FR-18.5, DR-41; the index is `resident_account_phone_suffix_idx`), `limit` up to 500 (the lookup uses 20 per kind). *Revised 2026-10-20 (DR-140):* DOC-09 said "contains, at least 3"; DR-41 and DOC-16 §4.2 say suffix, at least 4 digits. |
 | `findResidentAccountsByPhones` | Exact E.164 match, at most 5,000 numbers: the units import asks which owner phones already have an account (DR-114). |
 | `listDeletionRequests` | The accounts in `deletion_requested`, oldest first, keyset on `account_id`, with the two dates; `W-Residents` joins the names from its own profiles (DOC-35 §10.2). |
-| `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
+| `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure; the failure counters are committed in an **autonomous transaction** before the throw, the one exception to rule 2 (DR-132, DOC-26 §4.5). On success it writes one `identity.mail_requested.v1` kind `step_up_notice` per active Admin of the building. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
+| `findOrCreateResidentAccount` | Parses the phone (`libphonenumber-js/max`, region VN); invalid: `ValidationError` rule `phone_invalid`. `INSERT … ON CONFLICT (phone) DO NOTHING`; an existing account is returned unchanged (its name is not overwritten) with `created: false`. Used by the household add, the owner creation and the units-import commit (DOC-26 §2.2, DOC-27). |
+| `changeResidentPhone` | One conditional `UPDATE` of the phone (`status` `active` or `deletion_requested`): none is `NotFoundError`, `23505` is 409 `phone_in_use`; revokes every refresh family with reason `phone_changed` and writes one `identity.session_revoked.v1` each. The audit row is the caller's (DOC-26 §2.2). |
+| `queueMemberInvitation` | Writes `identity.sms_requested.v1` kind `member_invitation` after drawing one token from `otp:phone:<e164>`; an empty bucket throws `RateLimitedError`, so the caller's transaction rolls back. The owner's daily cap is the caller's (DOC-26 §2.2, DOC-27). |
 
 ### 7.4 Other contracts
 

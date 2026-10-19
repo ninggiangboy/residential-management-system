@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-42
+> Status: **Review** · Updated: 2026-10-20 (DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -130,7 +130,7 @@ Five of these were reproduced on PostgreSQL 18.6 and returned the SQLSTATE of th
 | `malformed_request` | 400 | `ValidationError` | The body is not valid JSON, the content type is wrong, a webhook body is over 16 KB (UC-08 E2) | — | The request could not be read. |
 | `invalid_cursor` | 400 | `ValidationError` | A list cursor that cannot be decoded or does not match the sort (DR-74) | — | The list position is no longer valid. Reload the list. |
 | `unauthenticated` | 401 | `UnauthorizedError` | No token, an expired access token, a revoked session or a refresh token used twice (FR-45.2) | — | Please sign in again. |
-| `forbidden` | 403 | `ForbiddenError` | The role or the capability does not allow the action (FR-14.1, FR-16.2) | — | You do not have permission to do this. |
+| `forbidden` | 403 | `ForbiddenError` | The role or the capability does not allow the action (FR-14.1, FR-16.2); a staff member locking, disabling or changing the role of their own account; a refresh by cookie without `X-Requested-With` | `{reason: "self"}` for the self case, else — | You do not have permission to do this. |
 | `not_found` | 404 | `NotFoundError` | A missing object, an object of another building or unit, a route that does not exist, a session of another account | — | We could not find this. |
 | `method_not_allowed` | 405 | `NotFoundError` | A known path with a wrong method | — | This action is not available. |
 | `version_conflict` | 409 | `VersionConflictError` | `If-Match` is stale, or two writers raced on one aggregate (DR-74) | `{current}` (the fresh resource when the caller may see it) | This was changed by someone else. Reload and try again. |
@@ -166,6 +166,7 @@ Both statuses carry the same code; a client shows `details` the same way. The st
 | `same_assignee` | 422 | A ticket reassigned to the person who holds it | FR-20.3 |
 | `assignee_locked` | 422 | The chosen assignee is locked or not a Technician | UC-20 E4 |
 | `setting_invalid` | 422 | A building setting outside its range or enumeration | FR-38.2 |
+| `can_pay_tenant_only` | 422 | `can_pay` set on a member who is not a tenant (DOC-27 §6, DR-139) | FR-17.3 |
 | `driver_not_allowed` | 422 | The `fake` driver for a building that is not a demo building | DR-26 |
 
 A new rule code is added to this table in the change that throws it, with its status.
@@ -184,6 +185,7 @@ A new rule code is added to this table in the change that throws it, with its st
 | `phone_in_use` | 409 | `ConflictError` | The new login phone has an account (FR-18.4) | — | This number already belongs to another account. |
 | `email_in_use` | 409 | `ConflictError` | A staff email that exists (FR-14) | — | This email is already used. |
 | `staff_has_open_tickets` | 409 | `ConflictError` | Locking a staff member who holds tickets (FR-14.3) | `{tickets: [{ticketId, code, status}]}` | This person still has open requests. Reassign them first. |
+| `last_admin` | 409 | `ConflictError` | Locking, disabling or demoting the last active Admin of the building (DOC-26 §4.4, DR-133) | — | The building needs at least one active administrator. |
 | `membership_inactive` | 403 | `ForbiddenError` | The membership is locked or removed (FR-16.1) | — | You no longer have access to this home. |
 | `terms_required` | 403 | `ForbiddenError` | The latest terms are not accepted (FR-39.1) | `{required: [{kind, version, versionId}]}` | Please accept the updated terms to continue. |
 | `terms_version_superseded` | 409 | `ConflictError` | Accepting a version that is no longer the latest (DOC-35 §9.3) | `{current: [{kind, version, versionId}]}` | The terms were updated. Please read the new version. |
@@ -198,6 +200,9 @@ A new rule code is added to this table in the change that throws it, with its st
 | `import_expired` | 409 | `ConflictError` | A commit of a preview older than 24 h (FR-01.4) | — | This preview has expired. Upload the file again. |
 | `import_not_ready` | 409 | `ConflictError` | A commit of a job that is not `validated` (DR-21) | `{status}` | This import is not ready to commit. |
 | `import_stale` | 409 | `ConflictError` | The data changed between the preview and the commit (DR-114) | `{rows}` | The data changed since the preview. Upload the file again. |
+| `member_exists` | 409 | `ConflictError` | The same account added to a unit twice, or the transfer target is already the owner (DOC-27 §6, DR-137) | `{membershipId, memberType?}` | This person is already a member of this home. |
+| `unit_has_owner` | 409 | `ConflictError` | A Manager adds an owner to a unit that already has one (DOC-27 §5) | `{ownerMembershipId}` | This unit already has an owner. Transfer ownership instead. |
+| `unit_code_in_use` | 409 | `ConflictError` | The unit code exists; mapped from the constraint `unit_code_key` (DOC-27 §4) | — | This unit code is already used. |
 | `invalid_transition` | 409 | `ConflictError` | A generic refusal: the object's state does not allow the action (see below) | `{entity, status, action}` | This can no longer be done in its current state. |
 
 ### 5.5 Finance
@@ -215,7 +220,7 @@ A new rule code is added to this table in the change that throws it, with its st
 | `gateway_unavailable` | 502 | `BadGatewayError` | The provider refused or did not answer a link request, or a connection check (UC-18) | — | The payment service is not available. Try again later. |
 | `gateway_in_use` | 409 | `ConflictError` | A change of the receiving account, driver or status while an intent is active (FR-38.3) | — | Online payments are in progress. Try again when none is open. |
 | `foreign_building` | 400 | `ValidationError` | A webhook order code that belongs to another building (UC-08 E2) | — | — |
-| `sms_unavailable` | 503 | `UnavailableError` | The SMS provider is down at OTP request (UC-14 E4) | — | Could not send the code. Try again later. |
+| `sms_unavailable` | 503 | `UnavailableError` | An OTP request while recent SMS commands are failing (three failing and none delivered in 10 minutes), or the daily cap of 3,000 is reached (UC-14 E4; DOC-26 §5.1, §5.4, DR-134) | — | Could not send the code. Try again later. |
 
 ### 5.6 Tickets, vehicles, notices and the library
 
@@ -239,7 +244,7 @@ A new rule code is added to this table in the change that throws it, with its st
 
 ### 5.8 Codes owed by documents not yet written
 
-A document that adds a code adds its row here in the same change (§2, principle 1). Known now: DOC-23 (intent creation: the lock rules), DOC-25 (statement lines: `statement_line_not_assignable`), DOC-27 (membership rules: `unit_has_owner`, `helper_limit` if any), DOC-30 (vehicle review), DOC-33 (`too_many_rows` for an export over 50,000 rows, as a rule code), DOC-31 (notice send). The names above are reserved.
+A document that adds a code adds its row here in the same change (§2, principle 1). Known now: DOC-23 (intent creation: the lock rules), DOC-25 (statement lines: `statement_line_not_assignable`), DOC-30 (vehicle review), DOC-33 (`too_many_rows` for an export over 50,000 rows, as a rule code), DOC-31 (notice send). The names above are reserved.
 
 ## 6. Routes that answer differently
 

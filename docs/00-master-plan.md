@@ -576,7 +576,7 @@ Goal: settle the decisions, collect the client inputs, and write the documents t
 | P0-25 | Write DOC-17 (§1–3) — **Draft 2026-10-19**, DOC-18 (§1) — **Draft 2026-10-19**, DOC-19 — **Review 2026-10-19**, DOC-20 (skeleton) — **Draft 2026-10-19** | DDL runs clean; grants matrix covers every role × schema | P0-24 | DOC-17, DOC-18, DOC-19, DOC-20 |
 | P0-26 | Write DOC-09, DOC-37, DOC-38 — **Review 2026-10-19** | Event catalog lists every event of DR-42; limits table; job catalog with schedules | P0-24 | DOC-09, DOC-37, DOC-38 |
 | P0-27 | Write DOC-35, DOC-36, DOC-42 — **Review 2026-10-19** (DR-124…127; the retention table is DOC-35 §8 with DOC-20 §2; the reset guard is DOC-36 §10; the catalog is DOC-42 §5) | Retention table complete; demo reset guard specified; error catalog covers DR-74 codes | P0-25, P0-06 | DOC-35, DOC-36, DOC-42 |
-| P0-28 | Write DOC-26 and DOC-27 | Every state and rate limit has a test row | P0-24 | DOC-26, DOC-27 |
+| P0-28 | Write DOC-26 and DOC-27 — **Review 2026-10-20** (DR-128…135 and DR-136…141; DOC-26 §12 `AU-01…55`, DOC-27 §17 `RM-01…51`) | Every state and rate limit has a test row | P0-24 | DOC-26, DOC-27 |
 | P0-29 | Write DOC-46, DOC-43, DOC-50, DOC-51 (P1 groups) | FL-17…24 and FL-45 with `alt` branches for every UC error; E-xx for auth, public, residency, platform | P0-28 | DOC-43, DOC-46, DOC-50, DOC-51 |
 | P0-30 | Write DOC-39, DOC-40, DOC-41 (skeletons) | Matrix generator input format fixed; metric catalog started; every P1 config key listed | P0-27 | DOC-39, DOC-40, DOC-41 |
 | P0-31 | Write DOC-69, DOC-70, DOC-71, DOC-73 (skeleton) | A new machine can follow DOC-69 to a running stack (dry-run on a clean user account) | P0-21, P0-03 | DOC-69, DOC-70, DOC-71, DOC-73 |

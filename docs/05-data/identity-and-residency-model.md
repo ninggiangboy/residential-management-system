@@ -1,6 +1,6 @@
 # Identity and residency model
 
-> Status: **Review** · Updated: 2026-10-19 (DR-86 wording of `file_key`) · DOC-16
+> Status: **Review** · Updated: 2026-10-20 (DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
 > Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity), P1-11 (residency), P1-13 (imports), DOC-19 (grants), DOC-26, DOC-27, DOC-35, DOC-46, DOC-51, EXP-09, EXP-10
 
@@ -444,7 +444,8 @@ CREATE TABLE identity.refresh_family (          -- one family = one sign-in on o
   absolute_expires_at timestamptz NOT NULL,     -- staff 90 days, resident 365 days after created_at (DR-38)
   revoked_at          timestamptz,
   revoked_reason      text CHECK (revoked_reason IN ('sign_out', 'user_revoked', 'token_reuse', 'cap_exceeded',
-                                                      'account_locked', 'role_changed', 'phone_changed', 'deleted')),
+                                                      'account_locked', 'account_disabled', 'role_changed',
+                                                      'phone_changed', 'password_changed', 'deleted')),
   CONSTRAINT refresh_family_building_by_kind CHECK ((kind = 'staff') = (building_id IS NOT NULL)),
   CONSTRAINT refresh_family_reason_with_revocation CHECK ((revoked_at IS NULL) = (revoked_reason IS NULL))
 );
@@ -471,7 +472,7 @@ CREATE INDEX refresh_token_family_idx ON identity.refresh_token (family_id);
 | `building_id` | Staff families only, so a staff request knows its building; a resident family has none (DR-38). Enforced by `refresh_family_building_by_kind`. |
 | `absolute_expires_at` | Staff 90 days, resident 365 days after `created_at` (DR-38, FR-45.4). |
 | `refresh_token.expires_at` | The sliding limit (staff 30 days, resident 180 days), never beyond the family's absolute limit. |
-| `revoked_reason` | `sign_out`, `user_revoked`, `token_reuse`, `cap_exceeded`, `account_locked`, `role_changed`, `phone_changed`, `deleted`. Required exactly when `revoked_at` is set. |
+| `revoked_reason` | `sign_out`, `user_revoked`, `token_reuse`, `cap_exceeded`, `account_locked`, `account_disabled`, `role_changed`, `phone_changed`, `password_changed`, `deleted`. Required exactly when `revoked_at` is set. The same ten words are the `reason` of `identity.session_revoked.v1` (DOC-26 §3.8). *Revised 2026-10-20 (DR-129):* `account_disabled` and `password_changed` were added. |
 | `replaced_by_id` | The successor of a rotated token; the foreign key is `DEFERRABLE INITIALLY DEFERRED` so the use case can consume the old token and insert the new one in either order inside the transaction. |
 
 **Indexes**
@@ -559,7 +560,7 @@ RETURNING tokens;
 ### 5.1 `unit`
 
 - **Grain:** one apartment. **Business key:** `(building_id, code)` (`A-1508`).
-- **Written by:** `residency` (Manager creates and edits; the units import updates, FR-18.1). **Read by:** every module through `ResidencyApi.getUnits(ids)`. A unit is never deleted, only marked `vacant` (DR-12); every change of owner or occupancy is a `unit_history` row.
+- **Written by:** `residency` (Manager creates and edits; the units import updates, FR-18.1). **Read by:** every module through `ResidencyApi.getUnits(ids)`. A unit is never deleted, only marked `vacant` (DR-12); every change of owner is a `unit_history` row, and a change of occupancy across vacancy is one too (`moved_out` when it becomes `vacant`, `moved_in` when it leaves `vacant`; *revised 2026-10-20, DR-141*).
 
 ```sql
 CREATE TABLE residency.unit (
@@ -775,13 +776,13 @@ CREATE INDEX unit_history_unit_idx ON residency.unit_history (building_id, unit_
 
 ### 5.5 `import_job`
 
-- **Grain:** one units-and-owners import (`kind = units_owners`). **Written and read by:** `residency`. The fee import has its own table `finance.import_job` with the same columns (DR-21, DOC-15); the core helper creates both.
+- **Grain:** one units-and-owners import (`kind = unit_owner`, the name of DR-22 and the API; *revised 2026-10-20 (DR-141):* it was `units_owners`). **Written and read by:** `residency`. The fee import has its own table `finance.import_job` with the same columns (DR-21, DOC-15); the core helper creates both.
 
 ```sql
 CREATE TABLE residency.import_job (
   id           uuid PRIMARY KEY,
   building_id  uuid NOT NULL,
-  kind         text NOT NULL CHECK (kind IN ('units_owners')),
+  kind         text NOT NULL CHECK (kind IN ('unit_owner')),
   status       text NOT NULL CHECK (status IN ('validated', 'failed', 'committed', 'expired')),
   file_key     text NOT NULL,                   -- object key of a file with purpose 'import' (DR-61, DR-86); deleted on commit or expiry
   file_name    text,

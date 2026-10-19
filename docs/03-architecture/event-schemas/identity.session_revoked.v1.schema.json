@@ -38,16 +38,18 @@
     },
     "reason": {
       "enum": [
-        "logout",
-        "revoked_by_user",
-        "revoked_by_admin",
-        "reuse_detected",
-        "password_changed",
-        "role_changed",
+        "sign_out",
+        "user_revoked",
+        "token_reuse",
+        "cap_exceeded",
+        "account_locked",
         "account_disabled",
-        "account_deleted"
+        "role_changed",
+        "phone_changed",
+        "password_changed",
+        "deleted"
       ],
-      "description": "Why; for the log."
+      "description": "Why; the same words as refresh_family.revoked_reason."
     }
   }
 }

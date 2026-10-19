@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Draft** · Updated: 2026-10-19 (DR-122: purpose `thumbnail`; tests OPM-65, OPM-66 run on PostgreSQL 18.6) · DOC-17
+> Status: **Draft** · Updated: 2026-10-20 (DR-132: bucket `stepup:staff:<id>`) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -718,6 +718,7 @@ CREATE INDEX ix_rate_bucket_updated ON platform.rate_bucket (updated_at);
 | `intent:account:<id>` | 10 per minute (`POST /me/payments/intents`) |
 | `reminder:account:<id>` | 10 per hour (`POST /staff/debts/reminders`) |
 | `upload:account:<id>` | 60 per hour |
+| `stepup:staff:<id>` | 5 per hour (`POST /staff/step-up`; DR-132, DOC-26 §6) |
 
 A key holds a phone, an IP or an account id, so the table is personal data in a small way: idle buckets are deleted by `token_purge` (DOC-20), and `rms_readonly` cannot read it. `ix_rate_bucket_updated` serves that purge.
 

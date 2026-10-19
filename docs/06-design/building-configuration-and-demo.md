@@ -1,6 +1,6 @@
 # Building configuration and demo
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-36
+> Status: **Review** · Updated: 2026-10-20 (DR-140: boot guard check 1 uses `buildingIdsOfAccounts`) · DOC-36
 > Depends on: original SDD §15, §21, [DR](../00-decision-register.md) (DR-26, 33, 36, 37, 39, 59, 60, 65, 74, 87, 98, 111, 112, 115, 126), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0026](../04-adr/0026-demo-building-and-fake-payment-driver.md), [DOC-03](../01-product/requirements.md) (FR-14, FR-15.6, FR-38, FR-41, FR-50), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §4.4, §8, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §4.4, [DOC-17](../05-data/operations-model.md) §1, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-07 (`building` module), P1-11, P1-12, P1-16 (settings screens), P1-21 (demo seed and reset guard), P3-xx (gateway screen), DOC-24, DOC-26, DOC-41, DOC-51, DOC-67, DOC-70, DOC-102, RB-12
 
@@ -412,7 +412,7 @@ The demo building is in the same database as the real one (ADR-0026). Per-buildi
 
 | # | Check | Query (shape) | Environments that refuse |
 | --- | --- | --- | --- |
-| 1 | A flagged account has a membership in a building that is not a demo building (DR-37, DR-60) | The query of DOC-16 §4.2: `is_demo` account ids → `ResidencyApi` memberships → `BuildingApi.isDemo` | `production`, `staging` |
+| 1 | A flagged account has a membership in a building that is not a demo building (DR-37, DR-60) | The query of DOC-16 §4.2: `is_demo` account ids → `ResidencyApi.buildingIdsOfAccounts` → `BuildingApi.isDemo` (DR-140) | `production`, `staging` |
 | 2 | A gateway configuration with driver `fake` belongs to a building that is not a demo building (DR-26) | `SELECT g.id FROM building.gateway_config g JOIN building.building b ON b.id = g.building_id WHERE g.driver = 'fake' AND NOT b.is_demo` | `production`, `staging` |
 | 3 | The deployment has more than one building that is not a demo building (DR-115) | `SELECT count(*) FROM building.building WHERE NOT is_demo` | none: `warn` only |
 | 4 | `SMS_DRIVER` is `console` or `allowlist`, or the mail driver is the console, in production | Configuration | `production` (DOC-26, DOC-41) |
