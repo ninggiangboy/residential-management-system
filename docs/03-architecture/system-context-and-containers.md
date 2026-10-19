@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-07
+> Status: **Review** · Updated: 2026-10-19 (DR-111) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -294,7 +294,7 @@ flowchart LR
 | `AuditApi.record(entry)` | audit | every module; joins the caller's transaction | DR-42, DR-57 |
 | `FilesApi.register/verify/attach/remove/usage` | building | every module with uploads | DR-42, DR-61 |
 | `BuildingApi.getSettings(buildingId)`, `FeatureApi.get(buildingId)` | building | all | DR-42 |
-| `BuildingApi.getGatewayConfig(...)`, `BuildingApi.hasAcceptedLatestTerms(accountId)`, `IdentityApi.verifyStepUp(...)` | building, building, identity | finance and the webhook (gateway configuration and its secrets); resident guard (`terms_required`); building (sensitive configuration change) | Needed by DR-33, DR-59, DR-39 (not in the DR-42 table: DR-87) |
+| `BuildingApi.getGatewayConfig(...)`, `BuildingApi.hasAcceptedLatestTerms(accountId, buildingId)`, `IdentityApi.verifyStepUp(...)` | building, building, identity | finance and the webhook (gateway configuration and its secrets); resident guard (`terms_required`); building (sensitive configuration change) | Needed by DR-33, DR-59, DR-39 (not in the DR-42 table: DR-87); `hasAcceptedLatestTerms` takes the building because the latest version is per building (DR-111) |
 
 The QR rotation uses `membership.credential_version`, not a shared transaction (DR-48). An import has no event: validation is synchronous (DR-21).
 

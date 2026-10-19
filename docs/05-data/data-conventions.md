@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-14
+> Status: **Review** · Updated: 2026-10-19 (DR-110, DR-112) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 
@@ -180,6 +180,7 @@ A table is on the allow-list only for one of three reasons: it is **looked up be
 | `identity.staff_account` | Carries `building_id` as data, but sign-in finds the row by email before a building is known. Guards read it by `id` and compare `building_id` with the token claim in the repository | The one table that is both on the list and has the column |
 | `building.building` | The scope root: its `id` is the building id | |
 | `<schema>.outbox_messages`, `<schema>.inbox` (every schema that publishes or consumes) | Core-package tables read only by the relay; the event payload carries `buildingId` (DOC-12 §7.1) | |
+| `building.job_run` | Infrastructure: one row per run of a job, with no business reads and no building (DR-112, DOC-17 §3.2) | Added by DOC-17 |
 
 Rules for the list:
 
@@ -362,7 +363,7 @@ Constraint and index names are written explicitly in the Drizzle schema (`primar
 **Triggers** are rare and exist only for invariants that the application must not be trusted with:
 
 - Immutable amounts: `charge.amount` and `charge_line` cannot change unless the charge is `draft` (original SDD §16.2). The template is `example.charge_freeze()` in §15; DOC-15 defines the real ones.
-- Append-only tables (`audit.audit_log`) are protected by privileges, not triggers (DOC-19).
+- Append-only tables (`audit.audit_log`) are protected by privileges (DOC-19). *Revised 2026-10-19 (DR-110):* `audit.audit_log` also has a trigger as a second layer, as DR-57 says; the privileges stay the control.
 - A trigger is `BEFORE UPDATE … FOR EACH ROW`, raises `integrity_constraint_violation`, writes nothing else, calls nothing outside its schema and never sets `version` or `updated_at`. Business rules, notifications and audit rows are the application's job.
 - Each trigger has a test row in its table document: the statement that must fail and the one that must succeed (checks 6 and 7 show the pattern).
 

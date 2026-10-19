@@ -42,7 +42,7 @@ Each prefix has one meaning in the whole project; a number once assigned is neve
 | `DQ-xx` | Data quality rule | DOC-18 |
 | `EXP-xx` | Experiment (the 12 of original SDD §20.2) | `10-testing/experiments/` |
 | `RB-xx` | Runbook | `09-operations/runbooks/` |
-| Test prefixes | One prefix per document: `LG-` ledger (DOC-22), `IN-` intents and settlement (DOC-23), `PX-` payOS adapter (DOC-24), `ST-` statement (DOC-25), `AU-` identity and sessions (DOC-26), `RM-` residency (DOC-27), `TK-` tickets (DOC-28), `QC-` QR (DOC-29), `VH-` vehicles (DOC-30), `NT-` notices and notifications (DOC-31), `WK-` library (DOC-32), `RP-` reports (DOC-33), `PD-` PDF (DOC-34), `AD-` audit and privacy (DOC-35), `BD-` building and demo (DOC-36), `FS-` files (DOC-37), `JB-` jobs (DOC-38), `IM-` imports (DOC-21, DOC-27), `IDM-` identity and residency tables (DOC-16 §9). DOC-88 indexes them all | each document's "Required tests" section |
+| Test prefixes | One prefix per document: `LG-` ledger (DOC-22), `IN-` intents and settlement (DOC-23), `PX-` payOS adapter (DOC-24), `ST-` statement (DOC-25), `AU-` identity and sessions (DOC-26), `RM-` residency (DOC-27), `TK-` tickets (DOC-28), `QC-` QR (DOC-29), `VH-` vehicles (DOC-30), `NT-` notices and notifications (DOC-31), `WK-` library (DOC-32), `RP-` reports (DOC-33), `PD-` PDF (DOC-34), `AD-` audit and privacy (DOC-35), `BD-` building and demo (DOC-36), `FS-` files (DOC-37), `JB-` jobs (DOC-38), `IM-` imports (DOC-21, DOC-27), `IDM-` identity and residency tables (DOC-16 §9), `OPM-` operations-model tables (DOC-17 §13), `GRT-` roles and grants (DOC-19). DOC-88 indexes them all | each document's "Required tests" section |
 
 Ranges are written compactly: `FR-01…12`, `DOC-07…11`, `DR-21–24`, `P5-06…13`. A reference to a subsection is `DOC-19 §4.3`; a reference to the original SDD is "original SDD §6.2".
 
@@ -573,7 +573,7 @@ Goal: settle the decisions, collect the client inputs, and write the documents t
 | P0-22 | Write ADR-0001…0011 and DOC-13 — **Review 2026-10-19** (ADR-0007 `Proposed` until the gateway sandbox) | ADRs Accepted in `04-adr/`; index lists all 26 | P0-21 | DOC-13 |
 | P0-23 | Write ADR-0013…0023 and ADR-0026 — **Review 2026-10-19** (ADR-0026 `Proposed` until DR-26) | ADRs Accepted | P0-22 | DOC-13 |
 | P0-24 | Write DOC-14 and DOC-16 — **Review 2026-10-19** | **All DDL runs clean** (`psql -f` on PostgreSQL 18, then the CHECK/UNIQUE test list passes by hand); ERDs | P0-21 | DOC-14, DOC-16 |
-| P0-25 | Write DOC-17 (§1–3), DOC-18 (§1), DOC-19, DOC-20 (skeleton) | DDL runs clean; grants matrix covers every role × schema | P0-24 | DOC-17, DOC-18, DOC-19, DOC-20 |
+| P0-25 | Write DOC-17 (§1–3) — **Draft 2026-10-19**, DOC-18 (§1), DOC-19, DOC-20 (skeleton) | DDL runs clean; grants matrix covers every role × schema | P0-24 | DOC-17, DOC-18, DOC-19, DOC-20 |
 | P0-26 | Write DOC-09, DOC-37, DOC-38 | Event catalog lists every event of DR-42; limits table; job catalog with schedules | P0-24 | DOC-09, DOC-37, DOC-38 |
 | P0-27 | Write DOC-35, DOC-36, DOC-42 | Retention table complete; demo reset guard specified; error catalog covers DR-74 codes | P0-25, P0-06 | DOC-35, DOC-36, DOC-42 |
 | P0-28 | Write DOC-26 and DOC-27 | Every state and rate limit has a test row | P0-24 | DOC-26, DOC-27 |

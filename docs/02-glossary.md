@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…109), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…112), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -282,8 +282,8 @@ This document defines the words of the project, as the project uses them. Every 
 | file object | — | `building.file_object`: the ledger of every stored file (`pending`, `verified`, `attached`, `deleted`); the basis of the quota. | FR-40, DR-61 |
 | presigned PUT | — | The upload method for files: a short-lived URL with a signed `Content-Type`. R2 has no presigned POST. | DR-61, DR-83 |
 | upload verification | — | After an upload the server reads the size with `HEAD`, deletes an oversized object, and checks the first bytes against the allowed type before attaching. | DR-61 |
-| storage quota | — | The per-building cap (default 50 GB); Admin is alerted at 80% and uploads are refused at 100% (413 `quota_exceeded`). | FR-40 |
-| orphan upload | — | A `pending` file older than 24 hours, deleted by a job. | DR-61 |
+| storage quota | — | The per-building cap (default 50 GiB, `storageQuotaBytes` = 53,687,091,200); Admin is alerted at 80% and uploads are refused at 100% (413 `quota_exceeded`). | FR-40 |
+| orphan upload | — | A file still `pending` or `verified` 24 hours after it was registered because no module attached it; the hourly job deletes it. | DR-61, DR-112 |
 | import job | — | `<module>.import_job`: a stored Excel upload with its validated preview. Status `validated`, `failed`, `committed`, `expired`. Validation is synchronous in the API. | DR-21 |
 | preview (import) | — | The counts, the first 50 valid rows and up to 500 row errors returned by the validating request. | DR-21 |
 | header alias | — | A Vietnamese or English name accepted for an Excel column. | DR-22 |
@@ -316,6 +316,9 @@ This document defines the words of the project, as the project uses them. Every 
 | audit log | — | `audit.audit_log`: an append-only row per staff mutation, written in the mutation's transaction. | FR-37, DR-57 |
 | `actor_kind = 'system'` | — | The audit actor of a settlement posted by the webhook, the re-query or the statement path. | DR-57 |
 | `pii.read` | — | The audit action for reading CCCD or date of birth: one row per detail view and one per export (with the record count). | DR-57, DR-58 |
+| retention class | — | The generated column `audit_log.retention_class`: `finance` (action starts with `finance.`, kept 5 years) or `standard` (kept 2 years). `audit.purge` selects on it. | DR-57, DR-110 |
+| append-only table | — | A table the runtime role can only `SELECT` and `INSERT` (`audit.audit_log`); a trigger is a second layer. | DR-57, DR-110 |
+| maintenance flag | — | The single row `platform.maintenance`: while `active`, every process answers 503 `maintenance`. Written by the deploy script with the migration role, read by the application role. | DR-85, DR-112 |
 | SSE | — | Server-sent events: the stream `GET /staff/events` that updates the web CMS; heartbeat at least every 30 s. Mobile apps do not use it. | DR-75 |
 | `api` role / `worker` role | — | The two values of `APP_ROLES` of the one image: `api` serves HTTP; `worker` runs the relay and the jobs. | DR-05 |
 | core packages (`core-*`) | — | The reference repository's infrastructure packages, copied (vendored) into this repository under `@core/*`. The reference's `kit-*` names appear only in the mapping table of DOC-12. | DR-02, ADR-0003 |

@@ -1,6 +1,6 @@
 # Identity and residency model
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-16
+> Status: **Review** · Updated: 2026-10-19 (DR-86 wording of `file_key`) · DOC-16
 > Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity), P1-11 (residency), P1-13 (imports), DOC-19 (grants), DOC-26, DOC-27, DOC-35, DOC-46, DOC-51, EXP-09, EXP-10
 
@@ -783,7 +783,7 @@ CREATE TABLE residency.import_job (
   building_id  uuid NOT NULL,
   kind         text NOT NULL CHECK (kind IN ('units_owners')),
   status       text NOT NULL CHECK (status IN ('validated', 'failed', 'committed', 'expired')),
-  file_key     text NOT NULL,                   -- object under imports/ (DR-61); deleted on commit or expiry
+  file_key     text NOT NULL,                   -- object key of a file with purpose 'import' (DR-61, DR-86); deleted on commit or expiry
   file_name    text,
   params       jsonb NOT NULL DEFAULT '{}',     -- request parameters (fee imports keep {"batchId": …} here)
   result       jsonb NOT NULL,                  -- counts, first 50 valid rows, up to 500 errors {row, column, code, message}
@@ -801,7 +801,7 @@ CREATE INDEX import_job_purge_idx ON residency.import_job (created_at);   -- imp
 | Column | Meaning |
 | --- | --- |
 | `status` | `validated` or `failed` (set by `POST /staff/imports` itself), then `committed` or `expired` (DR-21). There is no `validating` state: validation is synchronous. |
-| `file_key` | The uploaded object under `imports/` (DR-61). It holds CCCD numbers, so it is deleted on commit or expiry (FR-18.2). |
+| `file_key` | The key of the uploaded object, a `file_object` with `purpose = 'import'` (DR-61, DR-86; DR-21 wrote "under `imports/`"). It holds CCCD numbers, so it is deleted on commit or expiry (FR-18.2). |
 | `params` | The request parameters; `{}` for units, `{"batchId": …}` for fees (DR-109). |
 | `result` | Counts, the first 50 valid rows, up to 500 errors `{row, column, code, message}`. |
 | `expires_at` | `created_at + 24 h`. The commit endpoint refuses an older job with 409 `import_expired`. |
