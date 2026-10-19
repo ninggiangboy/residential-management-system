@@ -157,6 +157,7 @@ RETURNING id;   -- 0 rows: someone else won; the use case turns it into a typed 
 3. **Every index carries a reason**: the table document names the query (endpoint, job or constraint) that uses it. An index with no reason is removed.
 4. **Partial indexes** serve the live state of a lifecycle (`WHERE status = 'open'`); a partial `UNIQUE` expresses "at most one live row" (`allocation UNIQUE (charge_id) WHERE status = 'live'`).
 5. **A foreign key column is indexed** on the child side when the parent can be deleted or when the child is read by parent (`ix_charge_line_building_charge`).
+6. **One exception to rule 1:** `residency.membership_one_per_account_unit` does not start with `building_id`, because the request guard looks a membership up by `(account_id, unit_id)` before the building is known; unit ids are globally unique (DOC-16 §5.3).
 
 ### 5.2 The scope guard
 

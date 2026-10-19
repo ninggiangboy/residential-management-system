@@ -31,7 +31,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-13 | [ADR index](04-adr/README.md) | Review |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Review |
 | DOC-15 | Finance model (`05-data/finance-model.md`) | Not written |
-| DOC-16 | Identity and residency model (`05-data/identity-and-residency-model.md`) | Not written |
+| DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Review |
 | DOC-17 | Operations model (`05-data/operations-model.md`) | Not written |
 | DOC-18 | Data quality rules (`05-data/data-quality-rules.md`) | Not written |
 | DOC-19 | DB roles and grants (`05-data/db-roles-and-grants.md`) | Not written |

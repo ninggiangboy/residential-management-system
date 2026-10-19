@@ -47,6 +47,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-10: DR-101 (job rows and processed messages are bounded; DR-62 revised), DR-102 (memory-overcommit rules and the staging database settings) | DR-06, DR-62, DOC-10 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing ADR-0013…0026: DR-103 (no third-party error tracker, stated explicitly); DR-63 revised: the per-job gauge is `job_last_success_timestamp{job}` | DR-58, DR-63, DR-101, ADR-0021, ADR-0022 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-14: DR-104 (the allow-list of the building-scope lint, reconciled; `realtime.events` is scoped), DR-105 (DDL mechanics: text + CHECK enumerations, `updated_at`/`version` set by the statement, bootstrap migration, no down migrations) | DR-12, DR-85, DOC-07, DOC-12, DOC-14 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-16: DR-106 (`resident_profile` keyed by `(building_id, account_id)`; DR-40 revised), DR-107 (staff `locked_until` vs `locked`), DR-108 (deletion workflow columns), DR-109 (`import_job` columns) | DR-12, DR-21, DR-36, DR-40, DR-59, DOC-16 |
 
 ---
 
@@ -550,6 +551,12 @@ flowchart TB
 - **Consequences:** The aliases are part of DOC-18 (DQ rules); adding a column later is backward compatible.
 - **Write to:** DOC-18, DOC-21, DOC-27.
 
+### DR-109 · `import_job` columns: `params jsonb` and `expires_at` — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-21 stores the validated preview in `import_job` for the commit step but does not fix the columns; the residency and finance variants must agree.
+- **Decision:** Both variants have `params jsonb` (`{}` for units, `{"batchId": …}` for fees) and `expires_at = created_at + 24 h` (FR-01.4). DOC-16 §5.5 holds the residency table, DOC-15 the finance table.
+- **Consequences:** One column set for both; a stale job is refused with 409 `import_expired`.
+- **Write to:** DOC-15, DOC-16 §5.5.
+
 ## E. Manual payments
 
 ### DR-23 · Manual payment semantics — **Changed (Owner, 2026-10-18)**
@@ -754,6 +761,7 @@ flowchart TB
   *Changed 2026-10-19:* the proposed limits (10 active memberships, 3 helpers per unit) are dropped, and a new owner no longer sees the earlier paid history (the proposal showed all fee history).
 - **Consequences:** The `credential_version` column is the cross-module revocation switch used by the QR scan. Every resident history query carries the `membership.created_at` filter; a test with a member added after a payment pins it.
 - **Write to:** DOC-16, DOC-27, DOC-29, DOC-46 (FL), DOC-51, DOC-35.
+  *Revised 2026-10-19 (DR-106):* `resident_profile` is keyed by `(building_id, account_id)`, not `account_id` alone.
 
 ### DR-41 · Search and lookup (units, residents, plates, wiki) — ⚠ deviates from the original SDD — **Decided (Owner, 2026-10-19)**
 - **Problem:** `GET /staff/lookup?q=`, `W-Units` and `W-Residents` filters, plate lookup (`G-Plate`) and wiki search cover Vietnamese text typed with or without diacritics, phone fragments and partial plates, but no index or algorithm is given. SDD §12 searches plates "by prefix" although guards usually remember the last digits.
@@ -803,6 +811,25 @@ flowchart TB
   3. Tables: `finance.debt_reminder` (one row per unit per building day, the throttle of FR-12.4), `finance.fake_gateway_link` (links of the `fake` driver, DR-26) and `realtime.events` (replay buffer, DR-75).
 - **Consequences:** DOC-09 lists the event and contracts; DOC-15 and DOC-17 carry the three tables.
 - **Write to:** DOC-07, DOC-09, DOC-12, DOC-15, DOC-17.
+
+### DR-106 · `resident_profile` is keyed by `(building_id, account_id)` — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-40 keys `resident_profile` by `account_id`, but DR-12 gives every business table a `building_id`, and a phone could later belong to two buildings.
+- **Decision:** The primary key is `(building_id, account_id)`. A person in two buildings has two profiles.
+- **Consequences:** The building-scope guard applies to the table like any other.
+- **Write to:** DOC-16 §5.2, DOC-27.
+
+### DR-107 · Staff account status: temporary lockout is `locked_until`, `locked` is the manual lock — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-36 has four staff statuses (`invited`, `active`, `locked`, `disabled`), but FR-13 (15-minute lockout after 5 wrong passwords) and FR-14.3 (manual lock) do not say which one uses `locked`.
+- **Decision:** The temporary lockout is `locked_until` with `status = 'active'`, so no job has to unlock it. `locked` is the manual lock by a Manager or Admin (FR-14.3). `disabled` is the Admin's deactivation and the Admin can reverse it.
+- **Consequences:** No unlock job; the sign-in query compares `locked_until` with `now()`.
+- **Write to:** DOC-16 §4.1, DOC-26.
+
+### DR-108 · Columns for the account-deletion workflow — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-59 describes request, approval and execution of an account deletion but no table carries the dates.
+- **Decision:** `identity.resident_account` has `deletion_requested_at`, `deletion_approved_at` and `deleted_at`; `residency.resident_profile` has `cleared_at`. DOC-35 owns the workflow.
+- **Consequences:** The cooling-off (`accountDeletionDays`) is computed from `deletion_approved_at`.
+- **Write to:** DOC-16 §4.2 and §5.2, DOC-35.
+
 
 ## J. Support tickets
 

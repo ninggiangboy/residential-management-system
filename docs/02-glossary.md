@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…105), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…109), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -71,6 +71,7 @@ This document defines the words of the project, as the project uses them. Every 
 | Owner (project) | — | The owner of this project. Decides in the decision register; decisions are recorded as "Owner". Not a unit owner. | decision log of `00-decision-register.md` |
 | Operator | — | The person who runs the deployment (restores backups, rotates keys); in phase 1 the Owner (project). | NFR-11, DR-66 |
 | client | — | The management company seen as the customer who supplies inputs (bank statement sample, payOS account, hosting accounts, legal texts). | P0-03…P0-06 |
+| `locked_until` | — | The staff column that holds a temporary lockout (15 minutes after 5 wrong passwords). The account stays `active`; the sign-in query compares it with `now()`. Not the manual lock `locked`. | DR-107, FR-13 |
 
 ## 2. Fees, charges and the ledger
 
