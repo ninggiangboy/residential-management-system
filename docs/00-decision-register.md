@@ -42,6 +42,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-07: DR-85 (`platform` schema belongs to the core packages), DR-86 (one object-key layout), DR-87 (contracts, an event and tables implied by decisions). DR-88 (operators reach Grafana by SSH port-forward) is proposed for the Owner | DR-36, DR-42, DR-55, DR-56, DR-59, DR-61, DR-63, DR-74, DOC-07 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-05: DR-89 (the proposal has 113 features, not 139; 124 in the catalog), DR-90 (Excel export of units and residents is an export-center kind). DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites) are proposed for the Owner | DR-79, DR-55, DR-57, DOC-01, DOC-03, DOC-05 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-11 after re-verifying the versions on the web: DR-93 (pgBackRest from the PGDG apt repository), DR-94 (Expo-managed modules follow the SDK ranges), DR-95 (exact pins everywhere). DR-70 corrected: `expo-brightness` replaces the non-existent `expo-screen-brightness`; DR-82 table revised | DR-70, DR-82, DR-83, DOC-11 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-04: DR-97 (a recall counts the non-void charges of the batch; FR-04.2 updated). DR-96 (the resident sees `unmatchedTransfer` for every unposted outcome that leaves money received) is proposed for the Owner because it extends DR-84 item 8 | DR-19, DR-84, DR-20, DOC-03, DOC-04 |
 
 ---
 
@@ -473,6 +474,12 @@ flowchart TB
 - **Consequences:** One more endpoint behavior, one more action (void a single open charge) and two more notification templates. The open point in SDD §22 about "closed" is answered with a default the client can still change.
 - **Write to:** DOC-21, DOC-31, DOC-03 (FR-02, FR-03 wording; FR-49).
 
+### DR-97 · The count check of a recall when a charge of the batch is already void — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The recall (original SDD §5.8, FR-04.2) updates every `open` charge to `void` and compares the updated row count with the batch's charge count. A charge voided earlier alone (FR-49, DR-19) is not `open`, so a batch with no payment would be refused with `batch_has_payments`.
+- **Decision:** The recall requires the updated row count to equal the number of charges of the batch that are not `void`; it is refused exactly when a charge of the batch is `paid`. The expected count is read in the same transaction after the batch row is locked.
+- **Consequences:** A batch with one voided charge can still be recalled. DOC-21 gets the test case "239 open + 1 void → recalled".
+- **Write to:** DOC-21, DOC-22, DOC-03 (FR-04.2, updated).
+
 ## D. Imports
 
 ### DR-21 · Import jobs: lifecycle, storage and who owns the table — ⚠ deviates from the original SDD — **Changed (Owner, 2026-10-19)**
@@ -619,6 +626,12 @@ flowchart TB
 - **Decision (proposed):** Option 1, the simplest rule that keeps money correct. A Manager who wants cash in sends a reminder or records a manual payment (FR-05).
 - **Consequences:** F-PAY-05 stays "Not built".
 - **Write to:** DOC-05, DOC-23.
+
+### DR-96 · Which unposted outcomes set `unmatchedTransfer` on the intent — **Proposed**
+- **Problem:** DR-84 item 8 says an intent stays `pending` when a transfer of another amount arrives and the status endpoint returns `unmatchedTransfer {amount, receivedAt}`. It does not say what the resident sees for the other unposted outcomes. A resident whose charge was paid in cash and who also transferred sees nothing, and may transfer again.
+- **Decision (proposed):** The status endpoint returns `unmatchedTransfer` for every outcome that leaves money received and the intent not `paid`: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, with the same neutral message of DR-84 item 8. Not for `posted` (the intent is `paid`), `duplicate_transfer` (the intent already shows its receipts) or `unknown_order` (no intent). Still no push and no inbox entry.
+- **Consequences:** One field, one message, no new screen. The Manager refunds outside the system as before.
+- **Write to:** DOC-23, DOC-51, DOC-58, DOC-68, DOC-03 (FR-09.1 wording once decided).
 
 ## G. Reconciliation
 

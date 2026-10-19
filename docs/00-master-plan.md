@@ -568,7 +568,7 @@ Goal: settle the decisions, collect the client inputs, and write the documents t
 | P0-17 | Write DOC-06 — **Review 2026-10-19** | Glossary with every term of the minimum list; checker finds no undefined term used in DOC-01…05 | P0-01 | DOC-06 |
 | P0-18 | Write DOC-01 and DOC-02 — **Review 2026-10-19** | Both Approved-quality; goals trace to NFRs | P0-17 | DOC-01, DOC-02 |
 | P0-19 | Write DOC-03 — **Review 2026-10-19** | FR-01…50 and NFR-01…14 each with G/W/T and numbers; `check_docs.py` finds no dangling FR | P0-18, P0-07 | DOC-03 |
-| P0-20 | Write DOC-04 and DOC-05 | UC-01…30 per template A.2; every FR has a UC; every feature mapped | P0-19 | DOC-04, DOC-05 |
+| P0-20 | Write DOC-04 and DOC-05 — **Review 2026-10-19** | UC-01…30 per template A.2; every FR has a UC; every feature mapped | P0-19 | DOC-04, DOC-05 |
 | P0-21 | Write DOC-07, DOC-10, DOC-11, DOC-12 | Data ownership table covers every table of the register; capacity table; compatibility table skeleton (filled in P1-01/P1-02) | P0-20 | DOC-07, DOC-10, DOC-11, DOC-12 |
 | P0-22 | Write ADR-0001…0011 and DOC-13 | ADRs Accepted in `04-adr/`; index lists all 26 | P0-21 | DOC-13 |
 | P0-23 | Write ADR-0013…0023 and ADR-0026 | ADRs Accepted | P0-22 | DOC-13 |
