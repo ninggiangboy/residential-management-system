@@ -23,7 +23,7 @@ This document describes how each actor reaches a goal with the system: 30 use ca
 - **Endpoints** are written `METHOD /path` relative to `/api/v1`, in the audience groups of original SDD §17: `/auth/*` (public), `/me/*` (resident token plus `X-Unit-Id`), `/staff/*` (staff token), `/payments/webhooks/*` (gateway only). The endpoint IDs `E-xx` are assigned in DOC-51; until then the method and path identify the endpoint.
 - **Screens** are the design artboard names in backticks (`Pay-VietQR`, `W-Fee-Batch`); the screens index (DOC-56) maps them to files and phases. Prefixes: `W-` web CMS, `B-` `K-` `G-` `S-` staff app, no prefix resident app.
 - **Events** are the names of DR-42 (`finance.payment_posted.v1`). **Inbox templates** are the keys of DR-53 (`fee.batch_published`).
-- **Error flows** read `E1. <situation> → <HTTP status> <code> · UI: "<text>"`. Codes are those of original SDD §17.3 and DR-74. Where a requirement says only "refused", the exact code is fixed in DOC-50/DOC-42 and the flow says so. UI strings are quoted exactly as the product shows them in English; their final wording and the Vietnamese text are in DOC-68.
+- **Error flows** read `E1. <situation> → <HTTP status> <code> · UI: "<text>"`. Codes are those of original SDD §17.3 and DR-74. Where a requirement says only "refused", the exact code is fixed in DOC-42 §5 and the flow says so. UI strings are quoted exactly as the product shows them in English; their final wording and the Vietnamese text are in DOC-68.
 - **Alternative flows** are numbered after the main step they leave (`2a`, `2b`). **Race branches** are listed in a table `Concurrent pair · Arbiter · Outcome` and always name the losing branch.
 - **Rules** cite their source: `(DR-xx)`, `(FR-xx.y)`. Amounts use the sample building (DOC-01): unit `A-1508`, charge A 2,488,000 đ, charge B 350,000 đ, intent total 2,838,000 đ, transfer content `TT2FMZ9`.
 
@@ -206,7 +206,7 @@ flowchart LR
   - E2. A selected charge was paid, recalled or voided a moment earlier → 409 `charge_changed` with the fresh state · UI: "This charge has just changed. Check the list and try again."; the whole transaction rolls back, charge A is not paid either (FR-05.3).
   - E3. `receivedOn` in the future, or more than 90 days back entered by a Manager → 400 `validation_failed` (FR-05.5).
   - E4. Void with a reason of 4 characters → 422 `validation_failed`; nothing changes (FR-06.2).
-  - E5. Void of an `online` payment → refused (409; the exact code is fixed in DOC-50). Money confirmed by the bank is undone only by a refund outside the system (FR-06.3).
+  - E5. Void of an `online` payment → 409 `payment_not_voidable`. Money confirmed by the bank is undone only by a refund outside the system (FR-06.3).
   - E6. The same `Idempotency-Key` with another body → 422 `idempotency_key_reuse`.
 - **Postconditions:** Record: payment, allocations and receipts exist, the charges are `paid`, the unit's debt falls by 2,838,000 đ. Void: the ledger is back to its state before the payment, apart from the void rows and the audit trail.
 - **Business rules:** A payment amount is exactly the sum of whole charges, computed by the system (DR-84). No advance, no partial payment, no credit. A manual payment is never linked to a log row except through a statement line of exactly the same whole charges (FR-11.6). One receipt per allocation; receipt numbers are gapless per month (DR-10).
@@ -300,8 +300,8 @@ flowchart LR
   - void-a. A paid overcharge is not voided: the Manager offsets it with a negative adjustment line in a later batch (DR-19) or refunds outside the system (DR-84). Neither is created from the money log.
 - **Error flows:**
   - E1. One charge of the batch is `paid` → 409 `batch_has_payments`; 239 of 240 rows updated is detected and the transaction rolls back; every charge is unchanged (FR-04.2) · UI: "This batch has payments and cannot be recalled. Void individual charges instead."
-  - E2. Recall of a `closed` or already `recalled` batch → refused (409; the exact code is fixed in DOC-50) (FR-04.4).
-  - E3. Void of a `paid` charge or of a charge with a live allocation → 409 · void with a reason of 4 characters → 422 `validation_failed` · void by a Technician → 403 `forbidden` (FR-49.2).
+  - E2. Recall of a `closed` or already `recalled` batch → 409 `invalid_transition` (FR-04.4).
+  - E3. Void of a `paid` charge or of a charge with a live allocation → 409 `charge_not_voidable` · void with a reason of 4 characters → 422 `validation_failed` (`reason_too_short`) · void by a Technician → 403 `forbidden` (FR-49.2).
   - E4. A due date equal to or earlier than the current one → 400 `validation_failed`; any other field patched on a published batch → refused (FR-44.1, FR-44.2).
   - E5. Stale `If-Match` → 409 `version_conflict`.
   - E6. The gateway rejects the cancel with a 5xx → the command is retried 8 times (5 s doubling to 15 min), then dead-lettered with an alert; "already paid" from the gateway triggers `getStatus` and settlement (UC-18) (FR-10.6, DR-31).
@@ -464,7 +464,7 @@ flowchart LR
   - 2a. A new open row arrives while the Manager is on the page: every active Manager and Admin gets `finance.money_unposted` and the counter rises by 1 (FR-46.4); the web CMS refreshes through the `money_log.opened` event (DR-75).
   - 3a. The Manager adjusts a later batch with a negative adjustment line or voids a single open charge. Both are independent actions the Manager decides alone; the system never creates, suggests or pre-fills them from a log row (DR-16, DR-19).
 - **Error flows:**
-  - E1. A second review of the same row → refused (409; the exact code is fixed in DOC-50) (FR-46.1).
+  - E1. A second review of the same row → 409 `money_log_already_reviewed` (FR-46.1).
   - E2. A note of 4 characters → 422 `validation_failed` · UI: "Write at least 5 characters."
   - E3. A row with outcome `posted`, or a statement line `matched`, `proposed` or `already_recorded` → refused (FR-46.2).
   - E4. A Technician or Guard opens the endpoint → 403 `forbidden`; a resident never sees the log (DR-84).
@@ -615,7 +615,7 @@ flowchart LR
   - G. **Storage.** `W-System` shows file usage; the hourly job alerts the Admin at 80% (40 GB of 50 GB) and uploads are refused at 100% (FR-40.1).
 - **Error flows:**
   - E1. A Manager creates an Admin → 403 `forbidden` (FR-14.1).
-  - E2. A sensitive request with no code, a wrong code, an expired code, a reused code, a wrong password or another Admin's code → refused (401 or 403, exact code in DOC-26); 0 unexpected 2xx across the sensitive endpoints (FR-50.2, EXP-10). Five wrong codes consume the challenge; a wrong password counts toward the lockout (FR-50.3).
+  - E2. A sensitive request with no code, a wrong code, an expired code, a reused code, a wrong password or another Admin's code → refused (403 `step_up_required` when the proof is missing, 403 `step_up_failed` for every other failure); 0 unexpected 2xx across the sensitive endpoints (FR-50.2, EXP-10). Five wrong codes consume the challenge; a wrong password counts toward the lockout (FR-50.3).
   - E3. A locked account signs in → 423 `account_locked` with `details.retryAfter` · UI: "Too many attempts. Try again in 15 minutes." (FR-13.1).
   - E4. A password such as `12345678` or `abcdefgh`, or 129 characters → 400 `validation_failed` (FR-13.5).
   - E5. Locking a Technician with open tickets → 409 `staff_has_open_tickets` listing the tickets (FR-14.3).
@@ -816,7 +816,7 @@ flowchart LR
   - 3a. A reopened and re-closed ticket keeps its rating and allows no second one (FR-23.4).
   - 3b. The resident reads the thread: staff messages marked "Internal note" never appear in any resident response (FR-24.1).
 - **Error flows:**
-  - E1. A second rating → 409 `already_rated`; a rating 15 days after closing → refused; a comment of 501 characters → 400 `validation_failed` (FR-23.3).
+  - E1. A second rating → 409 `already_rated`; a rating 15 days after closing → 409 `rating_window_closed`; a comment of 501 characters → 400 `validation_failed` (FR-23.3).
   - E2. Close of a ticket that is not `resolved` → 409 · UI: "The ticket has changed. Refresh and try again."
   - E3. A resident of another unit calls the rating → 404 `not_found`.
   - E4. The close transaction rolls back → no "Completed" notification exists (FR-23.2).
@@ -878,7 +878,7 @@ flowchart LR
   - 5b. A resident who joined after sending does not see it as unread (FR-28.4).
 - **Error flows:**
   - E1. No Vietnamese title, a body of 101 KB, 6 attachments, an attachment of 21 MB, an image from an external URL, or a level-1 heading → 400 `validation_failed` naming the rule (FR-27.1).
-  - E2. Edit of title, body or audience of a `sent` notice → refused (409).
+  - E2. Edit of title, body or audience of a `sent` notice → 409 `invalid_transition`.
   - E3. A stale `If-Match` → 409 `version_conflict`.
   - E4. An audience with no recipient → 400 `validation_failed` · UI: "Nobody would receive this notice."
   - E5. A Technician calls the endpoint → 403 `forbidden`.
@@ -913,7 +913,7 @@ flowchart LR
   - 3a. A third car in a unit with `maxCarsPerUnit` 2 is only a warning; the Manager may still approve (FR-30.4).
 - **Error flows:**
   - E1. The plate photo or one side of the paper is missing → 400 `validation_failed` · UI: "Add the plate photo and both sides of the registration paper." (FR-30.1).
-  - E2. A second `pending` or `approved` vehicle with the same plate key in the building → 409 · UI: "This plate is already registered." The exact code is fixed in DOC-50 (FR-30.2).
+  - E2. A second `pending` or `approved` vehicle with the same plate key in the building → 409 `plate_in_use` · UI: "This plate is already registered." (FR-30.2).
   - E3. A file that is not what it claims → 422 `file_not_verified`; a stale `If-Match` → 409 `version_conflict`.
   - E4. A tenant tries to retire a vehicle → 403 `forbidden` (FR-43.1).
 - **Postconditions:** A vehicle is `pending`, `approved`, `rejected` or `retired`; revisions are applied or discarded.
@@ -1233,7 +1233,7 @@ Made while writing and recorded in the decision register: DR-96 (proposed, Owner
 ## Open questions
 
 - **DR-96:** proposed in §8 (it extends DR-84 item 8, which the Owner decided); the document stays `Review` until the Owner decides it. DR-97 is decided. Not blocking P1.
-- **Exact codes of "refused" cases (DOC-50):** the requirements say only "refused" for a recall of a closed batch, a second review of a money-log row, a void of an online payment, a duplicate plate and a cancel of a ticket past `accepted`. The flows above say "refused (409)" and leave the code to DOC-50/DOC-42.
+- **Exact codes of "refused" cases (DOC-42, 2026-10-19):** fixed in the flows above: `invalid_transition` (recall of a closed or recalled batch), `money_log_already_reviewed`, `payment_not_voidable`, `charge_not_voidable`, `plate_in_use`, `rating_window_closed`, `step_up_required` and `step_up_failed`. A ticket cancelled past `accepted` by the resident is `ticket_already_accepted`; the Manager's cancel past `accepted` is `invalid_transition` (DR-127).
 - **Locking of intent creation against recall and void (DOC-23):** UC-03 and UC-04 require that an intent created at the same instant as a recall or a void of one of its charges ends cancelled or refused, never holding a `void` charge. The mechanism (a row lock on the charges in the creation transaction, or a post-commit check) is fixed in DOC-23.
 - **Gateway-specific values (DR-25, DR-27, DR-28, DR-30, DR-31):** the 2,000 and 500,000,000 đ limits, the 9-character content, the 30-minute QR validity and the 60-minute hold used in UC-03 and UC-18 are defaults until the Owner reports a gateway sandbox.
 

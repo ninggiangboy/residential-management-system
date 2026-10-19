@@ -414,7 +414,7 @@ The relay and the jobs use the worker's pool (10 on staging, 15 on production, D
 | The database is unavailable | The relay logs and sleeps; jobs fail; readiness is 503 | Restore; everything resumes |
 | PostgreSQL restore to an earlier point (RB-10) | Outbox rows and job rows return as they were; handlers' inbox rows too | Run the purge and deletion jobs again (DOC-20 §4); `jobs:run account_deletion` |
 
-`jobs:run` is `bun run --filter @app/api jobs:run -- --name <job>`: it runs one job once, under the same lock, and writes its `job_run` row with `details.manual = true`. It is how an operator repeats a failed clock job (RB-05) and how the Admin of the demo building resets the demo through the API (DR-60).
+`jobs:run` is `bun run --filter @app/api jobs:run -- --name <job>`: it runs one job once, under the same lock, and writes its `job_run` row with `details.manual = true`. It is how an operator repeats a failed clock job (RB-05) and how the Admin of the demo building resets the demo through the API (`POST /staff/demo/reset`, DOC-36 §10.4, DR-60).
 
 ## 8. What it measures
 

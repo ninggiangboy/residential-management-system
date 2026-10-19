@@ -1,6 +1,6 @@
 # Messaging contracts
 
-> Status: **Review** · Updated: 2026-10-19 (DR-122) · DOC-09
+> Status: **Review** · Updated: 2026-10-19 (DR-125, DR-126, DR-127: contracts added, step-up action names corrected) · DOC-09
 > Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 
@@ -179,7 +179,7 @@ A repeat of the Expo push (the only accepted duplicate side effect besides a rep
 | throws `RetryLaterError(reason, retryAfterMs)` | The attempt is given back; the message returns after `retryAfterMs` (default 30 s) plus 0–10 % jitter; dead only after the 24 h budget | A provider rate limit (Expo 429, SMS provider quota), a lock held by another process |
 | returns normally | The inbox row is written; the message is done | Success, a duplicate, a message past its `expiresAt`, and a permanent per-recipient failure (an invalid address, a revoked device token), logged at `warn` |
 
-A permanent failure must not throw: it would dead-letter the message for every other consumer and every other recipient in a chunk. The mapping from exception classes to these three outcomes is DOC-42's.
+A permanent failure must not throw: it would dead-letter the message for every other consumer and every other recipient in a chunk. The mapping from exception classes to these three outcomes is DOC-42 §7's.
 
 A message that reaches `dead_at` raises `outbox_dead_letters` and the alert of RB-05. Dead rows stay until an operator requeues or removes them (DOC-20 §2.2).
 
@@ -699,7 +699,7 @@ Example payload:
 | `staffId` | uuid | The staff member who receives the mail. |
 | `kind` | `staff_invite` · `password_reset` · `step_up_code` · `step_up_notice` | Which mail. |
 | `locale` | locale | Language of the mail. |
-| `params` | object | Non-secret parameters, e.g. `{"action": "change_gateway", "actorName": "Lê Minh"}`. |
+| `params` | object | Non-secret parameters, e.g. `{"action": "gateway_config", "actorName": "Lê Minh"}`. |
 | `secretEnc` | encrypted or `null` | The raw link token or the 6-digit step-up code, encrypted as in `identity.sms_requested.v1`; `null` for a notice. |
 | `expiresAt` | instant or `null` | Expiry of the link or code; `null` for a notice. |
 
@@ -711,7 +711,7 @@ Example payload:
   "staffId": "0192f3c4-5a1e-7000-8000-000000000052",
   "kind": "step_up_code",
   "locale": "en",
-  "params": {"action":"change_gateway"},
+  "params": {"action":"gateway_config"},
   "secretEnc": "v1:k1:cXdlcnR5dWlvcGFz:b2tpcGhuZ2ZkYXNkZmdoamts",
   "expiresAt": "2026-10-19T03:31:00.000Z"
 }
@@ -1097,6 +1097,7 @@ interface ResidencyApi {
   activeUnitIds(accountId: Uuid): Promise<Uuid[]>
   getUnits(ids: Uuid[]): Promise<UnitDto[]>
   getMembershipForScan(membershipId: Uuid): Promise<ScanMembershipDto | null>
+  ownedUnitIds(accountId: Uuid): Promise<Uuid[]>            // DR-125: units where the account is the active owner
 }
 interface MembershipDto {                 // the request guard reads it on every request
   membershipId: Uuid; buildingId: Uuid; unitId: Uuid; accountId: Uuid
@@ -1120,6 +1121,7 @@ interface ScanMembershipDto {
 | `activeUnitIds` | The units where the account has an `active` membership; the inbox visibility filter (DR-53). Not paginated: an account has a handful of memberships. More than 500 rows is a data defect and the call throws. |
 | `getUnits` | Unit code, floor and occupancy for up to 500 ids; reports and the debt list use it for one page at a time (DR-42). |
 | `getMembershipForScan` | The membership by id with its `credentialVersion`, whatever its status; the QR scan compares status and version (DR-48). `null` for an unknown id. |
+| `ownedUnitIds` | The ids of the units whose active owner is the account; `[]` when none. Identity asks it at the approval and at the execution of an account deletion (`owner_must_transfer`, DOC-35 §10). |
 
 ### 7.3 `IdentityApi` (provider `identity`)
 
@@ -1130,9 +1132,10 @@ interface IdentityApi {
   getResidentAccounts(ids: Uuid[]): Promise<ResidentAccountDto[]>
   findResidentAccountsByPhoneFragment(fragment: string, limit: number): Promise<ResidentAccountDto[]>
   findResidentAccountsByPhones(phones: string[]): Promise<Array<{ phone: string; accountId: Uuid }>>
+  listDeletionRequests(page?: PageRequest): Promise<Page<{ accountId: Uuid; requestedAt: Instant; approvedAt: Instant | null }>>   // DR-125
   verifyStepUp(staff: StaffContext, action: StepUpAction, proof: { password: string; code: string }): Promise<void>
 }
-type StepUpAction = 'change_gateway' | 'create_admin' | 'promote_admin' | 'change_staff_email'     // DR-39
+type StepUpAction = 'gateway_config' | 'admin_change' | 'staff_email'     // DR-39, the stored names of password_token.action (DR-126)
 interface StaffDto { staffId: Uuid; fullName: string; role: StaffRole; status: 'invited' | 'active' | 'locked' | 'disabled'
                      language: 'vi' | 'en'; pushEnabled: boolean }
 interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: string | null; language: 'vi' | 'en'
@@ -1145,6 +1148,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `getResidentAccounts` | Up to 500 ids. The DTO has the phone (E.164) because `residency` shows it masked in the unit detail; a caller never logs it. A `deleted` account is returned with its `deleted:<id>` phone so a caller can tell. |
 | `findResidentAccountsByPhoneFragment` | Contains-match on the digits, at least 3 characters, `limit` up to 500 (the lookup uses 20 per kind, DR-41). |
 | `findResidentAccountsByPhones` | Exact E.164 match, at most 5,000 numbers: the units import asks which owner phones already have an account (DR-114). |
+| `listDeletionRequests` | The accounts in `deletion_requested`, oldest first, keyset on `account_id`, with the two dates; `W-Residents` joins the names from its own profiles (DOC-35 §10.2). |
 | `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
 
 ### 7.4 Other contracts
@@ -1157,9 +1161,12 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `AuditApi.record` | audit | `(entry: { actor: StaffContext \| SystemActor, action: string, object: { type: string, id: Uuid }, changes: AuditChange[], reason?: string, details?: object }) → void` | every module | Joins the caller's transaction; fills actor, role, IP and request id from the request context (DOC-12 §8.3; columns: DOC-17 §2) |
 | `FilesApi` | building | `register`, `verify`, `attach`, `remove`, `usage` (DR-42), plus `signedUrl` and `storeGenerated` (DR-119) | every module with files | Signatures, errors and the status machine: [DOC-37](../06-design/files-and-uploads.md) §3 |
 | `BuildingApi.getSettings` | building | `(buildingId) → BuildingSettings`, the saved keys overlaid on the code defaults (DR-111) | all | Keys and ranges: DOC-17 §1.2, DOC-36 |
-| `BuildingApi.getGatewayConfig` | building | `(buildingId, provider) → { id, provider, driver, status, receivingAccount, secrets: Record<string, string> } \| null` | finance, the webhook route | `secrets` is decrypted in memory only, cached 60 s per process, never logged (DOC-10 §4.1) |
+| `BuildingApi.getGatewayConfig` | building | `(buildingId, provider, opts?: { lock?: 'share' }) → { id, provider, driver, status, receivingAccount, secrets: Record<string, string> } \| null`; with `lock: 'share'` it skips the cache and takes `FOR SHARE` (DR-126) | finance (intent creation uses the lock), the webhook route | `secrets` is decrypted in memory only, cached 60 s per process, never logged (DOC-10 §4.1) |
 | `BuildingApi.hasAcceptedLatestTerms` | building | `(accountId, buildingId) → boolean`; true when the account has accepted the highest `version` of every kind (DR-111) | resident guard | `terms_required` (403) when false |
-| `FeatureApi.get` | building | `(buildingId) → Record<string, boolean>` | all | Flags: DOC-36 |
+| `BuildingApi.getBuilding` · `listBuildings` · `isDemo` | building | `(buildingId) → BuildingDto \| null` · `() → BuildingDto[]` · `(buildingId) → boolean`; `BuildingDto = { buildingId, code, name, timeZone, isDemo }` (DR-126) | jobs, senders, the boot guard, the demo reset | Cached 60 s (DOC-36 §3) |
+| `BuildingApi.missingTerms` | building | `(accountId, buildingId) → Array<{ kind, version, versionId }>`: the latest versions not yet accepted (DR-125) | resident guard | `terms_required` carries the rows |
+| `ActiveIntentProbe.hasActive` | declared by building, implemented by finance (`integrations/building`) | `(buildingId, provider) → boolean` (DR-126) | building (gateway change) | Keeps the modules acyclic; DOC-36 §7.3 |
+| `FeatureApi.get` | building | `(buildingId) → Record<string, boolean>` | all | Flags: DOC-36 §3.3 |
 
 Contracts owed by documents not yet written: the units-import commit creates resident accounts in its own transaction (DR-114, DOC-27); `AuditApi` reads for `GET /staff/audit` are the audit module's own routes, not a contract.
 
@@ -1214,6 +1221,8 @@ Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the cor
 | DR-118 | Message shape: `buildingId` first (nullable for account-level events), 64 KB cap, chunks of 500 ids, no `traceparent` in phase 1; retry classes with a per-type policy hook in the vendored relay; backoff `min(5 s × 2^(n−1), 15 min)` | §3, §4 |
 | DR-119 | `FilesApi` gains `signedUrl` and `storeGenerated` | §7.4 |
 | DR-122 | Two commands of `building`: delete an object from the bucket, make a thumbnail; `building` becomes a publishing module | §5, §6 |
+| DR-125 | `ResidencyApi.ownedUnitIds` and `IdentityApi.listDeletionRequests` for the account-deletion workflow | §7.2, §7.3 |
+| DR-126 | `BuildingApi` gains `getBuilding`, `listBuildings`, `isDemo`, `missingTerms` and the `lock` option; the port `ActiveIntentProbe`; the step-up action names are the stored ones (`gateway_config`, `admin_change`, `staff_email`) | §7.3, §7.4 |
 
 ## 11. Not in this document
 

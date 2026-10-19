@@ -50,14 +50,14 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-32 | Document library (`06-design/document-library.md`) | Not written |
 | DOC-33 | Reports and exports (`06-design/reports-and-exports.md`) | Not written |
 | DOC-34 | PDF rendering (`06-design/pdf-rendering.md`) | Not written |
-| DOC-35 | Audit, privacy and terms (`06-design/audit-privacy-and-terms.md`) | Not written |
-| DOC-36 | Building configuration and demo (`06-design/building-configuration-and-demo.md`) | Not written |
+| DOC-35 | [Audit, privacy and terms](06-design/audit-privacy-and-terms.md) | Review |
+| DOC-36 | [Building configuration and demo](06-design/building-configuration-and-demo.md) | Review |
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Review |
 | DOC-38 | [Jobs and outbox runtime](06-design/jobs-and-outbox-runtime.md) | Review |
 | DOC-39 | Security (`06-design/security.md`) | Not written |
 | DOC-40 | Observability (`06-design/observability.md`) | Not written |
 | DOC-41 | Configuration reference (`06-design/configuration-reference.md`) | Not written |
-| DOC-42 | Error handling (`06-design/error-handling.md`) | Not written |
+| DOC-42 | [Error handling](06-design/error-handling.md) | Review |
 | DOC-43 | Flows index (`06-design/flows/README.md`) | Not written |
 | DOC-44 | Fees and payments (ledger level) (`06-design/flows/fees-and-payments.md`) | Not written |
 | DOC-45 | Online payment (`06-design/flows/online-payment.md`) | Not written |

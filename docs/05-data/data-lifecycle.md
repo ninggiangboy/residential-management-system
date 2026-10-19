@@ -207,7 +207,7 @@ The workflow is DR-59's and FR-39: a resident requests, a Manager approves, the 
 
 | Step | Module | What happens | Stays |
 | --- | --- | --- | --- |
-| 0 | identity | Select accounts with `status = 'deletion_requested'`, `deletion_approved_at` set and `deletion_approved_at + accountDeletionDays` reached (index `resident_account_deletion_idx`); refuse an account that is the active owner of a unit (`owner_must_transfer`, FR-39.4) and leave it requested | — |
+| 0 | identity | Select accounts with `status = 'deletion_requested'`, `deletion_approved_at` set and `deletion_approved_at + accountDeletionDays` reached (index `resident_account_deletion_idx`); refuse an account that is the active owner of a unit (`ResidencyApi.ownedUnitIds` is not empty: `owner_must_transfer`, FR-39.4, DOC-35 §10) and leave it requested | — |
 | 1 | identity | In one transaction: revoke every refresh family (`revoked_reason = 'deleted'`), set `display_name` and `avatar_key` to null, replace `phone` with `deleted:<id>`, set `status = 'deleted'` and `deleted_at`, `version + 1`; write an audit row (`actor_kind = 'system'`); write the event to the outbox | The account row and its id |
 | 2 | notification | Delete the account's device tokens; the inbox entries age out by §2.5 | Nothing personal |
 | 3 | residency | Remove the memberships (`status = 'removed'`, `removed_at`, `credential_version + 1`); clear the profile with the statement of DOC-16 §5.2 (`full_name`, `email`, `cccd_enc`, `cccd_last4`, `date_of_birth`, `note` to null, `cleared_at = now()`) | Removed memberships and `unit_history` (ids) |

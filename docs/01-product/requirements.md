@@ -625,7 +625,7 @@ This document lists what the system must do (FR-01…50) and how well (NFR-01…
 | ID | Requirement | Acceptance criteria | Priority | Verification |
 | --- | --- | --- | --- | --- |
 | FR-50.1 | Code | **G** an Admin requests a code for `gateway_config` **W** it is mailed **T** it has 6 digits, is valid 10 min, is single use, and one live code exists per staff member and action (a new request consumes the older) | M | `AU-` tests |
-| FR-50.2 | Refusals | **G** a sensitive request with no code, a wrong code, an expired code, a reused code, a wrong password, and another Admin's code **W** sent **T** each is refused (401 or 403; the exact code is fixed in DOC-26) and 0 unexpected 2xx appear across the sensitive endpoints (EXP-10) | M | `AU-`, EXP-10 |
+| FR-50.2 | Refusals | **G** a sensitive request with no code, a wrong code, an expired code, a reused code, a wrong password, and another Admin's code **W** sent **T** each is refused (403 `step_up_required` when the proof is missing, 403 `step_up_failed` for every other failure, DOC-42 §5.3) and 0 unexpected 2xx appear across the sensitive endpoints (EXP-10) | M | `AU-`, EXP-10 |
 | FR-50.3 | Attempts | **G** 5 wrong codes **W** entered **T** the challenge is consumed; a wrong password counts toward the sign-in lockout | M | `AU-` tests |
 | FR-50.4 | Success is announced | **G** a successful change **W** it commits **T** every Admin of the building gets an email and an inbox entry `staff.step_up_done`; the audit row records which fields changed, not the secret values | M | `AU-`, `NT-` tests |
 

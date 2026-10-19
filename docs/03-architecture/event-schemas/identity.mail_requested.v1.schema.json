@@ -50,7 +50,7 @@
         "maxLength": 200
       },
       "maxProperties": 8,
-      "description": "Non-secret parameters, e.g. `{\"action\": \"change_gateway\", \"actorName\": \"Lê Minh\"}`."
+      "description": "Non-secret parameters, e.g. `{\"action\": \"gateway_config\", \"actorName\": \"Lê Minh\"}`."
     },
     "secretEnc": {
       "oneOf": [

@@ -35,7 +35,7 @@ This document holds the tables of the schemas that run the system rather than th
 | 6 | `notices`, `notification` | `notice`, `notice_attachment`, `notice_recipient`, `inbox_entry`, `device_token`, `push_ticket` (DR-50…53). The notification tables are needed in P2 and are written in P1-26 | P1-26, P3-12 | Not written |
 | 7 | `vehicles` | `vehicle`, `vehicle_revision` (DR-49) | P4-11 | Not written |
 | 8 | `wiki` | `folder`, `page`, `page_version`, `page_attachment` (DR-54) | P4-13 | Not written |
-| 9 | `reporting`, `realtime` | `export_job` (DR-55), `events` (DR-87) | P5-09 | Not written |
+| 9 | `reporting`, `realtime` | `export_job` (DR-55; plus the requester's role, IP, user agent and request id, which the worker needs to write the `pii.read` row of an export, DOC-35 §6, DR-124), `events` (DR-87) | P5-09 | Not written |
 
 The rules of DOC-14 §5.3 apply to every new table: a table with no `building_id` joins the allow-list in the same change as its DDL. This document adds `building.job_run` (§3.2) to it.
 

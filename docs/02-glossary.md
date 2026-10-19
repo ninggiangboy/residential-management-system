@@ -1,7 +1,7 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…123), [master plan](00-master-plan.md) §0.2, §3.2
+> Status: **Review** · Updated: 2026-10-19 (DR-124…127: audit, terms gate, boot guard, error terms) · DOC-06
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -332,6 +332,14 @@ This document defines the words of the project, as the project uses them. Every 
 | audit log | — | `audit.audit_log`: an append-only row per staff mutation, written in the mutation's transaction. | FR-37, DR-57 |
 | `actor_kind = 'system'` | — | The audit actor of a settlement posted by the webhook, the re-query or the statement path. | DR-57 |
 | `pii.read` | — | The audit action for reading CCCD or date of birth: one row per detail view and one per export (with the record count). | DR-57, DR-58 |
+| audit action | — | The name of an audited mutation, `<module>.<object>.<verb>` (or `pii.read`), declared in the module's manifest and listed in DOC-35 §4; `AuditApi.record` refuses an undeclared one. | DR-124 |
+| bulk form (audit) | — | One audit row for an action over many rows: it names the parent object, `changes` is empty and the counts are in `details`. | DR-124 |
+| terms gate | — | The check, on every resident request, that the latest `terms` and `privacy` versions are accepted; if not, 403 `terms_required`. Not cached; `/auth/*`, `/me`, `/me/terms*` and `/me/account/deletion` are exempt. | DR-59, DR-125 |
+| `SecretBox` | — | The AES-256-GCM helper of `@core/core`: blob `v1:<keyId>:<iv>:<ciphertext+tag>`, newest key = highest `k<n>`, additional data bound to the row so a blob cannot be moved. | DR-33, DR-126 |
+| boot guard | — | The checks run at start by `api` and `worker` that refuse to boot (exit 78) when the demo and real data are mixed: a flagged account in a real building, a `fake` driver in a real building, a stored secret whose key is gone. | DR-60, DR-126 |
+| demo reset | — | The deletion and reseeding of the demo building in one transaction, run nightly at 04:00 and through `POST /staff/demo/reset`; every module asserts `is_demo` first. | DR-60, DR-126 |
+| rule violation | — | A request that is well-formed but breaks a business rule: 422 `validation_failed` (a schema violation is 400). The status belongs to the rule code. | DR-127 |
+| `invalid_transition` | — | The generic 409 for an action the object's current state does not allow. | DR-127 |
 | retention class | — | The generated column `audit_log.retention_class`: `finance` (action starts with `finance.`, kept 5 years) or `standard` (kept 2 years). `audit.purge` selects on it. | DR-57, DR-110 |
 | append-only table | — | A table the runtime role can only `SELECT` and `INSERT` (`audit.audit_log`); a trigger is a second layer. | DR-57, DR-110 |
 | maintenance flag | — | The single row `platform.maintenance`: while `active`, every process answers 503 `maintenance`. Written by the deploy script with the migration role, read by the application role. | DR-85, DR-112 |

@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-12
+> Status: **Review** · Updated: 2026-10-19 (DR-126, DR-127: `SecretBox`, error classes) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -210,6 +210,7 @@ No dependency-injection container is used: the wiring is plain code that reads t
 - An `integrations/<consumer>` file imports only its producer's contracts, the consumer's contracts and `@core/*` (`integrations-use-contracts-only`, §6.2).
 - A module's core never imports its own `integrations/` (`module-core-does-not-load-its-integrations`).
 - Only `apps/api` imports `integrations/*`, and passes them to `installNotification` and `installRealtime`. A missing integration means that event produces nothing; a duplicate template key is a start-up error; a template without `vi` and `en` text is a start-up error and a catalog-parity failure (NFR-13).
+- The same mechanism lets a module ask another without importing it: `building` declares the port `ActiveIntentProbe` in its contracts and `finance` ships its implementation in `integrations/building`, so the change of a gateway configuration can ask whether an intent is active while the module graph stays acyclic (DOC-36 §7.3, DR-126).
 - Unlike the reference, `notification` here also calls contracts of `residency` and `identity` (recipients, device ownership; DOC-07 §5.2). That is an ordinary contract call and is allowed; only `realtime` is a strict leaf (§6.2).
 
 ## 5. The composition root
@@ -517,7 +518,7 @@ Behavior the vendored `@core/db` must have (P1-02 confirms in the copy and adds 
 | Place | Rule |
 | --- | --- |
 | Application use case (command) | Opens exactly one `uow.run` around its reads-that-matter, writes, outbox events and audit row. This is the only place a transaction begins for an HTTP request |
-| Query use case | No transaction; reads at READ COMMITTED through `executor` |
+| Query use case | No transaction; reads at READ COMMITTED through `executor`. One exception: a query that returns a full CCCD number or a date of birth opens a short transaction to write its `pii.read` row before it returns the data (DOC-35 §6, DR-124) |
 | Integration-event handler | One transaction: inbox insert (`ON CONFLICT DO NOTHING`), the module's writes, follow-up outbox rows. A duplicate delivery inserts nothing and returns |
 | Job | The job opens its own short transactions (claim, then work); a singleton job takes `pg_try_advisory_xact_lock(hashtext('job:<name>'))` in a short transaction (DR-62) |
 | Repository, route, mapper, domain | Never begins one |
@@ -538,7 +539,7 @@ export class VoidCharge {
 
   execute(staff: StaffContext, cmd: { chargeId: ChargeId; reason: string }): Promise<ChargeDto> {
     assertRole(staff, 'manager', 'admin')
-    if (cmd.reason.trim().length < 5) throw new ValidationError('reason_too_short', 'Reason needs at least 5 characters')
+    if (cmd.reason.trim().length < 5) throw new RuleViolationError('reason_too_short', 'Reason needs at least 5 characters')
     return withRetryOnSerialization(() => this.uow.run(async () => {
       const scope = staff.scope
       const before = await this.charges.get(scope, cmd.chargeId)                  // 404 outside the building
@@ -717,7 +718,8 @@ The domain and application layers throw typed errors; they never build an HTTP r
 
 | Class (kind) | HTTP | Thrown when | Example codes (DR-74, DOC-03) |
 | --- | --- | --- | --- |
-| `ValidationError` (`validation`) | 422 | Input violates a rule the schema cannot express | `allocation_mismatch`, `reason_too_short`, `file_not_verified` |
+| `ValidationError` (`validation`) | 400 | The request is invalid in itself: schema, limits, formats | `validation_failed` with `details[]` |
+| `RuleViolationError` (`validation`) | 422 | Well-formed values that a business rule refuses (the status of each rule code is listed in DOC-42 §5.2) | `validation_failed` (`reason_too_short`, `same_assignee`, `setting_invalid`), `allocation_mismatch`, `file_not_verified`, `idempotency_key_reuse` |
 | `UnauthorizedError` (`unauthorized`) | 401 | No or invalid credential, invalid webhook signature | `invalid_signature`, `otp_invalid` |
 | `ForbiddenError` (`forbidden`) | 403 | Authenticated but not allowed | `forbidden`, `membership_inactive`, `terms_required` |
 | `NotFoundError` (`not_found`) | 404 | Missing, or outside the caller's building or unit (never 403 for a foreign object) | `phone_not_registered` |
@@ -728,6 +730,8 @@ The domain and application layers throw typed errors; they never build an HTTP r
 | `RateLimitedError` (`rate_limited`) | 429 + `Retry-After` | A bucket is empty | `rate_limited` |
 | `UnavailableError` (`unavailable`) | 503 + `Retry-After` | A dependency the request needs is down | `sms_unavailable` |
 | `RetryLaterError` (messaging) | — | A handler defers without spending an attempt | — |
+
+*Revised 2026-10-19 (DR-127):* the single `ValidationError` (422) is split in two classes, `ValidationError` (400) and `RuleViolationError` (422); the code stays `validation_failed`. DOC-42 §4 holds the full class table, the SQLSTATE mapping and the catalog of codes.
 
 Rules:
 
@@ -746,7 +750,7 @@ Upstream names appear only in this table, in `packages/CORE_VERSION` and in the 
 
 | Reference package | Here | Directory | Copied | Role |
 | --- | --- | --- | --- | --- |
-| `kit-core` | `core-core` | `packages/core-core` | Yes | Domain events, aggregate root, errors, `Clock`, `IdGenerator`, `UnitOfWork`, `Log` |
+| `kit-core` | `core-core` | `packages/core-core` | Yes | Domain events, aggregate root, errors, `Clock`, `IdGenerator`, `UnitOfWork`, `Log`; gets `SecretBox` (AES-256-GCM key ring with a row-bound AAD, DOC-36 §6, DR-126) |
 | `kit-config` | `core-config` | `packages/core-config` | Yes | Config slices, `loadConfig`, generated `.env.example` |
 | `kit-context` | `core-context` | `packages/core-context` | Yes | Request context in `AsyncLocalStorage` |
 | `kit-db` | `core-db` | `packages/core-db` | Yes | Pool, ambient transaction, advisory locks, per-module migrations; gets `GaplessCounter` (§9.5) |
