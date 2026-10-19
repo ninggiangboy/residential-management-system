@@ -43,6 +43,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-05: DR-89 (the proposal has 113 features, not 139; 124 in the catalog), DR-90 (Excel export of units and residents is an export-center kind). DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites) are proposed for the Owner | DR-79, DR-55, DR-57, DOC-01, DOC-03, DOC-05 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-11 after re-verifying the versions on the web: DR-93 (pgBackRest from the PGDG apt repository), DR-94 (Expo-managed modules follow the SDK ranges), DR-95 (exact pins everywhere). DR-70 corrected: `expo-brightness` replaces the non-existent `expo-screen-brightness`; DR-82 table revised | DR-70, DR-82, DR-83, DOC-11 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-04: DR-97 (a recall counts the non-void charges of the batch; FR-04.2 updated). DR-96 (the resident sees `unmatchedTransfer` for every unposted outcome that leaves money received) is proposed for the Owner because it extends DR-84 item 8 | DR-19, DR-84, DR-20, DOC-03, DOC-04 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-12: DR-98 (`core-messaging` vendored without the privacy-participant protocol), DR-99 (guards built in the composition root, routes declare `audience`), DR-100 (`Money`, `LocalDate` and friends in `@rms/shared-types`) | DR-02, DR-03, DR-09, DR-11, DOC-12 |
 
 ---
 
@@ -257,6 +258,18 @@ flowchart TB
 - **Consequences:** More Dependabot pull requests (DR-01 groups minor and patch updates).
 - **Write to:** DOC-11, DOC-70, DOC-71.
 
+### DR-98 · `core-messaging` is vendored without the privacy-participant protocol — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The reference messaging package depends on `kit-privacy-participant`, but DR-02 and DR-03 skip that package and the privacy module.
+- **Decision:** The vendored `core-messaging` drops that dependency. P1-02 lists the edit under `omitted` and `local-changes` in `packages/CORE_VERSION`.
+- **Consequences:** A manual sync (DR-02) must re-apply this edit.
+- **Write to:** DOC-12 §13, ADR-0003.
+
+### DR-99 · Guards are built in the composition root and injected into modules — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** Neither the original SDD nor the DRs say where the `resident`, `unit(capability)` and `staff(...roles)` guards live. Modules cannot import each other's code, and the guards need `ResidencyApi` and `IdentityApi`.
+- **Decision:** `apps/api/src/bootstrap/guards.ts` builds the three guards from the contracts and passes them to every module as `host.guards`. Every route declares an `audience` as route metadata, which the EXP-10 authorization-matrix generator reads; a route without it fails the build. This changes no access rule, only where the code lives.
+- **Consequences:** Modules never build their own authentication.
+- **Write to:** DOC-12 §5.3, DOC-39.
+
 ## B. Conventions
 
 ### DR-09 · Time zones and calendar-day semantics — ⚠ deviates from the original SDD — **Decided (Owner, 2026-10-18)**
@@ -301,6 +314,12 @@ flowchart TB
 - **Consequences:** Four extra columns in the finance DDL compared with SDD §16.1; every composite index starts with `building_id`.
 - **Write to:** DOC-14, DOC-12, DOC-15, ADR-0004.
 
+
+### DR-100 · `Money`, `QtyMilli`, `LocalDate`, `buildingToday` and the branded id types live in `@rms/shared-types` — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-11 and DR-09 name the helpers but not their package.
+- **Decision:** They go in `@rms/shared-types`, a leaf package with no workspace dependency, no framework and no I/O, so server domain code and clients can both import it.
+- **Consequences:** The package must stay free of dependencies; a CI check (dependency-cruiser, DOC-12 §6.3) enforces it.
+- **Write to:** DOC-12 §2.2, DOC-14.
 
 ## C. Finance ledger
 
