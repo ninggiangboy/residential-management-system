@@ -33,7 +33,8 @@
         "vehicles",
         "notices",
         "notification",
-        "reporting"
+        "reporting",
+        "building"
       ],
       "description": "The producing module; equals the first segment of `type`."
     },

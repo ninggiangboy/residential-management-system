@@ -230,7 +230,7 @@ The ceilings add up to more than the hosts have. The overcommit is deliberate an
 | `api` pools | 1 × 15 = 15 | 2 × 20 = 40 |
 | `api` `LISTEN` (realtime) | 1 | 2 |
 | `worker` pool | 10 | 15 |
-| `worker` relay `LISTEN` | 1 | 1 |
+| `worker` relay `LISTEN` | 1 (reserved; unused, the relay polls, DOC-38 §2) | 1 (reserved) |
 | `postgres_exporter` | 2 | 2 |
 | pgBackRest `archive-push` (asynchronous) | 2 | 2 |
 | Migration step during a deploy | 1 | 1 |

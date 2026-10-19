@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114, DR-116, DR-119) · DOC-07
+> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -359,6 +359,7 @@ Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 §5 is the source 
 | `gateway_config` (one `secrets_enc` blob) | building | finance and the webhook route, `BuildingApi.getGatewayConfig` (decrypts in memory only) |
 | `terms_version`, `terms_acceptance` | building | resident guard, `BuildingApi.hasAcceptedLatestTerms` |
 | `file_object` | building (through `FilesApi`) | every module, `FilesApi` |
+| `outbox_messages`, `inbox` | building (delete and thumbnail commands, DR-122) | relay |
 | `job_run` | building (the job runner calls the `JobRunStore` port that building implements) | own metrics collector (`job_last_success_timestamp`) |
 
 #### `residency`
@@ -440,7 +441,7 @@ Keys follow `{env}/{building_id}/{module}/{yyyy}/{mm}/{uuid}.{ext}` (DR-61). The
 | `rms-<env>-backup` | `pgbackrest/` | Encrypted repository: full, differential, WAL | pgBackRest on the host | restore procedure (RB-10) | 4 full + 7 differential (DR-83) |
 | | `pg_dump/` | Weekly logical dump | host cron | restore procedure | 4 weeks (DR-66) |
 
-`pending` files older than 24 hours are deleted by the hourly job; usage over 50 GB per building refuses new uploads (DR-61). The backup bucket has its own API token; the files token cannot read it (DR-83 item 7). DR-56 names the fee-notice cache `batch/<id>/unit/<unit>.pdf`; it is the logical key in `file_object.owner_ref`, while the object key follows DR-61 (DR-86).
+Unattached files (`pending` and `verified`) older than 24 hours are deleted by the hourly job; usage over 50 GiB per building refuses new client uploads (DR-61, DR-123). A thumbnail of an image is an object of its own in the same prefix as the original (`purpose = thumbnail`, DR-122); a `bulk_zip` lives 7 days. The backup bucket has its own API token; the files token cannot read it (DR-83 item 7). DR-56 names the fee-notice cache `batch/<id>/unit/<unit>.pdf`; it is the logical key in `file_object.owner_ref`, while the object key follows DR-61 (DR-86).
 
 ### 6.5 Other stores
 

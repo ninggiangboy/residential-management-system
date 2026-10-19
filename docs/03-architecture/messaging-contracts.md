@@ -1,12 +1,12 @@
 # Messaging contracts
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-09
-> Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, DOC-38
+> Status: **Review** · Updated: 2026-10-19 (DR-122) · DOC-09
+> Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 
 This document is the catalog of everything one module says to another: the **events and commands** that travel through the outbox (the envelope, every payload with its schema and an example, who consumes it, how it is retried) and the **synchronous contracts** (`ResidencyApi`, `IdentityApi`, …) with their DTOs. It also fixes the rules that keep both compatible over time. It does not hold the relay mechanics, the timers or the job catalog (DOC-38), the tables (DOC-17 §3.3 for `outbox_messages` and `inbox`), the template keys and their texts (DOC-31), or the exception-to-code mapping (DOC-42).
 
-Every new decision in this document is recorded as DR-116, DR-117 or DR-118 and summarized in §10. The JSON Schema of each message is a file in [`event-schemas/`](event-schemas/) (28 files: 26 payloads, `common`, `envelope`). Until the producer modules exist, those files are the source; P1-05 moves each payload schema to `modules/<producer>/src/contracts/schemas/` and the contract tests of §9 read them from there. The schemas and every example in this document were validated with Ajv 8.20 (JSON Schema draft 2020-12, strict mode) on 2026-10-19: all 26 examples pass, and each schema refuses a payload with an extra field or a missing required field.
+Every new decision in this document is recorded as DR-116, DR-117, DR-118 or DR-122 (and DR-119) and summarized in §10. The JSON Schema of each message is a file in [`event-schemas/`](event-schemas/) (30 files: 28 payloads, `common`, `envelope`). Until the producer modules exist, those files are the source; P1-05 moves each payload schema to `modules/<producer>/src/contracts/schemas/` and the contract tests of §9 read them from there. The schemas and every example in this document were validated with Ajv 8.20 (JSON Schema draft 2020-12, strict mode) on 2026-10-19: all 28 examples pass, and each schema refuses a payload with an extra field or a missing required field.
 
 ## 1. Scope and reading guide
 
@@ -137,7 +137,7 @@ A class is the number of attempts a message gets. The relay reads the class of a
 
 | Class | Attempts | Types | Why |
 | --- | --- | --- | --- |
-| `default` | 8 | every type not named below | DR-62 |
+| `default` | 8 | every type not named below (25 of 28) | DR-62 |
 | `sms` | 3 | `identity.sms_requested.v1` | A late SMS is useless; the handler also skips it after `expiresAt` (5 min) |
 | `push` | 3 | `notification.push_requested.v1` | The Expo client already retries 3 times inside one attempt (DR-52) |
 | `intent_cancel` | 8 | `finance.intent_cancel_requested.v1` | DR-31; same number as `default`, named so it can change alone |
@@ -187,7 +187,7 @@ A message that reaches `dead_at` raises `outbox_dead_letters` and the alert of R
 
 ### 5.1 Events and commands
 
-26 types: 23 from DR-42 and DR-87, 3 from DR-116 (`finance.debt_reminder_sent`, `vehicles.vehicle_submitted`, `notification.staff_inbox_created`). An import has no event: validation is synchronous (DR-21). The QR rotation uses `credential_version`, not a message (DR-48).
+28 types: 23 from DR-42 and DR-87, 3 from DR-116 (`finance.debt_reminder_sent`, `vehicles.vehicle_submitted`, `notification.staff_inbox_created`) and 2 from DR-122 (`building.file_delete_requested`, `building.thumbnail_requested`). An import has no event: validation is synchronous (DR-21). The QR rotation uses `credential_version`, not a message (DR-48).
 
 | Event | Kind | Producer | `aggregate_id` | Consumers (handler names) | Retry class | Source |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -217,45 +217,49 @@ A message that reaches `dead_at` raises `outbox_dead_letters` and the alert of R
 | `notification.push_requested.v1` | command | notification | `sourceId` | `notification.send_expo_push` | `push` | DR-42 |
 | `notification.staff_inbox_created.v1` | event | notification | `staffId` | `realtime.sse_on_notification_staff_inbox_created` | `default` | DR-116 |
 | `reporting.export_ready.v1` | event | reporting | `exportId` | `notification.inbox_on_reporting_export_ready`<br>`realtime.sse_on_reporting_export_ready` | `default` | DR-42 |
+| `building.file_delete_requested.v1` | command | building | `fileId` | `building.delete_file_object` | `default` | DR-122 |
+| `building.thumbnail_requested.v1` | command | building | `fileId` | `building.make_thumbnail` | `default` | DR-122 |
 
 ### 5.2 Handlers
 
-32 handlers. A handler that reads from a table writes only its own schema; the cross-module reads it needs are the contracts of §7.
+34 handlers. A handler that reads from a table writes only its own schema; the cross-module reads it needs are the contracts of §7. The **idempotency key** of every delivery is `(message id, handler name)` in the consumer's inbox; the last column is the second net, the natural key that keeps a repeat harmless even without the inbox row (§4.3).
 
-| Handler | Consumes | Inbox mode | Effect |
-| --- | --- | --- | --- |
-| `notification.inbox_on_finance_batch_published` | `finance.batch_published.v1` | transactional | Per unit: inbox entry `fee.batch_published` and a push for each active owner, family member and tenant; none for helpers |
-| `notification.inbox_on_finance_batch_recalled` | `finance.batch_recalled.v1` | transactional | Per unit: inbox entry `fee.batch_recalled` and a push to the same recipients as the publish |
-| `notification.inbox_on_finance_batch_due_extended` | `finance.batch_due_extended.v1` | transactional | Per unit: inbox entry `fee.batch_due_extended` and a push |
-| `notification.inbox_on_finance_charge_voided` | `finance.charge_voided.v1` | transactional | Inbox entry `fee.charge_voided` and a push for the unit's recipients who can see fees |
-| `notification.inbox_on_finance_payment_posted` | `finance.payment_posted.v1` | transactional | Inbox entry `payment.received` and a push "Payment received" for the unit's recipients who can see fees, the payer included |
-| `notification.inbox_on_finance_payment_voided` | `finance.payment_voided.v1` | transactional | Inbox entry `payment.voided` and a push for the unit's recipients who can see fees |
-| `notification.inbox_on_finance_money_unposted` | `finance.money_unposted.v1` | transactional | Inbox entry `finance.money_unposted` for every active Manager and Admin; no push content with an amount |
-| `realtime.sse_on_finance_money_unposted` | `finance.money_unposted.v1` | none | SSE `money_log.opened` |
-| `finance.cancel_intent_link` | `finance.intent_cancel_requested.v1` | afterSideEffect | `CancelIntentLink`: cancel the link at the gateway; if it is already paid, run `getStatus` and `settle` (DR-31) |
-| `finance.render_receipt_pdf` | `finance.receipt_render_requested.v1` | afterSideEffect | Render the PDF from the frozen snapshot and write it to the files bucket (DOC-34) |
-| `notification.inbox_on_finance_debt_reminder_sent` | `finance.debt_reminder_sent.v1` | transactional | Per unit: inbox entry `fee.reminder` and a push for recipients who can see fees |
-| `notification.inbox_on_residency_membership_changed` | `residency.membership_changed.v1` | transactional | For `added`: inbox entry `member.added` for the added account; other changes produce nothing |
-| `notification.inbox_on_residency_owner_changed` | `residency.owner_changed.v1` | transactional | Inbox entry `member.added` for the new owner (no new template key) |
-| `identity.send_sms` | `identity.sms_requested.v1` | afterSideEffect | Send through the SMS driver (DR-68); skip if `expiresAt` has passed |
-| `identity.send_mail` | `identity.mail_requested.v1` | afterSideEffect | Send through SMTP; skip if `expiresAt` has passed |
-| `notification.inbox_on_identity_mail_requested` | `identity.mail_requested.v1` | transactional | Only for kind `step_up_notice`: inbox entry `staff.step_up_done` for `staffId`; all other kinds are ignored |
-| `realtime.close_stream_on_identity_session_revoked` | `identity.session_revoked.v1` | none | Close the SSE streams of that session; SSE `session.revoked` (staff only) |
-| `notification.drop_device_token_on_identity_session_revoked` | `identity.session_revoked.v1` | transactional | Delete the `device_token` rows of that session |
-| `residency.clear_profile_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Remove the account's memberships and clear its `resident_profile` rows (DOC-16 §5.2) |
-| `notification.drop_tokens_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Delete the account's device tokens |
-| `building.null_terms_ip_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Set `terms_acceptance.ip` to null for the account (DR-115) |
-| `notification.inbox_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | transactional | Maps `change` and `toStatus` to the `ticket.*` template keys of DR-53 and picks the recipients (resident side or staff side) |
-| `realtime.sse_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | none | SSE `ticket.created` when `change = created`, otherwise `ticket.changed` |
-| `notification.inbox_on_tickets_ticket_assigned` | `tickets.ticket_assigned.v1` | transactional | Inbox entry `ticket.assigned` and a push for the assignee |
-| `notification.inbox_on_vehicles_vehicle_submitted` | `vehicles.vehicle_submitted.v1` | transactional | Inbox entry `vehicle.pending_review` for the reviewers (recipients: DOC-31) |
-| `notification.inbox_on_vehicles_vehicle_reviewed` | `vehicles.vehicle_reviewed.v1` | transactional | Inbox entry `vehicle.approved` or `vehicle.rejected` and a push for the submitter |
-| `notification.inbox_on_notices_notice_sent_batch` | `notices.notice_sent_batch.v1` | transactional | Insert `inbox_entry` rows (`ON CONFLICT DO NOTHING`) and write `notification.push_requested.v1` in groups of 100 |
-| `notification.mark_read_on_notices_notice_read` | `notices.notice_read.v1` | transactional | Set `inbox_entry.read_at` where `source_kind = notice` and `source_id = noticeId` for the account |
-| `notification.send_expo_push` | `notification.push_requested.v1` | afterSideEffect | Resolve device tokens and languages, send in one Expo request of at most 100, store `push_ticket`s |
-| `realtime.sse_on_notification_staff_inbox_created` | `notification.staff_inbox_created.v1` | none | SSE `inbox.created` to the streams of that staff member |
-| `notification.inbox_on_reporting_export_ready` | `reporting.export_ready.v1` | transactional | Inbox entry `report.export_ready` for the requester |
-| `realtime.sse_on_reporting_export_ready` | `reporting.export_ready.v1` | none | SSE `export.ready` |
+| Handler | Consumes | Inbox mode | Effect | Second net (natural key) |
+| --- | --- | --- | --- | --- |
+| `notification.inbox_on_finance_batch_published` | `finance.batch_published.v1` | transactional | Per unit: inbox entry `fee.batch_published` and a push for each active owner, family member and tenant; none for helpers | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_batch_recalled` | `finance.batch_recalled.v1` | transactional | Per unit: inbox entry `fee.batch_recalled` and a push to the same recipients as the publish | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_batch_due_extended` | `finance.batch_due_extended.v1` | transactional | Per unit: inbox entry `fee.batch_due_extended` and a push | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_charge_voided` | `finance.charge_voided.v1` | transactional | Inbox entry `fee.charge_voided` and a push for the unit's recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_payment_posted` | `finance.payment_posted.v1` | transactional | Inbox entry `payment.received` and a push "Payment received" for the unit's recipients who can see fees, the payer included | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_payment_voided` | `finance.payment_voided.v1` | transactional | Inbox entry `payment.voided` and a push for the unit's recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_money_unposted` | `finance.money_unposted.v1` | transactional | Inbox entry `finance.money_unposted` for every active Manager and Admin; no push content with an amount | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `realtime.sse_on_finance_money_unposted` | `finance.money_unposted.v1` | none | SSE `money_log.opened` | none: a repeated SSE event is ignored by the browser |
+| `finance.cancel_intent_link` | `finance.intent_cancel_requested.v1` | afterSideEffect | `CancelIntentLink`: cancel the link at the gateway; if it is already paid, run `getStatus` and `settle` (DR-31) | Conditional update of the intent status; the gateway cancel is idempotent |
+| `finance.render_receipt_pdf` | `finance.receipt_render_requested.v1` | afterSideEffect | Render the PDF from the frozen snapshot and write it to the files bucket (DOC-34) | One cached file per `(owner_ref, variant)`; the content hash skips a re-render |
+| `notification.inbox_on_finance_debt_reminder_sent` | `finance.debt_reminder_sent.v1` | transactional | Per unit: inbox entry `fee.reminder` and a push for recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_residency_membership_changed` | `residency.membership_changed.v1` | transactional | For `added`: inbox entry `member.added` for the added account; other changes produce nothing | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_residency_owner_changed` | `residency.owner_changed.v1` | transactional | Inbox entry `member.added` for the new owner (no new template key) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `identity.send_sms` | `identity.sms_requested.v1` | afterSideEffect | Send through the SMS driver (DR-68); skip if `expiresAt` has passed | none: a repeat sends a second message; `expiresAt` bounds it |
+| `identity.send_mail` | `identity.mail_requested.v1` | afterSideEffect | Send through SMTP; skip if `expiresAt` has passed | none: a repeat sends a second message; `expiresAt` bounds it |
+| `notification.inbox_on_identity_mail_requested` | `identity.mail_requested.v1` | transactional | Only for kind `step_up_notice`: inbox entry `staff.step_up_done` for `staffId`; all other kinds are ignored | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `realtime.close_stream_on_identity_session_revoked` | `identity.session_revoked.v1` | none | Close the SSE streams of that session; SSE `session.revoked` (staff only) | none: a repeated SSE event is ignored by the browser |
+| `notification.drop_device_token_on_identity_session_revoked` | `identity.session_revoked.v1` | transactional | Delete the `device_token` rows of that session | `DELETE` by session or account: a second run deletes nothing |
+| `residency.clear_profile_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Remove the account's memberships and clear its `resident_profile` rows (DOC-16 §5.2) | Clearing fields that are already null; `cleared_at` is set once |
+| `notification.drop_tokens_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Delete the account's device tokens | `DELETE` by session or account: a second run deletes nothing |
+| `building.null_terms_ip_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Set `terms_acceptance.ip` to null for the account (DR-115) | `SET ip = NULL`: a second run changes nothing |
+| `notification.inbox_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | transactional | Maps `change` and `toStatus` to the `ticket.*` template keys of DR-53 and picks the recipients (resident side or staff side) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `realtime.sse_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | none | SSE `ticket.created` when `change = created`, otherwise `ticket.changed` | none: a repeated SSE event is ignored by the browser |
+| `notification.inbox_on_tickets_ticket_assigned` | `tickets.ticket_assigned.v1` | transactional | Inbox entry `ticket.assigned` and a push for the assignee | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_vehicles_vehicle_submitted` | `vehicles.vehicle_submitted.v1` | transactional | Inbox entry `vehicle.pending_review` for the reviewers (recipients: DOC-31) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_vehicles_vehicle_reviewed` | `vehicles.vehicle_reviewed.v1` | transactional | Inbox entry `vehicle.approved` or `vehicle.rejected` and a push for the submitter | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_notices_notice_sent_batch` | `notices.notice_sent_batch.v1` | transactional | Insert `inbox_entry` rows (`ON CONFLICT DO NOTHING`) and write `notification.push_requested.v1` in groups of 100 | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.mark_read_on_notices_notice_read` | `notices.notice_read.v1` | transactional | Set `inbox_entry.read_at` where `source_kind = notice` and `source_id = noticeId` for the account | `read_at` set only where null: a second run changes no row |
+| `notification.send_expo_push` | `notification.push_requested.v1` | afterSideEffect | Resolve device tokens and languages, send in one Expo request of at most 100, store `push_ticket`s | none: a repeat sends a second push; the inbox entry is the record |
+| `realtime.sse_on_notification_staff_inbox_created` | `notification.staff_inbox_created.v1` | none | SSE `inbox.created` to the streams of that staff member | none: a repeated SSE event is ignored by the browser |
+| `notification.inbox_on_reporting_export_ready` | `reporting.export_ready.v1` | transactional | Inbox entry `report.export_ready` for the requester | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `realtime.sse_on_reporting_export_ready` | `reporting.export_ready.v1` | none | SSE `export.ready` | none: a repeated SSE event is ignored by the browser |
+| `building.delete_file_object` | `building.file_delete_requested.v1` | afterSideEffect | Load the row; if its status is `deleted`, call `DeleteObject` on the files bucket (a missing key is success); otherwise do nothing (DOC-37 §14) | `DeleteObject` of a missing key is success |
+| `building.make_thumbnail` | `building.thumbnail_requested.v1` | afterSideEffect | Resize with `sharp` to 480 px (512 px for the logo), WebP, and register it as a `thumbnail` file with `owner_ref = thumb:<fileId>`; skip if it exists; an undecodable image is logged and skipped (DOC-37 §10) | A `thumbnail` row with `owner_ref = thumb:<fileId>` exists: skip |
 
 ### 5.3 From an event to a template key
 
@@ -1021,6 +1025,45 @@ Example payload:
 }
 ```
 
+### 6.9 building
+
+#### `building.file_delete_requested.v1`
+
+- **Command**, produced by `building` when: A file moves to `deleted`: a failed verify, `FilesApi.remove`, or the orphan job (DR-122). `aggregate_id` = `fileId`. Retry class `default`.
+- Written in the same transaction as the status change. The handler deletes the object only when the row is `deleted`; it never deletes the object of a live file.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `buildingId` | uuid | The building. The first field of every payload. |
+| `fileId` | uuid | The `file_object` whose object is removed. |
+
+Example payload:
+
+```json
+{
+  "buildingId": "0192f3c4-5a1e-7000-8000-000000000001",
+  "fileId": "0192f3c4-5a1e-7000-8000-000000000074"
+}
+```
+
+#### `building.thumbnail_requested.v1`
+
+- **Command**, produced by `building` when: An image of a purpose with a thumbnail is verified (DR-122). `aggregate_id` = `fileId`. Retry class `default`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `buildingId` | uuid | The building. The first field of every payload. |
+| `fileId` | uuid | The verified original. |
+
+Example payload:
+
+```json
+{
+  "buildingId": "0192f3c4-5a1e-7000-8000-000000000001",
+  "fileId": "0192f3c4-5a1e-7000-8000-000000000074"
+}
+```
+
 ## 7. Synchronous contracts
 
 ### 7.1 Rules (DR-42)
@@ -1112,7 +1155,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `FinanceApi.reportQueries` | finance | an object of named read methods, one per report kind of DR-55 (`collectionByFeeItem`, `debtAging`, `collectionByMonth`, `onlineTransactions`), each `(filter) → Page<Row>`; no join on another schema | reporting | Rows and filters: DOC-33 |
 | `TicketsApi.getDashboardCounts`, `VehiclesApi.getDashboardCounts`, `NoticesApi.getDashboardCounts` | tickets, vehicles, notices | `(buildingId) → Record<string, number>`; each answers from its own indexed tables | reporting | The keys are DOC-33's dashboard definition (FR-34) |
 | `AuditApi.record` | audit | `(entry: { actor: StaffContext \| SystemActor, action: string, object: { type: string, id: Uuid }, changes: AuditChange[], reason?: string, details?: object }) → void` | every module | Joins the caller's transaction; fills actor, role, IP and request id from the request context (DOC-12 §8.3; columns: DOC-17 §2) |
-| `FilesApi` | building | `register`, `verify`, `attach`, `remove`, `usage` (DR-42), plus `signedUrl` and `storeGenerated` (DR-119) | every module with files | Signatures, errors and the status machine: DOC-37 §3 |
+| `FilesApi` | building | `register`, `verify`, `attach`, `remove`, `usage` (DR-42), plus `signedUrl` and `storeGenerated` (DR-119) | every module with files | Signatures, errors and the status machine: [DOC-37](../06-design/files-and-uploads.md) §3 |
 | `BuildingApi.getSettings` | building | `(buildingId) → BuildingSettings`, the saved keys overlaid on the code defaults (DR-111) | all | Keys and ranges: DOC-17 §1.2, DOC-36 |
 | `BuildingApi.getGatewayConfig` | building | `(buildingId, provider) → { id, provider, driver, status, receivingAccount, secrets: Record<string, string> } \| null` | finance, the webhook route | `secrets` is decrypted in memory only, cached 60 s per process, never logged (DOC-10 §4.1) |
 | `BuildingApi.hasAcceptedLatestTerms` | building | `(accountId, buildingId) → boolean`; true when the account has accepted the highest `version` of every kind (DR-111) | resident guard | `terms_required` (403) when false |
@@ -1170,6 +1213,7 @@ Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the cor
 | DR-117 | Commands carry the id of the account, not its phone or address; a secret in a command is encrypted with the settings key ring; a command past its `expiresAt` is skipped, not failed | §3.4, §6 |
 | DR-118 | Message shape: `buildingId` first (nullable for account-level events), 64 KB cap, chunks of 500 ids, no `traceparent` in phase 1; retry classes with a per-type policy hook in the vendored relay; backoff `min(5 s × 2^(n−1), 15 min)` | §3, §4 |
 | DR-119 | `FilesApi` gains `signedUrl` and `storeGenerated` | §7.4 |
+| DR-122 | Two commands of `building`: delete an object from the bucket, make a thumbnail; `building` becomes a publishing module | §5, §6 |
 
 ## 11. Not in this document
 
@@ -1198,4 +1242,4 @@ Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the cor
 
 ## Open questions
 
-None. The decisions made while writing (DR-116 to DR-119) are decided and do not block Phase 1. The exact status literals that distinguish `ticket.rejected` and `ticket.awaiting_close` are DOC-28's; §5.3 names the rule and DOC-28 supplies the literals.
+None. The decisions made while writing (DR-116 to DR-119 and DR-122) are decided and do not block Phase 1. The exact status literals that distinguish `ticket.rejected` and `ticket.awaiting_close` are DOC-28's; §5.3 names the rule and DOC-28 supplies the literals.

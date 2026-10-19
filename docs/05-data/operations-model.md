@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Draft** · Updated: 2026-10-19 · DOC-17
+> Status: **Draft** · Updated: 2026-10-19 (DR-122: purpose `thumbnail`; tests OPM-65, OPM-66 run on PostgreSQL 18.6) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -488,7 +488,7 @@ CREATE TABLE building.file_object (
   CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
     'avatar', 'logo', 'import', 'statement', 'fee_notice_pdf', 'receipt_pdf', 'bulk_zip',
     'ticket_media', 'vehicle_plate_photo', 'vehicle_paper', 'notice_attachment', 'notice_image',
-    'wiki_attachment', 'wiki_image', 'export')),
+    'wiki_attachment', 'wiki_image', 'export', 'thumbnail')),
   CONSTRAINT ck_file_object_key     CHECK (object_key ~ '^[a-z]+/[0-9a-f-]{36}/[a-z]+/[0-9]{4}/(0[1-9]|1[0-2])/[0-9a-f-]{36}\.[a-z0-9]{1,8}$'),
   CONSTRAINT ck_file_object_size    CHECK (size >= 0),
   CONSTRAINT ck_file_object_status  CHECK (status IN ('pending', 'verified', 'attached', 'deleted')),
@@ -510,7 +510,7 @@ ALTER TABLE building.building
 
 | Column | Meaning |
 | --- | --- |
-| `module`, `purpose` | The owning module and the kind of file. `purpose` tells the kinds apart in one bucket and one key layout (DR-86): the upload purposes of DR-61 plus the generated ones (`fee_notice_pdf`, `receipt_pdf`, `bulk_zip`, `export`). DOC-37 owns the full table of purposes with the allowed MIME types and size limits; a new purpose is an expand migration of this `CHECK`. |
+| `module`, `purpose` | The owning module and the kind of file. `purpose` tells the kinds apart in one bucket and one key layout (DR-86): the upload purposes of DR-61 plus the generated ones (`fee_notice_pdf`, `receipt_pdf`, `bulk_zip`, `export`) and `thumbnail`, the 480 px copy of an image, a row of its own with `owner_ref = 'thumb:<id of the original>'` (DR-122). DOC-37 §4 owns the full table of purposes with the allowed MIME types and size limits; a new purpose is an expand migration of this `CHECK`. |
 | `object_key` | The R2 key. The `CHECK` pins the shape of DR-61 (environment, building id, module, year, month, id, extension). The earlier wording "under `imports/`" in DR-21, DR-22 and DOC-16 §5.5 is superseded by DR-86: an import file is `purpose = 'import'` with this key. |
 | `size` | The size the client declared at `register` (used for the quota check and the signed `Content-Length`), replaced by the real `HEAD` size at `verify`. Quota = Σ `size` of rows that are not `deleted` (DR-61). |
 | `checksum` | SHA-256 of the object, set when the server read all of it (imports, statements, generated PDFs); null for large media. |
@@ -538,7 +538,7 @@ stateDiagram-v2
 | `verified` → `deleted` | `orphan_uploads` | Verified but never attached for 24 h | As above. DR-61 names only `pending` files; a verified file nobody attached is the same waste (DR-112) |
 | `attached` → `deleted` | `FilesApi.remove` | The owner module removes the attachment or purges its object | `deleted_at` set in the owner's transaction; the R2 delete is a command in the outbox (DOC-37) |
 
-The physical removal of the R2 object is DOC-37's (an outbox command written in the same transaction as the status change); this table records the logical state and drives the quota.
+The physical removal of the R2 object is the command `building.file_delete_requested.v1`, written in the same transaction as the status change (DR-122, DOC-37 §14); this table records the logical state and drives the quota.
 
 **Indexes**
 
@@ -869,6 +869,8 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | OPM-62 | A `deleted` row with `deleted_at` | accepted |
 | OPM-63 | A logo file registered 30 hours ago | accepted |
 | OPM-64 | `building.logo_file` set to an existing file | accepted |
+| OPM-65 | An `attached` file of purpose `thumbnail`, `owner_ref = 'thumb:<id>'`, account kind `system` with the nil UUID (DR-122) | accepted |
+| OPM-66 | Purpose `cccd` (no national ID is ever a file, DOC-37) | 23514 |
 | OPM-70 | Successful run of `invariant_check` with counts | accepted |
 | OPM-71 | Status `running` | 23514 |
 | OPM-72 | `finished_at` before `started_at` | 23514 |

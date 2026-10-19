@@ -52,8 +52,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-34 | PDF rendering (`06-design/pdf-rendering.md`) | Not written |
 | DOC-35 | Audit, privacy and terms (`06-design/audit-privacy-and-terms.md`) | Not written |
 | DOC-36 | Building configuration and demo (`06-design/building-configuration-and-demo.md`) | Not written |
-| DOC-37 | Files and uploads (`06-design/files-and-uploads.md`) | Not written |
-| DOC-38 | Jobs and outbox runtime (`06-design/jobs-and-outbox-runtime.md`) | Not written |
+| DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Review |
+| DOC-38 | [Jobs and outbox runtime](06-design/jobs-and-outbox-runtime.md) | Review |
 | DOC-39 | Security (`06-design/security.md`) | Not written |
 | DOC-40 | Observability (`06-design/observability.md`) | Not written |
 | DOC-41 | Configuration reference (`06-design/configuration-reference.md`) | Not written |

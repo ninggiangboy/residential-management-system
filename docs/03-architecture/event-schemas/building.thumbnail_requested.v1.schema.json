@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "building.thumbnail_requested.v1.schema.json",
+  "title": "building.thumbnail_requested.v1",
+  "description": "Command of building. An image of a purpose with a thumbnail is verified (DR-122).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "fileId"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "fileId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The verified original."
+    }
+  }
+}

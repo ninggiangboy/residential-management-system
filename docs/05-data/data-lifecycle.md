@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Draft** · Updated: 2026-10-19 · DOC-20
+> Status: **Draft** · Updated: 2026-10-19 (DR-120: job names; DR-123: `bulk_zip`) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -70,11 +70,11 @@ Rules that hold everywhere:
 | `fee_batch`, `charge`, `charge_line`; drafts excepted | The fee history | Never deleted; drafts are hard-deleted while `draft` | — | — | DR-12, DOC-14 §4.2 |
 | `payment`, `allocation`, `receipt`, `payment_intent`, `payment_intent_item` | The money history and the receipts, with the payer-name snapshot | Never deleted | — | — | DR-57, SDD §19.5 |
 | `gateway_event`, `statement_line` (the money log) | Every incoming transfer that was seen | Never deleted | — | — | DR-57, DR-84 |
-| `webhook_rejection` | A rejected webhook with a 2 KB excerpt | Deleted by age | 30 days after `received_at` | finance's weekly `import_purge` run | DR-32 |
-| `statement_import` | The statement file's metadata and period | Never deleted (the lines are the money log); the uploaded file is deleted by age | File 1 year | `import_purge`-time file sweep, DOC-25 | DR-34 |
-| `import_job` (fee batches) | The preview | Deleted by age | 30 days | `import_purge` | DR-21 |
+| `webhook_rejection` | A rejected webhook with a 2 KB excerpt | Deleted by age | 30 days after `received_at` | `finance_purge`, weekly Sunday 04:00 | DR-32, DR-120 |
+| `statement_import` | The statement file's metadata and period | Never deleted (the lines are the money log); the uploaded file is deleted by age | File 1 year | `finance_purge`, DOC-25 | DR-34, DR-120 |
+| `import_job` (fee batches) | The preview | Deleted by age | 30 days | `finance_purge` | DR-21, DR-120 |
 | `document_counter` | The counters | Never deleted | — | — | DR-10 |
-| `debt_reminder` | One row per unit per building day | Deleted by age | 30 days (default) | finance's weekly `import_purge` run | DR-87, DR-115 |
+| `debt_reminder` | One row per unit per building day | Deleted by age | 30 days (default) | `finance_purge` | DR-87, DR-115, DR-120 |
 | `fake_gateway_link` | Links of the `fake` driver | Reset with the demo building; on `local` and `staging` kept until the database is rebuilt | — | `demo_reset` | DR-26, DR-60 |
 
 ### 2.5 Other schemas (DDL pending in DOC-17 §4–§9)
@@ -103,7 +103,7 @@ Keys are `{env}/{building_id}/{module}/{yyyy}/{mm}/{uuid}.{ext}` (DR-61, DR-86).
 | `rms-<env>-files` / `identity/` | Avatars | Until replaced or the account is cleared |
 | `building/` | Company logo | Until replaced |
 | `residency/` | Units-and-owners import files (CCCD numbers) | Deleted at commit; at expiry within one hour of `expires_at` (DR-22, DR-114) |
-| `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56) |
+| `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56); a bulk ZIP 7 days (DR-123) |
 | `tickets/`, `vehicles/`, `notices/`, `wiki/` | Photos, videos, papers, attachments | Follows the owner, which is never deleted (DR-115) |
 | `reporting/` | Export files | 7 days (DR-55) |
 | `rms-<env>-backup` / `pgbackrest/` | The encrypted repository | 4 full + 7 differential backups and the WAL they need (DR-66, DR-83) |
@@ -130,7 +130,9 @@ The job names, schedules and owners are those of DR-62 (and DR-101), with the tw
 | `export_purge` | hourly | reporting | Deletes export files and rows after 7 days |
 | `inbox_purge` | weekly Sunday 04:00 | notification | Deletes inbox entries after 180 days |
 | `push_receipts` | every 5 minutes | notification | Fetches Expo receipts and also deletes push tickets older than 3 days (DR-52) |
-| `import_purge` | weekly Sunday 04:00 | residency, finance | Deletes import rows after 30 days (and, in finance, `webhook_rejection` and `debt_reminder` rows after 30 days). DR-62 names `building` as the owner; DR-21 gives each module its own `import_job`, so each purges its own and DOC-38 settles the table |
+| `import_purge` | weekly Sunday 04:00 | residency | Deletes `residency.import_job` rows after 30 days (DR-120: DR-62 named `building`; each module owns its `import_job`, DR-21) |
+| `finance_purge` | weekly Sunday 04:00 | finance | Deletes fee-batch `import_job` rows, `webhook_rejection` and `debt_reminder` rows after 30 days, statement files after 1 year and `bulk_zip` files after 7 days (DR-120, DR-123) |
+| `realtime_purge` | hourly at :45 | realtime | Deletes `realtime.events` older than 24 hours (DR-115, DR-120) |
 | `audit_purge` | monthly day 1, 04:30 | audit | `audit.purge` for each class |
 | relay cleanup | every 10 minutes | every module's outbox | Deletes published outbox rows and delivered inbox rows after 7 days |
 
@@ -150,7 +152,7 @@ DELETE FROM building.job_run WHERE started_at < now() - interval '30 days';
 UPDATE residency.import_job SET status = 'expired'
  WHERE building_id = :building_id AND status = 'validated' AND expires_at < now()
 RETURNING file_key;
--- import_purge (residency, finance)
+-- import_purge (residency); finance_purge deletes finance.import_job the same way, with the other tables of its row above
 DELETE FROM residency.import_job WHERE building_id = :building_id AND created_at < now() - interval '30 days';
 
 -- orphan_uploads (building), per building

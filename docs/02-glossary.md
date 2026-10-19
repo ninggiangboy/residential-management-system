@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…119), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…123), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -282,6 +282,10 @@ This document defines the words of the project, as the project uses them. Every 
 | export center | — | The screen where requested exports are listed and downloaded. | FR-48, DR-72 |
 | file object | — | `building.file_object`: the ledger of every stored file (`pending`, `verified`, `attached`, `deleted`); the basis of the quota. | FR-40, DR-61 |
 | presigned PUT | — | The upload method for files: a short-lived URL with a signed `Content-Type`. R2 has no presigned POST. | DR-61, DR-83 |
+| signed URL | — | A presigned `GET` URL for a file, valid 15 minutes (5 for a vehicle paper), given inside an authorised response; a bearer token that is never logged or stored. | DR-61, DOC-37 §8 |
+| verify (a file) | — | The call after the client's `PUT`: `HEAD` for size and type, a ranged `GET` for the first bytes; passes to `verified` or deletes the file. | DR-123, DOC-37 §6.3 |
+| thumbnail | — | The 480 px WebP copy of an image (512 px for the logo), a `file_object` row of purpose `thumbnail` made by the worker. | DR-122, DOC-37 §10 |
+| generated file | — | A file the system writes itself (receipt and fee-notice PDFs, bulk ZIP, export): stored as account kind `system`, never refused by the quota. | DR-123, DOC-37 §9 |
 | upload verification | — | After an upload the server reads the size with `HEAD`, deletes an oversized object, and checks the first bytes against the allowed type before attaching. | DR-61 |
 | storage quota | — | The per-building cap (default 50 GiB, `storageQuotaBytes` = 53,687,091,200); Admin is alerted at 80% and uploads are refused at 100% (413 `quota_exceeded`). | FR-40 |
 | orphan upload | — | A file still `pending` or `verified` 24 hours after it was registered because no module attached it; the hourly job deletes it. | DR-61, DR-112 |
@@ -315,6 +319,8 @@ This document defines the words of the project, as the project uses them. Every 
 | `secretEnc` | — | The field of `identity.sms_requested.v1` and `identity.mail_requested.v1` that holds the OTP, link token or step-up code encrypted with the settings key ring; never plaintext in an outbox row. | DR-117 |
 | job | — | A timer-driven task in the worker (`notice_scheduler`, `intent_requery`, `invariant_check`, purges …). Each run writes `job_run`. | DR-62 |
 | `job_run` | — | The row `building.job_run` written by every job run; feeds the "last success" metrics. | DR-62 |
+| job mode | — | How a job stays safe if two workers run it: `claim` (rows claimed with `SKIP LOCKED`), `lock` (advisory lock at the start of every transaction), `snapshot` (one read-only transaction that holds the lock). | DR-121, DOC-38 §3.2 |
+| slot, grace window | — | A slot is a scheduled time of a clock job. The grace window is how late a missed slot may still run once, after a restart (none for hourly, 12 h daily, 24 h weekly, 7 days monthly). | DR-120, DOC-38 §3.3 |
 | advisory lock | — | A PostgreSQL lock used for singleton jobs: the transaction-level `pg_try_advisory_xact_lock`, safe behind a pooler. | DR-62, ADR-0015 |
 | `SKIP LOCKED` | — | The `FOR UPDATE SKIP LOCKED` clause used to claim work rows so workers take disjoint rows. | DR-30 |
 | arbiter | — | The one row whose conditional update decides a race (the charge, `gateway_event`, the intent, the ticket, the QR nonce, the OTP challenge). The loser sees zero rows. | original SDD §2.1, §8.2 |
