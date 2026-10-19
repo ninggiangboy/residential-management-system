@@ -571,7 +571,7 @@ Goal: settle the decisions, collect the client inputs, and write the documents t
 | P0-20 | Write DOC-04 and DOC-05 — **Review 2026-10-19** | UC-01…30 per template A.2; every FR has a UC; every feature mapped | P0-19 | DOC-04, DOC-05 |
 | P0-21 | Write DOC-07, DOC-10, DOC-11, DOC-12 — **Review 2026-10-19** | Data ownership table covers every table of the register; capacity table; compatibility table skeleton (filled in P1-01/P1-02) | P0-20 | DOC-07, DOC-10, DOC-11, DOC-12 |
 | P0-22 | Write ADR-0001…0011 and DOC-13 — **Review 2026-10-19** (ADR-0007 `Proposed` until the gateway sandbox) | ADRs Accepted in `04-adr/`; index lists all 26 | P0-21 | DOC-13 |
-| P0-23 | Write ADR-0013…0023 and ADR-0026 | ADRs Accepted | P0-22 | DOC-13 |
+| P0-23 | Write ADR-0013…0023 and ADR-0026 — **Review 2026-10-19** (ADR-0026 `Proposed` until DR-26) | ADRs Accepted | P0-22 | DOC-13 |
 | P0-24 | Write DOC-14 and DOC-16 | **All DDL runs clean** (`psql -f` on PostgreSQL 18, then the CHECK/UNIQUE test list passes by hand); ERDs | P0-21 | DOC-14, DOC-16 |
 | P0-25 | Write DOC-17 (§1–3), DOC-18 (§1), DOC-19, DOC-20 (skeleton) | DDL runs clean; grants matrix covers every role × schema | P0-24 | DOC-17, DOC-18, DOC-19, DOC-20 |
 | P0-26 | Write DOC-09, DOC-37, DOC-38 | Event catalog lists every event of DR-42; limits table; job catalog with schedules | P0-24 | DOC-09, DOC-37, DOC-38 |
