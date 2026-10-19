@@ -33,7 +33,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-15 | Finance model (`05-data/finance-model.md`) | Not written |
 | DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Review |
 | DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written, §4–9 owed) | Draft |
-| DOC-18 | Data quality rules (`05-data/data-quality-rules.md`) | Not written |
+| DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Draft |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Review |
 | DOC-20 | Data lifecycle (`05-data/data-lifecycle.md`) | Not written |
 | DOC-21 | Fee batches and import (`06-design/fee-batches-and-import.md`) | Not written |

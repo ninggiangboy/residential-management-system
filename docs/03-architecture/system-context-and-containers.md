@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-19 (DR-111) · DOC-07
+> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -288,7 +288,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | `ResidencyApi.getMembership(accountId, unitId)` (returns `startedAt`) | residency | HTTP guard, finance | DR-42, DR-40 |
 | `ResidencyApi.listRecipients(unitId, capability)`, `listNoticeRecipients(buildingId, cursor, limit)`, `activeUnitIds(accountId)`, `getUnits(ids)`, `getMembershipForScan(id)` | residency | finance, tickets, notices, notification, access, vehicles, reporting | DR-42 |
-| `IdentityApi.getStaff(ids)`, `listActiveStaff(buildingId, roles, cursor, limit)`, `findResidentAccountsByPhoneFragment`, `getResidentAccounts(ids)` | identity | tickets, notices, notification, residency | DR-42 |
+| `IdentityApi.getStaff(ids)`, `listActiveStaff(buildingId, roles, cursor, limit)`, `findResidentAccountsByPhoneFragment`, `getResidentAccounts(ids)`, `findResidentAccountsByPhones(phones)` (≤ 5,000 numbers, for the units import) | identity | tickets, notices, notification, residency | DR-42; the last one DR-114 |
 | `FinanceApi.getOutstandingByUnit(unitIds)`, `FinanceApi.reportQueries` | finance | residency (unit detail), reporting | DR-42 |
 | `TicketsApi`, `VehiclesApi`, `NoticesApi` read contracts for the dashboard | tickets, vehicles, notices | reporting | DR-55 (not in the DR-42 table: DR-87) |
 | `AuditApi.record(entry)` | audit | every module; joins the caller's transaction | DR-42, DR-57 |

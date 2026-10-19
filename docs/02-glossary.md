@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…113), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…114), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -287,6 +287,8 @@ This document defines the words of the project, as the project uses them. Every 
 | import job | — | `<module>.import_job`: a stored Excel upload with its validated preview. Status `validated`, `failed`, `committed`, `expired`. Validation is synchronous in the API. | DR-21 |
 | preview (import) | — | The counts, the first 50 valid rows and up to 500 row errors returned by the validating request. | DR-21 |
 | header alias | — | A Vietnamese or English name accepted for an Excel column. | DR-22 |
+| data-quality rule (`DQ-xx`) | — | One check of an import, with its layer (`file`, `row`, `set`, `db`, `commit`, `post`), severity (`fail`, `error`, `warning`, `info`), action, threshold and error code. The catalog is DOC-18. | DOC-18 |
+| stale import (`import_stale`) | — | The 409 answer when the commit finds that the data changed since the preview (the counts differ). Nothing is written; the user uploads the file again. | DR-114, DOC-18 |
 | Excel template | — | The downloadable file for a kind (`fee_batch`, `unit_owner`). | DR-22 |
 
 ## 10. Platform and processing

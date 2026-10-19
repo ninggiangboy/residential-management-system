@@ -386,7 +386,7 @@ The query plan with `enable_seqscan = off` on a small table uses `ix_resident_pr
 ### 14.1 Layout and commands (DR-08, ADR-0014)
 
 - Each module carries its own `drizzle.config.ts` and `migrations/` folder, reads the module's `infrastructure/persistence/schema.ts`, filters on its schema, and keeps its history in schema `drizzle_<module>`, table `__migrations` (the reference layout, DR-03).
-- `bun run db:generate` runs drizzle-kit inside each module; `bun run db:migrate` applies each module's pending migrations **in catalog order on one connection**, then runs the grants step (DOC-19 §4), with `prepare: false`, so it also works behind PgBouncer in transaction mode (DR-67). Migrations are a separate step of the deploy (a one-shot service or step 4 of the deploy script, DOC-70), never run by the app at boot.
+- `bun run db:generate` runs drizzle-kit inside each module; `bun run db:migrate` applies each module's pending migrations **in catalog order on one connection** with `prepare: false`, so it also works behind PgBouncer in transaction mode (DR-67), then runs the grants step (DOC-19 §4). Migrations are a separate step of the deploy (a one-shot service or step 4 of the deploy script, DOC-70), never run by the app at boot.
 - Versions: Drizzle 0.45 and drizzle-kit 0.31, as pinned in DOC-11 §3. The options below were checked against the drizzle-kit configuration reference on 2026-10-19. A move to Drizzle 1.0 changes casing, relational queries and the migrations layout and needs a DR (DR-82).
 
 ```ts
