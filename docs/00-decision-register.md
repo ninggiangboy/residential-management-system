@@ -44,6 +44,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-11 after re-verifying the versions on the web: DR-93 (pgBackRest from the PGDG apt repository), DR-94 (Expo-managed modules follow the SDK ranges), DR-95 (exact pins everywhere). DR-70 corrected: `expo-brightness` replaces the non-existent `expo-screen-brightness`; DR-82 table revised | DR-70, DR-82, DR-83, DOC-11 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-04: DR-97 (a recall counts the non-void charges of the batch; FR-04.2 updated). DR-96 (the resident sees `unmatchedTransfer` for every unposted outcome that leaves money received) is proposed for the Owner because it extends DR-84 item 8 | DR-19, DR-84, DR-20, DOC-03, DOC-04 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-12: DR-98 (`core-messaging` vendored without the privacy-participant protocol), DR-99 (guards built in the composition root, routes declare `audience`), DR-100 (`Money`, `LocalDate` and friends in `@rms/shared-types`) | DR-02, DR-03, DR-09, DR-11, DOC-12 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-10: DR-101 (job rows and processed messages are bounded; DR-62 revised), DR-102 (memory-overcommit rules and the staging database settings) | DR-06, DR-62, DOC-10 |
 
 ---
 
@@ -269,6 +270,12 @@ flowchart TB
 - **Decision:** `apps/api/src/bootstrap/guards.ts` builds the three guards from the contracts and passes them to every module as `host.guards`. Every route declares an `audience` as route metadata, which the EXP-10 authorization-matrix generator reads; a route without it fails the build. This changes no access rule, only where the code lives.
 - **Consequences:** Modules never build their own authentication.
 - **Write to:** DOC-12 §5.3, DOC-39.
+
+### DR-102 · Memory-overcommit rules and the staging database settings — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The ceilings of DR-06 add up to 5.1 GB on the 4 GB staging host and 8.4 GB on the 8 GB production host (DOC-10 §6.1), and DR-06 gives PostgreSQL settings for production only.
+- **Decision:** (1) PostgreSQL runs with `OOMScoreAdjust=-900`; (2) containers have `memswap_limit` equal to `mem_limit`; (3) each host has a 2 GB swap file for the host only; (4) staging PostgreSQL uses `shared_buffers` 512 MB and `max_connections` 60; (5) `DB_POOL_MAX` is 15 (`api`) and 10 (`worker`) on staging, 20 and 15 on production; (6) EXP-07 and EXP-08 never run together; (7) the worker is capped at `cpus: 1.0` on staging and `cpus: 2.0` on production.
+- **Consequences:** A runaway container dies before the database does; the overcommit is made safe, not removed. EXP-07 recalibrates the values.
+- **Write to:** DOC-70, DOC-41, DOC-10.
 
 ## B. Conventions
 
@@ -1003,6 +1010,7 @@ flowchart TB
   Realtime (LISTEN) and the relay use a direct database connection; request traffic may go through PgBouncer with `DB_PREPARE=false`.
 - **Consequences:** `job_run` and the table of timers are in DOC-38 and DOC-41 (configuration keys per job).
 - **Write to:** DOC-38, DOC-41, DOC-40, ADR-0015, ADR-0009.
+  *Revised 2026-10-19 (DR-101):* a tick that found nothing writes no `job_run` row; `job_run` rows are kept 30 days and processed outbox/inbox rows 7 days.
 
 ### DR-63 · Observability stack, metric catalog and alert delivery — **Changed (Owner, 2026-10-19)**
 - **Problem:** SDD §19.2 says metrics are "scraped by the host's monitoring", traces go over OTLP, alerts have conditions, but no backend, no channel, no list of metrics and no way to watch the nightly check or the backup exist.
@@ -1065,6 +1073,12 @@ flowchart TB
 - **Decision (proposed):** Option 1. Alerts already leave the host, so no console needs exposing; one hostname fewer to protect. This is an access decision, so the Owner confirms.
 - **Consequences:** A dashboard needs a terminal session; fine for one operator.
 - **Write to:** DOC-70, DOC-39.
+
+### DR-101 · Job rows and processed messages are bounded — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-62 says every run of a job writes a `building.job_run` row. The worker's ticks (`notice_scheduler` and `intent_requery` every 30 s, `notice_reclaim` every 60 s, `push_receipts` every 5 min) are 7,566 rows a day, 0.57 GB a year, more than all other data of the sample building (DOC-10 §5.3). DR-62 also has no purge for `job_run`, and none for processed `outbox_messages` and `inbox` rows (the reference deletes published rows after 7 days).
+- **Decision:** A run writes a `job_run` row when its schedule is one hour or longer, or when it did work or failed; a tick that found nothing to do only updates the gauge `job_last_success_timestamp{job}`. `job_run` rows older than `JOB_RUN_RETENTION_DAYS` = 30 are deleted by the daily `token_purge` slot. Published outbox rows and the inbox rows of delivered messages are deleted after `OUTBOX_RETENTION_DAYS` = 7 by the relay cleanup (at most every 10 minutes, one instance, the lock of DR-62).
+- **Consequences:** The "last success" metric survives a worker restart only after the next tick (60 s at most). Outbox payloads that hold a one-time code leave the database after 7 days.
+- **Write to:** DOC-38, DOC-41, DOC-20, DOC-40.
 
 ## O. Clients
 

@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…100), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…102), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -359,6 +359,10 @@ This document defines the words of the project, as the project uses them. Every 
 | Access service token | — | The Cloudflare Access credential that lets the CI deploy job reach the VPS over the Tunnel. | DR-83 |
 | integration (`integrations/<consumer>`) | — | An entry point of a producer module written for one named consumer module; it is the only code that translates the producer's contract for that consumer. | DR-04, DR-42 |
 | data owner | — | The one module that writes a table, topic or bucket prefix; other modules read it only through a contract. | DOC-07 §6 |
+| resource ceiling | — | The memory or CPU limit set on a container (`mem_limit`, `cpus`). The ceilings of all units may add up to more than the host has (bounded overcommit). | DR-06, DR-102 |
+| stress day | — | The day of the month when load peaks: batch publication and the two hours before the due date. The capacity estimate sizes for it. | DOC-10 §5 |
+| degraded mode | — | What a unit does at its limit instead of failing: refuse new uploads, queue exports, answer 429, keep the settlement path alive. | DOC-10 §8 |
+| stalled archive | — | PostgreSQL cannot hand WAL segments to pgBackRest, so `pg_wal` grows until the disk fills. Alert on `pg_stat_archiver.failed_count`. | DR-66, DOC-10 §6 |
 
 ## 12. Documents, process and testing
 
@@ -391,6 +395,7 @@ This document defines the words of the project, as the project uses them. Every 
 | kill test | — | A test that kills the process in the middle of a transaction and expects no half effect. | master plan §2 |
 | baseline (experiment) | — | The deliberately naive implementation an experiment compares against (EXP-03: read the status, decide in code, write without the predicate). | DR-78 |
 | template database | — | A migrated PostgreSQL database cloned per test file for isolation and speed. | DR-77 |
+| planned number / measured number | — | A planned number is a design target or a script estimate. It becomes measured only with a dated result file, machine and script (DR-77, DR-78). | DR-80, DOC-10 §2 |
 
 ## 13. Language, units and formats
 
