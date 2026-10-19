@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…103), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…105), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -330,6 +330,11 @@ This document defines the words of the project, as the project uses them. Every 
 | `Money` | — | The branded `bigint` of the domain; an integer JSON number at the edge. Never a float. | DR-11, DR-100 |
 | vendored package | — | A reference package copied into `packages/core-<name>` and owned by this repository from then on. | DR-02 |
 | local change | — | An edit made to a vendored package after the copy, listed in `packages/CORE_VERSION` so a manual sync can re-apply it. | DR-02, DR-98 |
+| allow-list (scope lint) | — | The explicit list of tables exempt from the `building_id` predicate check because they are looked up before a building is known, belong to an account spanning buildings, or are infrastructure. Reasons in DOC-14 §5.3. | DR-12, DR-104 |
+| scoped list | — | The tables that must be queried with a `BuildingScope` argument or a `building_id` predicate; generated from the module schemas. | DR-12, DOC-12 §7 |
+| bootstrap migration (`0000-bootstrap.sql`) | — | The first migration: creates extensions, schemas, the `platform` tables and shared SQL helper functions. | DR-105, DOC-14 §2.1 |
+| history schema (`drizzle_<module>`) | — | The schema where drizzle-kit keeps the applied-migrations table of one module. | DOC-14 §14 |
+| expand/contract | — | A migration style in two releases: add what the new code needs, switch the code, then remove what the old code used. No down migrations. | DR-08, DR-105 |
 
 ## 11. Infrastructure and delivery
 

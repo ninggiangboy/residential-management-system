@@ -489,7 +489,7 @@ The lint is a merge gate from P1 (DR-12). Whether it is a Biome GritQL rule or a
 | Scope argument | A public repository method on a scoped table has no `scope: BuildingScope` first parameter |
 | Registry | A table in a module `schema.ts` with a `building_id` column that is not in the scoped list, or a table without `building_id` that is not on the allow-list |
 
-The scoped list is generated from the schemas (`@mod/*/schema`). The explicit allow-list holds tables that are global by nature: `platform.*` (DR-85), `identity.rate_bucket`, `identity.otp_challenge`, `identity.refresh_family`, `identity.refresh_token`, `identity.resident_account` (a resident account has no building) and `realtime.events`. Adding to the allow-list is a change reviewed by CODEOWNERS (`modules/identity`, `modules/finance`). EXP-10 is the runtime check: it tries cross-building and cross-unit access on every endpoint.
+The scoped list is generated from the schemas (`@mod/*/schema`). The explicit allow-list holds tables that are global by nature: `platform.*` (DR-85), `identity.rate_bucket`, `identity.otp_challenge`, `identity.refresh_family`, `identity.refresh_token`, `identity.resident_account` (a resident account has no building), `identity.password_token`, `identity.staff_account`, `building.building`, `outbox_messages` and `inbox`; the reasons are in DOC-14 §5.3 (DR-104). `realtime.events` is scoped and not on the list. Adding to the allow-list is a change reviewed by CODEOWNERS (`modules/identity`, `modules/finance`). EXP-10 is the runtime check: it tries cross-building and cross-unit access on every endpoint.
 
 ## 8. Transactions, events, audit and counters
 

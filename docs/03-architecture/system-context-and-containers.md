@@ -329,7 +329,7 @@ Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 is the source if i
 1. **One writer per table.** Only the owning module writes a table, and only through its own repositories. Another module changes it by calling a contract or by publishing an event the owner handles. The one exception is `audit.audit_log`, which every module writes through `AuditApi.record` inside its own transaction (DR-57).
 2. **No cross-schema foreign keys.** A reference to another module's row is a plain `uuid` column checked through a contract (DR-42, original SDD §16). Foreign keys exist only inside one schema.
 3. **Reads cross a module only through `contracts/`.** Reports compose from read contracts, never from joins on another schema (DR-55). The "Readers" column lists the module and the contract; "own" means no one else.
-4. **Every business table has `building_id`** and the scope guard applies (DR-12). Global tables sit on the allow-list: `platform.*`, `identity.rate_bucket`.
+4. **Every business table has `building_id`** and the scope guard applies (DR-12). Global tables sit on the allow-list of DOC-14 §5.3 (DR-104): `platform.*`, the sign-in and session tables of `identity`, `building.building`, `outbox_messages` and `inbox`.
 5. **Database roles do not isolate modules.** One application role `rms_app` serves all modules; isolation is by convention and dependency-cruiser. `rms_migrator` owns the schemas; `rms_readonly` cannot read `identity.*_hash` columns; `rms_backup` is for backup (DR-67, DOC-19).
 6. **Each module has its own `outbox_messages` and `inbox` tables** in its schema (the reference helpers create them per schema) and its own migration history `drizzle_<module>` (original SDD §16.1).
 
@@ -356,7 +356,7 @@ Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 is the source if i
 | `gateway_config` (one `secrets_enc` blob) | building | finance and the webhook route, `BuildingApi.getGatewayConfig` (decrypts in memory only) |
 | `terms_version`, `terms_acceptance` | building | resident guard, `BuildingApi.hasAcceptedLatestTerms` |
 | `file_object` | building (through `FilesApi`) | every module, `FilesApi` |
-| `job_run` | building (the job runner calls the `JobRunStore` port that building implements) | own metrics collector (`job_last_success_age_seconds`) |
+| `job_run` | building (the job runner calls the `JobRunStore` port that building implements) | own metrics collector (`job_last_success_timestamp`) |
 
 #### `residency`
 

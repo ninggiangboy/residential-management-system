@@ -46,6 +46,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-12: DR-98 (`core-messaging` vendored without the privacy-participant protocol), DR-99 (guards built in the composition root, routes declare `audience`), DR-100 (`Money`, `LocalDate` and friends in `@rms/shared-types`) | DR-02, DR-03, DR-09, DR-11, DOC-12 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-10: DR-101 (job rows and processed messages are bounded; DR-62 revised), DR-102 (memory-overcommit rules and the staging database settings) | DR-06, DR-62, DOC-10 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing ADR-0013…0026: DR-103 (no third-party error tracker, stated explicitly); DR-63 revised: the per-job gauge is `job_last_success_timestamp{job}` | DR-58, DR-63, DR-101, ADR-0021, ADR-0022 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-14: DR-104 (the allow-list of the building-scope lint, reconciled; `realtime.events` is scoped), DR-105 (DDL mechanics: text + CHECK enumerations, `updated_at`/`version` set by the statement, bootstrap migration, no down migrations) | DR-12, DR-85, DOC-07, DOC-12, DOC-14 |
 
 ---
 
@@ -328,6 +329,18 @@ flowchart TB
 - **Decision:** They go in `@rms/shared-types`, a leaf package with no workspace dependency, no framework and no I/O, so server domain code and clients can both import it.
 - **Consequences:** The package must stay free of dependencies; a CI check (dependency-cruiser, DOC-12 §6.3) enforces it.
 - **Write to:** DOC-12 §2.2, DOC-14.
+
+### DR-104 · The allow-list of the building-scope lint — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DOC-12 §7.3 lists seven allow-list entries and DOC-07 §6.1 lists two; neither lists `outbox_messages`/`inbox` (no `building_id`), `identity.staff_account` (found by email at sign-in), `identity.password_token` (public links) or `building.building` (the root), and DOC-12 lists `realtime.events`, whose rows are building-specific.
+- **Decision:** A table is on the allow-list only if it is looked up before a building is known, belongs to an account that spans buildings, or is infrastructure. DOC-14 §5.3 holds the reconciled list. `realtime.events` carries `building_id` and is scoped. The document that defines a global table adds it in the same change as its DDL.
+- **Consequences:** A few more entries to review; no runtime change. EXP-10 stays the runtime check.
+- **Write to:** DOC-14 §5.3, DOC-12 §7.3, DOC-07 §6.1, DOC-17.
+
+### DR-105 · DDL mechanics: enumerations as `text` + `CHECK`, `updated_at` and `version` set by the statement, bootstrap step, no down migrations — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-12 names the columns but not how they are kept; the original SDD does not say how enumerations are typed, where shared SQL functions live, how `platform` tables are created or what a rollback is.
+- **Decision:** Enumerations are `text` with a `CHECK` (DOC-14 §9). The guarded `UPDATE` sets `updated_at` and increments `version`; there is no trigger (§4.1). A bootstrap migration creates the extensions, schemas, `platform` tables and helper functions (§2.1). There are no down migrations: rollback is the previous image, and migrations are backward compatible for one release (§14, DR-08).
+- **Consequences:** A forgotten `updated_at` or `version` increment is a review and integration-test finding, not a database guarantee.
+- **Write to:** DOC-14, DOC-12 §14, DOC-17 §3, DOC-19, ADR-0014.
 
 ## C. Finance ledger
 
