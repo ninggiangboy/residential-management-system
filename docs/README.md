@@ -20,7 +20,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-02 | [Personas and journeys](01-product/personas-and-journeys.md) | Review |
 | DOC-03 | [Requirements](01-product/requirements.md) | Review |
 | DOC-04 | Use cases (`01-product/use-cases.md`) | Not written |
-| DOC-05 | Feature catalog (`01-product/feature-catalog.md`) | Not written |
+| DOC-05 | [Feature catalog](01-product/feature-catalog.md) | Review |
 | DOC-06 | [Glossary](02-glossary.md) | Review |
 | DOC-07 | [System context and containers](03-architecture/system-context-and-containers.md) | Review |
 | DOC-08 | Data flows (`03-architecture/data-flows.md`) | Not written |

@@ -16,7 +16,7 @@ A mid-size apartment building in Vietnam has a few hundred units, a management c
 | Design scale | 20 buildings, 5,000 units on one PostgreSQL instance | original SDD §2.1, DR-06 |
 | Clients | One web CMS (Admin, Manager), one staff app (Manager, Technician, Guard), one resident app | original SDD §2.3 |
 | Languages | Vietnamese and English; Vietnamese is the fallback | DR-71 |
-| Feature volume | 139 features in the product proposal | `references/product-proposal.md` |
+| Feature volume | 113 features in the product proposal (DR-89) | `references/product-proposal.md` |
 
 The hard part is not the number of screens. It is the places where several people and systems act on the same thing at once: two household members paying the same batch, a cash payment recorded while an online transfer is in flight, a batch recalled while it is being paid, a gateway that confirms twice or not at all, a technician rejecting a job the Manager is reassigning, an owner locking a helper whose QR code is on screen. Each is rare on a given day and certain over a year.
 
@@ -99,7 +99,7 @@ Each phase ends with something that runs on staging (master plan §2, principle 
 | Item | Reason it is in |
 | --- | --- |
 | One building operated by one management company, with `building_id` on every business row | The real client; the column makes several buildings later a configuration change |
-| Three clients: web CMS, staff app, resident app (the 139 proposal features, adjusted by the design) | The client's baseline scope |
+| Three clients: web CMS, staff app, resident app (the 113 proposal features, adjusted by the design) | The client's baseline scope |
 | Fixed roles and member types with predefined permissions | A permission editor adds cost and risk with no phase 1 need |
 | Fee batches without a fixed cycle, each labelled with a fee month; Excel import; publish, recall, re-issue, void of a single charge; manual payments of whole charges; receipts; debt and aging; the money log | The core problem |
 | Online payment through one gateway: VietQR payment links from payOS, whole charges only, several at once | Residents already pay by QR from a banking app |
@@ -188,7 +188,7 @@ Only the risks that decide scope or the value of the system are listed here; the
 | One person cannot carry the plan | M1 more than 3 weeks late | The cut order and the two-person split |
 | One provider holds the edge, files and backups | A Cloudflare account problem | Accepted by the Owner (2026-10-19); encrypted repository with offline key custody; the weekly `pg_dump` is portable (DR-66) |
 | SMS brandname approval is slow | No approval 3 weeks after choosing the provider | Start before P1-10; unbranded route as the fallback |
-| Scope creep from the 139-feature checklist | Features with no FR | Every feature is mapped to an FR or marked out of scope (P0-07, DOC-05) |
+| Scope creep from the 113-feature checklist | Features with no FR | Every feature is mapped to an FR or marked out of scope (P0-07, DOC-05) |
 
 ## 10. Not in this document
 

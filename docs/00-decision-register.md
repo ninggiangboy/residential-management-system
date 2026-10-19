@@ -40,6 +40,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Owner | Receipts and e-invoices (DR-17, DR-42, DR-13): DR-17 and DR-42 accepted as proposed (one receipt per allocation; `ResidencyApi.getMembership` also returns `startedAt` for the history rule of DR-40). Legal risk resolved: the company issues an e-invoice only when a resident asks (request of type "Khác"), outside the system; the system does not manage e-invoices (no number, no table, no integration); the receipt is "Biên lai thu tiền / Payment receipt", not a tax invoice. Readiness hooks: complete snapshot, reserved nullable `finance.receipt.external_invoice jsonb`, event `finance.receipt_issued.v1`; no VAT fields, buyer tax details, invoice table or provider port now (a new migration at integration time) | DR-13, DR-17, DR-42, DR-40, DR-73, DOC-01, DOC-09, DOC-15, DOC-22, DOC-34, master plan §8 |
 | 2026-10-19 | Owner | Master plan approved as v1.0 (task P0-01 done). Every P1-blocking DR is decided; DR-25, 26, 27, 28, 30, 31, 34, 35 stay open until the gateway sandbox and the bank statement sample arrive; DR-08 is to be revisited | Master plan, DR-25…35 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-07: DR-85 (`platform` schema belongs to the core packages), DR-86 (one object-key layout), DR-87 (contracts, an event and tables implied by decisions). DR-88 (operators reach Grafana by SSH port-forward) is proposed for the Owner | DR-36, DR-42, DR-55, DR-56, DR-59, DR-61, DR-63, DR-74, DOC-07 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-05: DR-89 (the proposal has 113 features, not 139; 124 in the catalog), DR-90 (Excel export of units and residents is an export-center kind). DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites) are proposed for the Owner | DR-79, DR-55, DR-57, DOC-01, DOC-03, DOC-05 |
 
 ---
 
@@ -591,6 +592,13 @@ flowchart TB
 - **Consequences:** Lost encryption keys mean re-entering the gateway credentials, not data loss. A driver with another secret set needs a field list in DOC-24, not a migration.
 - **Write to:** DOC-36, DOC-24, DOC-17, DOC-39, RB-12.
 
+### DR-91 · A payment link created by the Manager for a resident is not built — **Proposed**
+- **Problem:** The proposal lists "payment links" (F-PAY-05). A payment intent belongs to a member who selects the charges, and a second creation path would need its own race rules (DR-28).
+- **Options:** (1) not built: the resident creates the link in the app (FR-07) and the Manager sends a debt reminder (FR-12.4); (2) the Manager creates an intent on behalf of a unit.
+- **Decision (proposed):** Option 1, the simplest rule that keeps money correct. A Manager who wants cash in sends a reminder or records a manual payment (FR-05).
+- **Consequences:** F-PAY-05 stays "Not built".
+- **Write to:** DOC-05, DOC-23.
+
 ## G. Reconciliation
 
 ### DR-34 · Bank-statement import: format, profiles and idempotency
@@ -906,6 +914,18 @@ flowchart TB
 - **Consequences:** One lifecycle and quota rule for all objects (DR-61).
 - **Write to:** DOC-37, DOC-34.
 
+### DR-90 · Excel export of units and residents is a kind of the export center — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The proposal asks to export units and residents to Excel (F-UNI-06), but no endpoint or FR names it.
+- **Decision:** It is two kinds of the export center (`units`, `residents`, FR-48), run as an export job (DR-55), and logged as one `pii.read` row per export with the record count (FR-37.5, DR-57). No new FR and no new endpoint.
+- **Consequences:** The wording of FR-48 widens to name the two kinds.
+- **Write to:** DOC-03 (FR-48), DOC-33, DOC-51.
+
+### DR-92 · Pinning favorite library pages is not built — **Proposed**
+- **Problem:** The proposal lists "pin favorites" for the library (F-WIK-09); no endpoint, screen or FR exists.
+- **Decision (proposed):** Not built; the folder tree and search (FR-33) reach every page.
+- **Consequences:** F-WIK-09 stays "Not built".
+- **Write to:** DOC-05, DOC-32.
+
 ## N. Runtime, operations and security
 
 ### DR-62 · Jobs, schedules and the outbox runtime settings — **Decided (Owner, 2026-10-19)**
@@ -1110,6 +1130,7 @@ flowchart TB
   *Changed 2026-10-19:* the proposal ended at FR-48; FR-49 and FR-50 are added and the range is FR-01…50.
 - **Consequences:** The traceability matrix (master plan §6) lists FR-01…50.
 - **Write to:** DOC-03, DOC-05, DOC-01.
+  *Revised 2026-10-19 (DR-89):* the proposal has 113 feature rows (131 counting one row per app it ships on), not 139; DOC-05 maps the 113 and adds 11 more, 124 in total.
 
 ### DR-80 · How the non-functional targets are measured — ⚠ deviates from the original SDD — **Decided (Owner, 2026-10-19)**
 - **Problem:** Several NFR targets mix definitions: NFR-02 ("webhook received → receipt visible in the resident app, p95 ≤ 5 s") includes a 3-second client poll; NFR-04 ("within 60 s of the send time") has no definition of "handed to Expo"; NFR-10 (99.5% per month) has no probe; NFR-12 measures from what instant.
@@ -1141,6 +1162,12 @@ flowchart TB
 
 - **Consequences:** An answer that differs from the default creates a `Changed` DR and updates the target documents.
 - **Write to:** DOC-01, DOC-03.
+### DR-89 · The feature count is 113, not 139 — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The master plan, DOC-01, DOC-03 and the original SDD say the product proposal has 139 features. Counting the rows of its tables (§3.1–§3.11) gives 113, or 131 when a row delivered on two apps counts twice. Writing DOC-05 (P0-07) needs one number.
+- **Decision:** DOC-05 maps the 113 proposal rows to `F-<GROUP>-xx` and adds 11 features that decisions require (124 in total: 121 built, 1 later, 2 not built). New text says 113; the original SDD and `references/` are not edited. DOC-01, DOC-03 and the master plan are corrected in the same change.
+- **Consequences:** Anyone quoting "139" from the SDD must read it as "113 rows, 131 deliveries".
+- **Write to:** DOC-05, DOC-01, DOC-03, master plan §3.2, P0-07.
+
 
 ---
 

@@ -599,7 +599,7 @@ This document lists what the system must do (FR-01…50) and how well (NFR-01…
 
 ### FR-48 · The export center (added)
 
-*Statement:* Manager and Admin request exports in an export center and download the file from a 15-minute link (added, DR-55).
+*Statement:* Manager and Admin request exports in an export center and download the file from a 15-minute link; the kinds are the six reports and the lists `units` and `residents` (added, DR-55, DR-90).
 
 | ID | Requirement | Acceptance criteria | Priority | Verification |
 | --- | --- | --- | --- | --- |
@@ -652,7 +652,7 @@ Numbers are design targets for the phase 1 machine and are recalibrated on the s
 
 ## 3. Matrix: requirement → use case → feature group → design
 
-Use cases are in DOC-04; the feature IDs `F-<GROUP>-xx` are assigned in DOC-05, which maps each of the 139 proposal features to an FR here; the table gives the feature group. Tasks and verification per requirement are in master plan §6.
+Use cases are in DOC-04; the feature IDs `F-<GROUP>-xx` are assigned in DOC-05, which maps each of the 113 proposal features to an FR here; the table gives the feature group. Tasks and verification per requirement are in master plan §6.
 
 | Requirement | Use case | Feature group | Design documents |
 | --- | --- | --- | --- |
