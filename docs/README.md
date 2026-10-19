@@ -28,7 +28,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Review |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Review |
 | DOC-12 | [Code architecture](03-architecture/code-architecture.md) | Review |
-| DOC-13 | ADR index (`04-adr/README.md`) | Not written |
+| DOC-13 | [ADR index](04-adr/README.md) | Review |
 | DOC-14 | Data conventions (`05-data/data-conventions.md`) | Not written |
 | DOC-15 | Finance model (`05-data/finance-model.md`) | Not written |
 | DOC-16 | Identity and residency model (`05-data/identity-and-residency-model.md`) | Not written |
