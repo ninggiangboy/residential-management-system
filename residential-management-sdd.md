@@ -115,56 +115,79 @@ One phone number is one resident account. The same account can be owner of one u
 ### 3.2 Use cases
 
 ```mermaid
-flowchart LR
-  ADM(["Admin"])
-  Manager(["Manager"])
-  TEC(["Technician"])
-  GRD(["Guard"])
-  OWN(["Owner"])
-  MEM(["Family member / Tenant"])
-  HLP(["Helper"])
-  SYS(["System"])
-
-  subgraph Money["Fees and payment"]
-    UC01["UC-01 Import and publish a fee batch"]
-    UC02["UC-02 Record a manual payment"]
-    UC03["UC-03 Pay batches online"]
-    UC04["UC-04 Recall and re-issue a batch"]
-    UC05["UC-05 Follow debt, send reminders"]
-    UC06["UC-06 Reconcile with the bank statement"]
-  end
-  subgraph Ops["Operations"]
-    UC07["UC-07 Submit a ticket"]
-    UC08["UC-08 Assign a ticket"]
-    UC09["UC-09 Handle an assigned ticket"]
-    UC10["UC-10 Close or reopen, rate"]
-    UC11["UC-11 Send a notice"]
-    UC12["UC-12 Register and review a vehicle"]
-  end
-  subgraph Access["People and access"]
-    UC13["UC-13 Import units and residents"]
-    UC14["UC-14 Sign in with OTP"]
-    UC15["UC-15 Manage household members"]
-    UC16["UC-16 Show and scan the QR code"]
-    UC17["UC-17 Manage staff and settings"]
-  end
-  subgraph Auto["Automatic jobs"]
-    UC18["UC-18 Settle from webhook or re-query"]
-    UC19["UC-19 Send scheduled notices"]
-    UC20["UC-20 Check ledger invariants nightly"]
-  end
-
-  Manager --- UC01 & UC02 & UC04 & UC05 & UC06 & UC08 & UC10 & UC11 & UC12 & UC13
-  ADM --- UC17
-  OWN --- UC03 & UC07 & UC10 & UC15 & UC16
-  MEM --- UC03 & UC07 & UC16
-  HLP --- UC16
-  TEC --- UC09
-  GRD --- UC09 & UC16
-  SYS --- UC18 & UC19 & UC20
+usecase-beta
+direction LR
+actor Manager
+actor ADM("Admin")
+actor TEC("Technician")
+actor GRD("Guard")
+actor RES("Resident")
+actor OWN("Owner")
+actor MEM("Family member / Tenant")
+actor HLP("Helper")
+actor SYS("System")
+systemBoundary Money["Fees and payment"]
+  UC01("UC-01 Import and publish a fee batch")
+  UC02("UC-02 Record a manual payment")
+  UC03("UC-03 Pay batches online")
+  UC04("UC-04 Recall and re-issue a batch")
+  UC05("UC-05 Follow debt, send reminders")
+  UC06("UC-06 Reconcile with the bank statement")
+end
+systemBoundary Ops["Operations"]
+  UC07("UC-07 Submit a ticket")
+  UC08("UC-08 Assign a ticket")
+  UC09("UC-09 Handle an assigned ticket")
+  UC10("UC-10 Close or reopen, rate")
+  UC11("UC-11 Send a notice")
+  UC12("UC-12 Register and review a vehicle")
+end
+systemBoundary Access["People and access"]
+  UC13("UC-13 Import units and residents")
+  UC14("UC-14 Sign in with OTP")
+  UC15("UC-15 Manage household members")
+  UC16("UC-16 Show and scan the QR code")
+  UC17("UC-17 Manage staff and settings")
+end
+systemBoundary Auto["Automatic jobs"]
+  UC18("UC-18 Settle from webhook or re-query")
+  UC19("UC-19 Send scheduled notices")
+  UC20("UC-20 Check ledger invariants nightly")
+end
+OWN --|> RES
+MEM --|> RES
+HLP --|> RES
+Manager --> UC01
+Manager --> UC02
+Manager --> UC04
+Manager --> UC05
+Manager --> UC06
+Manager --> UC08
+Manager --> UC10
+Manager --> UC11
+Manager --> UC12
+Manager --> UC13
+ADM --> UC17
+OWN --> UC03
+MEM --> UC03
+OWN --> UC07
+MEM --> UC07
+OWN --> UC10
+MEM --> UC10
+OWN --> UC12
+MEM --> UC12
+OWN --> UC15
+RES --> UC14
+RES --> UC16
+GRD --> UC16
+TEC --> UC09
+GRD --> UC09
+SYS --> UC18
+SYS --> UC19
+SYS --> UC20
 ```
 
-The diagram groups use cases by what is at stake: money, daily operations, and who may enter the building or the data.
+The diagram groups use cases by what is at stake: money, daily operations, and who may enter the building or the data. It follows the table below: Owner, Family member / Tenant and Helper are kinds of Resident, so UC-14 and UC-16, which every resident has, hang on Resident.
 
 | ID | Role | Use case |
 | --- | --- | --- |
@@ -266,7 +289,7 @@ flowchart TD
     SAPP["Staff app (Expo)"]
     RAPP["Resident app (Expo)"]
   end
-  EDGE["nginx: TLS, static web, /api proxy"]
+  EDGE["Cloudflare edge + Tunnel → Caddy: TLS, /api proxy"]
   WEB & SAPP & RAPP -- "HTTPS, JWT" --> EDGE
   subgraph API["apps/api: stateless, APP_ROLES = api | worker"]
     MODS["Modules: identity, building, residency, finance, tickets, access, vehicles, notices, notification, wiki, audit"]
@@ -317,7 +340,7 @@ Every client request becomes a short transaction in one module; anything slow or
 | Data | PostgreSQL 18, Drizzle ORM and drizzle-kit migrations per module, PgBouncer-compatible (`DB_PREPARE=false`) |
 | Messaging | Transactional outbox and inbox from the reference kit (`@kit/messaging`), in-process bus, `FOR UPDATE SKIP LOCKED` claiming |
 | Auth | ES256 JWT access tokens (15 min), rotating refresh tokens with reuse detection, argon2id (`Bun.password`) for staff passwords |
-| Files | S3 API (`@aws-sdk/client-s3`, presigned PUT), SeaweedFS locally, a managed S3-compatible bucket in production |
+| Files | S3 API (`@aws-sdk/client-s3`, presigned PUT), SeaweedFS locally, Cloudflare R2 in production |
 | Excel, PDF | `exceljs` for import and export; `@react-pdf/renderer` with embedded Be Vietnam Pro font for fee notices, receipts, reports and wiki export |
 | Phone numbers | `libphonenumber-js` (E.164 normalization, Vietnamese numbers) |
 | Payment | payOS REST API v2 (`/v2/payment-requests`, webhook with HMAC-SHA256 signature) behind a `PaymentGateway` port |
@@ -339,13 +362,45 @@ A charge is settled only by allocations of posted payments, and every allocation
 The ledger has five kinds of record. Charges say what a unit owes; payments say what money came in; allocations connect the two; credit holds what came in but could not be allocated; receipts are the immutable documents handed to residents.
 
 ```mermaid
-flowchart LR
-  B["fee_batch (PH-2610-01, fee month 10/2026, due 15/10)"] --> C["charge: one per unit in the batch (amount, paid_amount, status)"]
-  C --> L["charge_line: item, quantity, unit price, amount"]
-  P["payment: cash, bank transfer, online (amount, source, reference)"] --> A["allocation: payment → charge (amount)"]
-  A --> C
-  P --> K["unit_credit_entry: excess, applied, refunded"]
-  A --> R["receipt BL-2610-0153: snapshot, one per allocation"]
+erDiagram
+  FEE_BATCH ||--o{ CHARGE : "contains, one per unit"
+  CHARGE ||--o{ CHARGE_LINE : "itemized by"
+  PAYMENT ||--o{ ALLOCATION : "split into"
+  CHARGE ||--o{ ALLOCATION : "settled by"
+  ALLOCATION ||--o| RECEIPT : "documented by"
+  PAYMENT ||--o{ UNIT_CREDIT_ENTRY : "excess held as"
+  FEE_BATCH {
+    string code "PH-2610-01"
+    date fee_month "10/2026"
+    date due_date "15/10"
+  }
+  CHARGE {
+    numeric amount
+    numeric paid_amount
+    string status
+  }
+  CHARGE_LINE {
+    string item
+    numeric quantity
+    numeric unit_price
+    numeric amount
+  }
+  PAYMENT {
+    numeric amount
+    string source "cash, bank transfer, online"
+    string reference
+  }
+  ALLOCATION {
+    numeric amount
+  }
+  RECEIPT {
+    string number "BL-2610-0153"
+    jsonb snapshot
+  }
+  UNIT_CREDIT_ENTRY {
+    numeric amount
+    string kind "excess, applied, refunded"
+  }
 ```
 
 The batch groups charges for publishing and reporting; money always moves at the level of one charge, because a resident pays "October, batch 1" and not "some of my debt".
@@ -1667,33 +1722,53 @@ When something fails, the system leans to "slower but correct": money waits as p
 
 ### 19.1 Deployment
 
-> Deployment note (2026-10-18): the topology below is superseded by DR-83 (Cloudflare Pages, Edge and Tunnel in front of one VPS running Caddy, the Elysia `api` and `worker` in Docker, native PostgreSQL 18 with pgBackRest, and R2 for files and backups). Data residency under Decree 13/2023/NĐ-CP is an open question recorded there.
+The topology is decided in DR-83: Cloudflare in front, one VPS per environment behind it.
 
 ```mermaid
-flowchart TD
-  NET["Internet"] --> NG["nginx (TLS, static web CMS, /api proxy)"]
-  NG --> A1["api #1"] & A2["api #2"]
-  A1 & A2 --> PG[("PostgreSQL 18 (managed or container + daily dumps)")]
-  W["worker (outbox, jobs, PDF)"] --> PG
-  A1 & A2 & W --> S3[("S3-compatible bucket")]
-  W --> EXT["payOS, SMS, Expo Push, SMTP"]
-  NET -- "webhook" --> NG
-  BK["backup job 02:00"] --> PG
-  BK --> OFF[("Off-site bucket, 5 daily copies")]
+flowchart TB
+  subgraph CICD["CI/CD (dashed = deploys)"]
+    MONO["Monorepo: code, PR"] -.-> GHA["GitHub Actions: test, build, deploy"]
+    GHA -.-> GHCR["GHCR: Docker image"]
+    GHA -.-> EAS["Expo EAS: build, OTA"]
+  end
+  MOB["Mobile apps: Expo, React Native"] --> EDGE
+  WEB["Web admin: React SPA"] --> PAGES
+  WEB --> EDGE
+  GHA -.-> PAGES
+  subgraph CF["Cloudflare (free plan)"]
+    PAGES["Pages: static web admin"]
+    EDGE["Edge: DNS, WAF, rate limit; Access protects the admin site"]
+    TUN["Tunnel (cloudflared): no inbound port"]
+    R2[("R2: files, backups")]
+    EDGE --> TUN
+  end
+  subgraph VPS["VPS Ubuntu, PostgreSQL installed on the host"]
+    CADDY["Caddy, Elysia api and worker (Docker): auth, REST, jobs"]
+    PG[("PostgreSQL 18, native")]
+    PGB["pgBackRest: full, diff, WAL to R2"]
+    CADDY --> PG --> PGB
+  end
+  TUN --> CADDY
+  CADDY --> R2
+  PGB --> R2
+  GHCR -.-> CADDY
 ```
 
-Phase 1 runs on one host with docker compose: two API containers behind nginx for zero-downtime deploys, one worker, and PostgreSQL either managed by a Vietnamese cloud provider or as a container with dumps (section 22).
+Cloudflare Pages serves the web CMS; the mobile apps and the web CMS reach the API through the Cloudflare edge and a Tunnel, so the VPS has no inbound port. On the VPS, Docker Compose runs Caddy, `cloudflared`, two API containers, one worker and monitoring; PostgreSQL 18 runs natively on the host and pgBackRest archives it to R2 (section 22).
 
 | Component | Deployment | Replicas | Notes |
 | --- | --- | --- | --- |
-| nginx | Container | 1 | TLS (Let's Encrypt), static web CMS, `/api` proxy, request size 60 MB for video |
+| Cloudflare edge | Free plan | — | DNS, managed WAF, one rate-limiting rule on `/api/v1/auth/*`; Access in front of the admin site only |
+| Web CMS | Cloudflare Pages | — | Static, cross-origin to the API (CORS allows only the admin origin) |
+| Tunnel | `cloudflared` container | 1 | Only way in: the firewall denies all inbound traffic, SSH included |
+| Caddy | Container | 1 | Plain HTTP inside the host, reverse proxy with health checks on `/health/ready` |
 | API | Container, `APP_ROLES=api` | 2 | Stateless; rolling restart one at a time |
 | Worker | Same image, `APP_ROLES=worker` | 1 | Outbox relay and every job; jobs that must run once take an advisory lock, so a second worker is safe |
-| PostgreSQL | Managed service or container with a volume | 1 primary | 2 vCPU, 4 GB, 50 GB SSD for phase 1 |
-| Object storage | Managed S3-compatible bucket | — | Versioning on; lifecycle deletes orphans |
-| Staging | Same compose file on a smaller host | 1 each | payOS sandbox, SMS to an allow-list of test phones, separate push project |
+| PostgreSQL | Native on the VPS, version 18 | 1 primary | 8 GB host; pgBackRest full weekly, differential daily 02:00, WAL archive, RPO ≤ 5 min |
+| Object storage | Cloudflare R2, private buckets | — | Presigned PUT (R2 has no presigned POST); separate bucket for backups |
+| Staging | Same layout on a smaller VPS | 1 each | Own Tunnel, R2 buckets and Pages branch; payOS sandbox, SMS to an allow-list of test phones, separate push project |
 
-Configuration comes only from environment variables (validated at boot); secrets (database URL, JWT signing keys, QR signing key, settings encryption key, payOS credentials encryption, SMS and SMTP credentials) live in the host's secret store and never in the image or the repository. Data stays in Vietnam-hosted infrastructure, which keeps the system simpler to align with Vietnam's personal data protection rules (Decree 13/2023/NĐ-CP).
+Configuration comes only from environment variables (validated at boot); secrets (database URL, JWT signing keys, QR signing key, settings encryption key, payOS credentials encryption, SMS and SMTP credentials) live in the host's secret store and never in the image or the repository. Cloudflare's edge and R2 are outside Vietnam, so data residency under Decree 13/2023/NĐ-CP is an open question recorded in DR-58 and DR-83, to be settled before real personal data is loaded.
 
 ### 19.2 Observability and alerting
 
@@ -1883,7 +1958,7 @@ residential-management-system/
 │   └── mobile-core/         # API client, auth, unit context, push registration
 ├── docs/
 │   └── references/          # product proposal, design screen catalog, architecture reference
-├── docker/                  # Dockerfiles, nginx, compose for local, staging, production
+├── docker/                  # Dockerfiles, Caddy, compose for local, staging, production
 └── residential-management-sdd.md
 ```
 
