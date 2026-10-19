@@ -41,6 +41,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Owner | Master plan approved as v1.0 (task P0-01 done). Every P1-blocking DR is decided; DR-25, 26, 27, 28, 30, 31, 34, 35 stay open until the gateway sandbox and the bank statement sample arrive; DR-08 is to be revisited | Master plan, DR-25…35 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-07: DR-85 (`platform` schema belongs to the core packages), DR-86 (one object-key layout), DR-87 (contracts, an event and tables implied by decisions). DR-88 (operators reach Grafana by SSH port-forward) is proposed for the Owner | DR-36, DR-42, DR-55, DR-56, DR-59, DR-61, DR-63, DR-74, DOC-07 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-05: DR-89 (the proposal has 113 features, not 139; 124 in the catalog), DR-90 (Excel export of units and residents is an export-center kind). DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites) are proposed for the Owner | DR-79, DR-55, DR-57, DOC-01, DOC-03, DOC-05 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-11 after re-verifying the versions on the web: DR-93 (pgBackRest from the PGDG apt repository), DR-94 (Expo-managed modules follow the SDK ranges), DR-95 (exact pins everywhere). DR-70 corrected: `expo-brightness` replaces the non-existent `expo-screen-brightness`; DR-82 table revised | DR-70, DR-82, DR-83, DOC-11 |
 
 ---
 
@@ -97,6 +98,8 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
   | wrangler (Pages deploy) | 4.151.1 | npm | DR-83 |
   | Ubuntu Server | 26.04 LTS (26.04.1, EOL 2031-05) | endoflife.date | P1-20 checks PostgreSQL 18 and Docker packages for it, else 24.04 |
   | Grafana Alloy | not pinned yet: pin in P1-18, verify on the web first | Grafana Loki 3.4 blog (https://grafana.com/blog/2025/02/13/grafana-loki-3-4-standardized-storage-config-sizing-guidance-and-promtail-merging-into-alloy/) | DR-63; replaces Promtail, which reached end of life on 2026-03-02 |
+
+  *Revised 2026-10-19:* DOC-11 re-verified the table on 2026-10-19 and holds the current pins. Differences: knip 6.42.0, nodemailer 10.1.7, Grafana Alloy pinned at 1.20.1, pgBackRest 2.60.0 upstream but 2.59.3 in the PGDG apt repository for Ubuntu 26.04 (DR-93).
 
 - **Expo SDK 58 changes that touch this design** (expo.dev/changelog/sdk-58; each is checked again when the document concerned is written): `expo-notifications` shows foreground notifications by default (DR-52, DOC-31); iOS 27 SDK requires the scene-based lifecycle (DOC-73); R8 enabled in Android release builds (DOC-73 smoke test); `NODE_ENV` is set by the command, which changes `.env` loading (DOC-41, DOC-69); `expo-file-system` `File.write()` is async; `expo-sqlite` libSQL removed; React Native 0.87 Strict TypeScript API (no deep imports) and removed `InteractionManager`, `Modal animated`, some `StatusBar` props (DOC-55, DOC-54).
 - **Consequences:** Each doc gate starts with a refresh of the table, which costs about half a day. In return the first line of code is not written against removed APIs. The reference repository's tool versions are bumped when the core packages are vendored (P1-02).
@@ -234,6 +237,24 @@ flowchart TB
 - **Supersedes (parts of):** DR-05 (nginx → Caddy; web CMS not in a container; PostgreSQL native), DR-06 (same sizes, now one VPS per environment), DR-07 (nginx/Let's Encrypt/`limit_req`/same origin → Cloudflare/Caddy/Tunnel/CORS), DR-08 step 2 (deploy through the Tunnel, Pages and EAS), DR-58 (cross-border list), DR-61 (POST → PUT), DR-64 (nginx headers and "CORS disabled"), DR-66 (hosting; pgBackRest is now the primary mechanism, not the fallback), DR-67 (self-hosted PostgreSQL). DR-05, DR-06 and DR-07 were rewritten to this topology on 2026-10-19; the others carry a pointer to this entry.
 - **Consequences:** One VPS per environment is a single point of failure: recovery is a rebuild from the compose files and a pgBackRest restore (RTO ≤ 4 h, RB-10). A Tunnel or Cloudflare outage makes the API unreachable, so payOS webhooks can be missed; the re-query job and statement reconciliation cover it (DR-30, DR-35). Cloudflare free-plan limits (1 rate rule, WAF features) mean the application-level limiter carries more of the load. Operating PostgreSQL ourselves adds upgrades, tuning and the restore drill to the Owner's work (DOC-72).
 - **Write to:** DOC-07, DOC-70, DOC-71, DOC-72, DOC-37, DOC-39, DOC-35, ADR-0016, ADR-0017, ADR-0020.
+
+### DR-93 · pgBackRest is installed from the PGDG apt repository — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-83 names pgBackRest 2.60. Upstream 2.60.0 is a day old and the PGDG apt repository for Ubuntu 26.04 ships 2.59.3.
+- **Decision:** Install the apt package (2.59.3 today) and move to 2.60.x when PGDG ships it; do not build from source.
+- **Consequences:** One minor version behind upstream; signed packages and `apt upgrade` keep it current.
+- **Write to:** DOC-11, DOC-70, DOC-72.
+
+### DR-94 · Expo-managed modules follow the SDK's bundled ranges, not npm `latest` — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** For some modules npm `latest` lies outside the range the Expo SDK 58 bundles (gesture-handler 3.4.0 against ~3.3.0, flash-list 2.3.3 against 2.3.2, async-storage 3.1.1 against 2.2.0); DR-82 says "latest stable".
+- **Decision:** For every package in the SDK's bundled native modules list the pin is what `npx expo install` selects. DR-82 applies to everything else.
+- **Consequences:** These modules lag npm `latest` until the next SDK.
+- **Write to:** DOC-11, DOC-55.
+
+### DR-95 · Exact pins everywhere — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** Ranges and floating tags make builds non-reproducible.
+- **Decision:** Exact versions in `package.json` (except the `~` ranges Expo writes), exact Docker image tags in Compose files, GitHub Actions by commit SHA with the tag in a comment.
+- **Consequences:** More Dependabot pull requests (DR-01 groups minor and patch updates).
+- **Write to:** DOC-11, DOC-70, DOC-71.
 
 ## B. Conventions
 
@@ -1026,7 +1047,7 @@ flowchart TB
 - **Decision (proposed):**
   - Versions follow DR-82: verified latest stable, New Architecture only on mobile, development builds instead of Expo Go, native libraries checked for New Architecture support before they are listed here.
   - Web: Vite, React 19, TanStack Router (file-based) and Query, Tailwind CSS, shadcn/ui on Radix primitives, TanStack Table, react-hook-form with a TypeBox schema adapter, Recharts, `@dnd-kit` (wiki ordering), TipTap, `date-fns`, `lucide-react`.
-  - Mobile: current Expo SDK (58 at the 2026-10-18 snapshot; pinned in P1-01), expo-router, NativeWind (4.2 stable: see DR-82 table; Tailwind classes driven by the same `design-tokens` preset), TanStack Query with persisted cache for non-money screens (max age 24 h; payment and QR screens always online), `@shopify/flash-list`, `expo-image`, `expo-camera`, `expo-secure-store`, `expo-notifications`, `expo-image-picker`, `expo-image-manipulator`, `expo-media-library` (save QR image), `expo-screen-brightness`, `@react-native-community/netinfo`, `react-native-qrcode-svg`, `react-hook-form`.
+  - Mobile: current Expo SDK (58 at the 2026-10-18 snapshot; pinned in P1-01), expo-router, NativeWind (4.2 stable: see DR-82 table; Tailwind classes driven by the same `design-tokens` preset), TanStack Query with persisted cache for non-money screens (max age 24 h; payment and QR screens always online), `@shopify/flash-list`, `expo-image`, `expo-camera`, `expo-secure-store`, `expo-notifications`, `expo-image-picker`, `expo-image-manipulator`, `expo-media-library` (save QR image), `expo-brightness` *(Revised 2026-10-19: DOC-11 found that `expo-screen-brightness` does not exist on npm; SDK 58 ships `expo-brightness`)*, `@react-native-community/netinfo`, `react-native-qrcode-svg`, `react-hook-form`.
   - `packages/design-tokens` is extracted from the design canvas (colors, type scale, spacing, radius, status colors) into JSON and generates both the Tailwind preset and the NativeWind theme (task P1-09).
   - Eden Treaty types via type-only import (DR-04); P1-01 confirms Metro handles the workspace.
 - **Consequences:** If NativeWind fails the P1-01 check, `StyleSheet` with token constants is the fallback and `ui-native` is written once.
@@ -1177,7 +1198,7 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 | Level | Items | Why decide early |
 | --- | --- | --- |
-| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
+| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
 | Blocks P2 | DR-13…20, DR-84, DR-23, 24, DR-27, DR-29, DR-52, 53, DR-56, DR-75, 76, DR-78 | Fix the ledger tables and semantics, the all-or-nothing rule, the allocation statement, the money log, batches, manual payments, order code, the `settle()` contract, the notification core, PDF rendering and the order of work |
 | Blocks P3 | DR-25, 26, DR-28, DR-30…32, DR-34, 35 | Fix payOS behavior and the fake driver, intent lifecycle, the re-query and cancel jobs, webhook hardening and reconciliation |
 | Blocks P4 | DR-43…47, DR-50, 51 | Fix ticket mechanics and the notice model and fan-out |

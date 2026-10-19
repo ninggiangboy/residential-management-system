@@ -1,0 +1,332 @@
+# Tech stack and versions
+
+> Status: **Review** · Updated: 2026-10-19 · DOC-11
+> Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83), master plan §0.4, [DOC-06](../02-glossary.md)
+> Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
+
+This document pins every runtime, library, tool, CI action, image and font the system uses, with the reason, the licence, the date it was checked and the source of the check. It also holds the compatibility table that P1-01/P1-02 fill in, the fallback and refresh rules, and the list of things that are not used on purpose. It does not design how the packages are used: layout and layering are in DOC-12, topology in DOC-07, jobs and settings in DOC-38 and DOC-41.
+
+## 0. Conventions
+
+- **Currency policy (DR-82, master plan §0.4).** Latest stable of everything. No pre-release (RC, beta, `next`, canary, nightly) without a DR. Every pin was **checked on the web on 2026-10-19** against a primary source: the npm registry (`registry.npmjs.org`, which is what `npm view` reads), GitHub releases of the project, endoflife.date, the Expo changelog and bundled-module list, Docker Hub tags, and the PostgreSQL and Docker apt repositories. Memory, the original SDD and the reference repository were not used as evidence.
+- **Verified on.** The *Verified on* column is the date of the check; the *Source* column links the page that shows the version. A pin older than 30 days at the moment of use is checked again (§12).
+- **Unverified.** A row marked **unverified** names what could not be confirmed and who confirms it (task). None of the pins below is unverified; the points that wait for a task or an Owner input are in the Open questions.
+- **Where a pin is written.**
+  - `.tool-versions` holds Bun, Node and (for local runs) the tool binaries; `oven/bun:<exact>` is the Docker base image (DR-01).
+  - `package.json`: exact versions (no `^`, no `~`) for every direct dependency except the Expo-managed modules of §6, which keep the `~` ranges that `npx expo install` writes. `bun.lock` is committed (DR-01).
+  - Third-party images in Compose files use an exact tag, never `latest` or a bare major (DR-95).
+- **Expo-managed modules follow the SDK, not npm `latest` (DR-94).** For every package listed in the SDK's `bundledNativeModules.json`, the pin is the version range `npx expo install` selects for SDK 58; the table shows that range and, where it differs, the newer npm `latest` that is **not** used (for example `react-native-gesture-handler` 3.3.0 against 3.4.0).
+- **Licences** are those declared in the package metadata or the repository `LICENSE` file read on the check date. Copyleft tools (Grafana, Loki, k6: AGPL-3.0) run as separate programs and are not linked into the product; the product code is private.
+- **Dates** are ISO. Package names are in backticks.
+
+### 0.1 Differences from the DR-82 snapshot (2026-10-18) and from other documents
+
+| Item | DR-82 / other | Verified 2026-10-19 | Effect |
+| --- | --- | --- | --- |
+| `knip` | 6.41.0 | **6.42.0** (published 2026-10-18) | Pin 6.42.0 |
+| `nodemailer` | 10.1.3 | **10.1.7** (published 2026-10-18) | Pin 10.1.7 |
+| Grafana Alloy | "not pinned yet" | **1.20.1** (2026-09-28; image `grafana/alloy:v1.20.1` exists) | Pinned here for P1-18 |
+| pgBackRest | 2.60.0 (upstream release 2026-10-18) | Upstream 2.60.0, but the PGDG apt repository for Ubuntu 26.04 ships **2.59.3** | DR-93: install from PGDG apt (2.59.3 now), move to 2.60.x when PGDG ships it |
+| `expo-screen-brightness` (DR-70) | named in DR-70 | The package does not exist on npm (404). The SDK 58 module is **`expo-brightness`** 58.0.2 | DR-70 corrected 2026-10-19 |
+| TanStack Table | no version | **9.3.1** is `latest` (v9 is stable) | Pin 9.3.1; shadcn data-table examples may still target v8 (compatibility table row 7) |
+| `expo-router` | 58.0.23 | SDK bundle range `~58.0.20`; npm `latest` 58.0.23 is inside it | Unchanged |
+| Everything else in the DR-82 table | as listed | Unchanged (Bun 1.4.3, Node 24.22, PostgreSQL 18.6, TypeScript 7.0.2, Expo 58.0.14, React Native 0.88.0, React 19.3.1, Vite 8.3.4, Tailwind 4.3.3, NativeWind 4.2.7, Elysia 1.4.30, Drizzle 0.45.4 / 0.31.11, Biome 2.5.15, dependency-cruiser 18.6.0, Playwright 1.64.1, TipTap 3.32.0, `@react-pdf/renderer` 4.9.0, `exceljs` 4.4.0, pino 10.4.0, `@aws-sdk/client-s3` 3.1152.0, Caddy 2.11.7, cloudflared 2026.10.1, Ubuntu 26.04.1, wrangler 4.151.1, eas-cli 25.2.0, expo-server-sdk 7.2.0, TanStack Router 1.170.45 and Query 5.104.4) | Confirmed |
+
+## 1. Runtime and platform
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| Bun | **1.4.3** (2026-10-09) | Runtime, package manager, test runner, `Bun.password`, `Bun.randomUUIDv7()` (DR-01, DR-10, DR-39). SDD "≥ 1.4" holds | MIT, with bundled third-party components listed in the project's licensing file | 2026-10-19 | [GitHub releases](https://github.com/oven-sh/bun/releases), [endoflife.date/bun](https://endoflife.date/bun) |
+| Docker base image `oven/bun` | **1.4.3** (tag exists) | Same exact version as `.tool-versions` | as Bun | 2026-10-19 | [Docker Hub](https://hub.docker.com/r/oven/bun/tags) |
+| Node.js (tooling only: Expo CLI, EAS, Metro) | **24.22.0** LTS (2026-10-14). Node 26 becomes LTS on 2026-10-28 (26.12.0 today) | Expo SDK 58 accepts 22.13+, 24.3+, 26+; odd lines are unsupported. Replaces the SDD's "Node 22" (DR-82). Revisit 26 at the first refresh after 2026-10-28 | MIT | 2026-10-19 | [endoflife.date/nodejs](https://endoflife.date/nodejs), [Expo SDK 58 changelog](https://expo.dev/changelog/sdk-58) |
+| PostgreSQL | **18.6** (supported to 2030-11-14). 19 is not available. PGDG apt for Ubuntu 26.04 (`resolute-pgdg`) carries `postgresql-18` 18.6-1.pgdg26.04+2 | Replaces the SDD's PostgreSQL 17 (DR-82). Installed natively on the VPS (DR-83, DR-67) | PostgreSQL Licence | 2026-10-19 | [endoflife.date/postgresql](https://endoflife.date/postgresql), [apt.postgresql.org](https://apt.postgresql.org/pub/repos/apt/dists/resolute-pgdg/18/binary-amd64/Packages) |
+| PostgreSQL extensions | `pg_trgm`, `unaccent`, `citext` (contrib modules; P1-20 confirms the apt package carries them); `uuid` is generated in the application (UUIDv7, DR-10) | Plate and name search (DR-41), library search (DR-54), case-insensitive email (DR-36). P1-20 runs `CREATE EXTENSION` on the host | PostgreSQL Licence | not yet run on a host (P1-20) | PostgreSQL docs for [contrib modules](https://www.postgresql.org/docs/18/contrib.html) |
+| PostgreSQL image for local development and CI | `postgres:18.6` (tag exists) | Same minor as production; the integration job uses it as a service container (DR-08) | PostgreSQL Licence | 2026-10-19 | [Docker Hub](https://hub.docker.com/_/postgres/tags) |
+| Ubuntu Server LTS (VPS) | **26.04.1** "resolute" (supported to 2031-05-29) | DR-83; PostgreSQL 18 and Docker CE packages for it exist (checked above and below). Fallback 24.04 if P1-20 finds a gap | various (Ubuntu) | 2026-10-19 | [endoflife.date/ubuntu](https://endoflife.date/ubuntu) |
+| Docker Engine (VPS) | **29.9.1** (`docker-ce 5:29.9.1-1~ubuntu.26.04~resolute` is in Docker's apt repository) | Runs `api`, `worker`, Caddy, `cloudflared`, monitoring (DR-83) | Apache-2.0 | 2026-10-19 | [endoflife.date/docker-engine](https://endoflife.date/docker-engine), [Docker apt repository](https://download.docker.com/linux/ubuntu/dists/resolute/stable/binary-amd64/Packages) |
+| Docker Compose | **5.6.0** | Compose files per environment | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/docker/compose/releases) |
+| Local object store (S3 API) | **to be chosen and pinned in P1-03** (the task verifies it on the web). Candidates seen today: SeaweedFS 4.48 (2026-09-28, Apache-2.0), RustFS 1.0.3 (2026-10-17, Apache-2.0). MinIO's last release is 2025-10-16 and it is not a candidate | The SDD named SeaweedFS for local use; the choice stays open until the task runs (it only has to speak presigned PUT, `HEAD`, `DELETE`) | Apache-2.0 | 2026-10-19 | [SeaweedFS](https://github.com/seaweedfs/seaweedfs/releases), [RustFS](https://github.com/rustfs/rustfs/releases) |
+| Local mail catcher | Mailpit **v1.31.6** | Receives mail from `nodemailer` in `local` (DR-68) | MIT | 2026-10-19 | [GitHub releases](https://github.com/axllent/mailpit/releases) |
+
+## 2. Language and repository tooling
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| TypeScript | **7.0.2** (2026-07-08). `rc` and `next` tags exist and are not used | DR-82. The reference repository's ^5.9 is stale. Checked against Biome, dependency-cruiser, knip, Expo and Drizzle in P1-01 (compatibility table rows 2…4) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/typescript) |
+| `@types/bun` / `bun-types` | **1.4.3** | Matches Bun | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@types/bun) |
+| `@types/node` | **24.19.2** (latest of the 24 line; `latest` is 26.6.5 and is not used because tooling runs on Node 24) | Types follow the Node line of `.tool-versions` | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@types/node) |
+| Biome | **2.5.15** | Lint and format; GritQL for the building-scope rule if it can express it (DR-12) | MIT OR Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@biomejs/biome) |
+| dependency-cruiser | **18.6.0** | Three configs enforce the module boundaries (DR-04, ADR-0004) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/dependency-cruiser) |
+| knip | **6.42.0** | Unused files, exports and dependencies | ISC | 2026-10-19 | [npm](https://www.npmjs.com/package/knip) |
+| jscpd | **5.4.1** | Copy-paste detection in `verify` (DR-08) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/jscpd) |
+| Building-scope guard | A Biome GritQL rule or a Bun script over the TypeScript AST; decided in P1-01 (DR-12). No package to pin | | | | |
+
+## 3. Backend libraries
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `elysia` | **1.4.30** (2026-08-26). `2.0.0-beta.32` (`next`) is **not used** | HTTP framework (DR-01). Peer dependency `@sinclair/typebox >=0.34 <1`, `typescript >=5` | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/elysia) |
+| `@elysiajs/eden` | **1.4.9** | Eden Treaty client types for web and mobile (type-only import, DR-04). Peer `elysia >=1.4.19` | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@elysiajs/eden) |
+| `@elysiajs/openapi` | **1.4.16** | OpenAPI and Scalar docs in `local` and `staging` only (DR-64) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@elysiajs/openapi) |
+| `@elysiajs/cors` | **1.4.2** | CORS for `https://admin.<domain>` only (DR-83) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@elysiajs/cors) |
+| `@sinclair/typebox` | **0.34.52**. The package `typebox` 1.4.2 exists but Elysia 1.4.30 expects `@sinclair/typebox` below 1.0, so it is **not used** | Request and response schemas, the notice rich-text schema (DR-50) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@sinclair/typebox) |
+| `zod` | **4.6.7** | Configuration slices and shared validation in the vendored core packages (reference uses ^4.1) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/zod) |
+| `drizzle-orm` | **0.45.4**. `1.0.0-beta`/`rc` tags exist and are **not used** | ORM. 1.0 changes casing, relational queries (`defineRelations`) and the migrations layout; the move needs a DR when 1.0 is `latest` (DOC-14 is written for 0.45) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/drizzle-orm) |
+| `drizzle-kit` | **0.31.11** | Migrations per module, expand/contract (DR-08) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/drizzle-kit) |
+| `postgres` (postgres.js) | **3.4.9** | PostgreSQL driver used by the reference with Drizzle; direct, non-pooled connection for `LISTEN/NOTIFY` and the relay (DR-67). `DB_PREPARE=false` keeps the code PgBouncer-compatible | Unlicense | 2026-10-19 | [npm](https://www.npmjs.com/package/postgres) |
+| Password hashing | Argon2id through `Bun.password` (no package). Parameters `memoryCost 19456` KiB, `timeCost 2`; benchmarked in P1-10 | DR-39 | (part of Bun) | 2026-10-19 | [DR-39](../00-decision-register.md) |
+| `jose` | **6.2.12** | ES256 JWT sign and verify, `kid` rotation (DR-38); the reference uses it | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/jose) |
+| `libphonenumber-js` | **1.13.15** | E.164 normalization of Vietnamese numbers (DR-36) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/libphonenumber-js) |
+| `intl-messageformat` | **12.1.3** | ICU messages in the shared catalog (DR-71) | BSD-3-Clause | 2026-10-19 | [npm](https://www.npmjs.com/package/intl-messageformat) |
+| `pino` | **10.4.0** | JSON logs with the request id (DR-63) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/pino) |
+| `nodemailer` | **10.1.7** | SMTP client behind the `Mailer` port (DR-68) | MIT-0 | 2026-10-19 | [npm](https://www.npmjs.com/package/nodemailer) |
+| SMS provider adapter | **open Owner/client input** (DR-68, before P1-10). The `SmsSender` port is fixed; the adapter package or HTTP client is chosen with the provider | Brandname OTP, delivery receipts | n/a | n/a | [DR-68](../00-decision-register.md) |
+| `exceljs` | **4.4.0** (published 2023-10-19) | Excel import and streaming export (FR-01, FR-35). It is the latest stable and stays; unmaintained for three years, so P1-01 runs a read/write smoke test and P1-13 the import tests. A replacement needs a DR | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/exceljs) |
+| `@react-pdf/renderer` | **4.9.0** | Fee notices, receipts, reports, library export (DR-56). P2-13 and EXP-08 measure it on Bun | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@react-pdf/renderer) |
+| `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` | **3.1152.0** (both) | S3 API against Cloudflare R2: presigned PUT, `HEAD`, `DELETE` (DR-61, DR-83) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@aws-sdk/client-s3) |
+| `sharp` | **0.35.5** | Thumbnails (480 px) and logo resize in the worker (DR-56, DR-61). P1-07 checks it on Bun | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/sharp) |
+| `expo-server-sdk` | **7.2.0** | Expo Push API client with chunks of 100 and receipts (DR-52) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-server-sdk) |
+| payOS client | None. The adapter calls the REST API with `fetch` and signs with `node:crypto` HMAC-SHA256 (DOC-24) | The payOS SDK is not needed for two endpoints and a webhook; the provider is still unconfirmed (DR-25) | n/a | n/a | [DR-25](../00-decision-register.md) |
+
+## 4. Web client (static, Cloudflare Pages)
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `react`, `react-dom` | **19.3.1** (2026-10-14) | Web CMS. The mobile apps use the React version of the SDK (§6); the two workspaces pin their own (compatibility table row 9) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react) |
+| `vite` | **8.3.4** | Build and dev server. Previous major is 6.4.4 (tag `previous`) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/vite) |
+| `@vitejs/plugin-react` | **6.1.2** | React transform for Vite 8 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@vitejs/plugin-react) |
+| `@tanstack/react-router`, `@tanstack/router-plugin` | **1.170.45**, **1.168.47** | File-based routes with typed search params (DR-70). The plugin has its own version line | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/react-router), [plugin](https://www.npmjs.com/package/@tanstack/router-plugin) |
+| `@tanstack/react-query` | **5.104.4** | Server state; 409 handling rules in DOC-55 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/react-query) |
+| `@tanstack/react-table` | **9.3.1** | Tables of the CMS (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/react-table) |
+| `tailwindcss`, `@tailwindcss/vite` | **4.3.3** (both) | Utilities driven by the `design-tokens` preset (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/tailwindcss) |
+| `shadcn` (CLI) | **4.22.1** | Copies component source into `packages/ui-web`; no runtime dependency. Its `rc` and `beta` tags are not used | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/shadcn) |
+| `radix-ui` | **1.8.1** | Primitives under shadcn components | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/radix-ui) |
+| `class-variance-authority`, `tailwind-merge` | **0.7.1**, **3.7.0** | Variant helpers used by shadcn components. `class-variance-authority` was last published 2024-11-26 | Apache-2.0, MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/class-variance-authority), [npm](https://www.npmjs.com/package/tailwind-merge) |
+| `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm` | **3.32.0** (all) | Notice and library editor limited to the node set of DR-50 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tiptap/react) |
+| `react-hook-form`, `@hookform/resolvers` | **7.90.0**, **5.9.2** | Forms with a TypeBox schema adapter (DR-70); the adapter is checked in row 7 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-hook-form) |
+| `recharts` | **3.10.1** | Dashboard charts | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/recharts) |
+| `@dnd-kit/core`, `@dnd-kit/sortable` | **6.3.1**, **10.0.0** (both published December 2024) | Library page ordering (DR-70). The newer `@dnd-kit/react` is 0.x (0.5.1) and is not used | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@dnd-kit/core), [npm](https://www.npmjs.com/package/@dnd-kit/react) |
+| `date-fns` | **4.4.0** | Date helpers around the two formatters of DR-71 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/date-fns) |
+| `lucide-react` | **1.59.0** | Icons | ISC | 2026-10-19 | [npm](https://www.npmjs.com/package/lucide-react) |
+| `wrangler` | **4.151.1** | `wrangler pages deploy` from GitHub Actions (DR-83) | MIT OR Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/wrangler) |
+
+## 5. Fonts and assets
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| Be Vietnam Pro | Google Fonts release (18 TTF files: Thin to Black, upright and italic). Committed subsets in `packages/pdf-assets`: Regular, Medium, SemiBold, Bold, Italic (DR-56) | PDF and app typography with Vietnamese diacritics | SIL Open Font License 1.1 ("Copyright 2021 The Be Vietnam Pro Project Authors") | 2026-10-19 | [google/fonts `ofl/bevietnampro`](https://github.com/google/fonts/tree/main/ofl/bevietnampro), [OFL.txt](https://raw.githubusercontent.com/google/fonts/main/ofl/bevietnampro/OFL.txt) |
+
+## 6. Mobile clients (Expo, two apps)
+
+### 6.1 Core
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `expo` | **58.0.14** (SDK 58, released 2026-10-15) | Current SDK (DR-82). Built for the iOS 27 SDK with Xcode 27; Android AGP 9 compatible; macOS not supported | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo), [SDK 58 changelog](https://expo.dev/changelog/sdk-58) |
+| `react-native` | **0.88.0** (2026-10-15) | Bundled by SDK 58. Peer `react ^19.3.0` | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native) |
+| `react` (mobile) | **19.3.0**, the SDK's bundled version (npm `latest` is 19.3.1, used by the web) | Row 9 of the compatibility table | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
+| New Architecture | **Always on, cannot be switched off**: from React Native 0.82 (and Expo SDK 55) `newArchEnabled=false` is ignored. The SDK 58 changelog does not restate it. No library or code path may need the legacy architecture (DR-82 rule 5) | Rule 5 of DR-82 is already the platform default | n/a | 2026-10-19 | [React Native 0.82 blog](https://reactnative.dev/blog/2025/10/08/react-native-0.82), [Expo guide](https://docs.expo.dev/guides/new-architecture/) |
+| Development builds | `expo-dev-client` **58.0.14**; Expo Go is not used (the SDK 58 Expo Go is due "within a few weeks") | Native modules in use (DR-82 rule 5, DR-69) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-dev-client) |
+| `expo-router` | **58.0.23** (range `~58.0.20`) | File-based navigation (DR-70). SDK 58: server output is the default when `web.output` is unset; navigation core reworked | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-router) |
+| `eas-cli` | **25.2.0** | EAS Build and Update (DR-69, DR-83) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/eas-cli) |
+| `nativewind` | **4.2.7** stable (`5.0.0-rc.0` exists and is **not used**). Pulls `react-native-css-interop` 0.2.7 | Tailwind classes on native (DR-70). Fallback in §11 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/nativewind) |
+| `tailwindcss` (mobile) | **4.3.3**, the same as the web | Compatibility with NativeWind 4.2.7 is checked in row 8 (its peer range is `>3.3.0`) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/tailwindcss) |
+
+### 6.2 Expo-managed and native modules
+
+Pins are the SDK 58 bundled ranges (DR-94). "npm latest" is shown only where it is outside the range.
+
+| Package | SDK 58 pin | Used for | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `expo-camera` | ~58.0.10 | QR scan by the Guard (FR-26) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-camera) |
+| `expo-secure-store` | ~58.0.2 | Refresh token on the device (DR-38) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-secure-store) |
+| `expo-notifications` | ~58.1.4 (npm 58.1.5 is inside) | Push, device token, channels `default` and `urgent` (DR-52) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-notifications) |
+| `expo-image-picker` | ~58.0.10 | Ticket and vehicle photos | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-image-picker) |
+| `expo-image-manipulator` | ~58.0.14 | Resize to 1,920 px JPEG, HEIC to JPEG before upload (DR-61) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-image-manipulator) |
+| `expo-media-library` | ~58.0.9 | Save the QR image (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-media-library) |
+| `expo-brightness` | ~58.0.2 | Raise brightness on the QR screen. **Replaces the name `expo-screen-brightness` in DR-70, which is not an npm package** | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-brightness) |
+| `expo-image` | ~58.0.15 | Image display and cache | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-image) |
+| `expo-file-system` | ~58.0.9 | Upload from file, receipt download. `File.write()` is async in SDK 58 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-file-system) |
+| `expo-document-picker` | ~58.0.4 | Attachments | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-document-picker) |
+| `expo-linking` | ~58.0.13 | Deep links `rms-resident://`, `rms-staff://` (DR-69) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-linking) |
+| `expo-updates` | ~58.0.17 | OTA on channels `staging` and `production`; runtime version policy `appVersion` (DR-69) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-updates) |
+| `expo-localization` | ~58.0.4 | Device language for the first launch (DR-71) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-localization) |
+| `expo-build-properties` | ~58.0.10 | Android R8 keep-rule switches (§6.4) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-build-properties) |
+| `expo-constants`, `expo-device`, `expo-font`, `expo-splash-screen`, `expo-status-bar` | ~58.0.12, ~58.0.5, ~58.0.8, ~58.0.9, ~58.0.3 | App config, push needs a physical device, Be Vietnam Pro loading, splash, status bar | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
+| `react-native-reanimated`, `react-native-worklets` | 4.7.1, 0.13.0 | Animation dependency of Expo Router and gesture handling | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-reanimated) |
+| `react-native-gesture-handler` | ~3.3.0 (npm `latest` 3.4.0 is **outside** the range and not used) | Gestures | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-gesture-handler) |
+| `react-native-safe-area-context`, `react-native-screens` | ~5.10.1, ~4.30.0 | Layout and navigation primitives | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-screens) |
+| `react-native-svg` | 15.16.0 | QR rendering base | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-svg) |
+| `@shopify/flash-list` | 2.3.2 (npm `latest` 2.3.3 is **outside** the range and not used) | Long lists (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@shopify/flash-list) |
+| `@react-native-community/netinfo` | 12.0.1 | Offline banner (DOC-53) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@react-native-community/netinfo) |
+| `@react-native-async-storage/async-storage` | 2.2.0 (npm `latest` 3.1.1 is **outside** the bundle and not used) | Storage for the persisted query cache (DR-70) | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
+| `react-native-qrcode-svg` | **6.3.26** (not in the SDK bundle; JavaScript over `react-native-svg`) | Draw the resident QR (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-qrcode-svg) |
+| `@tanstack/react-query`, `@tanstack/react-query-persist-client`, `@tanstack/query-async-storage-persister` | **5.104.4** (all) | Server state with persisted cache for non-money screens only, maximum age 24 h (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/query-async-storage-persister) |
+| `react-hook-form` | **7.90.0**, as the web | Forms | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-hook-form) |
+
+### 6.3 New Architecture check of the native libraries
+
+Rule (DR-82 rule 5): no library enters DR-70 or DOC-55 before it is checked for New Architecture support. The platform is New Architecture only (§6.1), so "supported" means it works under it.
+
+| Library | Basis for "supported" | Open check |
+| --- | --- | --- |
+| Every `expo-*` module in §6.2 | Listed in the SDK 58 `bundledNativeModules.json` fetched 2026-10-19; the SDK ships only New Architecture builds of them | Run on a device in P1-17 (camera scan, push token, secure store) |
+| `react-native-reanimated` 4.7.1, `react-native-worklets` 0.13.0, `react-native-gesture-handler` 3.3.0, `react-native-screens` 4.30.0, `react-native-safe-area-context` 5.10.1, `react-native-svg` 15.16.0, `@shopify/flash-list` 2.3.2, `@react-native-community/netinfo` 12.0.1, `@react-native-async-storage/async-storage` 2.2.0 | In the SDK 58 bundle, so tested by Expo against RN 0.88 | None beyond the build in P1-01 |
+| `react-native-qrcode-svg` 6.3.26, `nativewind` 4.2.7 (`react-native-css-interop` 0.2.7) | JavaScript only over `react-native-svg` and the Metro transform, no native code of its own | Rows 7 and 8 of the compatibility table: the NativeWind transform under SDK 58 and Tailwind 4 |
+| Any library added later | Check [React Native Directory](https://reactnative.directory) and the package changelog; record the result in this table in the same change | Required before the DR or document that lists it |
+
+### 6.4 What the SDK 58 notes change in the design
+
+Re-read from the [SDK 58 changelog](https://expo.dev/changelog/sdk-58) on 2026-10-19. Each row is checked again when its document is written.
+
+| Change in SDK 58 | Affects | Action |
+| --- | --- | --- |
+| `expo-notifications` shows foreground notifications by default unless `setNotificationHandler` says otherwise | DR-52, DOC-31, DOC-60 | Set the handler explicitly (the app decides per category) |
+| iOS scene life cycle: prebuild generates `SceneDelegate.swift`; the iOS 27 SDK requires it | DOC-73 | Do not hand-edit `AppDelegate.swift`; smoke-test the release build |
+| Android R8 enabled by default in release builds | DOC-73 | Release smoke test; keep rules through `expo-build-properties` for reflection-based libraries |
+| Expo CLI sets `NODE_ENV` from the command (`NODE_ENV=test npx expo start` loads `.env.development`) | DOC-41, DOC-69 | Use `APP_ENV` and the EAS build profile for environment (DR-69), not `NODE_ENV` |
+| `expo-file-system`: `File.write()` is async (`File.writeSync()` is the old behavior) | DOC-55 | Use the async call |
+| `expo-sqlite`: libSQL support removed | none | The apps do not use SQLite |
+| React Native 0.87 Strict TypeScript API: deep imports from `react-native/Libraries/*` are type errors | DOC-55, DOC-54 | No deep imports in `ui-native` |
+| Removed or deprecated in React Native: `InteractionManager`, the `Touchable` root export, `NativeMethods` types, the `Modal` `animated` prop, several `StatusBar` props; `ImageBackground` deprecated | DOC-54, `ui-native` | Build components without them |
+| `expo-router`: navigation core reworked, much of the forked React Navigation API removed; server output is the default when `web.output` is unset; `@expo/ui` and `expo-symbols` are optional peers | DOC-55, DOC-53 | Set `web.output` explicitly (the apps have no web target); use only documented router APIs |
+| `expo-media-library`: `Asset.getUri()` resolves the current Photos version of videos | DOC-60 (save QR image) | No effect on images; note only |
+| `expo-localization`: iOS no longer forces RTL from the device locale | DOC-68 | None (vi, en are left-to-right) |
+| Expo Go for SDK 58 is not out yet; `create-expo-app` creates SDK 57 until then | DOC-69 | Always a development build; create the app with `--template default@sdk-58` if scaffolding |
+| Node 22.13+, 24.3+ or 26+ for the CLI | §1 | Node 24.22 pinned |
+
+## 7. Infrastructure and observability
+
+Third-party images are pinned to an exact tag in the Compose files (DR-95).
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| Caddy | **2.11.7** (2026-10-03); image `caddy:2.11.7` | Plain-HTTP reverse proxy behind the Tunnel, health checks, `auto_https off` (DR-83) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/caddyserver/caddy/releases), [Docker Hub](https://hub.docker.com/_/caddy/tags) |
+| cloudflared | **2026.10.1** (2026-10-15); image `cloudflare/cloudflared:2026.10.1` | Outbound Tunnel; no inbound port (DR-83) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/cloudflare/cloudflared/releases), [Docker Hub](https://hub.docker.com/r/cloudflare/cloudflared/tags) |
+| pgBackRest | Upstream **2.60.0** (2026-10-18). **Installed version: the PGDG apt package, 2.59.3 today** (DR-93) | Full weekly, differential daily, WAL archive to R2, repository encryption (DR-66, DR-83) | MIT | 2026-10-19 | [GitHub releases](https://github.com/pgbackrest/pgbackrest/releases), [PGDG Packages](https://apt.postgresql.org/pub/repos/apt/dists/resolute-pgdg/main/binary-amd64/Packages) |
+| Prometheus | **3.15.0** (2026-09-25); image `prom/prometheus:v3.15.0` | Metrics (DR-63) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/prometheus/prometheus/releases), [Docker Hub](https://hub.docker.com/r/prom/prometheus/tags) |
+| Alertmanager | **0.34.1** (2026-09-17); image `prom/alertmanager:v0.34.1` | Email and Telegram delivery (DR-63) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/prometheus/alertmanager/releases), [Docker Hub](https://hub.docker.com/r/prom/alertmanager/tags) |
+| Grafana | **13.2.4** (2026-10-13); image `grafana/grafana:13.2.4` | Dashboards | AGPL-3.0 | 2026-10-19 | [GitHub releases](https://github.com/grafana/grafana/releases), [Docker Hub](https://hub.docker.com/r/grafana/grafana/tags) |
+| Loki | **3.7.8** (2026-09-17); image `grafana/loki:3.7.8` | Logs, 14-day retention (DR-63) | AGPL-3.0 | 2026-10-19 | [GitHub releases](https://github.com/grafana/loki/releases), [Docker Hub](https://hub.docker.com/r/grafana/loki/tags) |
+| **Grafana Alloy** | **1.20.1** (2026-09-28); image `grafana/alloy:v1.20.1` | Collects container logs into Loki. Replaces Promtail, which reached end of life on 2026-03-02 (DR-63). Run with `run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy` | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/grafana/alloy/releases), [Docker Hub](https://hub.docker.com/r/grafana/alloy/tags), [install docs](https://grafana.com/docs/alloy/latest/set-up/install/docker/) |
+| postgres_exporter | **0.20.1** (2026-07-08) | PostgreSQL basics (DR-63) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/prometheus-community/postgres_exporter/releases) |
+| node_exporter | **1.12.1** (2026-07-14) | Host CPU, memory, disk for the capacity table (DOC-10) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/prometheus/node_exporter/releases) |
+| External uptime probe | A free-tier service on `GET /api/v1/health/ready` (NFR-10); the product is an Owner input in P1-18 | | n/a | n/a | [DR-63](../00-decision-register.md) |
+| Cloudflare services | Pages, DNS, WAF, Access, Tunnel, R2 (free plan). No version; limits verified in DR-83 on 2026-10-18 (one rate-limiting rule, R2 has no presigned POST) | DR-83 | n/a | 2026-10-18 (DR-83) | [Cloudflare R2 docs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/) |
+
+## 8. Quality, test and load tools
+
+| Item | Pin | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `bun test` | Part of Bun 1.4.3 | Unit and integration tests; PostgreSQL service container in CI (DR-08) | MIT | 2026-10-19 | [Bun](https://github.com/oven-sh/bun/releases) |
+| `@playwright/test` | **1.64.1** | Web CMS end to end, path-gated (DR-08) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@playwright/test) |
+| Maestro CLI | **2.11.0** (2026-09-29) | Mobile flows, on demand and before a store release (DR-08) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/mobile-dev-inc/maestro/releases) |
+| k6 | **2.3.0** (2026-09-21) | API load for EXP-07 | AGPL-3.0 | 2026-10-19 | [GitHub releases](https://github.com/grafana/k6/releases) |
+
+## 9. CI/CD actions and scanners
+
+GitHub Actions are referenced by full commit SHA with the tag in a comment; Dependabot (`github-actions` ecosystem) keeps them current (DR-01, DR-08). The tags below are the latest releases on the check date.
+
+| Item | Pin (tag) | Why | Licence | Verified on | Source |
+| --- | --- | --- | --- | --- | --- |
+| `actions/checkout` | v7.0.1 (2026-07-20) | Checkout | MIT | 2026-10-19 | [releases](https://github.com/actions/checkout/releases) |
+| `oven-sh/setup-bun` | v2.2.0 (2026-03-14) | Install Bun from `.tool-versions` | MIT | 2026-10-19 | [releases](https://github.com/oven-sh/setup-bun/releases) |
+| `actions/setup-node` | v7.1.0 (2026-10-08) | Node for Expo and EAS jobs | MIT | 2026-10-19 | [releases](https://github.com/actions/setup-node/releases) |
+| `actions/cache` | v6.1.0 | Dependency caches | MIT | 2026-10-19 | [releases](https://github.com/actions/cache/releases) |
+| `actions/upload-artifact`, `actions/download-artifact` | v7.0.2, v8.0.2 | Test reports and build output | MIT | 2026-10-19 | [releases](https://github.com/actions/upload-artifact/releases) |
+| `docker/setup-buildx-action`, `docker/login-action`, `docker/metadata-action`, `docker/build-push-action` | v4.4.1, v4.6.0, v6.2.0, v7.4.0 | Build and push the `rms-api` image to GHCR (DR-83) | Apache-2.0 | 2026-10-19 | [build-push-action](https://github.com/docker/build-push-action/releases) |
+| `github/codeql-action` | v4.39.0 | CodeQL on pull requests (DR-08) | MIT | 2026-10-19 | [tags](https://github.com/github/codeql-action/tags) |
+| `aquasecurity/trivy-action` and Trivy | v0.36.0 and Trivy **0.76.0** (2026-10-14) | Image and filesystem scan (DR-08) | Apache-2.0 | 2026-10-19 | [trivy-action](https://github.com/aquasecurity/trivy-action/tags), [Trivy](https://github.com/aquasecurity/trivy/releases) |
+| `gitleaks/gitleaks-action` and gitleaks | v3.0.0 and gitleaks **8.30.1** (2026-03-21) | Secret scan (DR-08). The npm package named `gitleaks` is an unrelated 2020 package and is not used | MIT | 2026-10-19 | [action](https://github.com/gitleaks/gitleaks-action/releases), [gitleaks](https://github.com/gitleaks/gitleaks/releases) |
+| `cloudflare/wrangler-action` | v4.1.3 (2026-09-24), with `wrangler` 4.151.1 | Pages deploy (DR-83) | MIT OR Apache-2.0 | 2026-10-19 | [releases](https://github.com/cloudflare/wrangler-action/releases) |
+| `expo/expo-github-action` | 9.0.0 (2026-06-02), with `eas-cli` 25.2.0 | EAS Build and Update from CI (DR-69, DR-83) | MIT | 2026-10-19 | [releases](https://github.com/expo/expo-github-action/releases) |
+| `dorny/paths-filter` | v4.0.3 | Path gating for the web and mobile jobs (DR-08) | MIT | 2026-10-19 | [releases](https://github.com/dorny/paths-filter/releases) |
+| `actions/dependency-review-action` | v5.0.0 | New vulnerable or disallowed-licence dependencies on pull requests | MIT | 2026-10-19 | [releases](https://github.com/actions/dependency-review-action/releases) |
+| Dependabot | Weekly, grouped minor and patch; ecosystems `bun` (npm), `github-actions`, `docker` | DR-01; a major upgrade and a pre-release need a DR | n/a | n/a | [DR-01](../00-decision-register.md) |
+
+## 10. Compatibility table (filled in by P1-01, P1-02 and the tasks that verify one part)
+
+"Result" stays **Not run** until a task runs the check in the real repository (not a throwaway workspace, DR-01). A failing check falls back by the rules of §11. Each filled row gets a date and the exact versions that passed.
+
+| # | Check | Versions under test | Task | Result | Date | Fallback |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `bun install` on the workspaces `apps/*`, `modules/*`, `packages/*` is clean and `bun.lock` is stable on a second run | Bun 1.4.3 | P1-01 | Not run | | Expo as a second workspace root installed with `bun install --linker hoisted` or npm, sharing `packages/*` by relative path (DR-01) |
+| 2 | `bun run lint`, `typecheck`, `check:arch` green on the skeleton; a test import of another module's internals fails `check:arch` | TypeScript 7.0.2, Biome 2.5.15, dependency-cruiser 18.6.0, knip 6.42.0, jscpd 5.4.1 | P1-01 | Not run | | The previous stable of the failing tool only (never a pre-release); TypeScript stays at 7 unless several tools fail |
+| 3 | Elysia routes type-check and Eden Treaty infers them through a type-only `import type { App } from '@app/api'` | Elysia 1.4.30, Eden 1.4.9, TypeBox 0.34.52, TypeScript 7.0.2 | P1-01 | Not run | | Previous stable of the failing package |
+| 4 | Migrations apply and queries run on PostgreSQL 18.6; `DB_PREPARE=false` works; `LISTEN/NOTIFY` on a direct connection | Drizzle 0.45.4, drizzle-kit 0.31.11, postgres 3.4.9, PostgreSQL 18.6 | P1-01, P1-05 | Not run | | PostgreSQL 17.11 only if the host packages fail (P1-20) |
+| 5 | Scope guard implemented: a query on a scoped table without a `building_id` predicate fails the check | Biome 2.5.15 GritQL, or a Bun AST script | P1-01 | Not run | | The AST script (DR-12) |
+| 6 | The Excel file round-trips: read one and write one xlsx, streaming write of 50,000 rows | `exceljs` 4.4.0, Bun 1.4.3 | P1-01, P1-13 | Not run | | A replacement needs a DR (DR-82 table note) |
+| 7 | Web app builds and routes: file-based routes, Tailwind 4 plugin, shadcn components, TanStack Table 9 with a shadcn data table, `react-hook-form` with the TypeBox adapter | Vite 8.3.4, plugin-react 6.1.2, React 19.3.1, Router 1.170.45 and plugin 1.168.47, Tailwind 4.3.3, shadcn 4.22.1, Table 9.3.1, RHF 7.90.0, resolvers 5.9.2 | P1-01, P1-09 | Not run | | TanStack Table: the previous major (8.x) if the v9 API blocks shadcn examples; no other fallback expected |
+| 8 | Expo SDK 58 app runs as a development build with the New Architecture; Metro resolves workspace packages and the type-only `@app/api` import; NativeWind 4.2.7 with Tailwind 4.3.3 styles a component from the shared tokens | Expo 58.0.14, RN 0.88.0, NativeWind 4.2.7, react-native-css-interop 0.2.7, Tailwind 4.3.3 | P1-01, P1-09, P1-17 | Not run | | NativeWind fails: `StyleSheet` with token constants and `ui-native` written once (DR-70); never the 5.0 RC |
+| 9 | One `react` version per workspace: web on 19.3.1, mobile on the SDK's 19.3.0; Bun does not hoist one into the other and `expo install --check` is clean | React 19.3.1 (web), 19.3.0 (mobile) | P1-01 | Not run | | Pin the web to 19.3.0 as well (a one-patch step back for one package, recorded here) |
+| 10 | The core packages build and their tests pass in this repository after their dependencies are bumped to this document's versions | `@core/*` after the P1-02 sync (zod 4.6.7, pino 10.4.0, jose 6.2.12, nodemailer 10.1.7, sharp 0.35.5) | P1-02 | Not run | | Previous stable of the failing dependency |
+| 11 | Local stack healthy in 3 minutes or less: PostgreSQL 18.6, the chosen S3-compatible store, Mailpit 1.31.6; the store is pinned here after the task verifies it | Docker 29.9.1, Compose 5.6.0 | P1-03 | Not run | | The other candidate store |
+| 12 | Argon2id parameters (`memoryCost 19456`, `timeCost 2`) benchmarked on the staging host; result recorded in DR-39 | Bun 1.4.3 `Bun.password` | P1-10 | Not run | | Raise cost if the host allows; no library change |
+| 13 | Uploads on R2: presigned PUT with signed `Content-Type`, whether a signed `Content-Length` is honored, `HEAD` rejection and deletion of an oversize object; `sharp` thumbnail runs on Bun | `@aws-sdk/client-s3` 3.1152.0, presigner 3.1152.0, sharp 0.35.5, R2 | P1-07 | Not run | | `sharp` fails on Bun: a new DR (DR-61); an unhonored `Content-Length` is covered by the `HEAD` check |
+| 14 | EAS development build, push token registration and camera QR scan on a physical device | eas-cli 25.2.0, `expo-notifications` ~58.1.4, `expo-camera` ~58.0.10, `expo-secure-store` ~58.0.2 | P1-17 | Not run | | A library failure is a new DR; Expo Go is not an option |
+| 15 | Alloy ships container logs to Loki; Prometheus scrapes `/metrics`; an alert reaches email and Telegram within 2 minutes | Alloy 1.20.1, Loki 3.7.8, Prometheus 3.15.0, Alertmanager 0.34.1, Grafana 13.2.4 | P1-18 | Not run | | Previous stable of the failing component |
+| 16 | On the staging VPS: PostgreSQL 18 and Docker packages install on Ubuntu 26.04; pgBackRest archives to R2 and one point-in-time restore works on an empty host | Ubuntu 26.04.1, PostgreSQL 18.6, pgBackRest 2.59.3 (PGDG), Docker 29.9.1 | P1-20 | Not run | | Ubuntu 24.04 (DR-83); PostgreSQL 17.11 (DR-82) |
+| 17 | A two-page bilingual fee notice renders under Bun with Be Vietnam Pro; time and RSS for 240 and 5,000 documents | `@react-pdf/renderer` 4.9.0, Bun 1.4.3 | P2-13, EXP-08 | Not run | | The same renderer in a Node child process image, or Typst or Chromium (a new DR, DR-56) |
+| 18 | The notice rich-text subset renders identically on web (TipTap) and in the React Native renderer; the CSP works with the editor | TipTap 3.32.0, Expo 58.0.14, CSP of DR-64 | P4-05 | Not run | | Nonce handling for the editor (DR-64); a feature outside the node set needs a schema change (DR-50) |
+| 19 | Playwright runs the CMS flows in CI; Maestro runs one flow against a development build | Playwright 1.64.1, Maestro 2.11.0 | P1-17, P1-01 | Not run | | |
+
+## 11. Fallback rules
+
+1. **The latest stable is the default (DR-82 rule 1).** A package that fails a check in §10 falls back to the previous stable release **of that one package**, recorded in this document with the failing check, the date and the version it fell back to. A pre-release is never the fallback.
+2. **A replacement is a DR.** Replacing a library by another (for example `exceljs`, `sharp`, `@react-pdf/renderer`) or moving to a new major that the DR names as deferred (Drizzle 1.0, Elysia 2.0, NativeWind 5) needs a DR with the reason and the exit plan.
+3. **Expo cannot live in the Bun workspace (DR-01).** `apps/resident-app` and `apps/staff-app` become a second workspace root installed with `bun install --linker hoisted` or npm, sharing `packages/*` by relative path. This costs one extra CI job.
+4. **NativeWind fails (DR-70).** `StyleSheet` with token constants.
+5. **Host packages missing (DR-82, DR-83).** Ubuntu 24.04 if 26.04 lacks a package; PostgreSQL 17 only if PostgreSQL 18 cannot be installed.
+6. **An Expo-managed module breaks.** Stay on the SDK's bundled version; the fix is an SDK patch (`npx expo install --fix`), not a different major of the module.
+
+## 12. Refresh procedure
+
+Run at every doc gate (`Pn-00`), and before pinning in code (P1-01, P1-02); a pin older than 30 days at the moment of use is checked again (DR-82 rule 4).
+
+1. Read the `Verified on` column; list the rows older than 30 days or touched by the gate.
+2. For npm packages, read `latest` from the registry (`npm view <name> version time dist-tags`, or `https://registry.npmjs.org/<name>`). Ignore every other dist-tag. Check the declared `peerDependencies` of Elysia, Eden, `react-native` and `expo` against the table.
+3. For Expo-managed modules, read `packages/expo/bundledNativeModules.json` on the `sdk-<n>` branch, and the [Expo changelog](https://expo.dev/changelog) for a new SDK. A new SDK is a planned change: read its release notes, update §6.4, re-run rows 8, 9 and 14.
+4. For tools and images, read GitHub releases (`/releases/latest`), the Docker Hub tag, and endoflife.date for Node, PostgreSQL, Ubuntu and Docker.
+5. For the host, check that the PGDG and Docker apt repositories carry the pinned versions for the Ubuntu release (§1, §7).
+6. Write the new version, the new date and the source in the same row. A major bump or a removed API updates every document that cites it in the same change (master plan §0.4, "Ripple"), and runs the compatibility rows it touches.
+7. List the differences from the previous check in the report of the gate. A plain version bump needs no DR; a change of policy (for example adopting a deferred major) needs one.
+8. Dependabot pull requests between gates follow the same rules: grouped minor and patch updates merge when CI is green; a major or a pre-release needs a DR (DR-01).
+
+## 13. Not used on purpose
+
+| Item | Why not | Exit |
+| --- | --- | --- |
+| Pre-releases of any package: Elysia 2.0 (`next` 2.0.0-beta.32), Drizzle 1.0 beta/rc, NativeWind 5.0.0-rc.0, TypeScript `rc`/`next` tags, Vite and TanStack beta tags | Owner rule: stable only (DR-82) | A new DR when the next major is `latest` and the compatibility rows pass |
+| `typebox` 1.x (the renamed TypeBox) | Elysia 1.4.30 expects `@sinclair/typebox` below 1.0 | Follows Elysia's own move |
+| Expo Go | Native modules in use; SDK 58 Expo Go is not yet published (DR-82 rule 5) | None |
+| Legacy architecture of React Native | Removed as an option from React Native 0.82 | None |
+| Stripe, payment SDKs, the payOS SDK | The gateway sits behind our own `PaymentGateway` port with `fetch` and HMAC (DR-25); Stripe is not available for this market and not part of the design | A DR if the Owner picks a provider whose SDK is required |
+| Jaeger, OpenTelemetry trace export, Promtail | No traces in phase 1 (DR-63); Promtail is end of life (2026-03-02) | A DR for tracing |
+| Third-party error tracker (Sentry and similar) | Personal data stays out of third parties (DR-58, ADR-0022) | A DR |
+| MinIO as the local object store | Last release 2025-10-16 (§1) | None |
+| Redis, message brokers, Kafka | Outbox and inbox in PostgreSQL, in-process bus (SDD §4.1) | A DR |
+| PgBouncer | `max_connections` 100 and direct connections (DR-67); `DB_PREPARE=false` keeps the door open | A DR |
+| `@dnd-kit/react` 0.x | Pre-1.0 line | When it reaches 1.0 |
+| Reference-repository modules `kit-ui`, `kit-privacy-participant`, `privacy`, `profile`, `billing` | DR-02, DR-03 | None |
+| Passkeys, OAuth, magic links, Web Push | Removed from the forked identity and notification modules (DR-03) | None |
+| TOTP | Not in phase 1 (DR-39) | A DR |
+| Protobuf or a schema registry | JSON envelope and JSON Schema in the repository (DOC-09) | None |
+| macOS or web targets for the Expo apps | SDK 58 does not support macOS; the web CMS is a separate Vite app | None |
+
+## 14. Decisions made while writing
+
+Every new decision in this document is recorded as a DR (decided, Claude delegated by the Owner).
+
+| ID | Title | State | Where used |
+| --- | --- | --- | --- |
+| DR-93 | pgBackRest is installed from the PGDG apt repository | Decided | §0.1, §7, §10 row 16 |
+| DR-94 | Expo-managed modules follow the SDK's bundled version ranges, not npm `latest` | Decided | §0, §6.2 |
+| DR-95 | Exact pins everywhere: exact versions in `package.json`, exact image tags, actions by commit SHA | Decided | §0, §7, §9 |
+
+## Open questions
+
+- **SMS provider and SMTP relay (DR-68):** the adapter packages cannot be pinned until the Owner or client chooses the providers. Not blocking this document; blocking P1-10.
+- **Local S3-compatible object store:** chosen and pinned by P1-03 after it verifies the candidates on the web.
+- **Grafana Alloy pin:** set to 1.20.1 here; P1-18 re-verifies it on the day it is used (a pin older than 30 days is checked again).
+- None. Decisions made while writing are DR-93, DR-94 and DR-95.
+- **DR-70 wording:** corrected in the register on 2026-10-19 (`expo-brightness`, §6.2).
