@@ -16,12 +16,12 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 
 | DOC | Document | Status |
 | --- | --- | --- |
-| DOC-01 | Vision and scope (`01-product/vision-and-scope.md`) | Not written |
-| DOC-02 | Personas and journeys (`01-product/personas-and-journeys.md`) | Not written |
-| DOC-03 | Requirements (`01-product/requirements.md`) | Not written |
+| DOC-01 | [Vision and scope](01-product/vision-and-scope.md) | Review |
+| DOC-02 | [Personas and journeys](01-product/personas-and-journeys.md) | Review |
+| DOC-03 | [Requirements](01-product/requirements.md) | Review |
 | DOC-04 | Use cases (`01-product/use-cases.md`) | Not written |
 | DOC-05 | Feature catalog (`01-product/feature-catalog.md`) | Not written |
-| DOC-06 | Glossary (`02-glossary.md`) | Not written |
+| DOC-06 | [Glossary](02-glossary.md) | Review |
 | DOC-07 | System context and containers (`03-architecture/system-context-and-containers.md`) | Not written |
 | DOC-08 | Data flows (`03-architecture/data-flows.md`) | Not written |
 | DOC-09 | Messaging contracts (`03-architecture/messaging-contracts.md`) | Not written |
