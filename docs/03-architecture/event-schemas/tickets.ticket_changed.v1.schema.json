@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tickets.ticket_changed.v1.schema.json",
+  "title": "tickets.ticket_changed.v1",
+  "description": "Event of tickets. A ticket is created, assigned, changes status, gets a message or a rating (FR-19…24).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "ticketId",
+    "code",
+    "unitId",
+    "change",
+    "fromStatus",
+    "toStatus",
+    "actorKind",
+    "actorId",
+    "messageVisibility"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "ticketId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The ticket."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^YC-[0-9]{6}-[0-9]{3,}$",
+      "description": "Ticket code, `YC-YYMMDD-NNN` (DR-10)."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The unit that raised it."
+    },
+    "change": {
+      "enum": [
+        "created",
+        "assigned",
+        "status_changed",
+        "message_added",
+        "rated"
+      ],
+      "description": "What happened."
+    },
+    "fromStatus": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z_]{3,30}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Status before; `null` for `created`."
+    },
+    "toStatus": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]{3,30}$",
+      "description": "Status after (the ticket status literals of DOC-28)."
+    },
+    "actorKind": {
+      "enum": [
+        "staff",
+        "resident",
+        "system"
+      ],
+      "description": "Who acted."
+    },
+    "actorId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The acting account, `null` for `system`."
+    },
+    "messageVisibility": {
+      "oneOf": [
+        {
+          "enum": [
+            "public",
+            "internal"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Set for `message_added`, otherwise `null`."
+    }
+  }
+}

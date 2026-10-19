@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.payment_posted.v1.schema.json",
+  "title": "finance.payment_posted.v1",
+  "description": "Event of finance. A payment is posted: online settlement or manual entry (FR-05, FR-08).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "paymentId",
+    "unitId",
+    "source",
+    "payerAccountId",
+    "postedAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "paymentId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The payment."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The unit that paid."
+    },
+    "source": {
+      "enum": [
+        "online",
+        "cash",
+        "bank_transfer"
+      ],
+      "description": "How the money arrived (DR-23)."
+    },
+    "payerAccountId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The resident who started the payment, `null` for a manual entry."
+    },
+    "postedAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When the payment was posted."
+    }
+  }
+}

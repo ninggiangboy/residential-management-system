@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.charge_voided.v1.schema.json",
+  "title": "finance.charge_voided.v1",
+  "description": "Event of finance. Void a single open charge (FR-49).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "chargeId",
+    "batchId",
+    "unitId",
+    "feeMonth"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "chargeId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The voided charge."
+    },
+    "batchId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its batch."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its unit."
+    },
+    "feeMonth": {
+      "$ref": "common.schema.json#/$defs/month",
+      "description": "Fee month of the batch."
+    }
+  }
+}

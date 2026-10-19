@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity.session_revoked.v1.schema.json",
+  "title": "identity.session_revoked.v1",
+  "description": "Event of identity. A session family is revoked (FR-45, FR-13).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "accountKind",
+    "accountId",
+    "sessionId",
+    "reason"
+  ],
+  "properties": {
+    "buildingId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The building, or `null` for an event about an account that belongs to no single building (resident sign-in, sessions, deletion)."
+    },
+    "accountKind": {
+      "$ref": "common.schema.json#/$defs/accountKind",
+      "description": "Staff or resident."
+    },
+    "accountId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The account."
+    },
+    "sessionId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The refresh family."
+    },
+    "reason": {
+      "enum": [
+        "logout",
+        "revoked_by_user",
+        "revoked_by_admin",
+        "reuse_detected",
+        "password_changed",
+        "role_changed",
+        "account_disabled",
+        "account_deleted"
+      ],
+      "description": "Why; for the log."
+    }
+  }
+}

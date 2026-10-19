@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.intent_cancel_requested.v1.schema.json",
+  "title": "finance.intent_cancel_requested.v1",
+  "description": "Command of finance. An intent leaves `pending`: expiry, a new request, recall, void or a payment elsewhere (DR-31).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "intentId",
+    "reason"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "intentId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The intent whose link is cancelled."
+    },
+    "reason": {
+      "enum": [
+        "expired",
+        "resident_cancelled",
+        "replaced",
+        "batch_recalled",
+        "charge_voided",
+        "charge_paid"
+      ],
+      "description": "Why; for the log only."
+    }
+  }
+}

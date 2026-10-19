@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…115), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…119), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -306,6 +306,13 @@ This document defines the words of the project, as the project uses them. Every 
 | inbox (consumer) | — | The per-consumer table that makes a handler idempotent: a handled message id is recorded once. A different thing from an inbox entry (§8). | ADR-0009 |
 | dead letter | — | A message that failed all attempts and is parked; an alert fires. | DR-62 |
 | command | — | A message addressed to one handler (intent cancel, receipt render, SMS, mail), as opposed to an event with many consumers. | DOC-09 |
+| envelope | — | The wire format of every outbox message: `id`, `type`, `source`, `aggregateId`, `occurredAt`, `payload`, `headers`. | DOC-09 §3 |
+| handler (consumer group) | — | A named consumer of one message type, `<module>.<effect>_on_<producer>_<event>`. The pair (module, handler name) is the second half of the inbox key; a message with three handlers is delivered to each. | DOC-09 §3.3 |
+| inbox mode | — | How a handler records that it ran: `transactional` (database effect, one transaction with the inbox row), `afterSideEffect` (SMTP, SMS, Expo, payOS, R2: check, do, record) or none (live SSE). | DOC-09 §4.3 |
+| retry class | — | The number of attempts a message type gets: `default` (8), `sms` (3), `push` (3), `intent_cancel` (8). | DR-118, DOC-09 §4.2 |
+| retry later | — | The outcome of a handler that throws `RetryLaterError`: the attempt is given back and the message returns after a delay, dead only after 24 hours. For provider rate limits. | DOC-09 §4.4 |
+| message part | — | One of the messages of a chunked action: at most 500 ids per message, with `part` and `parts`. | DR-118, DOC-09 §3.4 |
+| `secretEnc` | — | The field of `identity.sms_requested.v1` and `identity.mail_requested.v1` that holds the OTP, link token or step-up code encrypted with the settings key ring; never plaintext in an outbox row. | DR-117 |
 | job | — | A timer-driven task in the worker (`notice_scheduler`, `intent_requery`, `invariant_check`, purges …). Each run writes `job_run`. | DR-62 |
 | `job_run` | — | The row `building.job_run` written by every job run; feeds the "last success" metrics. | DR-62 |
 | advisory lock | — | A PostgreSQL lock used for singleton jobs: the transaction-level `pg_try_advisory_xact_lock`, safe behind a pooler. | DR-62, ADR-0015 |

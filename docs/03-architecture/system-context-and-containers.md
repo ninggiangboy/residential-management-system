@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114) · DOC-07
+> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114, DR-116, DR-119) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -292,7 +292,7 @@ flowchart LR
 | `FinanceApi.getOutstandingByUnit(unitIds)`, `FinanceApi.reportQueries` | finance | residency (unit detail), reporting | DR-42 |
 | `TicketsApi`, `VehiclesApi`, `NoticesApi` read contracts for the dashboard | tickets, vehicles, notices | reporting | DR-55 (not in the DR-42 table: DR-87) |
 | `AuditApi.record(entry)` | audit | every module; joins the caller's transaction | DR-42, DR-57 |
-| `FilesApi.register/verify/attach/remove/usage` | building | every module with uploads | DR-42, DR-61 |
+| `FilesApi.register/verify/attach/remove/usage`, `signedUrl`, `storeGenerated` | building | every module with uploads | DR-42, DR-61, DR-119 |
 | `BuildingApi.getSettings(buildingId)`, `FeatureApi.get(buildingId)` | building | all | DR-42 |
 | `BuildingApi.getGatewayConfig(...)`, `BuildingApi.hasAcceptedLatestTerms(accountId, buildingId)`, `IdentityApi.verifyStepUp(...)` | building, building, identity | finance and the webhook (gateway configuration and its secrets); resident guard (`terms_required`); building (sensitive configuration change) | Needed by DR-33, DR-59, DR-39 (not in the DR-42 table: DR-87); `hasAcceptedLatestTerms` takes the building because the latest version is per building (DR-111) |
 
@@ -305,22 +305,25 @@ Events are named `<module>.<name>.v1`, written to the producer's outbox in the s
 | Event (DR-42) | Producer | Consumers |
 | --- | --- | --- |
 | `finance.batch_published.v1`, `batch_recalled.v1`, `batch_due_extended.v1`, `charge_voided.v1`, `payment_voided.v1` | finance | notification (inbox and push) |
-| `finance.payment_posted.v1` | finance | notification, finance (receipt rendering) |
+| `finance.payment_posted.v1` | finance | notification (the receipt PDF is rendered by the command `finance.receipt_render_requested.v1`, one per receipt) |
 | `finance.receipt_issued.v1` | finance | none in phase 1 (e-invoice seam, DR-17) |
 | `finance.money_unposted.v1` | finance | notification (Manager and Admin inbox), realtime (`money_log.opened`) |
 | `finance.intent_cancel_requested.v1` (command) | finance | finance (`CancelIntentLink` handler) |
 | `finance.receipt_render_requested.v1` (command) | finance | finance (renderer in the worker) |
 | `residency.membership_changed.v1`, `residency.owner_changed.v1` | residency | notification |
-| `identity.sms_requested.v1`, `identity.mail_requested.v1` (commands) | identity | identity (sender handlers in the worker) |
+| `identity.sms_requested.v1`, `identity.mail_requested.v1` (commands) | identity | identity (sender handlers in the worker); notification for the step-up notice (inbox entry `staff.step_up_done`, DR-116) |
 | `identity.session_revoked.v1` | identity | realtime (closes the stream), notification (deletes the device token) |
 | `tickets.ticket_changed.v1`, `tickets.ticket_assigned.v1` | tickets | notification, realtime |
 | `vehicles.vehicle_reviewed.v1` | vehicles | notification |
 | `notices.notice_sent_batch.v1`, `notices.notice_read.v1` | notices | notification |
 | `notification.push_requested.v1` (command) | notification | notification (Expo sender) |
 | `reporting.export_ready.v1` | reporting | notification, realtime (`export.ready`) |
-| `identity.account_deletion_executed.v1` (*proposed*) | identity | residency (remove memberships, clear profile), notification (delete tokens), DR-87 |
+| `finance.debt_reminder_sent.v1` | finance | notification (`fee.reminder`) |
+| `vehicles.vehicle_submitted.v1` | vehicles | notification (`vehicle.pending_review`) |
+| `notification.staff_inbox_created.v1` | notification | realtime (`inbox.created`) |
+| `identity.account_deletion_executed.v1` | identity | residency (remove memberships, clear profile), notification (delete tokens), building (null the terms-acceptance IP, DR-115); DR-87 |
 
-Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 is the source if it differs.
+Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 §5 is the source and lists 26 types with their handlers.
 
 ## 6. Data ownership
 

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "residency.membership_changed.v1.schema.json",
+  "title": "residency.membership_changed.v1",
+  "description": "Event of residency. A membership is added, removed, retyped, locked or unlocked (FR-17.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "unitId",
+    "membershipId",
+    "accountId",
+    "change",
+    "memberType"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The unit."
+    },
+    "membershipId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The membership."
+    },
+    "accountId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The member's resident account."
+    },
+    "change": {
+      "enum": [
+        "added",
+        "removed",
+        "type_changed",
+        "can_pay_changed",
+        "locked",
+        "unlocked"
+      ],
+      "description": "What happened."
+    },
+    "memberType": {
+      "enum": [
+        "owner",
+        "family",
+        "tenant",
+        "helper"
+      ],
+      "description": "Type after the change."
+    }
+  }
+}

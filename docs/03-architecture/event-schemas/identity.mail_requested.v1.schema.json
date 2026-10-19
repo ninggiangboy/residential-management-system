@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity.mail_requested.v1.schema.json",
+  "title": "identity.mail_requested.v1",
+  "description": "Command of identity. Staff invite, password reset, step-up code and step-up notice (FR-13, FR-14, FR-50).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "staffId",
+    "kind",
+    "locale",
+    "params",
+    "secretEnc",
+    "expiresAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The building, or `null` for an event about an account that belongs to no single building (resident sign-in, sessions, deletion)."
+    },
+    "staffId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The staff member who receives the mail."
+    },
+    "kind": {
+      "enum": [
+        "staff_invite",
+        "password_reset",
+        "step_up_code",
+        "step_up_notice"
+      ],
+      "description": "Which mail."
+    },
+    "locale": {
+      "$ref": "common.schema.json#/$defs/locale",
+      "description": "Language of the mail."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "maxProperties": 8,
+      "description": "Non-secret parameters, e.g. `{\"action\": \"change_gateway\", \"actorName\": \"Lê Minh\"}`."
+    },
+    "secretEnc": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/encrypted"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The raw link token or the 6-digit step-up code, encrypted as in `identity.sms_requested.v1`; `null` for a notice."
+    },
+    "expiresAt": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/instant"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Expiry of the link or code; `null` for a notice."
+    }
+  }
+}

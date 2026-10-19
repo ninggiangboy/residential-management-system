@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vehicles.vehicle_reviewed.v1.schema.json",
+  "title": "vehicles.vehicle_reviewed.v1",
+  "description": "Event of vehicles. The Manager approves or rejects a vehicle (FR-30).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "vehicleId",
+    "unitId",
+    "decision",
+    "rejectCode",
+    "submittedByAccountId",
+    "reviewedBy"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "vehicleId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The vehicle."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its unit."
+    },
+    "decision": {
+      "enum": [
+        "approved",
+        "rejected"
+      ],
+      "description": "The outcome."
+    },
+    "rejectCode": {
+      "oneOf": [
+        {
+          "enum": [
+            "over_limit",
+            "unclear_photo",
+            "paper_mismatch",
+            "other"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Set when rejected (DR-49)."
+    },
+    "submittedByAccountId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The resident who registered it, `null` when staff did."
+    },
+    "reviewedBy": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The reviewing staff member."
+    }
+  }
+}

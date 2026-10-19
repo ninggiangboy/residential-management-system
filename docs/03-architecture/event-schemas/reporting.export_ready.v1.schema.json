@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reporting.export_ready.v1.schema.json",
+  "title": "reporting.export_ready.v1",
+  "description": "Event of reporting. The worker finishes an export (FR-48.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "exportId",
+    "kind",
+    "format",
+    "requestedBy",
+    "fileId",
+    "expiresAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "exportId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The `export_job`."
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]{3,40}$",
+      "description": "Export kind, e.g. `debt_aging`."
+    },
+    "format": {
+      "enum": [
+        "xlsx",
+        "pdf"
+      ],
+      "description": "File format."
+    },
+    "requestedBy": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The requesting staff member."
+    },
+    "fileId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The `file_object` of the result."
+    },
+    "expiresAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When the file is deleted (7 days, DR-55)."
+    }
+  }
+}

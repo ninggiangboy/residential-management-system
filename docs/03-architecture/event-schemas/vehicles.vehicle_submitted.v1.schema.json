@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vehicles.vehicle_submitted.v1.schema.json",
+  "title": "vehicles.vehicle_submitted.v1",
+  "description": "Event of vehicles. A resident registers a vehicle or edits an approved one (FR-30).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "vehicleId",
+    "unitId",
+    "isRevision"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "vehicleId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The vehicle."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its unit."
+    },
+    "isRevision": {
+      "type": "boolean",
+      "description": "`true` when an approved vehicle was edited and a revision awaits review."
+    }
+  }
+}

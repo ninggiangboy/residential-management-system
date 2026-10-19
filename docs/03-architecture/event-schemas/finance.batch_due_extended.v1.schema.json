@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.batch_due_extended.v1.schema.json",
+  "title": "finance.batch_due_extended.v1",
+  "description": "Event of finance. Extend the due date of a published batch (FR-44).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "batchId",
+    "code",
+    "previousDueDate",
+    "dueDate",
+    "part",
+    "parts",
+    "unitIds"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "batchId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The batch."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^PH-[0-9]{4}-[0-9]{2,}$",
+      "description": "Batch code."
+    },
+    "previousDueDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "The date before the change."
+    },
+    "dueDate": {
+      "$ref": "common.schema.json#/$defs/date",
+      "description": "The new, later date."
+    },
+    "part": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Position of this message among the messages of one action, from 1."
+    },
+    "parts": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of messages the action wrote; the handler needs no other knowledge of the total."
+    },
+    "unitIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/uuid"
+      },
+      "description": "Units that still have an `open` charge in the batch, at most 500. Units that paid are not told."
+    }
+  }
+}

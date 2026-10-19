@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.receipt_render_requested.v1.schema.json",
+  "title": "finance.receipt_render_requested.v1",
+  "description": "Command of finance. A receipt is issued or voided (FR-36).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "receiptId",
+    "variant"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "receiptId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The receipt."
+    },
+    "variant": {
+      "enum": [
+        "issued",
+        "void"
+      ],
+      "description": "`void` renders the watermarked copy (DR-17)."
+    }
+  }
+}

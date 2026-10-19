@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.schema.json",
+  "title": "Envelope",
+  "description": "The wire format of every outbox message (DOC-09 §3). `payload` is validated by the schema named in `type`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "source",
+    "aggregateId",
+    "occurredAt",
+    "payload",
+    "headers"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "UUIDv7 of the outbox row; the inbox key together with the handler name."
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z_]+\\.v[0-9]+$",
+      "description": "`<module>.<name>.v<major>`."
+    },
+    "source": {
+      "enum": [
+        "finance",
+        "residency",
+        "identity",
+        "tickets",
+        "vehicles",
+        "notices",
+        "notification",
+        "reporting"
+      ],
+      "description": "The producing module; equals the first segment of `type`."
+    },
+    "aggregateId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Ordering and grouping key (the field named in the catalog)."
+    },
+    "occurredAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When the state change was written."
+    },
+    "payload": {
+      "type": "object"
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correlationId",
+        "causationId"
+      ],
+      "properties": {
+        "correlationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "The request id that started the chain."
+        },
+        "causationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "The request id or message id that caused this message."
+        },
+        "traceparent": {
+          "type": "string",
+          "description": "W3C trace context. Absent in phase 1: no traces are built (DR-63)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.receipt_issued.v1.schema.json",
+  "title": "finance.receipt_issued.v1",
+  "description": "Event of finance. A receipt is issued, one per allocation (DR-17).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "receiptId",
+    "receiptNo",
+    "paymentId",
+    "allocationId",
+    "chargeId",
+    "unitId",
+    "issuedAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "receiptId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The receipt."
+    },
+    "receiptNo": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^BL-[0-9]{4}-[0-9]{4,}$",
+      "description": "Receipt number, `BL-YYMM-NNNN` (DR-10)."
+    },
+    "paymentId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its payment."
+    },
+    "allocationId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its allocation."
+    },
+    "chargeId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The charge it paid."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The unit."
+    },
+    "issuedAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "Issue time."
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notices.notice_sent_batch.v1.schema.json",
+  "title": "notices.notice_sent_batch.v1",
+  "description": "Event of notices. The fan-out has written one batch of `notice_recipient` rows (FR-29.2, DR-51).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "noticeId",
+    "title",
+    "urgent",
+    "batchNo",
+    "recipients"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "noticeId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The notice."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Notice title."
+    },
+    "urgent": {
+      "type": "boolean",
+      "description": "`true` selects the Android channel `urgent` (DR-52)."
+    },
+    "batchNo": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Batch number of the fan-out, from 1."
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accountKind",
+          "accountId"
+        ],
+        "properties": {
+          "accountKind": {
+            "$ref": "common.schema.json#/$defs/accountKind"
+          },
+          "accountId": {
+            "$ref": "common.schema.json#/$defs/uuid"
+          }
+        }
+      },
+      "description": "Accounts of this batch, at most 500."
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notification.push_requested.v1.schema.json",
+  "title": "notification.push_requested.v1",
+  "description": "Command of notification. An inbox handler asks for a push to up to 100 accounts (DR-52).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "templateKey",
+    "sourceKind",
+    "sourceId",
+    "params",
+    "channel",
+    "route",
+    "unitId",
+    "entityId",
+    "recipients"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "templateKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "description": "Push template key in the shared catalog."
+    },
+    "sourceKind": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]{3,30}$",
+      "description": "Kind of the source object."
+    },
+    "sourceId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Id of the source object; also the collapse key of the push."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "maxLength": 100
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "maxProperties": 5,
+      "description": "Template parameters."
+    },
+    "channel": {
+      "enum": [
+        "default",
+        "urgent"
+      ],
+      "description": "Android channel."
+    },
+    "route": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^/[a-z0-9/_-]*$",
+      "description": "App route opened by a tap, e.g. `/fees`."
+    },
+    "unitId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The unit the tap should select, or `null`."
+    },
+    "entityId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The object the tap should open, or `null`."
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accountKind",
+          "accountId"
+        ],
+        "properties": {
+          "accountKind": {
+            "$ref": "common.schema.json#/$defs/accountKind"
+          },
+          "accountId": {
+            "$ref": "common.schema.json#/$defs/uuid"
+          }
+        }
+      },
+      "description": "At most 100 accounts."
+    }
+  }
+}

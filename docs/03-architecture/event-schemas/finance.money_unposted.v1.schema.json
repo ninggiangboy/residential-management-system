@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.money_unposted.v1.schema.json",
+  "title": "finance.money_unposted.v1",
+  "description": "Event of finance. A new open row in the money log (FR-46.4).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "kind",
+    "rowId",
+    "outcome",
+    "amount",
+    "receivedAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "kind": {
+      "enum": [
+        "gateway_event",
+        "statement_line"
+      ],
+      "description": "Which table holds the row."
+    },
+    "rowId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Id of the `gateway_event` or `statement_line`."
+    },
+    "outcome": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]{3,40}$",
+      "description": "`gateway_event.outcome` or `statement_line.match_status` of the row."
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Amount in đồng, shown to staff only."
+    },
+    "receivedAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When the transfer arrived."
+    }
+  }
+}

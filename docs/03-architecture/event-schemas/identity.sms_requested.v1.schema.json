@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity.sms_requested.v1.schema.json",
+  "title": "identity.sms_requested.v1",
+  "description": "Command of identity. A resident OTP or a member invitation (FR-15.1, FR-17.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "requestId",
+    "accountId",
+    "kind",
+    "locale",
+    "params",
+    "secretEnc",
+    "expiresAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The building, or `null` for an event about an account that belongs to no single building (resident sign-in, sessions, deletion)."
+    },
+    "requestId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "A fresh id per send; the aggregate key."
+    },
+    "accountId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The resident account whose phone receives the message."
+    },
+    "kind": {
+      "enum": [
+        "otp",
+        "member_invitation"
+      ],
+      "description": "Which message."
+    },
+    "locale": {
+      "$ref": "common.schema.json#/$defs/locale",
+      "description": "Language of the SMS (the account's `language`)."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "maxProperties": 5,
+      "description": "Template parameters that are not secrets, e.g. `{\"unitCode\": \"A-1508\"}`."
+    },
+    "secretEnc": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/encrypted"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The OTP, AES-256-GCM encrypted (`v1:<keyId>:<iv>:<ciphertext+tag>`, DR-117); `null` for an invitation."
+    },
+    "expiresAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "After this instant the message is useless (the OTP expiry; for an invitation, creation + 5 min)."
+    }
+  }
+}

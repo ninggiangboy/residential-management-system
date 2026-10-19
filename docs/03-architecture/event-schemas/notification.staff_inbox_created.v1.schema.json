@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notification.staff_inbox_created.v1.schema.json",
+  "title": "notification.staff_inbox_created.v1",
+  "description": "Event of notification. An inbox entry is created for a staff account.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "staffId",
+    "entryId",
+    "templateKey"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "staffId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The staff member."
+    },
+    "entryId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The `inbox_entry`."
+    },
+    "templateKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "description": "Template key of the entry."
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tickets.ticket_assigned.v1.schema.json",
+  "title": "tickets.ticket_assigned.v1",
+  "description": "Event of tickets. The Manager assigns or reassigns a ticket (FR-20).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "ticketId",
+    "code",
+    "assigneeId",
+    "assignedBy",
+    "previousAssigneeId"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "ticketId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The ticket."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^YC-[0-9]{6}-[0-9]{3,}$",
+      "description": "Ticket code."
+    },
+    "assigneeId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The staff member now assigned."
+    },
+    "assignedBy": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The staff member who assigned."
+    },
+    "previousAssigneeId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The earlier assignee, `null` for a first assignment."
+    }
+  }
+}

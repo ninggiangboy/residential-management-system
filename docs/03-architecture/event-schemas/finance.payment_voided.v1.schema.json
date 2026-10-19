@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finance.payment_voided.v1.schema.json",
+  "title": "finance.payment_voided.v1",
+  "description": "Event of finance. Void a manual payment (FR-06).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "paymentId",
+    "unitId",
+    "source",
+    "voidedAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "paymentId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The voided payment."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "Its unit."
+    },
+    "source": {
+      "enum": [
+        "cash",
+        "bank_transfer"
+      ],
+      "description": "Only manual payments can be voided."
+    },
+    "voidedAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When it was voided."
+    }
+  }
+}

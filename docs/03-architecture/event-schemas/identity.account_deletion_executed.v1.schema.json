@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity.account_deletion_executed.v1.schema.json",
+  "title": "identity.account_deletion_executed.v1",
+  "description": "Event of identity. The daily `account_deletion` job executes an approved deletion (DR-59, DR-115).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "accountId",
+    "executedAt"
+  ],
+  "properties": {
+    "buildingId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The building, or `null` for an event about an account that belongs to no single building (resident sign-in, sessions, deletion)."
+    },
+    "accountId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The resident account that was cleared."
+    },
+    "executedAt": {
+      "$ref": "common.schema.json#/$defs/instant",
+      "description": "When identity cleared the account."
+    }
+  }
+}

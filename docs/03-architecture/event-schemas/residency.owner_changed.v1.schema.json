@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "residency.owner_changed.v1.schema.json",
+  "title": "residency.owner_changed.v1",
+  "description": "Event of residency. The Manager transfers ownership, or an import sets an owner (FR-18.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "buildingId",
+    "unitId",
+    "unitCode",
+    "newOwnerAccountId",
+    "previousOwnerAccountId",
+    "keepMembers"
+  ],
+  "properties": {
+    "buildingId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The building. The first field of every payload."
+    },
+    "unitId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The unit."
+    },
+    "unitCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Unit code, for the inbox text."
+    },
+    "newOwnerAccountId": {
+      "$ref": "common.schema.json#/$defs/uuid",
+      "description": "The new owner."
+    },
+    "previousOwnerAccountId": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The old owner, `null` for a first owner."
+    },
+    "keepMembers": {
+      "type": "boolean",
+      "description": "`true` when the Manager ticked \"keep members\"."
+    }
+  }
+}
