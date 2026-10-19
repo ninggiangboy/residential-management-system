@@ -45,6 +45,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-04: DR-97 (a recall counts the non-void charges of the batch; FR-04.2 updated). DR-96 (the resident sees `unmatchedTransfer` for every unposted outcome that leaves money received) is proposed for the Owner because it extends DR-84 item 8 | DR-19, DR-84, DR-20, DOC-03, DOC-04 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-12: DR-98 (`core-messaging` vendored without the privacy-participant protocol), DR-99 (guards built in the composition root, routes declare `audience`), DR-100 (`Money`, `LocalDate` and friends in `@rms/shared-types`) | DR-02, DR-03, DR-09, DR-11, DOC-12 |
 | 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-10: DR-101 (job rows and processed messages are bounded; DR-62 revised), DR-102 (memory-overcommit rules and the staging database settings) | DR-06, DR-62, DOC-10 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing ADR-0013…0026: DR-103 (no third-party error tracker, stated explicitly); DR-63 revised: the per-job gauge is `job_last_success_timestamp{job}` | DR-58, DR-63, DR-101, ADR-0021, ADR-0022 |
 
 ---
 
@@ -986,6 +987,12 @@ flowchart TB
 - **Consequences:** F-WIK-09 stays "Not built".
 - **Write to:** DOC-05, DOC-32.
 
+### DR-103 · No third-party error tracker — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** The master plan lists "no third-party error tracker" in ADR-0022, but no DR states it. DR-58 allows only Expo/FCM/APNs (and Cloudflare, DR-83) to receive personal data; request bodies and stack traces would carry it to a new processor.
+- **Decision:** Errors go to the structured logs with the request id, collected by Grafana Alloy into Loki (DR-63), plus metrics. A hosted error tracker is not used. Adding one needs a new DR that adds it to the cross-border list of DR-58.
+- **Consequences:** Exceptions are not grouped or de-duplicated; debugging depends on log search and on request ids in log lines.
+- **Write to:** ADR-0022, DOC-39, DOC-40.
+
 ## N. Runtime, operations and security
 
 ### DR-62 · Jobs, schedules and the outbox runtime settings — **Decided (Owner, 2026-10-19)**
@@ -1018,6 +1025,7 @@ flowchart TB
   *Changed 2026-10-19:* the proposal also ran Jaeger with 7-day trace retention and collected logs with Promtail.
 - **Consequences:** The staging machine budget (DR-06) includes this stack.
 - **Write to:** DOC-40, DOC-70, DOC-74 (runbooks), ADR-0021.
+  *Revised 2026-10-19 (DR-101):* the per-job gauge is `job_last_success_timestamp{job}` (the alert computes the age with `time() - …`); `job_last_success_age_seconds` is not used.
 
 ### DR-64 · Security headers, CSP, CORS and rate limits — **Decided (Owner, 2026-10-19)**
 
