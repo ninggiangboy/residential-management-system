@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…112), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…113), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -337,6 +337,9 @@ This document defines the words of the project, as the project uses them. Every 
 | allow-list (scope lint) | — | The explicit list of tables exempt from the `building_id` predicate check because they are looked up before a building is known, belong to an account spanning buildings, or are infrastructure. Reasons in DOC-14 §5.3. | DR-12, DR-104 |
 | scoped list | — | The tables that must be queried with a `BuildingScope` argument or a `building_id` predicate; generated from the module schemas. | DR-12, DOC-12 §7 |
 | bootstrap migration (`0000-bootstrap.sql`) | — | The first migration: creates extensions, schemas, the `platform` tables and shared SQL helper functions. | DR-105, DOC-14 §2.1 |
+| database roles (`rms_*`) | — | `rms_migrator` (owns the objects, runs migrations and the deploy), `rms_app` (DML for `api` and `worker`, no DDL), `rms_readonly` (support and metrics, no secrets) and `rms_backup` (dump and backup functions). One application role, not one per module. | DR-67, DR-113, DOC-19 |
+| grants step (`0900-grants.sql`) | — | The idempotent script, run by `rms_migrator` at the end of every `db:migrate`, that computes the privileges of `rms_app` and `rms_readonly` from nothing. A table it has not covered is closed (fail closed). | DR-113, DOC-19 §4 |
+| denied table | — | A table `rms_readonly` cannot read at all (sessions, codes, link hashes, stored responses, push tokens, every outbox). | DR-113, DOC-19 §4.2 |
 | history schema (`drizzle_<module>`) | — | The schema where drizzle-kit keeps the applied-migrations table of one module. | DOC-14 §14 |
 | expand/contract | — | A migration style in two releases: add what the new code needs, switch the code, then remove what the old code used. No down migrations. | DR-08, DR-105 |
 

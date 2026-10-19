@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Review** · Updated: 2026-10-19 (DR-110, DR-112) · DOC-14
+> Status: **Review** · Updated: 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 
@@ -54,6 +54,7 @@ Each module that migrates also has a **history schema** `drizzle_<module>` with 
 | Tables of `platform` | The same bootstrap step (`CREATE TABLE IF NOT EXISTS`), because the maintenance flag must exist before and while migrations run (reference, DR-03) | Once per database; DOC-17 §3 holds the DDL |
 | Tables of a module, `outbox_messages` and `inbox` of that module, its counter | That module's Drizzle migrations | `db:migrate` in catalog order (§14) |
 | History schema `drizzle_<module>` | `drizzle-kit migrate` | First migration of the module |
+| Privileges of `rms_app`, `rms_readonly` | `0900-grants.sql`, run by `rms_migrator` | At the end of every `db:migrate`; idempotent; a table not yet covered is closed (DOC-19 §4, DR-113) |
 
 The application role `rms_app` has no `CREATE` privilege on any schema (DOC-19).
 
@@ -385,7 +386,7 @@ The query plan with `enable_seqscan = off` on a small table uses `ix_resident_pr
 ### 14.1 Layout and commands (DR-08, ADR-0014)
 
 - Each module carries its own `drizzle.config.ts` and `migrations/` folder, reads the module's `infrastructure/persistence/schema.ts`, filters on its schema, and keeps its history in schema `drizzle_<module>`, table `__migrations` (the reference layout, DR-03).
-- `bun run db:generate` runs drizzle-kit inside each module; `bun run db:migrate` applies each module's pending migrations **in catalog order on one connection** with `prepare: false`, so it also works behind PgBouncer in transaction mode (DR-67). Migrations are a separate step of the deploy (a one-shot service or step 4 of the deploy script, DOC-70), never run by the app at boot.
+- `bun run db:generate` runs drizzle-kit inside each module; `bun run db:migrate` applies each module's pending migrations **in catalog order on one connection**, then runs the grants step (DOC-19 §4), with `prepare: false`, so it also works behind PgBouncer in transaction mode (DR-67). Migrations are a separate step of the deploy (a one-shot service or step 4 of the deploy script, DOC-70), never run by the app at boot.
 - Versions: Drizzle 0.45 and drizzle-kit 0.31, as pinned in DOC-11 §3. The options below were checked against the drizzle-kit configuration reference on 2026-10-19. A move to Drizzle 1.0 changes casing, relational queries and the migrations layout and needs a DR (DR-82).
 
 ```ts
