@@ -1,7 +1,7 @@
 # Glossary
 
 > Status: **Review** · Updated: 2026-10-19 · DOC-06
-> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…84), [master plan](00-master-plan.md) §0.2, §3.2
+> Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…88), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
 This document defines the words of the project, as the project uses them. Every other document uses these words exactly and never redefines them. It does not hold designs (tables, endpoints, algorithms): a definition points to the decision (DR-xx) or the document (DOC-xx) that does. A new term enters this file in the same change that first uses it (master plan §2, principle 9).
@@ -343,6 +343,14 @@ This document defines the words of the project, as the project uses them. Every 
 | `MIN_APP_VERSION` | — | The minimum app version per app; older clients get 426 `upgrade_required`. | DR-69 |
 | currency policy | — | Every dependency is the latest stable, verified on the web with the date and source recorded in DOC-11. | DR-82 |
 | Prometheus, Alertmanager, Grafana, Loki, Alloy | — | The observability stack; Alloy collects logs into Loki. No traces in phase 1. | DR-63 |
+| trust boundary (TB1–TB10) | — | A numbered line in the container diagram where the caller changes and a credential is checked (for example TB1 resident app to API, TB4 payOS webhook to API). The STRIDE table of the security document walks them. | DOC-07 §7, DOC-39 |
+| deployment unit | — | A process or container that is started and stopped on its own: `api-1`, `api-2`, `worker`, `caddy`, `cloudflared`, monitoring. | DR-05, DOC-07 §4.3 |
+| ops port | — | The internal port that serves `/health/*` and `/metrics`; neither Caddy nor the Tunnel routes it. Configured by `OPS_PORT`. | DR-07, DOC-07 |
+| `platform` schema | — | The schema owned by the vendored core packages, not by a module: `maintenance`, `idempotency_key` and `rate_bucket` for every limiter except sign-in, OTP and reset. | DR-85 |
+| composition root | — | The place where an app wires modules together (`apps/api`): the only code allowed to import several modules' manifests. | DOC-07, DOC-12 |
+| Access service token | — | The Cloudflare Access credential that lets the CI deploy job reach the VPS over the Tunnel. | DR-83 |
+| integration (`integrations/<consumer>`) | — | An entry point of a producer module written for one named consumer module; it is the only code that translates the producer's contract for that consumer. | DR-04, DR-42 |
+| data owner | — | The one module that writes a table, topic or bucket prefix; other modules read it only through a contract. | DOC-07 §6 |
 
 ## 12. Documents, process and testing
 

@@ -22,7 +22,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-04 | Use cases (`01-product/use-cases.md`) | Not written |
 | DOC-05 | Feature catalog (`01-product/feature-catalog.md`) | Not written |
 | DOC-06 | [Glossary](02-glossary.md) | Review |
-| DOC-07 | System context and containers (`03-architecture/system-context-and-containers.md`) | Not written |
+| DOC-07 | [System context and containers](03-architecture/system-context-and-containers.md) | Review |
 | DOC-08 | Data flows (`03-architecture/data-flows.md`) | Not written |
 | DOC-09 | Messaging contracts (`03-architecture/messaging-contracts.md`) | Not written |
 | DOC-10 | Quality attributes (`03-architecture/quality-attributes.md`) | Not written |

@@ -39,6 +39,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-19 | Owner | Process and scope (DR-76…81): DR-76, 78 accepted as proposed. DR-77: coverage targets are **warnings only** in CI for every module (reported, never failing the build). DR-79: requirements FR-49 **void a single open charge** (DR-19, DR-20) and FR-50 **step-up for sensitive staff actions** (DR-39) are added; the range is FR-01…50. DR-80 accepted; NFR-12 measures to the response with the validated preview. DR-81 accepted: the member type "family" stays separate from "tenant"; the rows for owner transfer, closed batch and ticket deadlines point to DR-40, DR-20 and DR-47 as decided | DR-76…81, DR-19, DR-20, DR-39, DOC-03, DOC-88, DOC-71, master plan §1, §6 |
 | 2026-10-19 | Owner | Receipts and e-invoices (DR-17, DR-42, DR-13): DR-17 and DR-42 accepted as proposed (one receipt per allocation; `ResidencyApi.getMembership` also returns `startedAt` for the history rule of DR-40). Legal risk resolved: the company issues an e-invoice only when a resident asks (request of type "Khác"), outside the system; the system does not manage e-invoices (no number, no table, no integration); the receipt is "Biên lai thu tiền / Payment receipt", not a tax invoice. Readiness hooks: complete snapshot, reserved nullable `finance.receipt.external_invoice jsonb`, event `finance.receipt_issued.v1`; no VAT fields, buyer tax details, invoice table or provider port now (a new migration at integration time) | DR-13, DR-17, DR-42, DR-40, DR-73, DOC-01, DOC-09, DOC-15, DOC-22, DOC-34, master plan §8 |
 | 2026-10-19 | Owner | Master plan approved as v1.0 (task P0-01 done). Every P1-blocking DR is decided; DR-25, 26, 27, 28, 30, 31, 34, 35 stay open until the gateway sandbox and the bank statement sample arrive; DR-08 is to be revisited | Master plan, DR-25…35 |
+| 2026-10-19 | Claude (delegated by Owner) | Added while writing DOC-07: DR-85 (`platform` schema belongs to the core packages), DR-86 (one object-key layout), DR-87 (contracts, an event and tables implied by decisions). DR-88 (operators reach Grafana by SSH port-forward) is proposed for the Owner | DR-36, DR-42, DR-55, DR-56, DR-59, DR-61, DR-63, DR-74, DOC-07 |
 
 ---
 
@@ -706,6 +707,21 @@ flowchart TB
 - **Consequences:** Reports that need unit codes call `ResidencyApi.getUnits` for one page of ids (SDD §14).
 - **Write to:** DOC-09, DOC-12, DOC-07, ADR-0009, ADR-0014.
 
+### DR-85 · The `platform` schema belongs to the core packages — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-36 puts `rate_bucket` in `identity`, but the limits for the webhook, QR, intents, reminders and uploads (DR-64) need a bucket table that no business module owns; the master plan lists `idempotency_key` under DOC-16 while DR-74 puts it in `platform`.
+- **Decision:** The schema `platform` belongs to the vendored core packages, not to a module. It holds `platform.maintenance`, `platform.idempotency_key` and `platform.rate_bucket`. `platform.rate_bucket` serves every limiter except sign-in, OTP and reset, which stay in `identity.rate_bucket` (DR-36). The tables are on the building-scope allow-list (DR-12).
+- **Consequences:** DOC-17 §3 holds the DDL of `idempotency_key`; DOC-16 drops it. One more schema in the grants matrix (DOC-19).
+- **Write to:** DOC-14, DOC-17, DOC-19, ADR-0014.
+
+### DR-87 · Contracts, an event and tables that decisions imply but no DR names — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** Writing the data ownership table (DOC-07 §5–§6) shows pieces that DR-18, DR-26, DR-33, DR-39, DR-55, DR-59 and DR-75 need but DR-42 does not list.
+- **Decision:**
+  1. Sync contracts added to the DR-42 table: `BuildingApi.getGatewayConfig` (finance and the webhook read the configuration and its secrets), `BuildingApi.hasAcceptedLatestTerms` (the `terms_required` guard, DR-59), `IdentityApi.verifyStepUp` (building verifies a step-up inside the same transaction, DR-39), and the read contracts of `TicketsApi`, `VehiclesApi` and `NoticesApi` that `reporting` uses for the dashboard (DR-55).
+  2. Event `identity.account_deletion_executed.v1`, consumed by `residency` (remove memberships, clear the profile) and `notification` (delete device tokens), so DR-59 execution needs no cross-module write.
+  3. Tables: `finance.debt_reminder` (one row per unit per building day, the throttle of FR-12.4), `finance.fake_gateway_link` (links of the `fake` driver, DR-26) and `realtime.events` (replay buffer, DR-75).
+- **Consequences:** DOC-09 lists the event and contracts; DOC-15 and DOC-17 carry the three tables.
+- **Write to:** DOC-07, DOC-09, DOC-12, DOC-15, DOC-17.
+
 ## J. Support tickets
 
 ### DR-43 · Ticket tables, limits and what a resident may attach — **Decided (Owner, 2026-10-19)**
@@ -884,6 +900,12 @@ flowchart TB
 - **Consequences:** `building` owns a table every module uses, through a contract.
 - **Write to:** DOC-37, DOC-17, DOC-39, ADR-0016.
 
+### DR-86 · One object-key layout for every object, generated PDFs included — **Decided (Claude, delegated by Owner, 2026-10-19)**
+- **Problem:** DR-56 names the fee-notice cache `batch/<id>/unit/<unit>.pdf` and DR-61 names object keys `{env}/{building_id}/{module}/…`; two key shapes for one bucket.
+- **Decision:** Every object key follows DR-61. `file_object.purpose` tells the kinds apart (`fee_notice_pdf`, `receipt_pdf`, `bulk_zip`, `import`, `statement`, `export`, plus the upload purposes). The path of DR-56 is the logical key stored in `file_object.owner_ref`, not the object key.
+- **Consequences:** One lifecycle and quota rule for all objects (DR-61).
+- **Write to:** DOC-37, DOC-34.
+
 ## N. Runtime, operations and security
 
 ### DR-62 · Jobs, schedules and the outbox runtime settings — **Decided (Owner, 2026-10-19)**
@@ -963,6 +985,13 @@ flowchart TB
 - **Decision (proposed):** Port `SmsSender` and `Mailer`; one adapter each. The Owner/client chooses the providers and the choice is recorded here before P1-10 (it is a decision, not an experiment). Compare two or three Vietnamese SMS providers that support brandname OTP (price per message, brandname registration lead time, delivery receipts, API quality, sandbox) and one SMTP relay (deliverability with SPF/DKIM/DMARC for the company domain, location, price). Decision rule: pick the cheapest provider with a delivery-receipt API and brandname approval ≤ 3 weeks; register the brandname during P0/P1 so it is ready for staging UAT. SMS and mail drivers per environment: `console` (local), `allowlist` (staging), real (production). Mail carries only links and generic text (DR-58).
 - **Consequences:** Brandname approval is a calendar-time dependency; if it is late, go-live can use an unbranded OTP route at higher cost.
 - **Write to:** DOC-26, DOC-11, DOC-70.
+
+### DR-88 · Operators reach Grafana and Alertmanager by SSH port-forward, with no public hostname — **Proposed**
+- **Problem:** DR-83 gives no public host for monitoring, and DR-63 sends alerts by email and Telegram. An operator still needs the dashboards.
+- **Options:** (1) no public hostname; the operator forwards the port over the SSH path through the Tunnel (DR-83 item 2); (2) a third hostname `grafana.<domain>` behind Cloudflare Access.
+- **Decision (proposed):** Option 1. Alerts already leave the host, so no console needs exposing; one hostname fewer to protect. This is an access decision, so the Owner confirms.
+- **Consequences:** A dashboard needs a terminal session; fine for one operator.
+- **Write to:** DOC-70, DOC-39.
 
 ## O. Clients
 
@@ -1121,7 +1150,7 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 | Level | Items | Why decide early |
 | --- | --- | --- |
-| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
+| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
 | Blocks P2 | DR-13…20, DR-84, DR-23, 24, DR-27, DR-29, DR-52, 53, DR-56, DR-75, 76, DR-78 | Fix the ledger tables and semantics, the all-or-nothing rule, the allocation statement, the money log, batches, manual payments, order code, the `settle()` contract, the notification core, PDF rendering and the order of work |
 | Blocks P3 | DR-25, 26, DR-28, DR-30…32, DR-34, 35 | Fix payOS behavior and the fake driver, intent lifecycle, the re-query and cancel jobs, webhook hardening and reconciliation |
 | Blocks P4 | DR-43…47, DR-50, 51 | Fix ticket mechanics and the notice model and fan-out |
