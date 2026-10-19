@@ -4,7 +4,7 @@
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
-This document says how long each kind of data lives and how it leaves: what is never deleted, what is purged by age and by which job, what is cleared but kept, what a restore brings back, and what the system does when a resident's account is deleted. **This is the skeleton the plan asks for in Phase 1** (P0-25): the schemas whose tables are written (`identity`, `residency`, `building`, `audit`, `platform`, the outbox and inbox) are complete, with purge statements run on PostgreSQL 18.6; the tables of the documents not yet written appear with the period the decisions already give, and four groups wait for the Owner (see "Open questions"). **The final version is due before Phase 6.** The periods marked "default" are the defaults of DR-115 until the legal dossier (P0-06) confirms them. The document does not hold the table definitions (DOC-14 to DOC-17), the job runtime (DOC-38), the privacy workflow and the `pii.read` rules (DOC-35) or the backup procedures (DOC-72).
+This document says how long each kind of data lives and how it leaves: what is never deleted, what is purged by age and by which job, what is cleared but kept, what a restore brings back, and what the system does when a resident's account is deleted. **This is the skeleton the plan asks for in Phase 1** (P0-25): the schemas whose tables are written (`identity`, `residency`, `building`, `audit`, `platform`, the outbox and inbox) are complete, with purge statements run on PostgreSQL 18.6; the tables of the documents not yet written appear with the period the decisions already give, and the Owner has decided that tickets, vehicles, notices and the library are never deleted (DR-115). **The tables still marked "DDL pending" are confirmed when their documents are written; the final version is due before Phase 6.** The periods marked "default" are the defaults of DR-115 until the legal dossier (P0-06) confirms them. The document does not hold the table definitions (DOC-14 to DOC-17), the job runtime (DOC-38), the privacy workflow and the `pii.read` rules (DOC-35) or the backup procedures (DOC-72).
 
 ## 1. Principles
 
@@ -81,11 +81,11 @@ Rules that hold everywhere:
 
 | Table | What is kept | Removal | Period | Job | Source |
 | --- | --- | --- | --- | --- | --- |
-| `tickets.*` and the ticket media | Tickets, events, messages, ratings, photos and videos | **Open** (no purge in phase 1) | Kept | — | DR-43; open question 1 |
+| `tickets.*` and the ticket media | Tickets, events, messages, ratings, photos and videos | Never deleted | — | — | DR-43, DR-115 |
 | `access.qr_credential` | One credential per membership | Follows the membership | Kept | — | DR-48 |
 | `access.qr_scan`, `access.lookup_log` | Scan results and Guard lookups, with the guard id | Deleted by age | 90 days (`lookup_log` is the default) | `qr_scan_purge`, daily 03:45 | DR-48, DR-62, DR-115 |
-| `vehicles.*` and the plate photos and papers | Vehicles and revisions | **Open** (no purge in phase 1) | Kept | — | DR-49; open question 1 |
-| `notices.*` | Notices, attachments, recipients | **Open** (no purge in phase 1) | Kept | — | DR-50; open question 1 |
+| `vehicles.*` and the plate photos and papers | Vehicles and revisions | Never deleted | — | — | DR-49, DR-115 |
+| `notices.*` | Notices, attachments, recipients | Never deleted | — | — | DR-50, DR-115 |
 | `notification.inbox_entry` | A resident's inbox entries | Deleted by age | 180 days after `created_at` | `inbox_purge`, weekly Sunday 04:00 | DR-53, DR-62 |
 | `notification.push_ticket` | Expo push tickets | Deleted by age | 3 days (DR-52; DOC-10's estimate uses 7, an upper bound) | `push_receipts`, every 5 minutes | DR-52 |
 | `notification.device_token` | A device's push token | Deleted at sign-out, session revocation, `DeviceNotRegistered` and account deletion | — | the sign-out and deletion paths | DR-52, DR-87 |
@@ -104,7 +104,7 @@ Keys are `{env}/{building_id}/{module}/{yyyy}/{mm}/{uuid}.{ext}` (DR-61, DR-86).
 | `building/` | Company logo | Until replaced |
 | `residency/` | Units-and-owners import files (CCCD numbers) | Deleted at commit; at expiry within one hour of `expires_at` (DR-22, DR-114) |
 | `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56) |
-| `tickets/`, `vehicles/`, `notices/`, `wiki/` | Photos, videos, papers, attachments | Follows the owner; **open** (question 1) |
+| `tickets/`, `vehicles/`, `notices/`, `wiki/` | Photos, videos, papers, attachments | Follows the owner, which is never deleted (DR-115) |
 | `reporting/` | Export files | 7 days (DR-55) |
 | `rms-<env>-backup` / `pgbackrest/` | The encrypted repository | 4 full + 7 differential backups and the WAL they need (DR-66, DR-83) |
 | `rms-<env>-backup` / `pg_dump/` | Weekly logical dump | 4 weeks (DR-66) |
@@ -194,8 +194,8 @@ The classes are those of DR-58 and ADR-0022. This table says where each class li
 | Date of birth | personal | `resident_profile.date_of_birth` | Cleared with the profile | Backups |
 | Phone, email, name | personal | `resident_account.phone`, `display_name`; `resident_profile.full_name`, `email`; `staff_account.email`, `full_name` | Resident: cleared at account deletion (the phone becomes `deleted:<id>`, which frees the number). Staff: never deleted; a former staff member is `disabled` | The payer name on a receipt and in a payment snapshot stays (accounting record, SDD §19.5); audit rows keep ids only |
 | IP address and user agent | personal | `audit_log.ip`, `user_agent`; `terms_acceptance.ip`; `otp_challenge.ip`; `refresh_family.user_agent` | Audit: with the row (5 or 2 years). Terms acceptance: nulled at account deletion. OTP and sessions: with the row (24 h and 30 days after revocation) | Logs (below) |
-| Vehicle papers and plate photos | personal | Files bucket, private prefix, signed URLs of 5 minutes (DR-61) | **Open** (question 1) | — |
-| Ticket text and media | operational | `tickets.*`, files bucket | **Open** (question 1) | — |
+| Vehicle papers and plate photos | personal | Files bucket, private prefix, signed URLs of 5 minutes (DR-61) | Never deleted (DR-115); the files stay private and are shown only by signed URL | — |
+| Ticket text and media | operational | `tickets.*`, files bucket | Never deleted (DR-115) | — |
 | Push tokens | personal | `notification.device_token` | Sign-out, session revocation, `DeviceNotRegistered`, account deletion | — |
 | Logs | personal, masked | Loki, 14 days, collected by Alloy (DR-63) | 14 days | Phones are masked (`+84•••••123`); OTP, tokens, passwords, CCCD and QR tokens are never logged (DR-58) |
 
@@ -218,7 +218,7 @@ Properties:
 - **Idempotent.** Every step is a conditional update or a clear of already-null fields, so running the job again, after a crash between steps or after a restore (§4), changes nothing that is already done.
 - **Each step is its own transaction** in its own module, driven by the event (DR-42); the identity step commits first, so an account marked `deleted` whose later steps are still pending is a normal, brief state. A handler that fails retries by the outbox rules (DR-62); a dead letter alerts.
 - **The phone is free** from step 1: a new account can use the number at once (IDM-14).
-- **Cooling-off.** The delay is the building setting `accountDeletionDays` (DOC-17 §1.2). A resident account may later belong to several buildings, so which building's value applies is open (question 2); with one real building it is that building's.
+- **Cooling-off.** The delay is the building setting `accountDeletionDays` (DOC-17 §1.2). One deployment serves one building (a second building would be a second deployment, DR-115), so there is one value; the demo building has its own accounts and its own setting.
 
 ## 9. Storage growth
 
@@ -234,7 +234,7 @@ DOC-10 §5 holds the estimate (computed by `docs/03-architecture/capacity/capaci
 | WAL | Up to 1,440 objects per day of 16 MB before compression; measured in P1-20 | DOC-10 §5.5 |
 | Logs and metrics | About 42 MB per day of raw logs for the sample building (8 MB in Loki, 14 days); Prometheus about 25 MB per day | DOC-10 §5.4 |
 
-What the retention rules of §2 change in that estimate: the outbox, inbox, `job_run`, idempotency keys, OTP and token rows are bounded by days, so none grows with the years; `audit_log` is bounded by 5 years (the upper bound DOC-10 uses); the ledger, tickets, notices and the library grow without a purge. The open question 1 decides whether tickets, vehicles and notices stay unbounded.
+What the retention rules of §2 change in that estimate: the outbox, inbox, `job_run`, idempotency keys, OTP and token rows are bounded by days, so none grows with the years; `audit_log` is bounded by 5 years (the upper bound DOC-10 uses); the ledger, tickets, notices and the library grow without a purge. They stay unbounded by decision (DR-115); the quota (50 GiB per building) is the limit, and the Admin sees the alert at 80%.
 
 ## 10. Statements tested
 
@@ -272,7 +272,7 @@ Tested on PostgreSQL 18.6 on 2026-10-19 on a database built from the DDL of DOC-
 
 | ID | Decision | Where used |
 | --- | --- | --- |
-| DR-115 | Default periods for the tables with none: `otp_challenge` 24 h; `password_token` 7 days; `refresh_family` 30 days; idle buckets 24 h; `file_object` `deleted` rows 90 days; `debt_reminder` 30 days; `lookup_log` 90 days; `export_job` rows 7 days; `realtime.events` 24 h. `terms_acceptance` kept with its IP nulled at account deletion. A daily `account_deletion` job. Tickets, vehicles and notices kept in phase 1, decided before Phase 6 | §2, §5, §8 |
+| DR-115 | Default periods for the tables with none: `otp_challenge` 24 h; `password_token` 7 days; `refresh_family` 30 days; idle buckets 24 h; `file_object` `deleted` rows 90 days; `debt_reminder` 30 days; `lookup_log` 90 days; `export_job` rows 7 days; `realtime.events` 24 h. `terms_acceptance` kept with its IP nulled at account deletion. A daily `account_deletion` job. Tickets, vehicles, notices and the library are never deleted (Owner, 2026-10-19) | §2, §5, §8 |
 
 ## 12. Not in this document
 
@@ -300,7 +300,4 @@ Tested on PostgreSQL 18.6 on 2026-10-19 on a database built from the DDL of DOC-
 
 ## Open questions
 
-1. **Tickets, vehicles, notices and the library: do they ever leave?** Recommendation: keep everything in phase 1. At about 4.6 GB per building per year the 50 GiB quota lasts about 10 years (§9), the rows are small, and a purge job would be one more thing to build and test. Revisit before Phase 6 with real volumes. The alternative the Owner may want sooner is to delete the photos of vehicle papers a fixed time after the vehicle is retired, because they are personal data (DR-58); that is one hourly job. The final version of this document waits for the answer.
-2. **Which building's `accountDeletionDays` applies to an account with memberships in several buildings?** With one real building the question does not arise. DOC-35 decides when the workflow is written; the proposal is the value of the building whose Manager approved the request, stored at approval.
-3. **Stale `device_token` rows.** A device that is never opened again keeps its token until the next sign-out or an Expo `DeviceNotRegistered` receipt. Recommendation: no age purge in phase 1; Expo's receipts clean up dead tokens.
-4. **Confirmation of every period by the legal dossier (P0-06).** The audit floors (DR-57) and the defaults of DR-115 are the code's behavior until then.
+None. The Owner decided on 2026-10-19 that tickets, vehicles, notices and the library are never deleted, that one deployment serves one building, and that the retention defaults of DR-115 stand; the legal dossier (P0-06) may confirm or change a period later, which is a new DR and a change to one statement of §5. A device token that is never opened again stays until the next sign-out or an Expo `DeviceNotRegistered` receipt: no age purge in phase 1.
