@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-20 (DR-128…150: sessions, staff accounts, household, API terms) · DOC-06
+> Status: **Review** · Updated: 2026-10-20 (DR-157…173: operations, testing; earlier: DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -419,6 +419,13 @@ This document defines the words of the project, as the project uses them. Every 
 | stress day | — | The day of the month when load peaks: batch publication and the two hours before the due date. The capacity estimate sizes for it. | DOC-10 §5 |
 | degraded mode | — | What a unit does at its limit instead of failing: refuse new uploads, queue exports, answer 429, keep the settlement path alive. | DOC-10 §8 |
 | stalled archive | — | PostgreSQL cannot hand WAL segments to pgBackRest, so `pg_wal` grows until the disk fills. Alert on `pg_stat_archiver.failed_count`. | DR-66, DOC-10 §6 |
+| release (on the host) | — | One unpacked tarball of `docker/` and `ops/` at `/opt/rms/releases/<tag>`; `/opt/rms/current` points at the running one and the last five are kept. | DR-158, DOC-70 §3.2 |
+| `gate` | — | The one required status check of `main`: it fails unless every CI job that ran finished `success` or `skipped`. | DR-163, DOC-71 §4 |
+| smoke test | — | The short set of public requests run after a deploy (ready, public config, the ops route is 404, the admin headers, and on staging a demo staff sign-in); `ops/deploy/smoke.sh`. | DR-163, DOC-71 §7.3 |
+| promote (a release) | — | Adding the tag `vX.Y.Z` to the `sha-<7>` image that passed staging, instead of building again. | DR-164, DOC-71 §7.4 |
+| compose profile | — | A Compose switch that starts optional services: `api2` (second API), `logs` (Loki, Alloy), `deploy` (the one-shot `migrate`). | DR-161, DOC-70 §6.1 |
+| Bot Fight Mode | — | A Cloudflare zone setting that challenges suspected bots; it cannot be skipped by a rule on the free plan, so it is off for the zone (proposed). | DR-160 |
+| `ssh-<env>` host | — | The Tunnel hostname of type SSH (behind Access) through which operators and CI reach the VPS. | DR-158 |
 
 ## 12. Documents, process and testing
 
@@ -452,6 +459,12 @@ This document defines the words of the project, as the project uses them. Every 
 | baseline (experiment) | — | The deliberately naive implementation an experiment compares against (EXP-03: read the status, decide in code, write without the predicate). | DR-78 |
 | template database | — | A migrated PostgreSQL database cloned per test file for isolation and speed. | DR-77 |
 | planned number / measured number | — | A planned number is a design target or a script estimate. It becomes measured only with a dated result file, machine and script (DR-77, DR-78). | DR-80, DOC-10 §2 |
+| sample template | — | The template database `rms_tpl_sample_<hash8>` that holds the migrated schema and the sample building; each test file clones it. | DR-77, DOC-88 §6, §7 |
+| mutant (of the generator) | — | A deliberately broken guard or repository that the authorization matrix must catch; a surviving mutant fails EXP-10. | DR-172, DOC-99 §3 |
+| burst reading (of NFR-07) | — | The reading of "5 SMS per phone per hour" as the bucket's capacity (a burst of 5, then one per 12 minutes) rather than a sliding hour; proposed. | DR-171, DOC-98 §12 |
+| port suite | — | One contract suite run against both the fake and the real adapter of a port. | DOC-88 §14 |
+| race profile | — | `TEST_RACE_PROFILE`: `ci` (20 rounds) or `nightly` (1,000 rounds, 8 sessions) for the race harness. | DR-169, DOC-88 §8.3 |
+| `TEST_` variables | — | Environment variables read only by `@rms/test-support` and the test scripts, never by `loadConfig`. | DR-169, DOC-88 §6.3 |
 
 ## 13. Language, units and formats
 

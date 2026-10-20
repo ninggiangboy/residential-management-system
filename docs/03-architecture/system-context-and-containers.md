@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-20 (DR-88 decided; earlier: DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Status: **Review** · Updated: 2026-10-20 (DR-160 proposed revision of TB1; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -490,7 +490,7 @@ flowchart LR
 
 | ID | Boundary | Who authenticates, how | What crosses | Refs |
 | --- | --- | --- | --- | --- |
-| TB1 | Internet → Cloudflare edge | TLS ends here. Managed WAF; one rate rule on `/api/v1/auth/*`; WAF challenges and Bot Fight Mode skipped for the API host and the webhook path (native apps cannot solve a challenge). Access (login) in front of `admin.<domain>` and `monitor.<domain>` only, never in front of `api.<domain>` | All client traffic, payOS webhooks | DR-07, DR-83 |
+| TB1 | Internet → Cloudflare edge | TLS ends here. Managed WAF; one rate rule on `/api/v1/auth/*`; WAF challenges and Bot Fight Mode skipped for the API host and the webhook path (native apps cannot solve a challenge). Access (login) in front of `admin.<domain>` and `monitor.<domain>` only, never in front of `api.<domain>`. *Revised (DR-160, proposed):* Bot Fight Mode cannot be skipped on the free plan, so it is off for the zone; the webhook path skips managed and rate rules (DR-159) | All client traffic, payOS webhooks | DR-07, DR-83, DR-159, DR-160 |
 | TB2 | Cloudflare → VPS | The VPS opens an outbound Tunnel; no inbound port, SSH included. Operators and CI reach SSH through the Tunnel with an Access service token | HTTP to Caddy; SSH | DR-83 item 2 |
 | TB3 | Caddy → `api` | Docker network, plain HTTP. Caddy trusts the private Docker ranges and passes `CF-Connecting-IP`; the API keeps `TRUSTED_PROXY_HOPS=1`. Body limit 2 MB | Requests with the client IP | DR-07 |
 | TB4 | `api`, `worker` → PostgreSQL | `scram-sha-256` from the Docker subnet; roles `rms_app` (DML only) and `rms_migrator` (migrations only); direct connection for `LISTEN` and the relay | SQL | DR-67, DR-83 item 6 |

@@ -1,6 +1,6 @@
 # Security
 
-> Status: **Draft** · Updated: 2026-10-20 (skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
+> Status: **Draft** · Updated: 2026-10-20 (DR-159, DR-160 proposed: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
 > Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 147, 151, 152, 153), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
 > Main readers: P1-04, P1-10, P1-14, P1-15 (route metadata and the matrix), P1-16 (the web CMS headers), P1-20 (Caddy), P3-03, P5-09, P6-08 (the review), DOC-70, DOC-71, DOC-99 (EXP-10), DOC-98 (EXP-09)
 
@@ -261,7 +261,7 @@ The VPS has no inbound port, so the only peers in the trusted range are the cont
 - `/health/*` and `/metrics` are on the ops port, bound to the Docker network, not routed (DR-07). Only `GET /api/v1/health/ready` is public and names no dependency (DR-145).
 - OpenAPI and Scalar exist only in `local` and `staging`; `production` answers 404 and refuses to boot with the flag on (AG-03).
 - A call to the webhook route from an address outside `WEBHOOK_KNOWN_IPS` is logged `webhook.unknown_ip` (`warn`, with the address and the configuration id) and counted in `webhook_unknown_ip_total`; it is **never blocked** (DR-32). The list is empty until the gateway documentation or sandbox gives the ranges (DR-25).
-- Cloudflare: one rate rule on `/api/v1/auth/*` (the free plan allows one) as the outer net; WAF challenges and Bot Fight Mode are skipped for the API host and the webhook path because the apps cannot answer a challenge (TB1). The rule's numbers are set in DOC-70 within the limits of the free plan, checked on the web in P1-20.
+- Cloudflare: one rate rule on `/api/v1/auth/*` (the free plan allows one) as the outer net; WAF challenges and Bot Fight Mode are skipped for the API host and the webhook path because the apps cannot answer a challenge (TB1). *Revised (DR-159, DR-160 proposed):* Bot Fight Mode cannot be skipped on the free plan, so it is **off** for the zone; the webhook path skips the managed and rate rules, and the rate rule is 100 requests per 10 s per IP (DOC-70 §5.3). The rule's numbers are set in DOC-70 within the limits of the free plan, checked on the web in P1-20.
 
 ## 6. Rate limits
 

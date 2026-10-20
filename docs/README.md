@@ -84,11 +84,11 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-66 | Web: finance (`08-ux-ui/screens/web-finance.md`) | Not written |
 | DOC-67 | Web: system (`08-ux-ui/screens/web-system.md`) | Not written |
 | DOC-68 | UI states and copy (`08-ux-ui/ui-states-and-copy.md`) | Not written |
-| DOC-69 | Local development (`09-operations/local-dev.md`) | Not written |
-| DOC-70 | Deploy: staging and production (`09-operations/deploy-staging-and-production.md`) | Not written |
-| DOC-71 | CI/CD (`09-operations/ci-cd.md`) | Not written |
+| DOC-69 | [Local development](09-operations/local-dev.md) (dry run owed to P1-03) | Draft |
+| DOC-70 | [Deploy: staging and production](09-operations/deploy-staging-and-production.md) (first version: Owner inputs open, run by P1-20; final P6) | Draft |
+| DOC-71 | [CI/CD](09-operations/ci-cd.md) | Review |
 | DOC-72 | Backup and restore (`09-operations/backup-restore.md`) | Not written |
-| DOC-73 | Mobile release (`09-operations/mobile-release.md`) | Not written |
+| DOC-73 | [Mobile release](09-operations/mobile-release.md) (skeleton: final P6) | Draft |
 | DOC-74 | Runbook index (`09-operations/runbooks/README.md`) | Not written |
 | DOC-75 | RB 01: ledger invariant (`09-operations/runbooks/RB-01-ledger-invariant.md`) | Not written |
 | DOC-76 | RB 02: payments stuck (`09-operations/runbooks/RB-02-payments-stuck.md`) | Not written |
@@ -103,7 +103,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-85 | RB 11: money to check (`09-operations/runbooks/RB-11-money-to-check.md`) | Not written |
 | DOC-86 | RB 12: rotate secrets and keys (`09-operations/runbooks/RB-12-rotate-secrets-and-keys.md`) | Not written |
 | DOC-87 | RB 13: payos outage or credential change (`09-operations/runbooks/RB-13-payos-outage-or-credential-change.md`) | Not written |
-| DOC-88 | Test strategy (`10-testing/test-strategy.md`) | Not written |
+| DOC-88 | [Test strategy](10-testing/test-strategy.md) | Review |
 | DOC-89 | Experiments: common protocol (`10-testing/experiments/README.md`) | Not written |
 | DOC-90 | EXP 01: duplicate and late webhooks (`10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md`) | Not written |
 | DOC-91 | EXP 02: webhook vs requery (`10-testing/experiments/EXP-02-webhook-vs-requery.md`) | Not written |
@@ -113,8 +113,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-95 | EXP 06: notice fan out (`10-testing/experiments/EXP-06-notice-fan-out.md`) | Not written |
 | DOC-96 | EXP 07: api load (`10-testing/experiments/EXP-07-api-load.md`) | Not written |
 | DOC-97 | EXP 08: bulk pdf (`10-testing/experiments/EXP-08-bulk-pdf.md`) | Not written |
-| DOC-98 | EXP 09: otp abuse (`10-testing/experiments/EXP-09-otp-abuse.md`) | Not written |
-| DOC-99 | EXP 10: authorization matrix (`10-testing/experiments/EXP-10-authorization-matrix.md`) | Not written |
+| DOC-98 | [EXP 09: otp abuse](10-testing/experiments/EXP-09-otp-abuse.md) (first version; DR-171 proposed) | Draft |
+| DOC-99 | [EXP 10: authorization matrix](10-testing/experiments/EXP-10-authorization-matrix.md) (first version; final P6; DR-173 proposed) | Draft |
 | DOC-100 | EXP 11: ledger drift detection (`10-testing/experiments/EXP-11-ledger-drift-detection.md`) | Not written |
 | DOC-101 | EXP 12: restore drill (`10-testing/experiments/EXP-12-restore-drill.md`) | Not written |
 | DOC-102 | Demo script (`10-testing/demo-script.md`) | Not written |

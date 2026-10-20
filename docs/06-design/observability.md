@@ -1,6 +1,6 @@
 # Observability
 
-> Status: **Draft** · Updated: 2026-10-20 (skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Status: **Draft** · Updated: 2026-10-20 (DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
@@ -87,7 +87,7 @@ Other fields (`route`, `status`, `code`, `durationMs`, `err`, `sql`) follow DOC-
 
 ### 3.2 Collection and retention
 
-Alloy reads the Docker log files of the containers `api-1`, `api-2` and `worker` (and `caddy`), parses the JSON, and sends to Loki with **four labels only**: `env` (`staging`, `production`), `service`, `container`, `level`. Everything else stays in the JSON and is read with `| json` at query time; a field is never promoted to a label (cardinality). Debug lines from `/health/*` are dropped in Alloy. Loki keeps 14 days (DR-63). Alloy's `config.alloy` is a file of DOC-70; its stages are: docker source → relabel to the four labels → `stage.json` for `level` → `stage.drop` on `msg="request"` with `route=~"/health.*"` → Loki write.
+Alloy reads the Docker log files of the containers `api-1`, `api-2` and `worker` (and `caddy`), parses the JSON, and sends to Loki with **four labels only**: `env` (`staging`, `production`), `service`, `container`, `level`. Everything else stays in the JSON and is read with `| json` at query time; a field is never promoted to a label (cardinality). Debug lines from `/health/*` are dropped in Alloy. Loki keeps 14 days (DR-63). **Staging runs without Loki and Alloy** (the compose profile `logs`, DOC-70 §6.1, DR-161): there, logs are read with `docker logs`; production runs both. Alloy's `config.alloy` is a file of DOC-70; its stages are: docker source → relabel to the four labels → `stage.json` for `level` → `stage.drop` on `msg="request"` with `route=~"/health.*"` → Loki write.
 
 ### 3.3 Levels and volume
 
@@ -124,6 +124,7 @@ Rules for every metric (DR-154):
 | `api_errors_total` | counter | `code`, `status` | `api` | DOC-42 §8.5 | P1 |
 | `idempotency_total` | counter | `outcome` (`first`, `replay`, `reuse`, `in_progress`) | `api` | DOC-50 §16 | P1 |
 | `upgrade_required_total` | counter | `app` (`resident`, `staff`) | `api` | DOC-50 §16 | P1 |
+| `app_version_requests_total` | counter | `app` (`resident`, `staff`), `version` (the semantic version of `X-App-Version`, or `invalid`) | `api` | DOC-73 §9 (DR-168) | P1 |
 | `rate_limited_total` | counter | `scope` (the bucket family: `otp_ip`, `otp_phone`, `staff_login_ip`, `reset_email`, `reset_ip`, `stepup`, `upload`, `webhook`, `qr`, `intent`, `reminder`, `client_errors`) | `api` | DOC-50 §16, DOC-39 §6 | P1 |
 | `client_errors_total` | counter | `app`, `kind` | `api` | DOC-42 §8.5 | P1 |
 | `readiness_ok` | gauge (1 or 0) | none | `api`, `worker` | DOC-51 §3 | P1 |

@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Review** · Updated: 2026-10-20 (DR-154: label `job_name`) · DOC-38
+> Status: **Review** · Updated: 2026-10-20 (DR-161: database absent at start; earlier: DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -370,6 +370,8 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 3. `maintenance.refresh()`; it throws at boot rather than guess. If the flag is on, the relay starts paused and the scheduler starts in the "maintenance" state of §5.3.
 4. Start the ops server (`/health/*`, `/metrics`) and then the relay.
 5. Read the restart query once (§3.3), start the interval timers, and start the scheduler loop; the first tick performs the catch-up of any missed clock job.
+
+**Database absent at start (DR-161).** After a host reboot Docker restarts the containers before PostgreSQL, which waits for Docker's bridge (DOC-70 §6.2, §8.2). Step 1 and step 3 therefore retry the first connection for 30 seconds; if it still fails the process exits with code 1 (not 78: the configuration is valid) and Docker restarts it. `/health/ready` is 503 while the database is unreachable. `api` does the same at its own boot.
 
 ### 5.2 Health
 

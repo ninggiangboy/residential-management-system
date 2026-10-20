@@ -1,6 +1,6 @@
 # API guidelines
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-50
+> Status: **Review** · Updated: 2026-10-20 (DR-168: `app_version_requests_total`) · DOC-50
 > Depends on: original SDD §17.2, §17.3, [DR](../00-decision-register.md) (DR-07, 36…39, 64, 71, 74, 75, 83, 84, 123, 127, DR-142…), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-12](../03-architecture/code-architecture.md) §5.3, §8.3, §12, [DOC-17](../05-data/operations-model.md) §3 (`platform.idempotency_key`), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-35](../06-design/audit-privacy-and-terms.md) §9, [DOC-37](../06-design/files-and-uploads.md), [DOC-42](../06-design/error-handling.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04 (`apps/api` composition root), P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every task that adds an endpoint, DOC-51, DOC-52, DOC-55, DOC-99, EXP-10
 
@@ -314,7 +314,7 @@ No adapter is built now.
 | `API_BODY_LIMIT_BYTES` | int | 2097152 | Body limit the API enforces when Caddy is absent (local, tests) |
 | `OPENAPI_ENABLED` | bool | `true` in `local`, `staging`; `false` in `production` | Serves OpenAPI and Scalar (§3); the boot guard refuses `true` in `production` |
 
-DOC-41 lists these with the others. Metrics (names owed to DOC-40): `http_request_duration_seconds` (histogram, labels `method`, `route`, `status`), `api_errors_total{code,status}`, `idempotency_total{outcome}` (`first`, `replay`, `reuse`, `in_progress`), `upgrade_required_total{app}`, `rate_limited_total{scope}`. A route label is always the template. Log lines follow DOC-42 §8.1.
+DOC-41 lists these with the others. Metrics (names owed to DOC-40): `http_request_duration_seconds` (histogram, labels `method`, `route`, `status`), `api_errors_total{code,status}`, `idempotency_total{outcome}` (`first`, `replay`, `reuse`, `in_progress`), `upgrade_required_total{app}`, `app_version_requests_total{app,version}` (native apps only, DR-168), `rate_limited_total{scope}`. A route label is always the template. Log lines follow DOC-42 §8.1.
 
 ## 17. Required tests
 

@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Review** · Updated: 2026-10-19 (DR-126, DR-127: `SecretBox`, error classes) · DOC-12
+> Status: **Review** · Updated: 2026-10-20 (DR-158, DR-169: `ops/` and `test-support` in the layout; earlier: DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -46,8 +46,11 @@ residential-management-system/
 │   ├── ui-native/           # @rms/ui-native
 │   ├── mobile-core/         # @rms/mobile-core
 │   ├── pdf-assets/          # @rms/pdf-assets
+│   ├── test-support/        # @rms/test-support: dev-only test helpers, never in the image (DR-169)
 │   └── CORE_VERSION         # upstream commit of the last sync (§13)
-├── docker/  docs/  scripts/
+├── docker/                  # Dockerfile.api, compose.{local,base,staging,production}.yml (DR-158)
+├── ops/                     # configuration mounted or installed on a host: caddy, prometheus, alertmanager, loki, alloy, grafana, postgres, pgbackrest, backup, host, deploy (DOC-70 §3.2)
+├── docs/  scripts/
 └── biome.json  tsconfig.base.json  knip.json  .jscpd.json
     .dependency-cruiser.apps.cjs  .dependency-cruiser.modules.cjs  .dependency-cruiser.packages.cjs
 ```
