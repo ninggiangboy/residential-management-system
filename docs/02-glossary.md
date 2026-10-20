@@ -424,7 +424,7 @@ This document defines the words of the project, as the project uses them. Every 
 | smoke test | — | The short set of public requests run after a deploy (ready, public config, the ops route is 404, the admin headers, and on staging a demo staff sign-in); `ops/deploy/smoke.sh`. | DR-163, DOC-71 §7.3 |
 | promote (a release) | — | Adding the tag `vX.Y.Z` to the `sha-<7>` image that passed staging, instead of building again. | DR-164, DOC-71 §7.4 |
 | compose profile | — | A Compose switch that starts optional services: `api2` (second API), `logs` (Loki, Alloy), `deploy` (the one-shot `migrate`). | DR-161, DOC-70 §6.1 |
-| Bot Fight Mode | — | A Cloudflare zone setting that challenges suspected bots; it cannot be skipped by a rule on the free plan, so it is off for the zone (proposed). | DR-160 |
+| Bot Fight Mode | — | A Cloudflare zone setting that challenges suspected bots; it cannot be skipped by a rule on the free plan, so it is off for the zone. | DR-160 |
 | `ssh-<env>` host | — | The Tunnel hostname of type SSH (behind Access) through which operators and CI reach the VPS. | DR-158 |
 
 ## 12. Documents, process and testing
@@ -461,7 +461,7 @@ This document defines the words of the project, as the project uses them. Every 
 | planned number / measured number | — | A planned number is a design target or a script estimate. It becomes measured only with a dated result file, machine and script (DR-77, DR-78). | DR-80, DOC-10 §2 |
 | sample template | — | The template database `rms_tpl_sample_<hash8>` that holds the migrated schema and the sample building; each test file clones it. | DR-77, DOC-88 §6, §7 |
 | mutant (of the generator) | — | A deliberately broken guard or repository that the authorization matrix must catch; a surviving mutant fails EXP-10. | DR-172, DOC-99 §3 |
-| burst reading (of NFR-07) | — | The reading of "5 SMS per phone per hour" as the bucket's capacity (a burst of 5, then one per 12 minutes) rather than a sliding hour; proposed. | DR-171, DOC-98 §12 |
+| burst reading (of NFR-07) | — | The reading of "5 SMS per phone per hour" as the bucket's capacity (a burst of 5, then one per 12 minutes) rather than a sliding hour; NFR-07 is worded this way (at most 10 in any hour). | DR-171, DOC-98 §12 |
 | port suite | — | One contract suite run against both the fake and the real adapter of a port. | DOC-88 §14 |
 | race profile | — | `TEST_RACE_PROFILE`: `ci` (20 rounds) or `nightly` (1,000 rounds, 8 sessions) for the race harness. | DR-169, DOC-88 §8.3 |
 | `TEST_` variables | — | Environment variables read only by `@rms/test-support` and the test scripts, never by `loadConfig`. | DR-169, DOC-88 §6.3 |

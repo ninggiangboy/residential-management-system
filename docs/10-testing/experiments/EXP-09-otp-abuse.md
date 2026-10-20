@@ -1,6 +1,6 @@
 # EXP-09: The OTP limits bound SMS cost per phone and per IP, and no guess succeeds in five attempts
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-32) · DOC-98 / EXP-09
+> Status: **Draft** · Updated: 2026-10-20 (P0-32; DR-171 decided) · DOC-98 / EXP-09
 > Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §7.3, §20.2, [DR](../../00-decision-register.md) (DR-37, 64, 77, 78, 80, 134, 152), [DOC-26](../../06-design/identity-and-sessions.md) §5, §6, §10, [DOC-39](../../06-design/security.md) §5.3, §6, §11.4, [DOC-40](../../06-design/observability.md) §4.3, [DOC-88](../test-strategy.md) §12, [DOC-16](../../05-data/identity-and-residency-model.md) §4.3, §4.6
 > Main readers: P1-11 (the code under test), P1-23 (the run); the evaluation of NFR-07
 
@@ -17,9 +17,9 @@ This experiment shows, on the staging host, that a hostile caller cannot make th
 | H3 | An attacker holding a challenge makes at most **5 counted attempts** and **0 guesses succeed**, even with 200 parallel guesses | NFR-07, DR-37 | C6 |
 | H4 | The three ways to count an SMS agree: the answers the caller saw, the rows of `identity.otp_challenge`, and the metrics | DOC-26 §10 | C7 |
 | H5 | No SMS reaches a real handset during the run (cost bound) | DR-37, DR-68 | C8 |
-| H6 | **A reading of NFR-07 that matters.** The limiter is a token bucket (capacity 5 per phone, refill 5 per hour). It bounds a **burst**, not a sliding hour: 50 requests spread over 38 minutes yield **8** SMS, over an hour **9 or 10** | DOC-16 §4.6, DR-171 | C2 |
+| H6 | **NFR-07 is a burst, not a sliding hour (DR-171).** The limiter is a token bucket (capacity 5 per phone, refill 5 per hour). It bounds a **burst**, not a sliding hour: 50 requests spread over 38 minutes yield **8** SMS, over an hour **9 or 10** | DOC-16 §4.6, DR-171 | C2 |
 
-H6 is a prediction made before the run, from the arithmetic of §6.1. If NFR-07 is read literally ("≤ 5 SMS per phone per hour" in any hour), H6 says the experiment **fails by design**; DR-171 asks the Owner to choose between rewording NFR-07 and changing the limiter (§12). The run measures both readings and reports both.
+H6 is a prediction made before the run, from the arithmetic of §6.1. NFR-07 is worded as the bucket behaves (DR-171, decided by the Owner 2026-10-20): a burst of 5 per phone, then 5 per hour, at most 10 in any hour. The run still reports the count of a sliding 5-per-hour reading, for information only.
 
 ## 2. Variables
 
@@ -223,7 +223,7 @@ Correctness criteria hold in **every** one of the 5 runs (DR-78). There is no la
 | ID | Criterion | Source | Expected |
 | --- | --- | --- | --- |
 | C1 | `max10(A_k) ≤ 5` | NFR-07 as burst | 5 |
-| C2 | `SMS in the 50-request run == bucketModel` (8 at 46 s) and `max60(A_k) ≤ 10`; `max60 ≤ 5` is **reported** as the literal reading | H6, DR-171 | 8; ≤ 10. The literal reading fails (8 > 5) until DR-171 is decided |
+| C2 | `SMS in the 50-request run == bucketModel` (8 at 46 s) and `max60(A_k) ≤ 10`; `max60 ≤ 5` is **reported** for information (not a criterion since DR-171) | H6, DR-171 | 8; ≤ 10 |
 | C3 | `challengesPerIp ≤ 20` in phase B, and every request after the 20th is 429 | NFR-07, DR-134 | exactly 20 issued, 180 refused |
 | C4 | The 21st request of phase E and of the `/64` case is 429 from the API | DR-134 step 1, DR-152 | 21st = 429 |
 | C5 | A refused request creates no challenge and no SMS command | DOC-26 §5.1 | rows = 202 count |
@@ -234,7 +234,7 @@ Correctness criteria hold in **every** one of the 5 runs (DR-78). There is no la
 | C10 | `otp_challenges_24h` stayed below 3,000 and `otp_daily_cap_reached_total` did not rise | DR-37 | true |
 | C11 | Phase F (final run only): challenges for the `/64` ≤ 23, per phone ≤ 5, `otp_ip` refusals ≥ 2,400 | DOC-39 §13 row 6, DR-152 | 23; 5; about 2,477 |
 
-The experiment **passes** when C1, C3 to C10 (and C11 in the final run) hold in all 5 runs and C2 holds in its two measurable parts; the literal-hour reading of NFR-07 is a separate line in the report (verdict by DR-171). It **fails** when any criterion fails in any run; a failing run is not repeated away: the code is fixed and all five runs are redone.
+The experiment **passes** when C1, C3 to C10 (and C11 in the final run) hold in all 5 runs and C2 holds in its two measurable parts; the sliding 5-per-hour count is a separate line in the report, for information (DR-171). It **fails** when any criterion fails in any run; a failing run is not repeated away: the code is fixed and all five runs are redone.
 
 ## 8. Analysis
 
@@ -251,7 +251,7 @@ Observed values are filled by the summary; empty until the run.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | C1 `max10(A)` | ≤ 5 | | | | | | | | | |
 | C2 SMS in 50 requests (model 8) | = model | | | | | | | | | |
-| C2 `max60(A)` | ≤ 10 (literal reading ≤ 5 reported) | | | | | | | | | |
+| C2 `max60(A)` | ≤ 10 (sliding ≤ 5 reported for information) | | | | | | | | | |
 | C3 challenges for the IP | 20 | | | | | | | | | |
 | C3 refused after the 20th | 180 | | | | | | | | | |
 | C4 21st request, edge and `/64` | 429 | | | | | | | | | |
@@ -313,7 +313,7 @@ Not run. The run is P1-23 (after P1-11 and P1-22); the results of record are the
 
 ## 12. Open questions
 
-- **DR-171 (proposed, Owner): what "per hour" in NFR-07 means.** *Problem:* NFR-07, the vision table, original SDD §20.2 and AU-24 say "≤ 5 SMS per phone per hour" and "≤ 20 challenges per IP per hour". The limiter of DOC-16 §4.6 and DOC-26 §6 is a token bucket with capacity 5 (20) and refill 5 (20) per hour. It allows 5 at once, then one per 12 minutes: 8 SMS in 37.6 minutes, 9 or 10 in a full hour for a phone, up to 40 per hour for an IP (§6.1). *Options:* (a) keep the bucket and reword the requirement: "a burst of 5 per phone and 20 per IP, then 5 and 20 per hour; at most 10 and 40 in any hour" (worst cost 10 SMS per phone per hour, bounded further by the daily cap of 3,000); (b) replace the token bucket of the OTP families by a **sliding-window count** over `identity.otp_challenge` (`count(*) WHERE phone = :p AND created_at > now() − interval '1 hour'` ≥ 5 refuses), which makes the literal reading true at the cost of one indexed count per request and a second mechanism beside the bucket helper; (c) keep the bucket with capacity 5 and refill 5 per 24 hours (a weaker service for a resident who mistypes). *Recommendation:* (a): the cost bound is acceptable (a phone cannot cost more than 10 SMS an hour, 3,000 a day for the whole building) and the bucket is already specified, tested (AU-24) and shared with the other limits. *Consequences if (a):* NFR-07 and the vision table change wording, AU-24 is written with the burst reading (requests 46 s apart with a fake clock give 8 in 37.6 minutes), C2 here is the pass criterion as written. *If (b):* the bucket helper is not used for `otp:phone`, DOC-26 §6 and DOC-16 §4.6 change, C1 and C2 become "≤ 5 in any 60 minutes". The decision touches cost and abuse resistance, so it stays with the Owner; until it is decided the literal reading fails by design and EXP-09 reports it as such. *Write to:* DOC-03 NFR-07, DOC-01, DOC-26 §5.1, §6 and AU-24, DOC-16 §4.6, DOC-98.
+- **DR-171 (decided, Owner, 2026-10-20: option (a)): what "per hour" in NFR-07 means.** *Problem:* NFR-07, the vision table, original SDD §20.2 and AU-24 say "≤ 5 SMS per phone per hour" and "≤ 20 challenges per IP per hour". The limiter of DOC-16 §4.6 and DOC-26 §6 is a token bucket with capacity 5 (20) and refill 5 (20) per hour. It allows 5 at once, then one per 12 minutes: 8 SMS in 37.6 minutes, 9 or 10 in a full hour for a phone, up to 40 per hour for an IP (§6.1). *Options:* (a) keep the bucket and reword the requirement: "a burst of 5 per phone and 20 per IP, then 5 and 20 per hour; at most 10 and 40 in any hour" (worst cost 10 SMS per phone per hour, bounded further by the daily cap of 3,000); (b) replace the token bucket of the OTP families by a **sliding-window count** over `identity.otp_challenge` (`count(*) WHERE phone = :p AND created_at > now() − interval '1 hour'` ≥ 5 refuses), which makes the literal reading true at the cost of one indexed count per request and a second mechanism beside the bucket helper; (c) keep the bucket with capacity 5 and refill 5 per 24 hours (a weaker service for a resident who mistypes). *Recommendation:* (a): the cost bound is acceptable (a phone cannot cost more than 10 SMS an hour, 3,000 a day for the whole building) and the bucket is already specified, tested (AU-24) and shared with the other limits. *Consequences if (a):* NFR-07 and the vision table change wording, AU-24 is written with the burst reading (requests 46 s apart with a fake clock give 8 in 37.6 minutes), C2 here is the pass criterion as written. *If (b):* the bucket helper is not used for `otp:phone`, DOC-26 §6 and DOC-16 §4.6 change, C1 and C2 become "≤ 5 in any 60 minutes". The Owner chose (a) on 2026-10-20; the literal reading no longer applies. *Write to:* DOC-03 NFR-07, DOC-01, DOC-26 §5.1, §6 and AU-24, DOC-16 §4.6, DOC-98.
 - **DR-170 (decided, Claude delegated): how the run is made.** *Problem:* a single operator IP cannot test per-IP limits and phone limits independently, and the real SMS provider must not be billed. *Decision:* the harness runs inside the compose network of the staging host and sets `CF-Connecting-IP` per request (the same function the edge feeds); the test accounts are created through E-64 as helpers of unit `A-1509`, in the reserved phone block `+84 90 000 xxxx`, none on `SMS_ALLOWLIST`; ground truth is read with `SELECT` as `rms_app`; phase E and SC-18 cover the real edge and the `/64` rule. *Consequences:* DOC-70 names the compose network, the Prometheus address and the secret file path; the `exp:09` script needs a `seed`, `run`, `edge`, `summary` and `baseline` mode; the 225 test accounts remain on staging, inert. *Write to:* DOC-98, DOC-70, DOC-69.
 - **The resend gate and the IP bucket.** Phase A rotates the source IP so that the phone bucket, not the IP bucket, decides. If the Owner prefers a run from one real IP, the 50 requests would meet the IP limit after about 27 requests (20 tokens plus 12 refilled over 37 minutes); this is a property of the design, not a defect, and is listed here so nobody mistakes it for one.
 - **`details.scope` of the 429.** The E-09 example shows `"scope": "otp"`, while DOC-39 §6 and DOC-40 name the scopes `otp_ip` and `otp_phone`. The harness classifies refusals with `rate_limited_total{scope}` and `auth_otp_requested_total{outcome}`, not with the body; DOC-51 E-09 is to be aligned.

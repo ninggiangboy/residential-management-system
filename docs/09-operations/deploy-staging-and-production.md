@@ -1321,7 +1321,7 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 | --- | --- | --- | --- |
 | DR-158 | Host layout and hardening: `ssh-<env>.<domain>` as the fourth host; `docker/` and `ops/` shipped as one release tarball; configuration hashes passed as an environment variable so Compose recreates only what changed; secret files owned by `deploy`, group `rms` (10001), mode 0440 (revises "root, 0400" of DR-65); unattended upgrades limited to operating-system security updates | Decided | §3.1, §3.2, §4.5, §6.1, §9.1 |
 | DR-159 | Cloudflare free-plan rules: the one rate rule on `/api/v1/auth/*` is 100 requests per 10 s per IP, block 10 s, one rule for both hosts; `*.pages.dev` goes behind Access when the plan allows | Decided | §5.3, §5.4 |
-| DR-160 | **Bot Fight Mode is off for the zone**, because it cannot be skipped on the free plan (revises DR-83 item 4, DOC-07 TB1, DOC-39 §5.4) | **Proposed** (security posture: the Owner confirms) | §5.3 |
+| DR-160 | **Bot Fight Mode is off for the zone**, because it cannot be skipped on the free plan (revises DR-83 item 4, DOC-07 TB1, DOC-39 §5.4) | Decided (Owner, 2026-10-20) | §5.3 |
 | DR-161 | Staging runs without Loki and Alloy (profile `logs`, production only); `deploy.sh` stops at the first failing step and never rolls back by itself | Decided | §6.1, §6.5 |
 | DR-162 | PostgreSQL cluster locale `C.UTF-8` with data checksums; backup timers are systemd timers with `Asia/Ho_Chi_Minh` in `OnCalendar` (full Sunday 02:00, differential Monday to Saturday 02:00) | Decided | §8.1, §8.5 |
 
@@ -1359,7 +1359,7 @@ Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot
 
 - **Everything in §2 is open** until P0-03 collects it; none of it blocks writing this document, all of it blocks P1-20.
 - **Application boot with the database absent** (the 30-second retry then exit 1, §6.2) is a requirement on P1-04 that DOC-38 §5 and DOC-12 do not state yet; propagate it there.
-- **DR-160 (Bot Fight Mode off)** weakens the edge relative to DR-83 item 4 and needs the Owner's confirmation; the alternative is to keep it on and accept that a challenge can hit an app or the gateway callback.
+- **DR-160 (Bot Fight Mode off)** weakens the edge relative to DR-83 item 4; the Owner confirmed it on 2026-10-20. The alternative, to keep it on, would let a challenge hit an app or the gateway callback.
 - **Whether the free plan offers** *Access for `*.pages.dev`*, accepts the `starts_with` operator and host condition in the one rate rule, and covers the staff count in Access is checked by P1-20.
 - **The GHCR token type**, the `cloudflared` flags, the Alertmanager `*_file` keys, the Alloy option names and the `postgres_exporter` options are checked by P1-20 and P1-18 as marked.
 - Decisions made while writing: DR-158…162.

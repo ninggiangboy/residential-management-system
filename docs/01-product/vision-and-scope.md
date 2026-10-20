@@ -70,7 +70,7 @@ Each goal is a target, the requirement that states it ([DOC-03 §NFR](requiremen
 | A notice reaches everyone fast | 5,000 recipients: scheduler claim → last request to Expo returned ≤ 60 s | NFR-04 | EXP-06 |
 | Fee notices in bulk | 240 PDFs in ≤ 2 min; 5,000 in ≤ 30 min in the background; worker memory ≤ 1 GB | NFR-05 | EXP-08 |
 | Access is revoked at once | 0 stale QR codes accepted after a replace, lock or removal | NFR-06 | EXP-05 |
-| OTP abuse is bounded | ≤ 5 SMS per phone per hour, ≤ 20 per IP per hour, ≤ 5 attempts per code | NFR-07 | EXP-09 |
+| OTP abuse is bounded | A burst of 5 SMS per phone (at most 10 in any hour) and 20 challenges per IP (at most 40 in any hour); ≤ 5 attempts per code | NFR-07 | EXP-09 |
 | Isolation | 0 successful reads or writes of another unit or building across the authorization matrix | NFR-08 | EXP-10 |
 | Corruption is noticed | A nightly job checks the invariants on every unit; an injected difference is reported within 24 h; 0 false positives on clean data | NFR-09 | EXP-11 |
 | Availability | 99.5% per month by an external probe of `/api/v1/health/ready` every 60 s | NFR-10 | External probe over the first month in production |

@@ -538,8 +538,8 @@ Key catalog (limits are configuration, DOC-41; values from DR-37, DR-39, DR-64):
 
 | Key | Limit |
 | --- | --- |
-| `otp:phone:<e164>` | 5 SMS per hour (`otp_per_phone`) |
-| `otp:ip:<ip>` | 20 challenges per hour (`otp_per_ip`) |
+| `otp:phone:<e164>` | Burst of 5 SMS, refill 5 per hour; at most 10 in any hour (`otp_per_phone`, DR-171) |
+| `otp:ip:<ip>` | Burst of 20 challenges, refill 20 per hour; at most 40 in any hour (`otp_per_ip`, DR-171) |
 | `staff-login:ip:<ip>` | 30 attempts per 15 minutes |
 | `reset:email:<lower(email)>` | 3 requests per hour |
 | `reset:ip:<ip>` | 10 requests per hour |

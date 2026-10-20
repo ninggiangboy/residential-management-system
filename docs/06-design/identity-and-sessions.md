@@ -526,7 +526,7 @@ The boot guard refuses `production` when `SMS_DRIVER` is `console` or `allowlist
 
 ## 6. Rate buckets
 
-All five families live in `identity.rate_bucket` (DOC-16 §4.6) so an unauthenticated flood cannot touch the table the rest of the API uses (DR-85). The acquire statement is DOC-16 §4.6's single upsert. A bucket has a capacity (the burst) and a refill rate; a limit of "N per period" is capacity `N` and rate `N / period`.
+All five families live in `identity.rate_bucket` (DOC-16 §4.6) so an unauthenticated flood cannot touch the table the rest of the API uses (DR-85). The acquire statement is DOC-16 §4.6's single upsert. A bucket has a capacity (the burst) and a refill rate; a limit of "N per period" is capacity `N` and rate `N / period`. The bucket therefore allows a burst of `N`, and up to about `2N` in any one period: at most 10 SMS for a phone and 40 challenges for an IP in any hour, which is what NFR-07 states (DR-171).
 
 | Key | Capacity | Refill | Spent by | Refused answer |
 | --- | --- | --- | --- | --- |
@@ -679,7 +679,7 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-21 | Verify at 4 min 59 s and at 5 min 01 s; resend at 30 s and at 46 s (fake clock; FR-15.2) | the first verify works, the second 400 `otp_invalid`; the resend at 30 s is 429 with `Retry-After` 15, the one at 46 s is accepted and consumes the earlier challenge |
 | AU-22 | Five wrong codes (FR-15.3) | each is 400 `otp_invalid` with `attemptsLeft` 4, 3, 2, 1, 0; the correct code afterwards is also `otp_invalid` |
 | AU-23 | Two verifies of the correct code in parallel (race, FR-15.4) | exactly one 200; one family exists |
-| AU-24 | 50 requests for one phone in an hour; 200 phones from one IP (FR-15.5, EXP-09) | at most 5 SMS commands for the phone; at most 20 challenges for the IP; the 21st request from the IP is 429 even for unregistered phones |
+| AU-24 | 50 requests for one phone 46 s apart with a fake clock; 200 phones from one IP (FR-15.5, EXP-09, DR-171) | 8 SMS commands for the phone in 37.6 minutes (5 at once, then one per 12 minutes) and never more than 10 in any 60 minutes; at most 20 challenges for the IP; the 21st request from the IP is 429 even for unregistered phones |
 | AU-25 | The 3,001st challenge in 24 hours | 503 `sms_unavailable`; `otp_daily_cap_reached_total` increases; the count ignores a challenge 24 h 1 min old |
 | AU-26 | The code `123456` for a flagged demo account and for a non-flagged one (FR-15.6) | 200 for the first; 400 `otp_invalid` for the second (attempt counted); the demo request wrote no SMS command |
 | AU-27 | Boot with a flagged account in a non-demo building, in `production` | the process exits 78 (the test is BD-30, run from here too) |

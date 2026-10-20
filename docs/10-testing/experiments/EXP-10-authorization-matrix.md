@@ -1,12 +1,12 @@
 # EXP-10: Every route refuses every actor it should refuse, and serves every actor it should serve
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-32; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
+> Status: **Draft** · Updated: 2026-10-20 (P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
 > Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
 > Main readers: P1-15 (first version), P6-08 (final); the evaluation of NFR-08
 
 The authorization matrix itself (the input, the sixteen actors, `expected()`, the run and the pass criterion) is designed in DOC-39 §4 (DR-151) and is **not repeated here**. This document adds what an experiment needs: the variables, the baseline that proves the generator can fail, the exact step-up and charge-void cases, what the first version covers, the formulas, the criteria and the result tables. It proves gates, not content (§10).
 
-**Until DOC-89 exists.** The common protocol is DOC-89 (P2). For this run DR-78 and §6 of this document hold it, with one **proposed deviation** (DR-173): the results of record come from the CI job `integration`, not from the staging host, because the run is correctness-only and needs `CREATE DATABASE` rights that no application role has.
+**Until DOC-89 exists.** The common protocol is DOC-89 (P2). For this run DR-78 and §6 of this document hold it, with one **deviation** (DR-173, decided by the Owner 2026-10-20): the results of record come from the CI job `integration`, not from the staging host, because the run is correctness-only and needs `CREATE DATABASE` rights that no application role has.
 
 ## 1. Hypothesis
 
@@ -236,7 +236,7 @@ Result file (envelope of DOC-88 §12, `metrics` of this document):
 | **In-process is not the edge** | Caddy, Cloudflare, CORS and headers are not exercised | SC-14 to SC-16 and the deploy smoke test cover them; this experiment covers the application |
 | **A fixed list of 16 actors** | A new role or member type is not tested until an actor is added | Adding a role to `@rms/shared-types` fails the `actors.ts` completeness check; the list is part of DOC-39 §4.2 |
 | **Mutants prove detection only for the mutants listed** | A defect of another kind could survive | The list grows with every defect found in review; each escaped defect adds a mutant |
-| **Not run on the staging host** | DR-78 says every experiment runs there | DR-173 (proposed): the run is correctness-only and deterministic, so the machine does not matter; the deploy smoke test and SC-16 touch staging |
+| **Not run on the staging host** | DR-78 says every experiment runs there | DR-173: the run is correctness-only and deterministic, so the machine does not matter; the deploy smoke test and SC-16 touch staging |
 | **A single database cluster** | Behavior of grants on the staging cluster is not exercised | `GRT-` and the `db-grants` job cover the roles; the matrix connects as `rms_app` like the application |
 
 ## 11. Results
@@ -245,7 +245,7 @@ Not run. The first version runs in P1-15 (after P1-14); the final run is P6-08. 
 
 ## 12. Open questions
 
-- **DR-173 (proposed, Owner; deviates from DR-78): EXP-10 does not run on the staging host.** *Problem:* DR-78 says all experiments run on the staging host, except EXP-03 and EXP-04. The matrix needs a fresh database per route batch (`CREATE DATABASE … TEMPLATE`), which needs a role with `CREATEDB` that the application roles do not have (DR-113) and that the staging cluster should not give; it has no timing criterion. *Decision proposed:* the results of record come from the CI job `integration` at the commit under test (five repetitions by `bun run exp:10`), with the machine recorded; the staging deployment is checked by the smoke test and SC-16. *Consequences:* DOC-89 lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`. *Write to:* DOC-89, DOC-99, DOC-71.
+- **DR-173 (decided, Owner, 2026-10-20; deviates from DR-78): EXP-10 does not run on the staging host.** *Problem:* DR-78 says all experiments run on the staging host, except EXP-03 and EXP-04. The matrix needs a fresh database per route batch (`CREATE DATABASE … TEMPLATE`), which needs a role with `CREATEDB` that the application roles do not have (DR-113) and that the staging cluster should not give; it has no timing criterion. *Decision:* the results of record come from the CI job `integration` at the commit under test (five repetitions by `bun run exp:10`), with the machine recorded; the staging deployment is checked by the smoke test and SC-16. *Consequences:* DOC-89 lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`. *Write to:* DOC-89, DOC-99, DOC-71.
 - **DR-172 (decided, Claude delegated): the generator's own checks are mutants injected through `host.guards`.** *Problem:* a matrix that cannot fail proves nothing, and DOC-39 §16 has only two negative tests (SC-04, SC-05). *Decision:* §3: eleven defective guards or repositories, built by the test composition root through the guard seam of DR-99, run in the same job; a surviving mutant fails the experiment. *Consequences:* the test composition root accepts guard overrides (test code only); about one more minute in `integration`. *Write to:* DOC-99, DOC-39 §16 (SC-04 and SC-05 are the first two of them), DOC-88 §13.
 - **E-100 error codes.** The cases of §7.2 assert the class of the answer until DOC-51 specifies E-100 (P2). The `charge.status` values come from DR-13 and DR-84; DOC-15 holds the DDL when it is written.
 - **The route count of the first version.** 73 is E-02…E-74 as numbered today; P1-15 records the real count at its commit, and `catalogParity` reports a route that is mounted early or late (E-75…E-77, the SSE and inbox groups of P1-26).

@@ -538,7 +538,7 @@ flowchart LR
 - **Error flows:**
   - E1. A wrong code → 400 `otp_invalid` with `details.attemptsLeft` 4, 3, 2, 1, 0; the fifth wrong code consumes the challenge · UI: "Wrong code. 3 tries left." (FR-15.3).
   - E2. A code at 5 min 01 s → 400 `otp_invalid` (expired); a resend at 30 s → 429 `rate_limited` with `Retry-After`; at 46 s accepted (FR-15.2).
-  - E3. More than 5 SMS for a phone in an hour, or more than 20 challenges from one IP → 429 `rate_limited`; at 3,000 SMS in a day new challenges are refused and an alert fires (FR-15.5, NFR-07).
+  - E3. A phone that has used its burst of 5 SMS (then one every 12 minutes, at most 10 in any hour), or an IP that has used its burst of 20 challenges (at most 40 in any hour) → 429 `rate_limited`; at 3,000 SMS in a day new challenges are refused and an alert fires (FR-15.5, NFR-07).
   - E4. The SMS provider is down → 503 `sms_unavailable` · UI: "Could not send the code. Try again later."
   - E5. The membership is locked or removed after sign-in → every `/me/*` request returns 403 `membership_inactive`; the app returns to `Unit-Pick` (FR-16.1).
   - E6. The app is older than `MIN_APP_VERSION` → 426 `upgrade_required` · UI: "Update the app to continue."

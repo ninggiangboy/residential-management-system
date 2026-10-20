@@ -1,7 +1,7 @@
 # ADR-0020: Deploy behind Cloudflare to one VPS per environment, with the API and worker in Docker and PostgreSQL installed natively
 
 - Status: Accepted
-- Date: 2026-10-19 · Related: DR-83, DR-05, DR-06, DR-07, DR-102, DR-08, DR-61, DR-64, DR-66, DR-67, NFR-03, NFR-10, NFR-11
+- Date: 2026-10-19 · Related: DR-83, DR-160, DR-05, DR-06, DR-07, DR-102, DR-08, DR-61, DR-64, DR-66, DR-67, NFR-03, NFR-10, NFR-11
 
 ## Context
 
@@ -23,7 +23,7 @@ Option **5** is chosen. The deployment diagram, the container table, the unit ta
 - **The VPS.** Ubuntu LTS; the firewall denies all inbound traffic, SSH included; operators and the CI deploy job reach SSH through the Tunnel (Access service token for CI), the provider console is the break-glass path (DR-83 item 2). Compose runs `caddy`, `cloudflared`, `api-1`, `api-2` and `worker` (one image, `APP_ROLES` selects the role: DR-05) and monitoring ([ADR-0021](0021-observability-stack-and-alert-delivery.md)).
 - **Sizes and ceilings** (DR-06, DR-102). Staging 2 vCPU, 4 GB, 60 GB runs `api` ×1 and is where EXP-07 runs; production 4 vCPU, 8 GB, 100 GB runs `api` ×2. Container memory ceilings may add up to more than the host: the overcommit is bounded by PostgreSQL `OOMScoreAdjust=-900`, `memswap_limit` equal to `mem_limit` and a host-only swap file.
 - **Proxy trust.** TLS ends at Cloudflare; Caddy speaks plain HTTP (`auto_https off`), with active health checks on `/health/ready`, a 2 MB body limit, no buffering on the SSE path. The client address is read from `CF-Connecting-IP`; Caddy trusts the private Docker ranges and the API keeps `TRUSTED_PROXY_HOPS=1` (DR-07, DR-83 item 3).
-- **Edge.** Managed WAF, **one** rate rule on `/api/v1/auth/*` (the free plan allows one); WAF challenges and Bot Fight Mode skipped for the API host and the webhook path; CORS allows only `https://admin.<domain>`; SSE sends a heartbeat at least every 30 s because Cloudflare closes a silent proxied request at 100 s (DR-83 items 4, 5, 10).
+- **Edge.** Managed WAF, **one** rate rule on `/api/v1/auth/*` (the free plan allows one); WAF challenges skipped for the API host and the webhook path, and Bot Fight Mode **off** for the whole zone because the free plan cannot skip it (DR-83 items 4, 5, 10; revised by DR-160); CORS allows only `https://admin.<domain>`; SSE sends a heartbeat at least every 30 s because Cloudflare closes a silent proxied request at 100 s (DR-83 items 4, 5, 10).
 - **Files and backups on R2** through the S3 API; two private buckets per environment; presigned `PUT` because R2 has no presigned `POST` ([ADR-0016](0016-files-on-r2-presigned-put.md)); pgBackRest to a separate bucket gives RPO ≤ 5 minutes ([ADR-0017](0017-backup-with-point-in-time-recovery.md)).
 - **Delivery.** GitHub Actions builds the image to GHCR and deploys over the Tunnel with the rolling restart `api-1` → ready → `api-2` → `worker`; Pages and Expo EAS are deployed by the same pipeline; rollback is the previous image tag, Pages deployment or EAS Update, each in 10 minutes (DR-08, DR-83 item 9).
 

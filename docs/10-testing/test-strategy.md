@@ -596,7 +596,7 @@ Every new decision in this document is recorded as DR-169 (decided, Claude deleg
 
 ## Open questions
 
-- None of the decisions of §17 is open. Decisions made while writing: DR-169; DR-171 and DR-173 (proposed, in DOC-98 and DOC-99) wait for the Owner.
+- None of the decisions of §17 is open. Decisions made while writing: DR-169; DR-171 and DR-173 (in DOC-98 and DOC-99) were decided by the Owner on 2026-10-20.
 - **`bun test` parallelism.** Whether Bun 1.4.3 runs test files in parallel, and how many databases a run clones at once, is checked in P1-01; the design needs none (a file owns its database), so any scheduler is safe.
 - **`packages/testing/grants.test.ts`.** DOC-19 §9 names this path; the vendored testing package is `packages/core-testing` (DOC-12 §13). The path is settled when P1-06 writes the file; this document uses DOC-19's path until then.
 - **`FI-` numbers 31 and 32.** DOC-46 reserves them in the block of FL-19 (`FI-21…32`) and the file has no rows for them. DOC-46's author writes them or strikes them (conventions §1).
