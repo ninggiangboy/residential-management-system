@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-20 (DR-157…173: operations, testing; earlier: DR-128…150) · DOC-06
+> Status: **Review** · Updated: 2026-10-20 (DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -86,7 +86,7 @@ This document defines the words of the project, as the project uses them. Every 
 | Term | Local name | Definition | Related |
 | --- | --- | --- | --- |
 | fee month | — | The month a batch is for, a `date` (first day of the month), shown `MM/YYYY`. A label for reporting; fee batches have no fixed cycle. | DR-09, DR-22 |
-| fee batch | — | A group of charges published together, with a code (`PH-YYMM-NN`), a name in both languages, a fee month and a due date. | original SDD §5.2 |
+| fee batch | Đợt phí | A group of charges published together, with a code (`PH-YYMM-NN`), a name in both languages, a fee month and a due date. | original SDD §5.2 |
 | draft | — | Batch and charge status before publishing: editable, re-importable, hard-deletable. | DR-12, DR-20 |
 | published | — | Batch status after publishing: charges are frozen and visible to residents. The only edit is a later due date. | FR-02, FR-44 |
 | recalled | — | Batch status after a recall: its charges are `void`, intents holding them are cancelled. Possible only if no charge is paid. | FR-04 |
@@ -207,7 +207,7 @@ This document defines the words of the project, as the project uses them. Every 
 
 | Term | Local name | Definition | Related |
 | --- | --- | --- | --- |
-| ticket | Yêu cầu | A resident's support request about a unit, with type, title, description, location, photos and video. Exactly one status and at most one assignee at any time. | FR-19, DR-43 |
+| ticket | Yêu cầu (staff and web: Phiếu, "Phiếu hỗ trợ") | A resident's support request about a unit, with type, title, description, location, photos and video. Exactly one status and at most one assignee at any time. The resident app says "Yêu cầu"; the staff app and the web CMS say "Phiếu" (DR-197). | FR-19, DR-43, DR-197 |
 | ticket status | — | `submitted`, `assigned`, `accepted`, `in_progress`, `on_hold`, `resolved`, `closed`, `cancelled`. Residents see five simplified labels (Sent, Accepted, In progress, Completed, Cancelled). | DR-44, DR-45 |
 | `submitted` | — | Ticket state: sent by the resident and waiting for the Manager. Resident label "Sent". | DR-44 |
 | `assigned` | — | Ticket state: the Manager chose an assignee who has not accepted yet. | DR-44 |
@@ -445,6 +445,8 @@ This document defines the words of the project, as the project uses them. Every 
 | `DQ-xx` | — | A data quality rule. | DOC-18 |
 | `EXP-xx` | — | One of the 12 experiments. | DOC-89 |
 | `RB-xx` | — | A runbook. | DOC-74 |
+| `UX-nn` | — | A numbered UX principle (UX-01…20). A screen document cites the principles it relies on. | DOC-53 §2 |
+| `UI…-nn` | — | Test and acceptance-criterion ID of one screen document: `UIRA-` (DOC-57), `UIRF-` (DOC-58), `UIRU-` (DOC-59), `UIRQ-` (DOC-60), `UISM-` (DOC-61), `UIST-` (DOC-62), `UISG-` (DOC-63), `UIWO-` (DOC-64), `UIWR-` (DOC-65), `UIWF-` (DOC-66), `UIWS-` (DOC-67), `UICP-` (DOC-68). `DS-` is the design system (DOC-54), `CL-` the clients (DOC-55). | DR-195, DOC-56 §6 |
 | `Pn-xx`, `Mn` | — | A task of phase n; the milestone that closes phase n. `Pn-00` is the doc gate. | master plan §5 |
 | doc gate | — | The task `Pn-00` that reviews the documents a phase needs; the phase starts only when they are `Approved`. | master plan §0.1 |
 | Approved | — | A document that has its required content, no open question, defined terms and IDs, listed dependencies and examples for every ambiguity. Only the Owner (project) moves a document here. | master plan §3.3 |
@@ -480,7 +482,18 @@ This document defines the words of the project, as the project uses them. Every 
 | amount format | — | Vietnamese `2.838.000 đ`; English `₫2,838,000`. | DR-71 |
 | date format | — | Vietnamese `09/10/2026`; English `Oct 9, 2026`; times 24-hour in building time. | DR-71 |
 | E.164 | — | The international phone number format in which phones are stored. | DR-36 |
-| Be Vietnam Pro | — | The font of PDFs and documents (SIL OFL). | DR-56 |
+| Be Vietnam Pro | — | The font of PDFs and documents only (SIL OFL); the apps and the web use Geologica and Big Shoulders. | DR-56, DR-180 |
+| Hiên | — | The name of the design system of the design canvas (namespace `Hien`): tokens, light and dark themes, the component set. | DOC-54, DR-180 |
+| design token | — | A named value (color, type style, spacing, radius, size, shadow) in `packages/design-tokens`, from which the Tailwind preset and the NativeWind theme are generated. | DOC-54 §2, DR-70 |
+| plate (UI) | — | The `Plate` component: a code shown on a dark, nearly square label (unit code, ticket code, vehicle plate). Not the vehicle plate itself. | DOC-54 §7.2, DR-180 |
+| tone | — | The color family of a `Tag`, a well or a banner: neutral, info, success, warning, danger (and, for icon wells, teal, gold, coral, sky, violet). It tells the viewer what to do, never carries meaning alone. | DOC-54 §6.1, DR-183 |
+| well | — | The round or squared tinted tile behind an icon on a service tile, notice or list row. | DOC-54 §6.5 |
+| Tag | — | The status label component: text plus icon plus tone. | DOC-54 §6.1, DR-183 |
+| hero card | — | The gradient card (`hero-from` to `hero-to`) that carries the main figure of a home screen, such as the bill slip due. It holds the one `gold` action of the screen. | DOC-54 §3.1, §7.2 |
+| intent key | — | The `Idempotency-Key` a client creates once per user intent (when the form mounts) and reuses on every retry of that intent. | DOC-55 §4.3, DR-74 |
+| unit context (client) | — | In the resident app: the selected unit id, the membership and `can()`, kept in secure storage and as the prefix of every query key. Switching drops the previous unit's cache. | DOC-55 §7, DR-191 |
+| offline read-only mode | — | What the clients do without a network: show the last persisted data with a banner, disable every write, keep money and QR screens unavailable. No write queue. | DOC-55 §9, DR-190, DR-175 |
+| `/wrong-app` | — | The web CMS page that a Technician or Guard sees after signing in on the web (and the staff app's equivalent for an Admin): says which app to use and offers sign-out. | DR-174, DOC-53 §3.4 |
 
 ## Open questions
 

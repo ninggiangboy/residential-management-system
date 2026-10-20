@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Review** · Updated: 2026-10-20 (P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Review** · Updated: 2026-10-20 (DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -545,6 +545,20 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `SC-` | Security | [DOC-39](../06-design/security.md) §16 | `SC-01…31` | Draft | P1-15, P1-16, P1-20, P3, P6-08 |
 | `OB-` | Observability | [DOC-40](../06-design/observability.md) §10 | `OB-01…18` | Draft | P1-18 |
 | `CF-` | Configuration | [DOC-41](../06-design/configuration-reference.md) §19 | `CF-01…18` | Draft | P1-04 |
+| `DS-` | Design system (tokens, contrast, status table) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…08` | Review | P1-09 |
+| `CL-` | Clients (fetcher, refresh, unit context, offline, push) | [DOC-55](../08-ux-ui/client-architecture.md) §18 | `CL-01…30` | Review | P1-16, P1-17 |
+| `UIRA-` | Screens: resident sign-in and home | [DOC-57](../08-ux-ui/screens/resident-signin-home.md) | `UIRA-01…55` | Review | P1-11, P1-17 |
+| `UIRF-` | Screens: resident fees and payment | DOC-58 | not written | planned (P2, P3) | P2, P3 |
+| `UIRU-` | Screens: resident requests, unit, members, vehicles | DOC-59 | not written | planned (P4, P5) | P4, P5 |
+| `UIRQ-` | Screens: resident QR, notices, account | [DOC-60](../08-ux-ui/screens/resident-qr-notices-account.md) | `UIRQ-01…21` (account group; QR, notices P4, P5) | Review | P1-17 |
+| `UISM-` | Screens: staff app shared and Manager | [DOC-61](../08-ux-ui/screens/staff-shared-and-manager.md) | `UISM-01…18` (sign-in, account; Manager P4, P5) | Review | P1-17 |
+| `UIST-` | Screens: staff app Technician | DOC-62 | not written | planned (P4) | P4 |
+| `UISG-` | Screens: staff app Guard | DOC-63 | not written | planned (P4, P5) | P4, P5 |
+| `UIWO-` | Screens: web sign-in, dashboard, operations | [DOC-64](../08-ux-ui/screens/web-auth-dashboard-operations.md) | `UIWO-01…26` (sign-in, profile; the rest P4…P6) | Review | P1-16 |
+| `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…40` | Review | P1-16 |
+| `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
+| `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
+| `UICP-` | UI states and copy (catalog parity cases) | DOC-68 | reserved | planned (P1) | P1-09 |
 | `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-09 (DOC-98), EXP-10 (DOC-99) | Draft | per EXP row of master plan §3.2 |
 
 Three notes. (1) The statement-test infix `S` is a numbering convention inside the prefix, not a prefix. (2) `DQ-` is the catalog of data-quality **rules** (DOC-18), not tests; its tests are `IM-`. (3) `RM-` also holds the residency side of the import commit (DOC-27 §17); the validator and the file rows are `IM-`.

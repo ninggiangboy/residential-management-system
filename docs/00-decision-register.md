@@ -1,6 +1,6 @@
 # Decision Register
 
-> Status: **Review** · Updated: 2026-10-20 (DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
+> Status: **Review** · Updated: 2026-10-20 (DR-174…224 added with the P1 UX/UI documents; DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
 
 The original SDD is strong on the hard part: the money invariant, the arbiter row of every race (charge, `gateway_event`, ticket, nonce), the state machines, the options analyses and the experiments that prove them. It is thin on "exactly how" in the places that surround that core: the finance tables it does not list, the Excel and bank-statement formats, how the reference's kit packages are vendored (as `core-*`), the cross-module contracts that the module rule forces, the payOS facts it admits it does not know, the jobs and their schedules, time zones, personal-data handling, hosting, backup and the screens the design never drew. It also contains a few contradictions (transfer-content length, the audit transaction, the invalid-signature row, the 24-hour RPO against "never lose a payment", the `now()::date` aging query) that would surface as bugs if coded as written. Each gap below is one decision with one concrete proposal. The DRs that fix schemas, contracts and repository layout must be decided before any code.
 
@@ -63,6 +63,13 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-69, DOC-70, DOC-71 and DOC-73 (P0-31): DR-157 (local targets, ports, Expo on Node, local role provisioning), DR-158 (host layout, release tarball, config hashes, secret file ownership, held upgrades), DR-159 (the one rate rule, WAF skip for the webhook, Access for `*.pages.dev`), **DR-160 proposed** (Bot Fight Mode off: it cannot be skipped on the free plan; the Owner confirms), DR-161 (profiles, staging without Loki, `deploy.sh` behavior, boot retry), DR-162 (cluster locale, backup timers), DR-163 (`gate`, blocking scans, e2e deploy gate, smoke test), DR-164 (a release promotes the staged image), DR-165 (two Pages projects, nightly race on a CI database), DR-166 (review rule, PR titles), DR-167 (independent apps, `.dev` identifier, EAS environments, push projects, compatibility), DR-168 (adoption metric) | DR-05, DR-06, DR-08, DR-65, DR-83, DR-88, DOC-69, DOC-70, DOC-71, DOC-73 |
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-88, DOC-98 and DOC-99 (P0-32): DR-169 (`TEST_` variables, `@rms/test-support`, `check:test-ids`, race profiles), DR-170 (how EXP-09 is run), DR-172 (EXP-10 mutants); **proposed for the Owner:** DR-171 (what "per hour" in NFR-07 means: the bucket allows 8 to 10 SMS per phone in an hour) and DR-173 (EXP-10 runs in CI, deviating from DR-78) | DR-77, DR-78, DR-151, NFR-07, DOC-88, DOC-98, DOC-99 |
 | 2026-10-20 | Owner | DR-160 decided: option 1, Bot Fight Mode off for the whole zone. DR-171 decided: option (a), NFR-07 reworded to "a burst of 5, at most 10 in any hour" (IP: a burst of 20, at most 40). DR-173 decided: EXP-10 runs in CI (the `integration` job), not on staging; asked whether it must run on every pull request, it was answered that `test:authz` already does and nothing new is added | DR-78, DR-83, DR-159, DR-160, DR-171, DR-173, NFR-07, DOC-07, DOC-39, DOC-70, DOC-98, DOC-99 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-53 (P1 gate, quick pass because the design prototype exists): DR-174 (`/wrong-app` for the wrong client; navigation by phase), DR-175 (money screens never persisted; no offline write queue), DR-176 (web URL conventions: validated search parameters), DR-177 (deep links and push routing), DR-178 (responsive thresholds), DR-179 (planned client performance budget) | DOC-53, DOC-55, DOC-64…67, DOC-10, DOC-71, DOC-31 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-54: DR-180 (Geologica and Big Shoulders self-hosted; Be Vietnam Pro for PDFs only), DR-181 (**Phosphor** icons instead of Lucide, ⚠ revises DR-70), DR-182 (both themes ship, follow the OS), DR-183 (status presentation as one data table), DR-184 (accessibility floor), DR-185 (**token-styled charts, Recharts held back**, ⚠ revises DR-70), DR-186 (web CMS breakpoints), DR-187 (date input: calendar popover with a typed field) | DOC-54, DOC-11, DOC-55, DOC-64, DOC-66, DOC-68, ADR-0019 (note) |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-55: DR-188 (`packages/client-core`; no `packages/ui-web`), DR-189 (token handling per platform; no sign-out on silence), DR-190 (server-state defaults; opt-in persisted cache), DR-191 (unit context rules), DR-192 (client error reporting throttle), DR-193 (push tap for another unit) | DOC-55, DOC-12, DOC-11, DOC-26, DOC-39, DOC-35, DOC-31 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-56: DR-194 (**no duplicated wireframes**, ⚠ master plan A.5), DR-195 (one test prefix per screen document; copy-key scheme), DR-196 (composite screens built per phase), DR-197 (**ticket wording: "Yêu cầu" for residents, "Phiếu" for staff**). The canvas has 110 artboards, not 115 (DR-72 revised) | DOC-56, DOC-57…67, DOC-68, DOC-88, glossary, master plan |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-57, DOC-60 and DOC-61: DR-198…201 (unit switcher content, push explanation sheet, home built per phase, one Terms component), DR-202 (E-13 returns `cooloffDays`, `executeAfter`), DR-203 (`Contact` shows what E-15 returns), DR-204 (`Terms` view mode), DR-205 (`formatPhone`), DR-206 (no tries-left counter or policy numbers), DR-207 (no "open mail app" button), DR-208 (reset resend 45 s) | DOC-57, DOC-60, DOC-61, DOC-51, DOC-35, DOC-55, DOC-64, DOC-68 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-64, DOC-65 and DOC-67: DR-209 (no echoed email or absolute expiry), DR-210 (forgot-password dialog), DR-211 (`W-Profile` one page), DR-212 (fields E-57 and E-63 return for the list screens), DR-213 (`unitCode` in import issues; browser CSV), DR-214 (four member types on the add form), DR-215 (phone lookup shows no personal data), DR-216 (step-up dialog opens proactively and reactively), DR-217 (`W-Staff` counts), DR-218 (staff edit reuses the create dialog), DR-219 (`W-Building` one page) | DOC-64, DOC-65, DOC-67, DOC-51, DOC-18, DOC-27, DOC-35, DOC-53 |
+| 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-68: DR-220 (rule codes share the `error.` namespace), DR-221 (one name per shared string), DR-222 (two ticket status families), DR-223 (formatter details), DR-224 (parity compares ICU arguments) | DOC-68, DOC-42, DOC-55, DOC-56, DOC-57, DOC-64, DOC-67 |
 
 ---
 
@@ -1485,6 +1492,7 @@ flowchart TB
   - Eden Treaty types via type-only import (DR-04); P1-01 confirms Metro handles the workspace.
 - **Consequences:** If NativeWind fails the P1-01 check, `StyleSheet` with token constants is the fallback and `ui-native` is written once.
 - **Write to:** DOC-55, DOC-54, DOC-11, ADR-0019.
+  *Revised 2026-10-20 (DR-181, DR-185):* the icon library is Phosphor, not `lucide-react`; charts are token-styled components and Recharts is held back until P6.
 
 ### DR-71 · i18n catalog, language resolution and number/date formats — **Decided (Owner, 2026-10-19)**
 - **Problem:** SDD §4.3 says "shared catalog package (`vi`, `en`), ICU messages, catalog parity test". Unspecified: library, who owns server messages, language fallback, and the exact formats (`2.838.000 đ` differs from `Intl` output `2.838.000 ₫`).
@@ -1514,6 +1522,7 @@ flowchart TB
   The design owner (client or Owner) is asked in P0 to produce these before the matching phase gate.
 - **Consequences:** Screen documents mark each artboard `designed` or `to design`.
 - **Write to:** DOC-56…DOC-67, DOC-53.
+  *Revised 2026-10-20 (DR-194, DR-197):* the canvas has **110** artboards, not 115, and 13 screens are `to design` (the twelve above plus the component `UnitMoneyPanel`; the list is DOC-56 §4, which is the source of the count). Screen documents do not duplicate wireframes (DR-194).
 
 ## P. API and conventions
 
@@ -1717,6 +1726,317 @@ flowchart TB
 - **Consequences:** DOC-89 (P2) lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`.
 - **Write to:** DOC-89, DOC-99, DOC-71.
 
+## R. UX/UI: clients, design system and screen documents
+
+Decided while writing the P1-gate documents DOC-53…57, 60, 61, 64, 65, 67 (all by Claude under the Owner's delegation of design details: none touches money or access rules). The prototype (the design canvas, design system Hiên) stays the visual source of truth.
+
+### DR-174 · Clients by role, and navigation by phase — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The API lets any staff role sign in to any client (DOC-26 §3), and the canvas draws the navigation of every phase at once.
+- **Decision:** A Technician or Guard on the web, and an Admin on the staff app, get a `/wrong-app` page with a sign-out. A navigation entry exists only once its phase has shipped, as a build constant (no server flag, no "coming soon" page). The Manager has no audit menu entry (E-54's narrowed read serves history panels).
+- **Consequences:** New copy keys owed to DOC-68; `/wrong-app` is a `to design` screen.
+- **Write to:** DOC-53, DOC-55, DOC-64, DOC-61, DOC-68.
+
+### DR-175 · Money screens are never persisted offline; no offline write queue — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-70 says payment and QR screens are always online but is silent on fees, receipts and debts.
+- **Decision:** Fees, fee detail, history, receipts, payment, QR, scan, lookup, the money log and debts are never persisted. Everything else follows DR-70 (24 hours at most). There is no offline write queue.
+- **Consequences:** A stale amount is never shown; the offline banner makes the app read-only.
+- **Write to:** DOC-55, DOC-53.
+
+### DR-176 · Web URL conventions: filters, tabs and dialogs are search parameters — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** Filters and dialogs kept in component state cannot be shared and are lost on Back.
+- **Decision:** Filters, tab, page and dialogs are search parameters validated by `validateSearch` against a TypeBox schema (an invalid value falls back to its default). Names mirror the endpoint parameters. `redirect` is accepted only as a same-origin application path.
+- **Consequences:** Each route owns a schema.
+- **Write to:** DOC-53, DOC-55, DOC-64…67.
+
+### DR-177 · Deep links and push routing — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The push contract carries `route`, `unitId` and `entityId`, but nothing says how an app resolves them.
+- **Decision:** An allow-list of the app's own routes; the target is `route/entityId`; the unit is switched before navigating; three entry paths (cold start, background tap, OS link); the app calls `clearLastNotificationResponse` after routing; a foreground push does not navigate; no universal links in phase 1.
+- **Consequences:** The push contract is unchanged; DOC-31 owns the closed list of `route` values.
+- **Write to:** DOC-53 §5.3, DOC-55, DOC-31.
+
+### DR-178 · Responsive thresholds — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The CMS and the apps need breakpoints and orientation rules.
+- **Decision:** The CMS is primary at 1280 px and wider, usable from 768 px, and shows a notice below that. The apps are portrait only; tablets are letterboxed at 480 pt. Text scaling is honored up to 1.3×. (DR-186 refines the layout steps inside this range.)
+- **Consequences:** None for the API.
+- **Write to:** DOC-53, DOC-54, DOC-55.
+
+### DR-179 · Planned client performance budget — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** NFR-03 covers the API only.
+- **Decision:** The planned budget of DOC-53 §8, checked by a bundle-size check in CI from P1-19 and by Playwright, Maestro and Lighthouse in P6. The web-vitals "good" thresholds are those published by web.dev (verified 2026-10-20). All numbers are *planned*.
+- **Consequences:** One more CI check.
+- **Write to:** DOC-53, DOC-10, DOC-71.
+
+### DR-180 · The UI typeface is Geologica with Big Shoulders for plates, self-hosted — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DOC-11 §5 names Be Vietnam Pro as the app typography (SDD §4.3), but the canvas, and the tokens extracted from it (DR-70), use Geologica and Big Shoulders. The CSP allows `font-src 'self'` only, and React Native cannot load variable or `woff2` fonts.
+- **Decision:** Geologica 400/500/600/700 and Big Shoulders 700 are the UI fonts. The web serves `woff2` from its own origin; the apps load static `ttf` instances made with `fonttools` and kept in `packages/design-tokens/fonts`. Vietnamese coverage is tested (DS-05). Be Vietnam Pro stays for PDFs only (DR-56).
+- **Consequences:** A PDF and the app differ in typeface (acceptable). DOC-11 §5/§6 lose "app typography"; DOC-54 is the font source of truth.
+- **Write to:** DOC-54, DOC-11, DOC-55, DOC-34 (note only).
+
+### DR-181 · Icons are Phosphor, not Lucide — ⚠ deviates from DR-70 — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-70 lists `lucide-react`, but every artboard is drawn with Phosphor icons; the two sets differ in shape and names.
+- **Decision:** `@phosphor-icons/react` 2.1.10 (web) and `phosphor-react-native` 3.0.6 (native), shadcn `iconLibrary: "phosphor"`, one typed registry of icon names on both platforms; `lucide-react` is removed.
+- **Consequences:** The web package is 17 months old; the fallback is the `@phosphor-icons/core` SVGs. DOC-11 §4 swaps the row; DR-70's icon clause is revised.
+- **Write to:** DOC-54, DOC-11, ADR-0019 (note), DOC-55.
+- *Revised 2026-10-20:* DR-70's icon library is Phosphor (this entry).
+
+### DR-182 · Both themes ship and follow the operating system — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The plan's DOC-54 content says "dark mode if any"; the canvas has both themes.
+- **Decision:** Both themes ship and follow the OS; no manual toggle in phase 1; the QR and VietQR surfaces and receipts stay on a fixed light surface (DOC-54 §11).
+- **Consequences:** Two theme passes in QA (DS-08); a user-selectable theme is a later change.
+- **Write to:** DOC-54, DOC-55, DOC-29 (QR surface).
+
+### DR-183 · Status presentation is one data table with fixed rules — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas colors statuses per screen; its `TicketCard` has a state `rejected` the model does not have, `VehicleCard` has `expired`, and nothing says which tone a `recalled` batch or a `resolved` ticket has.
+- **Decision:** `status.json` in `design-tokens`: tone by "what the viewer should do", label text always shown (never color alone), `DUE_SOON_DAYS = 7`, resident ticket `cancelled` neutral instead of the red `rejected`, vehicle `expired` dropped for `rejected` / `retired` (DOC-54 §6).
+- **Consequences:** Proposed labels (marked) go to DOC-68; the canvas `TicketCard` and `VehicleCard` are changed by the design owner or in `ui-native`.
+- **Write to:** DOC-54, DOC-68, DOC-33.
+
+### DR-184 · The accessibility floor — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The plan says 44 px targets and 4.5:1; the tokens say `tap-min` 48 px and several `sm` controls are 36 px; `lamp` fails 3:1 on light surfaces.
+- **Decision:** 44 × 44 px is the enforced minimum and 48 the target; `sm` controls extend their hit area; `lamp` never carries meaning alone; font scale 1.5× without clipping, with a 1.3× cap on `micro` and plates; rules A1–A12 (DOC-54 §12).
+- **Consequences:** Tests DS-02, DS-07, DS-08; `@axe-core/playwright` joins the dev dependencies.
+- **Write to:** DOC-54, DOC-71 (job), DOC-11.
+
+### DR-185 · Charts are token-styled components; Recharts is not adopted yet — ⚠ deviates from DR-70 — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-70 and ADR-0019 pick Recharts, but the canvas charts are three simple shapes already built as accessible components.
+- **Decision:** Build them as plain components (DOC-54 §10); Recharts stays a pinned, unused dependency until P6 decides.
+- **Consequences:** Less code and bundle in P1…P5; the dashboard (P6) may add Recharts for a line chart with its own DR.
+- **Write to:** DOC-54, DOC-64, DOC-66, DOC-11.
+
+### DR-186 · Web CMS breakpoints — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas wraps the sidebar above the content under about 810 px, which is not a navigation pattern.
+- **Decision:** Designed at 1440 px, full layout from 1024 px, icon rail from 768 px, drawer below; tables scroll inside their card (DOC-54 §8.1). Within DR-178: "primary" is 1280 px and wider, and 1024–1279 px keeps the full layout.
+- **Consequences:** DOC-53 repeats the per-screen behavior.
+- **Write to:** DOC-54, DOC-53.
+
+### DR-187 · The date input is the shadcn calendar in a popover with a typed field — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas draws date fields (fee month, due date, notice schedule) as a `SelectField` with a calendar icon and no picker; the native `input type="date"` shows the browser's format, not the `dd/mm/yyyy` of DR-71.
+- **Decision:** The shadcn `calendar` (built on `react-day-picker`) opens in a popover from a text field that accepts typing in the UI-language format (`dd/mm/yyyy`, `MMM d, yyyy`), stores a date-only value (ADR-0013) and shows the format as its placeholder. On mobile, date choices are a `BottomSheet` list or the system picker where a screen needs one (DOC-55).
+- **Consequences:** `react-day-picker` joins DOC-11 §4 (version verified when added, P1-16); DOC-64 and DOC-66 use it.
+- **Write to:** DOC-54, DOC-64, DOC-66, DOC-11.
+
+### DR-188 · A pure-TypeScript `client-core` package; shadcn source lives in the web app — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The web and the two apps would each repeat the fetcher, the error classification and the retry rules; DOC-11 §4 names a `packages/ui-web` that DOC-12 does not list.
+- **Decision:** `packages/client-core` (`@rms/client-core`, pure TypeScript) holds the fetcher, error classification, retry plan, intent keys, query-key helpers and single-flight. The shadcn component source lives in `apps/web/src/components/ui` (no `packages/ui-web`). `@core/web-core` supplies only the SSE client; its `authFetch` is not used because the refresh rules here are project-specific.
+- **Consequences:** DOC-12 §2.1, §2.2, §6.3 and DOC-11 §4 owe the package and the corrected line.
+- **Write to:** DOC-55, DOC-12, DOC-11.
+
+### DR-189 · Tokens on the clients: memory, secure-store, no sign-out on silence — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** ADR-0011 and DOC-26 fix the server side of refresh families, not how each client holds and replays tokens.
+- **Decision:** The access token is in memory only on every platform. The mobile refresh token is in secure-store as `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, written before any replay. A refresh that gets no answer is never a sign-out (retry inside the grace window, then state `unknown`). Web tabs share one refresh through Web Locks and `BroadcastChannel`.
+- **Consequences:** DOC-26 §3.3 and DOC-39 gain the client rules.
+- **Write to:** DOC-55 §5, DOC-26, DOC-39.
+
+### DR-190 · Server-state defaults and an opt-in persisted cache — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-70 says the cache is persisted for non-money screens but not which queries, nor the defaults.
+- **Decision:** Server-state defaults of DOC-55 §8.1; offline is read-only with no write queue; the persisted cache is opt-in per query (`meta.persist`) and per account, with the allow-list of DOC-55 §9.2, which excludes money, QR, members, vehicles and access-control lookups.
+- **Consequences:** Personal data of other people is never written to the device cache; DOC-35 (privacy) notes it.
+- **Write to:** DOC-55, DOC-53, DOC-35.
+
+### DR-191 · Unit context rules on the client — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** SDD §18.2 says switching units drops cached data but not the exact mechanics.
+- **Decision:** Stored unit id; automatic selection with one membership; `removeQueries(['unit', previous])` on switch; a lost membership returns to `Unit-Pick`.
+- **Consequences:** Every unit-scoped query key starts with `['unit', unitId]`.
+- **Write to:** DOC-55 §7.
+
+### DR-192 · Client error reporting throttle — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `POST /client-errors` (E-04) is rate limited on the server; the clients need their own limit so a crash loop does not flood it.
+- **Decision:** At most 5 reports per minute per app and one per `(kind, errorName, screen)` per 10 minutes; fire-and-forget; no URLs. The web reloads once on a chunk-load error after a deploy.
+- **Consequences:** None for the API.
+- **Write to:** DOC-55 §15, §16.
+
+### DR-193 · A push tap for another unit — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** A push can concern a unit other than the selected one.
+- **Decision:** The app switches to that unit when the membership is active; otherwise it opens Home. An unknown `route` opens Home.
+- **Consequences:** None for the push contract (DR-177).
+- **Write to:** DOC-55 §10.2, DOC-31.
+
+### DR-194 · Wireframes are not duplicated — ⚠ deviates from master plan Appendix A.5 — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** Template A.5 asks for an ASCII wireframe per screen, but the design canvas is the visual source of truth and a copy drifts.
+- **Decision:** Section 3 of a screen section is "Prototype": the artboard name, a compact region list and a "Do not copy" list. ASCII wireframes only for `to design` screens (DOC-56 §6.2).
+- **Consequences:** Screen documents are shorter and cannot drift from the canvas.
+- **Write to:** DOC-56, DOC-57…67, master plan Appendix A.5.
+
+### DR-195 · One test-ID prefix per screen document, and the copy-key scheme — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DOC-88 needs one prefix per document, and DOC-68 needs a stable key for every string.
+- **Decision:** Screen documents use one prefix each (DOC-56 §6.3: `UIRA-`, `UIRF-`, `UIRU-`, `UIRQ-`, `UISM-`, `UIST-`, `UISG-`, `UIWO-`, `UIWR-`, `UIWF-`, `UIWS-`; `UICP-` is reserved for DOC-68) and the key scheme `<app>.<screen>.<element>` with `app` ∈ `res`, `staff`, `web`, `common` (DOC-56 §6.4). `error.<code>` and `status.<entity>.<value>` belong to DOC-68.
+- **Consequences:** Acceptance criteria and E2E cases share one table row; DOC-88's prefix index and master plan §0.2 gain the rows.
+- **Write to:** DOC-56, DOC-68, DOC-88.
+
+### DR-196 · A composite screen is built in its first phase with the cards whose modules exist — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The home shows cards for modules from P2 to P5.
+- **Decision:** The home and other composite screens are built in their first phase with the cards whose modules exist; later cards are absent until their phase ships (DOC-56 §6.7, N10).
+- **Consequences:** No "coming soon" placeholders.
+- **Write to:** DOC-57, DOC-55.
+
+### DR-197 · The UI word for a ticket: "Yêu cầu" for residents, "Phiếu" for staff — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-41…47 fix "Yêu cầu" as the UI wording of a ticket, but the prototype's staff screens and the web CMS say "Phiếu" (a work slip).
+- **Decision:** Residents see "Yêu cầu"; staff screens and the web CMS see "Phiếu", as the prototype draws them. The glossary records both words for the one concept. DR-41…47 stay true for residents.
+- **Consequences:** The `web.staff.dialog.open-tickets.*` strings and every staff ticket string use "phiếu".
+- **Write to:** DOC-56, DOC-61…64, DOC-68, glossary.
+
+### DR-198 · `Unit-Pick` and the unit switcher show only what E-13 carries — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The prototype shows floor, area and member count; `ActiveMembershipDto` and E-13 carry none of them.
+- **Decision:** They show the unit code, the member type and, for a tenant, whether paying is allowed. Adding `floor` later is a one-field change to E-13.
+- **Consequences:** None for the API.
+- **Write to:** DOC-57.
+
+### DR-199 · The push explanation is a bottom sheet on the first home render — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The OS permission prompt cannot be shown twice; a cold request wastes it.
+- **Decision:** A bottom sheet on the first home render after sign-in explains push before the OS prompt; "Để sau" is not asked again until the user turns push on in `Account`.
+- **Consequences:** DOC-55 §10.1 refers to this sheet.
+- **Write to:** DOC-57, DOC-55.
+
+### DR-200 · The home is built per phase from a card matrix — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The home, its tile grid and its tab bar differ by member type, `can_pay` and by phase.
+- **Decision:** Built per phase from the matrix of `Main` §4 (DOC-57); a card or tab whose phase has not shipped is absent; the greeting follows the building-local hour (05:00 / 11:00 / 13:00 / 18:00); tile slots follow capabilities, so a tenant without `can_pay` gets "Phí của căn" and "Lịch sử phí" and never "Thanh toán" or "Thành viên".
+- **Consequences:** Tested per member type (UIRA-).
+- **Write to:** DOC-57.
+
+### DR-201 · `Terms` and `Terms-Update` are one component — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The two artboards differ only in entry and copy; an API flag would add state.
+- **Decision:** One component, told apart by the entry path (sign-in vs the 403 `terms_required` gate) and by copy; the checkbox starts unticked (the artboard draws it ticked); one consent accepts every listed unaccepted version; the four summary rows are catalog copy and the binding text is the E-16 `text`; `Terms-Update` has a sign-out action so it is not a dead end.
+- **Consequences:** None for the API.
+- **Write to:** DOC-57.
+
+### DR-202 · The resident reads the cooling-off length — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `Account-Deletion` must say how long after approval the account is deleted, but `accountDeletionDays` is a building setting readable only by the Admin (E-47), and E-13 returns only the two dates.
+- **Decision:** E-13 `account.deletion` gains `cooloffDays` (the setting, integer) and, when `approvedAt` is set, `executeAfter` (`approvedAt` plus the days). Nothing else of the settings is exposed.
+- **Consequences:** DOC-51 E-13 example and DOC-35 §10 gain two fields; no schema change (computed on read).
+- **Write to:** DOC-51, DOC-35, DOC-60.
+
+### DR-203 · `Contact` shows only what E-15 returns — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The artboard shows a company line, an office location, a logo mark and an out-of-hours promise that no document backs and E-15 does not carry.
+- **Decision:** `Contact` and `Account-Phone` show name, hotline, working hours and email only; the plate shows the initials of the building name; the out-of-hours sentence and the office row are dropped. An office location or a logo can return later as an addition to the contact block of DOC-36 §4.
+- **Consequences:** Less copy to translate.
+- **Write to:** DOC-60, DOC-36 (note).
+
+### DR-204 · `Terms` has a read-only mode — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `Account` has the row "Điều khoản sử dụng", but `Terms` only has the modes `first` and `update`, both of which end in an accept button.
+- **Decision:** `Terms` takes `mode=view`: it shows the accepted versions from E-16, with no accept button, and back returns to `Account`.
+- **Consequences:** DOC-53 §5.1 params and DOC-57 `Terms` gain one value.
+- **Write to:** DOC-53, DOC-57, DOC-60.
+
+### DR-205 · A phone is shown in national form — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The API returns E.164 (`+84912345678`); the artboards show `0912 345 678`.
+- **Decision:** A helper `formatPhone(e164)` in `@rms/shared-types` returns the Vietnamese national form `0912 345 678` (spaces after the 4th and 7th digit); any other country code is shown in international form. Display only: requests always carry E.164.
+- **Consequences:** One small table test beside the money and date formatters.
+- **Write to:** DOC-55 §11, DOC-60.
+
+### DR-206 · Sign-in and reset copy reveals nothing about the account — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The artboards show "Bạn còn 2 lần thử" (a counter the API does not give, DR-128), the numbers 5 and 15 in a policy banner (building settings an Admin can change), and "Đã gửi link tới email của bạn" (false for an unknown email, FR-13.4).
+- **Decision:** No screen shows a count of tries left. The policy banner has no number. The 423 message takes its minutes from `details.retryAfter`. The reset confirmation says "if the address has an active account you will get an email". The same rules apply to `W-Login` and `W-Forgot-Sent`.
+- **Consequences:** DOC-68 holds `error.account_locked` with `{minutes}`.
+- **Write to:** DOC-61, DOC-64, DOC-68.
+
+### DR-207 · "Mở ứng dụng email" is not in phase 1 — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `S-Forgot-Sent` shows a button that opens the mail app. No single call opens the inbox on both iOS and Android without a native intent library, and `mailto:` opens a composer.
+- **Decision:** The button is dropped from phase 1; the screen keeps "Quay lại đăng nhập" and the resend. It can return if P1-17 adds an intent library for another reason.
+- **Consequences:** None for the API.
+- **Write to:** DOC-61.
+
+### DR-208 · The reset-link resend is 45 seconds — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `S-Forgot-Sent` says 60 seconds; the catalog says 45; every other resend in the product (OTP) is 45 seconds, and the server has no cooldown for E-06 (it has an hourly bucket).
+- **Decision:** The client enables the resend 45 seconds after each send. The server bucket (3 per hour per email) stays the real limit and a 429 shows its `Retry-After`.
+- **Consequences:** A single constant in `@rms/client-core`.
+- **Write to:** DOC-61, DOC-64 (`W-Forgot-Sent`), DOC-55.
+
+### DR-209 · `W-Forgot-Sent` and `W-Reset` echo no account email or absolute expiry — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The prototype shows both, but E-06 returns the same 202 for every input and no endpoint reads a token without consuming it.
+- **Decision:** Conditional copy ("Nếu {email} có tài khoản…") and a fixed validity (30 minutes for a reset, 24 hours for an invite). The reset and invite routes keep the token in the URL with `Referrer-Policy: no-referrer`.
+- **Consequences:** The canvas copy changes; no new endpoint.
+- **Write to:** DOC-64, DOC-68.
+
+### DR-210 · Forgot-password is a dialog on `W-Login` — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas has no artboard for the request form.
+- **Decision:** The request form is a dialog on `W-Login` at `/login?dialog=forgot`; success goes to `/forgot/sent`. `W-Login` also accepts `reason=password_set`.
+- **Consequences:** No new artboard is needed; DOC-53 §4 owes both additions to the `W-Login` row.
+- **Write to:** DOC-64, DOC-53.
+
+### DR-211 · `W-Profile` is one page — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DOC-53 §4 gives `W-Profile` a `tab` parameter, but the artboard is one page.
+- **Decision:** One page without tabs. Language saves at once through E-31; name and photo save with "Lưu thay đổi". Every session except the current one can be ended (N9, FR-45.1). "Gỡ ảnh" is added.
+- **Consequences:** The `tab` param of DOC-53 §4 is dropped.
+- **Write to:** DOC-64, DOC-53.
+
+### DR-212 · The list screens get the fields they draw — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** `W-Units` draws a summary line, a "Loại" filter, a member count and a "1–10 trên 240" pager; `W-Residents` draws "612 tài khoản", a "Chưa đăng nhập" status and a search by unit code and email. E-57 and E-63 return none of these, and the cursor lists have no filtered total.
+- **Decision:** E-57 gains the query `bedrooms` (0…20), the item field `memberCount` and `summary {total, occupied, rented, vacant}` for the whole building. E-63 gains `summary {total}`, the item field `lastAppOpenAt` (null = never signed in) and the query `neverSignedIn`. Search stays what the endpoints do: unit-code prefix for units; folded name and phone suffix for residents. The pager keeps the cursors it has visited and shows no filtered total. "Phương tiện" column (P5) and "Xuất Excel" (P6) are hidden for now.
+- **Consequences:** Two small query changes and three response fields in DOC-51 (Draft); RM-35, RM-36 get a case each; DOC-53's URL rows gain `bedrooms`, `neverSignedIn`, `dialog=profile&accountId`.
+- **Write to:** DOC-51 E-57 and E-63, DOC-53 §4, DOC-27 §11.
+
+### DR-213 · The import preview names the unit of an issue; the error list is a browser CSV — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas's error table has a "Mã căn" column and a download "Tải danh sách lỗi"; an issue of E-72 has `row`, `column`, `code`, `params` and `message` only, and no endpoint downloads the errors.
+- **Decision:** Each entry of `preview.issues` also carries `unitCode` (normalized, `null` when the row has none). The download is generated in the browser from `issues` (CSV with a BOM, at most 500 rows). No list of past imports in phase 1; a job is reopened through `?importId=`.
+- **Consequences:** One field in the E-72/E-73 examples and DOC-18 §1.4; no new endpoint; IM-30 asserts the field.
+- **Write to:** DOC-51 E-72, E-73, DOC-18 §1.4.
+
+### DR-214 · The add form takes the four member types — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** UC-13 3a says "create an owner by phone" and the canvas draws only that, but E-64 accepts `family`, `tenant` and `helper`, and DOC-27 §5.1 lets the Manager add them.
+- **Decision:** The role select lists the four types. "Chủ hộ" is selectable only for a unit without an owner; otherwise it is disabled with the hint "Căn này đã có chủ hộ. Muốn đổi chủ hộ, dùng Chuyển chủ hộ." A tenant gets the "Được phép thanh toán" box.
+- **Consequences:** More copy keys; UIWR-26.
+- **Write to:** DOC-27 §5.1, DOC-56.
+
+### DR-215 · A phone lookup never shows more than the list does — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The canvas shows, for an existing phone, the person's full ID number, date of birth and email. Only E-65 returns those, and it writes `pii.read`; a create form must not read personal data.
+- **Decision:** The lookup calls E-63, whose items hold the name, the phone and the masked ID number; the panel shows those and the person's units, nothing else.
+- **Consequences:** UIWR-25 is the test; the profile dialog of `W-Residents` stays the only place of the full values.
+- **Write to:** DOC-35 §6, DOC-56.
+
+### DR-216 · The step-up dialog opens proactively and reactively — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** UX-09 opens the step-up dialog only after a 403, so a form that already knows its action would send one request certain to be refused.
+- **Decision:** The dialog opens on submit when the form knows its action, and also on any 403 `step_up_required`. Each proof attempt carries a new `Idempotency-Key`, because a body that differs by `stepUp` under the same key would be 422 `idempotency_key_reuse`. The held request, password and code live only in memory.
+- **Consequences:** UX-09 and DOC-55 §5 gain this rule.
+- **Write to:** DOC-67 (`W-Step-Up`), DOC-53, DOC-55.
+
+### DR-217 · `W-Staff` counts come from one unfiltered list call — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** E-39 returns only `total` for the current filter, but the prototype shows per-role and per-status counts.
+- **Decision:** The chip counts and the subtitle come from one unfiltered E-39 call with `pageSize=50`. No new endpoint.
+- **Consequences:** Works while the building has tens of staff.
+- **Write to:** DOC-67.
+
+### DR-218 · Editing a staff account reuses the create dialog — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The prototype draws a pencil on each row but no edit panel, and no disable or enable action.
+- **Decision:** Edit mode reuses the dialog of `W-Staff-New`; "Vô hiệu hóa tài khoản" lives in that dialog and "Kích hoạt lại" is the row action of a disabled account.
+- **Consequences:** The design owner may redraw it.
+- **Write to:** DOC-67, DOC-56.
+
+### DR-219 · `W-Building` is one page with one save — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DOC-53 §4 gives `W-Building` three tabs, but the artboard is one page and E-48 saves both parts under one `If-Match`.
+- **Decision:** One page with one save; the terms panel is `dialog=terms`, replacing the `tab` parameter.
+- **Consequences:** DOC-53 §4 owes the row change.
+- **Write to:** DOC-67, DOC-53.
+
+
+### DR-220 · Rule codes share the `error.` namespace — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DOC-42 §3 says the message key of a code is `error.<code>`, but a rule code such as `password_weak` is a `details[].code`, not a top-level code; the screens already use `error.password_weak`, `error.phone_invalid`, `error.setting_invalid`, `error.terms_text`.
+- **Decision:** Rule codes live in the same `error.` namespace as the top-level codes, one table in DOC-68 §3.7, and a uniqueness test (UICP-06) fails the build on a collision.
+- **Consequences:** A future rule code must not reuse the name of a top-level code.
+- **Write to:** DOC-68, DOC-42 §3, DOC-55 §14.
+
+### DR-221 · One name per shared string — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** Three documents defined the same string under different keys (`common.auth.signed_out` / `auth.signed_out`; `common.offline.banner` / `offline.banner`; `common.role.*` / `common.staff-role.*`).
+- **Decision:** The names in DOC-68 §4 and §6: `auth.signed_out`, `offline.banner`, `common.staff-role.<role>`; the screen documents change at their next edit.
+- **Consequences:** No catalog file holds two keys with one text.
+- **Write to:** DOC-68, DOC-57, DOC-64, DOC-67, DOC-55 §9.3.
+
+### DR-222 · Two ticket status families — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The staff status set (eight values) and the resident's five states share the word "status" but not the values; DOC-56 §6.4 used `status.ticket.sent` for the resident state.
+- **Decision:** `status.ticket.<domain status>` for staff and web; `status.ticket-resident.<sent|received|processing|done|cancelled>` for the resident's five states (DR-45).
+- **Consequences:** A ticket card reads the family of its audience; the DOC-56 example becomes `status.ticket-resident.sent`.
+- **Write to:** DOC-68, DOC-56 §6.4, DOC-54 §6.3.
+
+### DR-223 · Formatter details that DR-71 leaves open — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** DR-71 fixes the money and date outputs only; negative amounts, percentages, areas, relative time and day counts have no rule.
+- **Decision:** A negative amount has a leading `-`; percentages and areas have up to one decimal with the trailing zero dropped; relative time is used for "sent" and "last seen" only and a deadline uses calendar days; `formatPhone` follows DR-205 and does not guess a layout for other countries.
+- **Consequences:** The table of DOC-68 §7.2 is the formatter test of P1-09.
+- **Write to:** DOC-68, DOC-55 §11, DOC-54 §9.
+
+### DR-224 · The parity test compares ICU arguments, not branches — **Decided (Claude, delegated by Owner, 2026-10-20)**
+- **Problem:** The parity test of P1-09 says "a different ICU placeholder fails" without defining equality for a `plural` or `select`; Vietnamese writes only the `other` branch.
+- **Decision:** Equal sets of argument names and types.
+- **Consequences:** Vietnamese strings stay simple; NFR-13 is still enforced.
+- **Write to:** DOC-68, DOC-55 §11, P1-09.
 ---
 
 ## Summary by impact
@@ -1725,7 +2045,7 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 | Level | Items | Why decide early |
 | --- | --- | --- |
-| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
+| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173, DR-174…224 (the P1 UX/UI documents) | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
 | Blocks P2 | DR-13…20, DR-84, DR-23, 24, DR-27, DR-29, DR-52, 53, DR-56, DR-75, 76, DR-78 | Fix the ledger tables and semantics, the all-or-nothing rule, the allocation statement, the money log, batches, manual payments, order code, the `settle()` contract, the notification core, PDF rendering and the order of work |
 | Blocks P3 | DR-25, 26, DR-28, DR-30…32, DR-34, 35 | Fix payOS behavior and the fake driver, intent lifecycle, the re-query and cancel jobs, webhook hardening and reconciliation |
 | Blocks P4 | DR-43…47, DR-50, 51 | Fix ticket mechanics and the notice model and fan-out |
@@ -1734,4 +2054,4 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 Status on 2026-10-19: every DR is decided, changed or superseded except DR-25, 26, 27, 28, 30, 31, 34, 35 (waiting for the gateway sandbox or the bank statement sample). DR-17 and DR-42 were decided on 2026-10-19.
 
-⚠ deviations from the original SDD: DR-02, DR-03, DR-09, DR-10, DR-12, DR-14, DR-16, DR-18, DR-19, DR-20, DR-21, DR-27, DR-29, DR-32, DR-39, DR-41, DR-44, DR-45, DR-48, DR-49, DR-51, DR-55, DR-57, DR-60, DR-61, DR-66, DR-72, DR-76, DR-80, DR-84.
+⚠ deviations from the original SDD: DR-02, DR-03, DR-09, DR-10, DR-12, DR-14, DR-16, DR-18, DR-19, DR-20, DR-21, DR-27, DR-29, DR-32, DR-39, DR-41, DR-44, DR-45, DR-48, DR-49, DR-51, DR-55, DR-57, DR-60, DR-61, DR-66, DR-72, DR-76, DR-80, DR-84, DR-181, DR-185, DR-194.

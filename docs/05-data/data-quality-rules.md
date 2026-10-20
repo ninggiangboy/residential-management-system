@@ -1,6 +1,6 @@
 # Data quality rules
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
+> Status: **Draft** · Updated: 2026-10-20 (DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
 > Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
@@ -248,8 +248,8 @@ The preview is the `result` of `residency.import_job` (DOC-16 §5.5) and is also
       "notes": [{ "code": "unit_will_update" }, { "code": "account_linked" }] }
   ],
   "issues": [
-    { "row": 4, "column": "owner_phone", "severity": "error", "code": "owner_conflict", "params": { "code": "A-1510" } },
-    { "row": 8, "column": "unit_code", "severity": "error", "code": "unit_code_duplicate", "params": { "code": "A-1508", "firstRow": 2 } }
+    { "row": 4, "unitCode": "A-1510", "column": "owner_phone", "severity": "error", "code": "owner_conflict", "params": { "code": "A-1510" } },
+    { "row": 8, "unitCode": "A-1508", "column": "unit_code", "severity": "error", "code": "unit_code_duplicate", "params": { "code": "A-1508", "firstRow": 2 } }
   ],
   "issuesTruncated": false
 }
@@ -258,6 +258,7 @@ The preview is the `result` of `residency.import_job` (DOC-16 §5.5) and is also
 - `validRows` lists the first 50 valid rows; `issues` lists up to 500 entries, errors first, then warnings; `issuesTruncated` is true beyond that (DR-21). `counts` are always complete.
 - The API adds a rendered `message` to each issue in the language of the request; the stored `jsonb` keeps `{code, params}` only (DR-22).
 - A row with an `error` is counted in `errors` once, however many issues it has.
+- *Revised 2026-10-20 (DR-213):* every issue carries `unitCode`, the normalized code of its row (`null` when the row has none), so `W-Import` can show a "Mã căn" column and build the error CSV in the browser. It is stored in the `jsonb` with `{code, params}`, not rendered.
 
 ### 1.5 The database layer: two set queries and one contract
 
@@ -383,7 +384,7 @@ The prefix `IM-` is shared with DOC-21 and DOC-27 (master plan §0.2). This docu
 | IM-27 | A profile with another name and another last four digits | two warnings `profile_field_differs`; the stored values stay after the commit |
 | IM-28 | A profile with an empty email and a row with an email | the commit fills the email |
 | IM-29 | The sample file of §1.6 | the counts and the row outcomes of the table |
-| IM-30 | A file of 2,000 rows with 40 errors, from upload to the preview | the preview within 10 s (NFR-12); 40 issues; 1,960 valid rows |
+| IM-30 | A file of 2,000 rows with 40 errors, from upload to the preview | the preview within 10 s (NFR-12); 40 issues, each with the `unitCode` of its row (`null` for a row without a code, DR-213); 1,960 valid rows |
 | IM-31 | A file with 600 wrong rows | 500 issues, `issuesTruncated` true, `errors` 600 |
 | IM-32 | The preview of a file with ID numbers and birth dates | `result` contains neither; the ID number is masked |
 | IM-33 | "Save" pressed twice | one commit; the second answer equals the first |

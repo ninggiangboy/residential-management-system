@@ -1,6 +1,6 @@
 # CI/CD
 
-> Status: **Review** · Updated: 2026-10-20 (P0-31) · DOC-71
+> Status: **Review** · Updated: 2026-10-20 (DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
 > Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
@@ -89,8 +89,8 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 | Output | Paths |
 | --- | --- |
 | `api` | `apps/api/**`, `modules/**`, `packages/core-*/**`, `packages/shared-types/**`, `packages/i18n-catalog/**`, `docker/**`, `ops/**`, `bun.lock` |
-| `web` | `apps/web/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `packages/core-web-core/**`, `bun.lock` |
-| `mobile` | `apps/resident-app/**`, `apps/staff-app/**`, `packages/mobile-core/**`, `packages/ui-native/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `bun.lock` |
+| `web` | `apps/web/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `packages/client-core/**`, `packages/core-web-core/**`, `bun.lock` |
+| `mobile` | `apps/resident-app/**`, `apps/staff-app/**`, `packages/mobile-core/**`, `packages/client-core/**`, `packages/ui-native/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `bun.lock` |
 | `docs` | `docs/**` |
 
 | Stage | Runs | Commands (DOC-69 §5) | Fails when | Blocks merge |
@@ -100,7 +100,7 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 | `integration` | always | Service container `postgres:18.6`; `0001-provision.sql` through `psql`; `bun run db:migrate`; `bun run test:integration`; `bun run test:authz` | A test fails; the authorization matrix has an unexpected 2xx or 3xx, an unexpected refusal, a 5xx, a leak, a route without metadata or a missing fixture (DR-151, DOC-39 §4.6) | **Yes** |
 | `security` | always | §5: Gitleaks, Trivy filesystem, CodeQL (`security-extended`), dependency review | A finding of the severities of DOC-39 §12 | **Yes** (DR-153) |
 | `build` | always (push only on `main`) | §6: the `rms-api` image; Trivy image scan; on `main` push `sha-<7>` to GHCR | The image does not build or the scan finds a fixed HIGH or CRITICAL vulnerability or a secret in a layer | **Yes** (so the Dockerfile cannot rot) |
-| `e2e-web` | `changes.web` or `changes.api` | Build the web CMS; start `bun run dev:api` against a migrated database seeded with `seed:demo`; `bun run test:e2e` (Playwright 1.64.1, Chromium) | A flow fails | No on a pull request; **yes as a deploy gate** (§7.3) |
+| `e2e-web` | `changes.web` or `changes.api` | Build the web CMS and check the bundle budgets of DOC-53 §8 (first load of `/login` ≤ 170 KB gzip, shell plus landing route ≤ 300 KB, any other route chunk ≤ 120 KB; DR-179); start `bun run dev:api` against a migrated database seeded with `seed:demo`; `bun run test:e2e` (Playwright 1.64.1, Chromium), which includes the accessibility audits of `@axe-core/playwright` in both themes (DS-07, DS-08, DR-184) | A flow fails; a bundle is over budget; an audit finds a serious or critical violation | No on a pull request; **yes as a deploy gate** (§7.3) |
 | `gate` | always, `if: always()` | Fails unless every job above that ran finished `success` or `skipped` | | It **is** the required check |
 
 Merge is blocked by `verify`, `unit`, `integration`, `security` and `build` (DR-08 named the first three; DOC-39 §12 and DR-153 make the scans fail the build, which is why `security` and `build` join, DR-163). The branch rule requires one status, `gate`, so that a path-gated job that was skipped does not leave a required check pending.

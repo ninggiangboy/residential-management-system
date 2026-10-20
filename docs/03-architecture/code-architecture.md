@@ -1,7 +1,7 @@
 # Code architecture
 
-> Status: **Review** · Updated: 2026-10-20 (DR-158, DR-169: `ops/` and `test-support` in the layout; earlier: DR-126, DR-127) · DOC-12
-> Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
+> Status: **Review** · Updated: 2026-10-20 (DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
 This document says how the code is laid out and which imports are allowed: the repository and its package scopes, the layers inside a module, the module template, the composition root, the three dependency-cruiser configurations, the `BuildingScope` repositories, the ambient transaction, DTOs, `UnitContext` and its policy function, the exception types, the rule for syncing the vendored `core-*` packages and the review checklist. It holds no table (DOC-14…17), no event schema (DOC-09), no endpoint (DOC-51) and no version number (DOC-11). Which modules exist and who owns which table is DOC-07 §5–§6; this document does not repeat it.
@@ -44,6 +44,7 @@ residential-management-system/
 │   ├── i18n-catalog/        # @rms/i18n-catalog
 │   ├── design-tokens/       # @rms/design-tokens
 │   ├── ui-native/           # @rms/ui-native
+│   ├── client-core/         # @rms/client-core: fetcher, error classes, retry plan, intent keys, single-flight; pure TypeScript (DR-188)
 │   ├── mobile-core/         # @rms/mobile-core
 │   ├── pdf-assets/          # @rms/pdf-assets
 │   ├── test-support/        # @rms/test-support: dev-only test helpers, never in the image (DR-169)
@@ -63,7 +64,7 @@ Bun workspaces are `apps/*`, `modules/*` and `packages/*`. There are no changese
 | --- | --- | --- | --- |
 | `@core/*` | Vendored infrastructure: one package per concern (§13) | Other `@core/*` along the acyclic graph of §6.3; npm packages only in its adapter files | `@mod/*`, `@rms/*`, `@app/*` |
 | `@mod/<m>` | A business module (§4) | `@core/*` (by layer, §3); `@rms/shared-types`; **only the `contracts` export** of another `@mod/<n>` | Another module's `domain`, `application`, `infrastructure`, `presentation`; `@app/*`; `@rms/ui-native`, `@rms/mobile-core` |
-| `@rms/*` | Project packages shared by apps and clients | Other `@rms/*`; `@core/i18n`; `@core/web-core` (web only) | `@mod/*`, `@app/*`, server-only `@core/*` |
+| `@rms/*` | Project packages shared by apps and clients (`client-core` and `shared-types` are pure TypeScript with no DOM and no React Native, DR-188) | Other `@rms/*`; `@core/i18n`; `@core/web-core` (web only) | `@mod/*`, `@app/*`, server-only `@core/*` |
 | `@app/api` | The composition root | Every module through its exports map: `.`, `./manifest`, `./config`, `./schema`, `./integrations/<consumer>` | A module's internals; a driver package directly (§6.2) |
 | `@app/web`, `@app/resident-app`, `@app/staff-app` | Clients | `@rms/*`, `@core/i18n`, `@core/web-core`; **`import type { App } from '@app/api'` only** | `@mod/*`, any value import from `@app/api` (DR-04) |
 
@@ -401,7 +402,8 @@ const ALLOWED = {                       // package → workspace packages it may
   'core-web-core': ['core-i18n'],
   'shared-types': [], 'design-tokens': [], 'i18n-catalog': ['shared-types'],
   'ui-native': ['design-tokens', 'shared-types', 'core-i18n'],
-  'mobile-core': ['shared-types', 'i18n-catalog', 'core-i18n'],
+  'client-core': ['shared-types'],
+  'mobile-core': ['shared-types', 'client-core', 'i18n-catalog', 'core-i18n'],
   'pdf-assets': [],
 }
 const rule = (pkg, allowed) => ({

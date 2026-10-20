@@ -46,3 +46,9 @@ Option **5** is chosen. The library lists, pins and licences are owned by [DOC-1
 
 - P1-01 and P1-02 fill the compatibility table of DOC-11 (NativeWind with Tailwind 4, Metro in the Bun workspace, Eden types); P1-09 extracts the tokens.
 - Write DOC-54 (design system), DOC-55 (client architecture) and DOC-73 (mobile release).
+
+**Notes added 2026-10-20 (no change of the decision)**
+
+- Icons are Phosphor on both platforms (`@phosphor-icons/react`, `phosphor-react-native`), because the design canvas is drawn with them; `lucide-react` of DR-70 is not used (DR-181, DOC-54 §7.3).
+- Recharts is listed above and pinned in DOC-11, but it is not adopted before P6: the canvas charts are plain token-styled components (DR-185, DOC-54 §10).
+- Shared client logic without React or DOM lives in `packages/client-core`; the shadcn source lives in `apps/web/src/components/ui` (DR-188, DOC-12 §2.1, DOC-55 §2.2).

@@ -1,6 +1,6 @@
 # Quality attributes
 
-> Status: **Review** · Updated: 2026-10-20 (DR-154: label `job_name`) · DOC-10
+> Status: **Review** · Updated: 2026-10-20 (DR-179: pointer to the client budgets; earlier DR-154: label `job_name`) · DOC-10
 > Depends on: original SDD §3.4, §19, §20, [DR](../00-decision-register.md) (DR-05, 06, 21, 30, 52, 56, 57, 61…64, 66, 67, 75, 77, 78, 80, 83, 85), [DOC-01](../01-product/vision-and-scope.md) §4, [DOC-03](../01-product/requirements.md) §2, [DOC-06](../02-glossary.md), [DOC-07](system-context-and-containers.md) §3–§4
 > Main readers: DOC-38, DOC-40, DOC-70, DOC-72, DOC-96 (EXP-07), DOC-97 (EXP-08), P1-03, P1-18, P1-20, P6-05, P6-07
 
@@ -105,6 +105,8 @@ Three consequences:
 | NFR-05 | Bulk PDF | 240 notices ≤ 2 min → ≤ 500 ms per PDF; 5,000 ≤ 30 min → ≤ 360 ms per PDF; worker memory ≤ 1 GB | Render, upload to R2 (≈ 100 ms), insert `file_object`. `PDF_CONCURRENCY` = 1 on staging and 2 on production until EXP-08 measures it; an unmet budget is the trigger for a second worker (original SDD §19.6) |
 | NFR-09 | Nightly check | ≤ 5 min at 5,000 units (`statement_timeout` 5 min on the job's transaction) | One query per invariant, each a single pass over live allocations or open charges |
 | NFR-12 | 2,000-row import | ≤ 10 s. Planned ≈ 2 s: read object from R2 0.3 s, stream-parse 1.0 s, validate with set-based lookups 0.4 s, insert the preview row 0.1 s, response 0.1 s | A 5,000-row, 5 MB file (the limit) is planned at ≈ 5 s |
+
+**Client budgets (DR-179).** The budgets of the three clients (bundle size, LCP, INP, cold start, scroll, scan to result) are planned numbers in DOC-53 §8, next to the screens they belong to. The API side of them is the rows above; the bundle budgets are checked in CI from P1-19 (DOC-71 `e2e-web`), the rest by Playwright and Maestro in P6.
 
 ## 5. Capacity estimate
 

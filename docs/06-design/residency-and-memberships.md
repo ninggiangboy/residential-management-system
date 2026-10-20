@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Review** · Updated: 2026-10-20 (DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Status: **Review** · Updated: 2026-10-20 (DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -217,6 +217,7 @@ Every staff query takes the `BuildingScope` of the token's `bid` (DOC-12 §7). A
 4. A member type other than owner inserts the membership as in §6.3 with `added_by_kind = 'staff'`, writes `unit_history` `member_added` and `membership_changed` `added`.
 5. **No invitation SMS is sent** (DR-137): the Manager tells the person.
 6. The same account and unit twice: 409 `member_exists` (§6.3).
+7. *Revised 2026-10-20 (DR-214):* `W-Resident-Add` offers the four member types, not only the owner of UC-13 3a. "Chủ hộ" is selectable only for a unit without an active owner (the form disables it and points to ownership transfer; the 409 of step 3 stays the arbiter); a tenant gets the `canPay` box.
 
 Response `201`: `{ "accountId": "…", "membershipId": "…", "accountCreated": true }`.
 
@@ -596,6 +597,8 @@ Results on PostgreSQL 18.6 (S13), 5,000 accounts and profiles added to the seed:
 
 A Guard receives `"phone": "090••••567"` and no `accountId`, and each view is logged in `access.lookup_log` (DR-48, FR-31.3). The mask and the log are DOC-29. A list or a search never returns a full CCCD or a date of birth and writes no `pii.read` row (DOC-35 §6).
 
+*Revised 2026-10-20 (DR-212):* the two lists also answer what their screens draw. `GET /staff/units` takes `bedrooms`, returns `memberCount` (non-removed memberships, owner included) and a building-wide `summary {total, occupied, rented, vacant}`; `GET /staff/residents` takes `neverSignedIn`, returns `lastAppOpenAt` and `summary {total}`. The search stays what §11.1 runs: a unit-code prefix for units, a folded name or a phone suffix for residents; an email or a unit code in `q` finds no resident (the `unitId` filter covers the unit).
+
 ## 12. Account deletion: the handler
 
 The workflow and the order of steps are DOC-35 §10 and DOC-20 §8. Identity commits first (the account is `deleted`, sessions revoked, phone `deleted:<id>`). Then this handler runs, one transaction in the inbox pattern (DOC-12 §8.4):
@@ -725,8 +728,8 @@ Prefix `RM-` (master plan §0.2, unused elsewhere: `grep -rn "| RM-" docs/` foun
 | RM-32 | A phone change for an account with no profile in the building | 404 |
 | RM-33 | Search "nguyen", "van an", "dang van" (S) | "Nguyễn Văn An" and "Đặng Văn Hùng" found without diacritics (FR-18.5) |
 | RM-34 | Search "4567" and "456" (S) | The first finds `+84901234567`; the second does no phone search (FR-18.5) |
-| RM-35 | Search "A-15" (S) | The four units whose code starts with it, the exact one first; at most 20 per kind |
-| RM-36 | `GET /staff/residents?q=` and `GET /staff/lookup` for a Guard | Manager: full phone, masked CCCD; Guard: masked phone through the mapper; no date of birth in either |
+| RM-35 | Search "A-15" (S); `GET /staff/units?bedrooms=2` | The four units whose code starts with it, the exact one first; at most 20 per kind. `bedrooms=2` returns only 2-bedroom units; every item has `memberCount`; `summary` counts the whole building whatever the filters (DR-212) |
+| RM-36 | `GET /staff/residents?q=` and `GET /staff/lookup` for a Guard; `GET /staff/residents?neverSignedIn=true` | Manager: full phone, masked CCCD; Guard: masked phone through the mapper; no date of birth in either. `neverSignedIn=true` returns only accounts with `last_app_open_at` NULL and every item carries `lastAppOpenAt`; a unit code or an email in `q` finds no resident (DR-212) |
 | RM-37 | The profile detail view | One `pii.read` row before the data; a failed insert returns 500 and no data (AD-20, AD-22) |
 | RM-38 | A CCCD `12a4`, 11 digits, 12 digits | 400 `format`; 400; stored sealed with `cccd_last4` |
 | RM-39 | A profile edit with a stale `If-Match` | 409 `version_conflict` |

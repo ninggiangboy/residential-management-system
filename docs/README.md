@@ -68,22 +68,22 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Review |
 | DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74 specified, E-75…E-168 numbered) | Draft |
 | DOC-52 | SSE and webhooks (`07-api/sse-and-webhooks.md`) | Not written |
-| DOC-53 | UX principles and information architecture (`08-ux-ui/ux-principles-and-ia.md`) | Not written |
-| DOC-54 | Design system (`08-ux-ui/design-system.md`) | Not written |
-| DOC-55 | Client architecture (`08-ux-ui/client-architecture.md`) | Not written |
-| DOC-56 | Screens index (`08-ux-ui/screens/README.md`) | Not written |
-| DOC-57 | Resident: sign-in and home (`08-ux-ui/screens/resident-signin-home.md`) | Not written |
+| DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Review |
+| DOC-54 | [Design system](08-ux-ui/design-system.md) | Review |
+| DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Review |
+| DOC-56 | [Screens index](08-ux-ui/screens/README.md) | Review |
+| DOC-57 | [Resident: sign-in and home](08-ux-ui/screens/resident-signin-home.md) (complete) | Review |
 | DOC-58 | Resident: fees and payment (`08-ux-ui/screens/resident-fees-payment.md`) | Not written |
 | DOC-59 | Resident: requests, unit, members, vehicles (`08-ux-ui/screens/resident-requests-unit.md`) | Not written |
-| DOC-60 | Resident: QR, notices, account (`08-ux-ui/screens/resident-qr-notices-account.md`) | Not written |
-| DOC-61 | Staff app: shared and Manager (`08-ux-ui/screens/staff-shared-and-manager.md`) | Not written |
+| DOC-60 | [Resident: QR, notices, account](08-ux-ui/screens/resident-qr-notices-account.md) (account group P1; QR, notices, library owed) | Review |
+| DOC-61 | [Staff app: shared and Manager](08-ux-ui/screens/staff-shared-and-manager.md) (§1 P1; B-screens owed) | Review |
 | DOC-62 | Staff app: Technician (`08-ux-ui/screens/staff-technician.md`) | Not written |
 | DOC-63 | Staff app: Guard (`08-ux-ui/screens/staff-guard.md`) | Not written |
-| DOC-64 | Web: sign-in, dashboard, operations (`08-ux-ui/screens/web-auth-dashboard-operations.md`) | Not written |
-| DOC-65 | Web: residents (`08-ux-ui/screens/web-residents.md`) | Not written |
+| DOC-64 | [Web: sign-in, dashboard, operations](08-ux-ui/screens/web-auth-dashboard-operations.md) (§1 P1) | Review |
+| DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1; W-Vehicles owed P5) | Review |
 | DOC-66 | Web: finance (`08-ux-ui/screens/web-finance.md`) | Not written |
-| DOC-67 | Web: system (`08-ux-ui/screens/web-system.md`) | Not written |
-| DOC-68 | UI states and copy (`08-ux-ui/ui-states-and-copy.md`) | Not written |
+| DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Review |
+| DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (102 error codes and the P1 keys; grows per phase) | Review |
 | DOC-69 | [Local development](09-operations/local-dev.md) (dry run owed to P1-03) | Draft |
 | DOC-70 | [Deploy: staging and production](09-operations/deploy-staging-and-production.md) (first version: Owner inputs open, run by P1-20; final P6) | Draft |
 | DOC-71 | [CI/CD](09-operations/ci-cd.md) | Review |

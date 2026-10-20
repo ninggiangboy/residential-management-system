@@ -1,7 +1,7 @@
 # Tech stack and versions
 
-> Status: **Review** · Updated: 2026-10-20 (DR-154: `prom-client` row; earlier: DR-114) · DOC-11
-> Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83), master plan §0.4, [DOC-06](../02-glossary.md)
+> Status: **Review** · Updated: 2026-10-20 (DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
+> Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83, 180…188), master plan §0.4, [DOC-06](../02-glossary.md)
 > Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
 
 This document pins every runtime, library, tool, CI action, image and font the system uses, with the reason, the licence, the date it was checked and the source of the check. It also holds the compatibility table that P1-01/P1-02 fill in, the fallback and refresh rules, and the list of things that are not used on purpose. It does not design how the packages are used: layout and layering are in DOC-12, topology in DOC-07, jobs and settings in DOC-38 and DOC-41.
@@ -28,6 +28,8 @@ This document pins every runtime, library, tool, CI action, image and font the s
 | Grafana Alloy | "not pinned yet" | **1.20.1** (2026-09-28; image `grafana/alloy:v1.20.1` exists) | Pinned here for P1-18 |
 | pgBackRest | 2.60.0 (upstream release 2026-10-18) | Upstream 2.60.0, but the PGDG apt repository for Ubuntu 26.04 ships **2.59.3** | DR-93: install from PGDG apt (2.59.3 now), move to 2.60.x when PGDG ships it |
 | `expo-screen-brightness` (DR-70) | named in DR-70 | The package does not exist on npm (404). The SDK 58 module is **`expo-brightness`** 58.0.2 | DR-70 corrected 2026-10-19 |
+| `lucide-react` (DR-70) | named in DR-70 | The canvas is drawn with Phosphor icons | *Revised 2026-10-20 (DR-181):* `@phosphor-icons/react` 2.1.10 and `phosphor-react-native` 3.0.6 replace it (§4, §6.1) |
+| Recharts (DR-70) | named in DR-70 | The canvas charts are three simple shapes | *Revised 2026-10-20 (DR-185):* pinned, not adopted before P6 (§4) |
 | TanStack Table | no version | **9.3.1** is `latest` (v9 is stable) | Pin 9.3.1; shadcn data-table examples may still target v8 (compatibility table row 7) |
 | `expo-router` | 58.0.23 | SDK bundle range `~58.0.20`; npm `latest` 58.0.23 is inside it | Unchanged |
 | Everything else in the DR-82 table | as listed | Unchanged (Bun 1.4.3, Node 24.22, PostgreSQL 18.6, TypeScript 7.0.2, Expo 58.0.14, React Native 0.88.0, React 19.3.1, Vite 8.3.4, Tailwind 4.3.3, NativeWind 4.2.7, Elysia 1.4.30, Drizzle 0.45.4 / 0.31.11, Biome 2.5.15, dependency-cruiser 18.6.0, Playwright 1.64.1, TipTap 3.32.0, `@react-pdf/renderer` 4.9.0, `exceljs` 4.4.0, pino 10.4.0, `@aws-sdk/client-s3` 3.1152.0, Caddy 2.11.7, cloudflared 2026.10.1, Ubuntu 26.04.1, wrangler 4.151.1, eas-cli 25.2.0, expo-server-sdk 7.2.0, TanStack Router 1.170.45 and Query 5.104.4) | Confirmed |
@@ -100,22 +102,26 @@ This document pins every runtime, library, tool, CI action, image and font the s
 | `@tanstack/react-query` | **5.104.4** | Server state; 409 handling rules in DOC-55 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/react-query) |
 | `@tanstack/react-table` | **9.3.1** | Tables of the CMS (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tanstack/react-table) |
 | `tailwindcss`, `@tailwindcss/vite` | **4.3.3** (both) | Utilities driven by the `design-tokens` preset (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/tailwindcss) |
-| `shadcn` (CLI) | **4.22.1** | Copies component source into `packages/ui-web`; no runtime dependency. Its `rc` and `beta` tags are not used | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/shadcn) |
+| `shadcn` (CLI) | **4.22.1** | Copies component source into `apps/web/src/components/ui` (DR-188; there is no `packages/ui-web`, DOC-12 §2.1); no runtime dependency. `components.json` sets `iconLibrary: "phosphor"` (DR-181). Its `rc` and `beta` tags are not used | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/shadcn) |
 | `radix-ui` | **1.8.1** | Primitives under shadcn components | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/radix-ui) |
 | `class-variance-authority`, `tailwind-merge` | **0.7.1**, **3.7.0** | Variant helpers used by shadcn components. `class-variance-authority` was last published 2024-11-26 | Apache-2.0, MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/class-variance-authority), [npm](https://www.npmjs.com/package/tailwind-merge) |
 | `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm` | **3.32.0** (all) | Notice and library editor limited to the node set of DR-50 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@tiptap/react) |
 | `react-hook-form`, `@hookform/resolvers` | **7.90.0**, **5.9.2** | Forms with a TypeBox schema adapter (DR-70); the adapter is checked in row 7 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-hook-form) |
-| `recharts` | **3.10.1** | Dashboard charts | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/recharts) |
+| `recharts` | **3.10.1** | Dashboard charts. Pinned but **not adopted before P6**: the canvas charts are built as plain token-styled components (DR-185, DOC-54 §10) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/recharts) |
 | `@dnd-kit/core`, `@dnd-kit/sortable` | **6.3.1**, **10.0.0** (both published December 2024) | Library page ordering (DR-70). The newer `@dnd-kit/react` is 0.x (0.5.1) and is not used | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@dnd-kit/core), [npm](https://www.npmjs.com/package/@dnd-kit/react) |
 | `date-fns` | **4.4.0** | Date helpers around the two formatters of DR-71 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/date-fns) |
-| `lucide-react` | **1.59.0** | Icons | ISC | 2026-10-19 | [npm](https://www.npmjs.com/package/lucide-react) |
+| `@phosphor-icons/react` | **2.1.10** (published 2025-05-22; fallback `@phosphor-icons/core` 2.1.1) | Icons, replacing `lucide-react` of DR-70 because the canvas is drawn with Phosphor (DR-181, DOC-54 §7.3) | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/@phosphor-icons/react) |
+| `sonner` | **2.0.8** (2026-08-09) | Toasts: the shadcn `sonner` component (DR-181, DOC-54 §7.2) | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/sonner) |
+| `react-day-picker` | **10.0.2** (2026-09-30; npm `latest`, which the shadcn `calendar` installs). Fallback: **9.14.0** (2026-02-26) | Date popover with a typed field in the DR-71 format (DR-187). P1-16 confirms the generated `calendar` builds against 10.x, else pins 9.14.0 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-day-picker) |
 | `wrangler` | **4.151.1** | `wrangler pages deploy` from GitHub Actions (DR-83) | MIT OR Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/wrangler) |
 
 ## 5. Fonts and assets
 
 | Item | Pin | Why | Licence | Verified on | Source |
 | --- | --- | --- | --- | --- | --- |
-| Be Vietnam Pro | Google Fonts release (18 TTF files: Thin to Black, upright and italic). Committed subsets in `packages/pdf-assets`: Regular, Medium, SemiBold, Bold, Italic (DR-56) | PDF and app typography with Vietnamese diacritics | SIL Open Font License 1.1 ("Copyright 2021 The Be Vietnam Pro Project Authors") | 2026-10-19 | [google/fonts `ofl/bevietnampro`](https://github.com/google/fonts/tree/main/ofl/bevietnampro), [OFL.txt](https://raw.githubusercontent.com/google/fonts/main/ofl/bevietnampro/OFL.txt) |
+| Be Vietnam Pro | Google Fonts release (18 TTF files: Thin to Black, upright and italic). Committed subsets in `packages/pdf-assets`: Regular, Medium, SemiBold, Bold, Italic (DR-56) | PDF documents only, with Vietnamese diacritics (DR-56). The apps and the web use the two rows below (DR-180) | SIL Open Font License 1.1 ("Copyright 2021 The Be Vietnam Pro Project Authors") | 2026-10-19 | [google/fonts `ofl/bevietnampro`](https://github.com/google/fonts/tree/main/ofl/bevietnampro), [OFL.txt](https://raw.githubusercontent.com/google/fonts/main/ofl/bevietnampro/OFL.txt) |
+| Geologica | Google Fonts variable font (`wght` 100–900); web: self-hosted `woff2` 400/500/600/700; Expo: static `ttf` instances made with `fonttools` into `packages/design-tokens/fonts` (DR-180, DOC-54 §4.1) | UI text of the web CMS and both apps; Vietnamese subset present (147 characters tested, 0 missing) | SIL Open Font License 1.1 | 2026-10-20 | [google/fonts `ofl/geologica`](https://github.com/google/fonts/tree/main/ofl/geologica) |
+| Big Shoulders | Google Fonts variable font (`wght`, `opsz`); web `woff2` 700; Expo static `ttf` 700 (DR-180) | Plates: unit, ticket and vehicle codes (`plate-*` styles). Vietnamese subset present | SIL Open Font License 1.1 | 2026-10-20 | [google/fonts `ofl/bigshoulders`](https://github.com/google/fonts/tree/main/ofl/bigshoulders) |
 
 ## 6. Mobile clients (Expo, two apps)
 
@@ -153,11 +159,12 @@ Pins are the SDK 58 bundled ranges (DR-94). "npm latest" is shown only where it 
 | `expo-updates` | ~58.0.17 | OTA on channels `staging` and `production`; runtime version policy `appVersion` (DR-69) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-updates) |
 | `expo-localization` | ~58.0.4 | Device language for the first launch (DR-71) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-localization) |
 | `expo-build-properties` | ~58.0.10 | Android R8 keep-rule switches (§6.4) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-build-properties) |
-| `expo-constants`, `expo-device`, `expo-font`, `expo-splash-screen`, `expo-status-bar` | ~58.0.12, ~58.0.5, ~58.0.8, ~58.0.9, ~58.0.3 | App config, push needs a physical device, Be Vietnam Pro loading, splash, status bar | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
+| `expo-constants`, `expo-device`, `expo-font`, `expo-splash-screen`, `expo-status-bar` | ~58.0.12, ~58.0.5, ~58.0.8, ~58.0.9, ~58.0.3 | App config, push needs a physical device, Geologica and Big Shoulders loading before the splash hides (DR-180), splash, status bar | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
 | `react-native-reanimated`, `react-native-worklets` | 4.7.1, 0.13.0 | Animation dependency of Expo Router and gesture handling | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-reanimated) |
 | `react-native-gesture-handler` | ~3.3.0 (npm `latest` 3.4.0 is **outside** the range and not used) | Gestures | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-gesture-handler) |
 | `react-native-safe-area-context`, `react-native-screens` | ~5.10.1, ~4.30.0 | Layout and navigation primitives | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-screens) |
-| `react-native-svg` | 15.16.0 | QR rendering base | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-svg) |
+| `react-native-svg` | 15.16.0 | QR rendering base; also the base of `phosphor-react-native` (explicit dependency of `ui-native`, DR-181) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/react-native-svg) |
+| `phosphor-react-native` | **3.0.6** (2026-04-23) | Icons of both apps, same names as the web registry (DR-181, DOC-54 §7.3). Pure JavaScript over `react-native-svg`; Fabric support follows `react-native-svg` ≥ 13 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/phosphor-react-native) |
 | `@shopify/flash-list` | 2.3.2 (npm `latest` 2.3.3 is **outside** the range and not used) | Long lists (DR-70) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@shopify/flash-list) |
 | `@react-native-community/netinfo` | 12.0.1 | Offline banner (DOC-53) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@react-native-community/netinfo) |
 | `@react-native-async-storage/async-storage` | 2.2.0 (npm `latest` 3.1.1 is **outside** the bundle and not used) | Storage for the persisted query cache (DR-70) | MIT | 2026-10-19 | [bundledNativeModules (sdk-58)](https://github.com/expo/expo/blob/sdk-58/packages/expo/bundledNativeModules.json) |
@@ -221,6 +228,7 @@ Third-party images are pinned to an exact tag in the Compose files (DR-95).
 | --- | --- | --- | --- | --- | --- |
 | `bun test` | Part of Bun 1.4.3 | Unit and integration tests; PostgreSQL service container in CI (DR-08) | MIT | 2026-10-19 | [Bun](https://github.com/oven-sh/bun/releases) |
 | `@playwright/test` | **1.64.1** | Web CMS end to end, path-gated (DR-08) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@playwright/test) |
+| `@axe-core/playwright` | **4.14.0** (2026-10-15) | Accessibility audit of the web pages in both themes: 0 serious or critical violations (DR-184, DS-07, DOC-54 §12) | MPL-2.0 | 2026-10-20 | [npm](https://www.npmjs.com/package/@axe-core/playwright) |
 | Maestro CLI | **2.11.0** (2026-09-29) | Mobile flows, on demand and before a store release (DR-08) | Apache-2.0 | 2026-10-19 | [GitHub releases](https://github.com/mobile-dev-inc/maestro/releases) |
 | k6 | **2.3.0** (2026-09-21) | API load for EXP-07 | AGPL-3.0 | 2026-10-19 | [GitHub releases](https://github.com/grafana/k6/releases) |
 

@@ -1,6 +1,6 @@
 # Identity and sessions
 
-> Status: **Review** · Updated: 2026-10-20 (DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
+> Status: **Review** · Updated: 2026-10-20 (DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
 > Depends on: original SDD §7, §17.1, §19.3, [DR](../00-decision-register.md) (DR-36…39, 59, 60, 64, 65, 68, 73, 74, 83, 85, 87, 99, 107, 108, 125, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-03](../01-product/requirements.md) (FR-13…15, 45, 50), [DOC-04](../01-product/use-cases.md) (UC-14, UC-17, UC-26), [DOC-09](../03-architecture/messaging-contracts.md) §6.3, §7.3, [DOC-12](../03-architecture/code-architecture.md) §5.3, §8, §12, [DOC-16](../05-data/identity-and-residency-model.md) §4, [DOC-17](../05-data/operations-model.md) §3, [DOC-35](audit-privacy-and-terms.md) §10, [DOC-36](building-configuration-and-demo.md) §3, §7, §9, §10, [DOC-42](error-handling.md) §5.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity: staff), P1-11 (identity: resident OTP), P1-14 (staff API), P1-22 (SMS and mail adapters), DOC-27, DOC-39, DOC-41, DOC-51, EXP-09, EXP-10, RB-12
 
@@ -162,6 +162,8 @@ Set-Cookie: __Secure-rms_refresh=<256-bit token, base64url>; Path=/api/v1/auth; 
 - `__Secure-` is used instead of `__Host-` because `__Host-` forces `Path=/`, and the cookie must stay on `/api/v1/auth`.
 - Logout answers `Set-Cookie: __Secure-rms_refresh=; Path=/api/v1/auth; Secure; HttpOnly; SameSite=Strict; Max-Age=0`.
 - The SPA sends `credentials: 'include'`; CORS allows only `https://admin.<domain>` with credentials; `X-Requested-With: rms` on `/auth/refresh` and `/auth/logout` forces a preflight, which with `SameSite=Strict` is the CSRF defense (DR-38, DOC-39 owns the CORS rules).
+
+*Client handling (DR-189, DOC-55 §5).* Every client keeps the access token in memory only. An app stores the refresh token in `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY` and writes the new one **before** it replays any waiting call. A refresh that gets no answer (network failure, timeout, 502/503/429) is not a sign-out: the client retries the same token after 1 s and 3 s, inside the grace window of §3.5, then reports the state `unknown`; only a 401 or 403 from the refresh ends the session. Web tabs share one refresh through the Web Locks API and a `BroadcastChannel`, so two tabs never present the same cookie twice.
 
 **Which credential a refresh uses.** If the JSON body has `refreshToken`, it is used. Otherwise the cookie is used, and the request must carry `X-Requested-With: rms`, else 403 `forbidden` (a cross-site form post has the cookie but cannot set the header). With neither, 401 `unauthenticated`. A request that sends both uses the body and ignores the cookie.
 

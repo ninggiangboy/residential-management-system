@@ -1,7 +1,7 @@
 # API endpoints
 
-> Status: **Draft** · Updated: 2026-10-20 · DOC-51
-> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
+> Status: **Draft** · Updated: 2026-10-20 (DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
 This document numbers every endpoint of the API (`E-01…E-168`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74`). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
@@ -667,7 +667,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
       "id": "0192f3c4-5a1e-7000-8000-000000000041", "phone": "+84901234567", "displayName": "Nguyễn Văn An",
       "avatarUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
       "language": "vi", "pushEnabled": true, "status": "active",
-      "deletion": { "requestedAt": null, "approvedAt": null }
+      "deletion": { "requestedAt": null, "approvedAt": null, "cooloffDays": 30, "executeAfter": null }
     },
     "memberships": [
       { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "buildingId": "0192f3c4-5a1e-7000-8000-000000000001",
@@ -677,6 +677,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   ```
 
   `avatarUrl` is `null` without an avatar, else a 480 px thumbnail URL valid 15 minutes (regenerated on every response, never stored by a client, DOC-37 §8). `status` is `active` or `deletion_requested` (a `deleted` account cannot hold a session). `memberships` is `ResidencyApi.listActiveMemberships` (DOC-27 §2.1, `ActiveMembershipDto`): active only, ordered by unit code, `[]` when none. A removed or locked unit simply disappears from the list; the app clears the cache of that unit (UC-14 E5).
+  *Revised 2026-10-20 (DR-202):* `deletion.cooloffDays` is the building setting `accountDeletionDays` (integer, the only setting a resident reads) and `deletion.executeAfter` is `approvedAt` plus that many days, `null` until the Manager approves the request; both are computed on read (`Account-Deletion`, DOC-60, DOC-35 §10).
 - **Errors:** 401 `unauthenticated`.
 - **Data source:** `identity.resident_account` by primary key; `residency.membership` joined to `residency.unit` through `membership_one_per_account_unit` (prefix `account_id`) (DOC-27 §17.1 S11).
 - **Cache:** `Cache-Control: private, no-cache`; no `ETag` (the document mixes two modules).
@@ -713,7 +714,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   ```json
   { "id": "0192f3c4-5a1e-7000-8000-000000000041", "phone": "+84901234567", "displayName": "Nguyễn Văn An",
     "avatarUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
-    "language": "en", "pushEnabled": false, "status": "active", "deletion": { "requestedAt": null, "approvedAt": null } }
+    "language": "en", "pushEnabled": false, "status": "active", "deletion": { "requestedAt": null, "approvedAt": null, "cooloffDays": 30, "executeAfter": null } }
   ```
 
 - **Errors:** 400 `validation_failed` (`unknown_key`, enum, a body with no key); 403 `membership_inactive` (the `X-Unit-Id` is not an active membership); 422 `file_not_verified` (the file is not verified, belongs to another account or is already attached); 401.
@@ -2000,6 +2001,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | `q` | query | string | no | | 1…100 characters, NFC, trimmed. With `q` the answer is the search of DOC-27 §11.1 (unit code prefix, at least 2 characters, exact match first), capped at 20, with no cursor; with 1 character it is an empty list |
   | `occupancy` | query | enum | no | | `occupied`, `rented`, `vacant` |
   | `floor` | query | integer | no | | −5…150 |
+  | `bedrooms` | query | integer | no | | 0…20 (DR-212; the "Loại" filter of `W-Units`) |
   | `cursor` | query | string | no | | Opaque; 400 `invalid_cursor` when it does not decode |
   | `limit` | query | integer | no | 50 | 1…200 |
 
@@ -2009,14 +2011,17 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   {
     "items": [
       { "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "code": "A-1508", "floor": 15, "bedrooms": 2, "areaM2": "68.50",
-        "occupancy": "occupied", "note": null, "version": 3,
+        "occupancy": "occupied", "note": null, "version": 3, "memberCount": 3,
         "owner": { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "accountId": "0192f3c4-5a1e-7000-8000-000000000041",
                    "fullName": "Nguyễn Văn An", "phone": "+84901234567" } },
       { "unitId": "0192f3c4-5a1e-7000-8000-000000000022", "code": "A-1509", "floor": 15, "bedrooms": 3, "areaM2": "82.00",
-        "occupancy": "vacant", "note": null, "version": 1, "owner": null }
+        "occupancy": "vacant", "note": null, "version": 1, "memberCount": 0, "owner": null }
     ],
-    "nextCursor": "eyJjIjoiQS0xNTA5IiwiaSI6IjAxOTJmM2M0LTVhMWUifQ"
+    "nextCursor": "eyJjIjoiQS0xNTA5IiwiaSI6IjAxOTJmM2M0LTVhMWUifQ",
+    "summary": { "total": 240, "occupied": 171, "rented": 52, "vacant": 17 }
   }
+
+  *Revised 2026-10-20 (DR-212):* `memberCount` counts the non-removed memberships of the unit, the owner included. `summary` covers the whole building, whatever the filters, and is present on every page (one `GROUP BY occupancy` over `residency.unit`).
   ```
 
 - **Errors:** 400 `validation_failed`, 400 `invalid_cursor`, 401, 403 `forbidden`.
@@ -2214,6 +2219,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | `memberType` | query | enum | no | | `owner`, `family`, `tenant`, `helper` |
   | `status` | query | enum | no | | Membership status: `active`, `locked` |
   | `deletion` | query | enum | no | | `requested`: only accounts in `deletion_requested` (DR-149) |
+  | `neverSignedIn` | query | boolean | no | | `true`: only accounts with `last_app_open_at IS NULL` (DR-212; the "Chưa đăng nhập" status of `W-Residents`) |
   | `cursor`, `limit` | query | string, integer | no | none, 50 | `limit` 1…200 |
 
 - **Response 200:**
@@ -2222,13 +2228,16 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   {
     "items": [
       { "accountId": "0192f3c4-5a1e-7000-8000-000000000041", "fullName": "Nguyễn Văn An", "phone": "+84901234567",
-        "cccdMasked": "•••• 2345", "accountStatus": "active",
+        "cccdMasked": "•••• 2345", "accountStatus": "active", "lastAppOpenAt": "2026-10-20T01:02:11.000Z",
         "memberships": [ { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "unitId": "0192f3c4-5a1e-7000-8000-000000000021",
                            "unitCode": "A-1508", "memberType": "owner", "status": "active" } ],
         "deletion": { "requestedAt": null, "approvedAt": null } }
     ],
-    "nextCursor": null
+    "nextCursor": null,
+    "summary": { "total": 612 }
   }
+
+  *Revised 2026-10-20 (DR-212):* `lastAppOpenAt` is `resident_account.last_app_open_at` (set at most once an hour, DOC-26 §5.2), `null` when the account never opened the app. `summary.total` is the number of resident accounts of the building, whatever the filters. `q` stays a name or phone search; an email or a unit code is not searched here (use `unitId`).
   ```
 
 - **Errors:** 400 `validation_failed`, 400 `invalid_cursor`.
@@ -2521,19 +2530,21 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
                      { "code": "account_will_be_created", "message": "A new resident account will be created for this phone." } ] }
       ],
       "issues": [
-        { "row": 4, "column": "owner_phone", "severity": "error", "code": "owner_conflict", "params": { "code": "A-1510" },
+        { "row": 4, "unitCode": "A-1510", "column": "owner_phone", "severity": "error", "code": "owner_conflict", "params": { "code": "A-1510" },
           "message": "Unit A-1510 already has another owner. Use ownership transfer." },
-        { "row": 8, "column": "unit_code", "severity": "error", "code": "unit_code_duplicate", "params": { "code": "A-1508", "firstRow": 2 },
+        { "row": 8, "unitCode": "A-1508", "column": "unit_code", "severity": "error", "code": "unit_code_duplicate", "params": { "code": "A-1508", "firstRow": 2 },
           "message": "Unit A-1508 already appears in row 2." },
-        { "row": 17, "column": "owner_phone", "severity": "error", "code": "phone_invalid", "params": {},
+        { "row": 17, "unitCode": "A-1515", "column": "owner_phone", "severity": "error", "code": "phone_invalid", "params": {},
           "message": "This phone number is not valid." },
-        { "row": 23, "column": "owner_id_number", "severity": "warning", "code": "id_number_padded", "params": {},
+        { "row": 23, "unitCode": "A-1520", "column": "owner_id_number", "severity": "warning", "code": "id_number_padded", "params": {},
           "message": "The ID number lost its leading zeros in Excel; it was padded to 12 digits. Check it." }
       ],
       "issuesTruncated": false
     }
   }
   ```
+
+  *Revised 2026-10-20 (DR-213):* every entry of `issues` carries `unitCode`, the normalized code of the row (`null` when the row has none), so the screen can show a "Mã căn" column; the list of errors is downloaded as a CSV built in the browser, and E-73 is not a history list (`W-Import` reopens a job by `?importId=`).
 
   A file that fails a file-layer rule (not an `.xlsx`, no unit-code header, a duplicated column, no data rows: DQ-01…DQ-04) still creates a job, with `status: "failed"`, empty `validRows`, zero `counts` and one issue with `severity: "fail"` (for example `import_no_header`); the commit of it is 409 `import_not_ready`. With more than 500 issues `issues` holds the first 500, errors first, and `issuesTruncated` is `true`; `counts` stay complete (IM-31).
 - **Limits and errors:**
