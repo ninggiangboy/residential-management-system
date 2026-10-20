@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-19 (DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Status: **Review** · Updated: 2026-10-20 (DR-88 decided; earlier: DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -81,7 +81,7 @@ flowchart TB
   end
   subgraph CF["Cloudflare, free plan"]
     PAGES["Pages: static web CMS at admin.domain"]
-    EDGE["Edge: DNS, managed WAF, one rate rule, Access on admin only; TLS ends here"]
+    EDGE["Edge: DNS, managed WAF, one rate rule, Access on admin and monitor only; TLS ends here"]
     TUN["Tunnel: outbound only"]
     R2F[("R2 files bucket: private")]
     R2B[("R2 backup bucket: private")]
@@ -128,7 +128,7 @@ Containers and their jobs:
 | Web CMS | React SPA on Cloudflare Pages | Admin and Manager screens. No business rule; types come from the API by Eden Treaty (type-only import, DR-04). Security headers from the Pages `_headers` file (DR-64) | — (static) | HTTPS to `api.<domain>`, cross-origin with `credentials: include` (DR-38) |
 | Staff app | Expo, React Native, New Architecture | Manager, Technician, Guard tabs by role; QR scan for Guards | — | HTTPS, bearer token; refresh token in `expo-secure-store` |
 | Resident app | Expo, React Native | Fees, payment, tickets, QR, notices, household; every request carries `X-Unit-Id` | — | HTTPS, bearer token |
-| Cloudflare edge | Cloudflare free plan | DNS, TLS, managed WAF, one rate rule on `/api/v1/auth/*`, Access in front of `admin.<domain>` only, never in front of `api.<domain>` (DR-83) | 443 | HTTPS |
+| Cloudflare edge | Cloudflare free plan | DNS, TLS, managed WAF, one rate rule on `/api/v1/auth/*`, Access in front of `admin.<domain>` and `monitor.<domain>` only, never in front of `api.<domain>` (DR-83, DR-88) | 443 | HTTPS |
 | Tunnel + `cloudflared` | Official image | The only way in: outbound connection from the VPS to Cloudflare; routes the API hostname to Caddy | none inbound | QUIC/HTTP2 outbound |
 | Caddy | Official image, `auto_https off` | Reverse proxy to `api-1`/`api-2` with active health checks on `/health/ready`, 2 MB request body limit, no buffering on the SSE path, API security headers, real client IP from `CF-Connecting-IP` (DR-83 item 3) | 80 (Docker network only) | HTTP |
 | `api-1`, `api-2` | Bun, Elysia, image `rms-api`, `APP_ROLES=api` | Every HTTP route: `/api/v1/staff`, `/me`, `/auth`, `/public`, `/payments/webhooks`, SSE `/staff/events`. Stateless; scaling unit is the container | 3000 (`PORT`) | HTTP; ops port separate |
@@ -163,7 +163,7 @@ flowchart TB
   GHA -.-> PAGES
   subgraph CF["Cloudflare, free plan"]
     PAGES["Pages: static web CMS"]
-    EDGE["Edge: DNS, WAF, rate limit; Access protects the admin site"]
+    EDGE["Edge: DNS, WAF, rate limit; Access protects the admin and monitor sites"]
     TUN["Tunnel: no inbound port"]
     R2[("R2: files, backups")]
     EDGE --> TUN
@@ -220,7 +220,7 @@ A second worker is safe by design (singleton jobs take a transaction-level advis
 
 ### 4.4 Operator access to monitoring
 
-Grafana and Alertmanager have no public hostname. Alerts leave the host by email and Telegram, so the Owner does not need a web console to be told; to open a dashboard the operator forwards the port over the SSH path of §4.1 (*proposed*, DR-88).
+Grafana is reached at `monitor.<domain>` (staging: `monitor-staging.<domain>`): a Tunnel public hostname whose origin is the `grafana` container, behind a Cloudflare Access application that allows the operators' emails only, and Grafana keeps its own sign-in (DR-88). Prometheus, Loki and Alertmanager have no host; Grafana reads them, and alerts are listed and silenced in Grafana. Alerts leave the host by email and Telegram whether or not the dashboards are reachable.
 
 ## 5. Modules
 
@@ -463,7 +463,7 @@ flowchart LR
     PO["payOS"]
   end
   subgraph Z1["Zone 1: Cloudflare"]
-    ED["Edge: WAF, Access on admin only"]
+    ED["Edge: WAF, Access on admin and monitor only"]
     PG1["Pages"]
     R2["R2 buckets"]
   end
@@ -490,7 +490,7 @@ flowchart LR
 
 | ID | Boundary | Who authenticates, how | What crosses | Refs |
 | --- | --- | --- | --- | --- |
-| TB1 | Internet → Cloudflare edge | TLS ends here. Managed WAF; one rate rule on `/api/v1/auth/*`; WAF challenges and Bot Fight Mode skipped for the API host and the webhook path (native apps cannot solve a challenge). Access (login) in front of `admin.<domain>` only, never in front of `api.<domain>` | All client traffic, payOS webhooks | DR-07, DR-83 |
+| TB1 | Internet → Cloudflare edge | TLS ends here. Managed WAF; one rate rule on `/api/v1/auth/*`; WAF challenges and Bot Fight Mode skipped for the API host and the webhook path (native apps cannot solve a challenge). Access (login) in front of `admin.<domain>` and `monitor.<domain>` only, never in front of `api.<domain>` | All client traffic, payOS webhooks | DR-07, DR-83 |
 | TB2 | Cloudflare → VPS | The VPS opens an outbound Tunnel; no inbound port, SSH included. Operators and CI reach SSH through the Tunnel with an Access service token | HTTP to Caddy; SSH | DR-83 item 2 |
 | TB3 | Caddy → `api` | Docker network, plain HTTP. Caddy trusts the private Docker ranges and passes `CF-Connecting-IP`; the API keeps `TRUSTED_PROXY_HOPS=1`. Body limit 2 MB | Requests with the client IP | DR-07 |
 | TB4 | `api`, `worker` → PostgreSQL | `scram-sha-256` from the Docker subnet; roles `rms_app` (DML only) and `rms_migrator` (migrations only); direct connection for `LISTEN` and the relay | SQL | DR-67, DR-83 item 6 |
@@ -499,7 +499,7 @@ flowchart LR
 | TB7 | payOS → webhook route | HMAC-SHA256 with the checksum key is the only gate; body ≤ 16 KB; a call from an unknown IP is logged, never blocked; failures go to `finance.webhook_rejection`, never to `gateway_event` | Signed confirmations | DR-32 |
 | TB8 | `api`, `worker` → providers | API keys and passwords from secret files (`SMS_*`, `SMTP_*`, `EXPO_ACCESS_TOKEN`); payOS credentials decrypted from `gateway_config`. Payloads carry no personal text for push (DR-52) | Link requests, OTP text, mail, push | DR-52, DR-58 |
 | TB9 | CI → registry and VPS | GitHub Actions pushes the image to GHCR; the VPS pulls with a read-only token; deploy runs over the Tunnel with an Access service token | Image, deploy commands | DR-08, DR-83 item 9 |
-| TB10 | Monitoring plane | `/health/*` and `/metrics` are on the ops port, bound to the Docker network and not routed by Caddy or the Tunnel; Grafana and Alertmanager have no public hostname | Metrics, logs | DR-07, DR-63 |
+| TB10 | Monitoring plane | `/health/*` and `/metrics` are on the ops port, bound to the Docker network and not routed by Caddy or the Tunnel; only Grafana has a public host, `monitor.<domain>`, behind Access; Prometheus, Loki and Alertmanager have none | Metrics, logs | DR-07, DR-63, DR-88 |
 
 The authorization inside the API (token kind, role, membership policy) is not a boundary in this table: it is specified in DOC-26, DOC-27 and DOC-39. A staff token on a resident route, and the reverse, is refused (FR-16.4).
 
@@ -543,7 +543,7 @@ Never logged: OTP codes, tokens, passwords, CCCD, full phone numbers, QR tokens 
 
 ## Open questions
 
-Decisions made while writing: DR-85, DR-86 and DR-87 (decided, Claude delegated by the Owner) and DR-88 (proposed).
+Decisions made while writing: DR-85, DR-86 and DR-87 (decided, Claude delegated by the Owner) and DR-88 (decided by the Owner, 2026-10-20).
 
-- **DR-88 · Operators reach Grafana by SSH port-forward over the Tunnel, not through a public hostname.** Proposed; access decision, Owner to confirm. Not blocking Phase 1.
+- **DR-88 · Operators reach Grafana at `monitor.<domain>` behind Cloudflare Access.** Decided by the Owner on 2026-10-20 (it replaces the SSH port-forward first proposed). Not blocking Phase 1; the host is created with the staging environment in P1-20.
 - The payload of `identity.sms_requested.v1` has to carry the OTP code until it is sent. Whether it is stored encrypted in `outbox_messages` is decided in DOC-09 and DOC-26.

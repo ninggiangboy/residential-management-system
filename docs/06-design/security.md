@@ -407,7 +407,7 @@ Completed in P5-09 (`—` = nothing to add yet).
 | TB5 `api`, `worker` → R2 | A leaked bucket key | Private bucket; separate token for the backup bucket |
 | TB8 `api`, `worker` → providers | Personal data to a third party | Push payloads without personal text; SMS carries a code only |
 | TB9 CI → registry and VPS | A poisoned image or action | Pinned action versions; Trivy; a read-only registry token on the VPS |
-| TB10 Monitoring | Metrics or logs exposed | Ops port not routed; Grafana and Alertmanager have no public hostname |
+| TB10 Monitoring | Metrics or logs exposed | Ops port not routed; only Grafana has a public host, `monitor.<domain>`, behind Cloudflare Access plus its own sign-in; Prometheus, Loki and Alertmanager have none (DR-88) |
 
 ## 12. CI scanning
 

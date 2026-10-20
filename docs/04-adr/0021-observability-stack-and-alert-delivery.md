@@ -25,7 +25,7 @@ Option **5** is chosen (DR-63). The metric catalog, dashboards and PromQL rules 
 - **Alerts.** The alert table of original SDD §19.2 becomes PromQL rules in DOC-40, each linked to one runbook RB-01…09. Delivery is email plus a Telegram bot to the Owner and the Admin; `Critical` repeats every 30 minutes until acknowledged.
 - **Availability.** An external uptime probe (free tier) calls `GET /api/v1/health/ready` every 60 s; NFR-10 is measured from it, not from the host.
 - **Errors.** No third-party error tracker in phase 1.
-- **Operator access to dashboards** is not fixed by this ADR. DR-88 proposes an SSH port-forward over the Tunnel with no public hostname; it is **Proposed** until the Owner confirms, and the decision above does not depend on it.
+- **Operator access to dashboards** (DR-88, decided by the Owner on 2026-10-20): Grafana is served at `monitor.<domain>` through the Tunnel, behind a Cloudflare Access application that allows the operators' emails, and keeps its own sign-in. Prometheus, Loki and Alertmanager have no host; alerts are silenced in Grafana.
 
 ## Consequences
 
@@ -41,10 +41,10 @@ Option **5** is chosen (DR-63). The metric catalog, dashboards and PromQL rules 
 - Without traces, a slow request that crosses several modules is found by reading log lines joined on the request id.
 - Telegram and email are two outside services in the alert path; if both are down the Owner learns late.
 - A Loki and Alloy stack is more to upgrade and tune than a hosted service, and Alloy replaced Promtail, so older guides are wrong.
-- Until DR-88 is decided, reaching a dashboard has no agreed path.
+- A third public host and a second Access application have to be kept correct; a wrong policy would expose dashboards and log queries.
 
 **Follow-up work**
 
 - Write DOC-40 (metric catalog, PromQL rules, panel list, delivery), DOC-74 (alert → runbook table) and the runbooks RB-01…09; pin Alloy in P1-18 after verifying it on the web.
 - DOC-10 asks DOC-40 to add host and per-container metrics and the archive-failure alert; reconcile the job-metric name between DR-63 and DR-101 there.
-- Decide DR-88.
+- Create `monitor.<domain>` and its Access application with the staging environment (P1-20, DOC-70).

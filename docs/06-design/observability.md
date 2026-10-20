@@ -432,7 +432,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
 | **Logs** | The saved queries of §3.4 as panels with a `requestId` variable | RB-09 |
 
-Dashboards are reached by an SSH port-forward over the Tunnel (no public hostname) until the Owner decides DR-88.
+Dashboards are reached at `monitor.<domain>` (staging `monitor-staging.<domain>`), a Tunnel public hostname for the `grafana` container behind a Cloudflare Access application (DR-88). Prometheus, Loki and Alertmanager have no host; alerts are listed and silenced in Grafana through its Alertmanager data source.
 
 ## 8. What must not exist
 
@@ -531,6 +531,6 @@ tests:
 
 ## Open questions
 
-- **DR-88 (Owner to confirm):** operators reach Grafana by an SSH port-forward over the Tunnel, with no public hostname. Not blocking.
+- **The Access policy of `monitor.<domain>`** (allowed emails, session length) is set in DOC-70 (DR-88, decided).
 - **The metrics library on Bun** and **the Alertmanager Telegram keys** are verified in P1-18 (§2); the pin goes to DOC-11 §3 and §7 then.
 - **The addresses and chat id of §6** are Owner input (P0-03).
