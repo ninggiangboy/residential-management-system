@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Review** · Updated: 2026-10-20 (DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
+> Status: **Review** · Updated: 2026-10-20 (DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -136,6 +136,7 @@ Five of these were reproduced on PostgreSQL 18.6 and returned the SQLSTATE of th
 | `version_conflict` | 409 | `VersionConflictError` | `If-Match` is stale, or two writers raced on one aggregate (DR-74) | `{current}` (the fresh resource when the caller may see it) | This was changed by someone else. Reload and try again. |
 | `precondition_required` | 428 | `PreconditionRequiredError` | An edit without `If-Match` | — | Reload and try again. |
 | `payload_too_large` | 413 | `PayloadTooLargeError` | A body over its limit that reached the API | `{maxBytes}` | The request is too large. |
+| `request_in_progress` | 409 | `ConflictError` | A duplicate of a create whose key was committed `in_progress` before an outside call and has not completed (DOC-50 §8, DR-143) | — | This request is still being processed. Try again in a moment. |
 | `idempotency_key_reuse` | 422 | `RuleViolationError` | The same `Idempotency-Key` with another body (DR-74) | — | This request was already used with different content. |
 | `upgrade_required` | 426 | `UpgradeRequiredError` | `X-App-Version` below `MIN_APP_VERSION` | `{minVersion, storeUrl}` | Update the app to continue. |
 | `rate_limited` | 429 | `RateLimitedError` | A bucket is empty (DR-64) | `{scope}` (`otp`, `intent`, `upload`, …) | Too many attempts. Try again later. |
@@ -166,6 +167,8 @@ Both statuses carry the same code; a client shows `details` the same way. The st
 | `same_assignee` | 422 | A ticket reassigned to the person who holds it | FR-20.3 |
 | `assignee_locked` | 422 | The chosen assignee is locked or not a Technician | UC-20 E4 |
 | `setting_invalid` | 422 | A building setting outside its range or enumeration | FR-38.2 |
+| `one_change_only` | 400 | A membership `PATCH` body with two keys or none (DOC-27 §6, DR-139) | FR-17.3 |
+| `min_properties` | 400 | An empty `PATCH` body (the schema rule `minProperties`) | DR-74 |
 | `can_pay_tenant_only` | 422 | `can_pay` set on a member who is not a tenant (DOC-27 §6, DR-139) | FR-17.3 |
 | `driver_not_allowed` | 422 | The `fake` driver for a building that is not a demo building | DR-26 |
 

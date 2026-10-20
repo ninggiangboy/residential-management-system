@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-27
+> Status: **Review** · Updated: 2026-10-20 (DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -254,6 +254,8 @@ The name comes from the form that added the person (the owner's `displayName`, t
 }
 ```
 
+*Revised 2026-10-20 (DR-149):* the list also takes `deletion=requested` (only accounts in `deletion_requested`) and each item carries `deletion {requestedAt, approvedAt}`, joined through `IdentityApi.listDeletionRequests`.
+
 `GET /staff/residents?q=&unitId=&memberType=&status=&cursor=&limit=` lists profiles keyset-paginated on `account_id` (the primary key `(building_id, account_id)` serves it; UUIDv7 makes it creation order), 1…200 per page. The pending deletion requests come from `IdentityApi.listDeletionRequests` joined with the profile names (DOC-35 §10.2). `memberType` and `status` filter through `membership`; the personal data of a row is the masked set above.
 
 ## 6. Household: memberships
@@ -363,6 +365,8 @@ RETURNING status, credential_version;
 
 Results on PostgreSQL 18.6 (S3, S4, S5): the owner's lock returned `locked/owner/2`; the same statement again 0 rows; the Manager's lock returned `locked/manager/3`; the owner's unlock 0 rows; the Manager's unlock `active/4`; `tenant → family` 5, `family → tenant` 6; `can_pay = true` left the version at 6; the removal returned `removed/2` and the same account added again as a new row returned a `created_at` later than the old one, while a second add of the same pair returned 0 rows.
 
+*Revised 2026-10-20 (DR-149):* the staff `PATCH /staff/memberships/{id}` carries no version, so the type the client saw is derived from the target: a change to `tenant` expects `family` and the reverse.
+
 Each successful change writes the `unit_history` row (`member_added` for an add, `member_removed` for a removal, none for a lock, an unlock or a retype) and the event `membership_changed` with the matching `change`.
 
 ### 6.4 What the person sees after a change
@@ -444,7 +448,7 @@ Run on PostgreSQL 18.6 (S7): a unit with an owner, a tenant, a family member, a 
 
 ## 8. Changing a login phone
 
-`PATCH /staff/residents/{accountId}/phone` (Manager, Admin) with `{ "phone": "0987654321" }` and no `If-Match` (the account row is identity's).
+`PATCH /staff/residents/{accountId}/phone` (Manager, Admin) with `{ "phone": "0987654321" }` and no `If-Match` (the account row is identity's). The answer is 204 for a change and for the same number (*noted 2026-10-20, DR-149*).
 
 1. The account must have a `resident_profile` in this building; otherwise 404. This is the scope check: accounts are global, so the profile row is what ties a Manager to a person (DR-136).
 2. Parse the number (`libphonenumber-js/max`, region VN). Invalid: 400 `validation_failed`, rule `phone_invalid`. Equal to the current number: 204, nothing written.
@@ -477,6 +481,8 @@ sequenceDiagram
   API->>DB: one transaction (§9.2)
   API-->>W: 200 {committed counts}
 ```
+
+*Revised 2026-10-20 (DR-149):* the request body is `{kind, fileId, params?}` where `fileId` is a verified upload of purpose `import` (DOC-37 registers and verifies a file id and keeps the object key private); the use case resolves the key through `FilesApi` and attaches the file as `import:<jobId>`. Wherever this document or the diagram says `fileKey`, read `fileId`. A file of more than 5,000 rows is 400 `validation_failed` rule `too_many_rows` and stores no job (DOC-18 DQ-05).
 
 `POST /staff/imports` with `kind = unit_owner` is served by `residency`; the route is shared with the fee import, which is `finance`'s (DR-21), and DOC-51 fixes where the dispatch by `kind` lives. The database and the API both say `unit_owner` (DR-22); DOC-16 §5.5 said `units_owners` and was corrected with this document (DR-141).
 

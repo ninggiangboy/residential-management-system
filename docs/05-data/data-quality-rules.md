@@ -1,6 +1,6 @@
 # Data quality rules
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-135: the creating contract is named) · DOC-18
+> Status: **Draft** · Updated: 2026-10-20 (DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
 > Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
@@ -95,7 +95,7 @@ Thresholds come from DR-61 (5 MB, checked by `FilesApi.verify` before the job ex
 | DQ-02 | file | The unit-code column is found | Row 1 of the first sheet has a header whose key matches a `unit_code` alias | fail | Job `failed` | — | `import_no_header` | "Dòng đầu tiên phải có cột “Mã căn hộ”. Hãy dùng tệp mẫu." / "The first row must contain the “Unit code” column. Use the template." |
 | DQ-03 | file | No column appears twice | Two header cells map to the same canonical column | fail | Job `failed` | — | `import_duplicate_column` | "Có hai cột cùng là “{column}”. Hãy giữ một cột." / "Two columns are both “{column}”. Keep one." |
 | DQ-04 | file | There is data | At least one non-blank data row | fail | Job `failed` | ≥ 1 row | `import_empty` | "Tệp không có dòng dữ liệu." / "The file has no data rows." |
-| DQ-05 | file | The file is not too long | At most 5,000 non-blank data rows; the reader stops at 5,001 | fail | Job `failed` | 5,000 rows | `import_too_many_rows` | "Tệp có hơn {max, number} dòng. Hãy chia nhỏ tệp." / "The file has more than {max, number} rows. Split it." |
+| DQ-05 | file | The file is not too long | At most 5,000 non-blank data rows; the reader stops at 5,001 | fail | **400 `validation_failed`, rule `too_many_rows`; no job is stored** (*revised 2026-10-20, DR-149*; UC-13 E2 and DOC-42 §5.2 already said 400) | 5,000 rows | `import_too_many_rows` (log only) | "Tệp có hơn {max, number} dòng. Hãy chia nhỏ tệp." / "The file has more than {max, number} rows. Split it." |
 | DQ-06 | file | Unknown columns are ignored | A header that matches no alias | warning | Column ignored; one issue per column, row 1 | — | `import_unknown_column` | "Cột “{column}” không được nhận diện nên bị bỏ qua." / "Column “{column}” is not recognised and is ignored." |
 | DQ-10 | row | Unit code | Trimmed value matches `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$` | error | Row rejected; stored upper-case | 1–20 characters | `unit_code_invalid` | "Mã căn hộ gồm 1–20 ký tự: chữ, số, dấu chấm, gạch ngang hoặc gạch chéo." / "Unit code must be 1–20 letters, digits, dots, hyphens or slashes." |
 | DQ-11 | row | Floor | Blank, or a whole number from −5 to 150 | error | Row rejected | −5…150 | `floor_invalid` | "Tầng phải là số nguyên từ −5 đến 150." / "Floor must be a whole number from −5 to 150." |
@@ -358,7 +358,7 @@ The prefix `IM-` is shared with DOC-21 and DOC-27 (master plan §0.2). This docu
 | IM-02 | Row 1 without any unit-code alias | `import_no_header`, job `failed` |
 | IM-03 | Headers `Mã căn hộ` and `Unit code` in one file | `import_duplicate_column` |
 | IM-04 | A header and blank rows only | `import_empty` |
-| IM-05 | 5,001 data rows; 5,000 data rows | `import_too_many_rows` and job `failed`; 5,000 validated |
+| IM-05 | 5,001 data rows; 5,000 data rows | 400 `too_many_rows` and no job stored (*revised 2026-10-20, DR-149*); 5,000 validated |
 | IM-06 | Extra column `Ghi chú` | one warning `import_unknown_column`; the rows validated |
 | IM-07 | Unit codes of §1.3 | the table of DQ-10 |
 | IM-08 | Floors and bedrooms of §1.3 | the table of DQ-11, DQ-12 |

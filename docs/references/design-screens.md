@@ -8,7 +8,7 @@ Artboard prefixes: `W-` web CMS, `B-` staff app as Manager, `K-` staff app as Te
 
 | Area | Artboard | Screen |
 | --- | --- | --- |
-| Auth | `W-Login` | Email + password sign-in; wrong-password counter ("2 tries left, then locked 15 minutes") |
+| Auth | `W-Login` | Email + password sign-in; wrong-password message without a counter, then "Too many attempts. Try again in 15 minutes." once locked (*revised 2026-10-20, DR-128: the design showed "2 tries left"*) |
 | | `W-Forgot-Sent` | Reset link sent; valid 30 minutes; resend after 45 s |
 | | `W-Reset` | Set new password in the browser (min 8 chars, letters and digits) |
 | | `W-Profile` | Name, avatar, UI language, send password-reset link, recent sessions |

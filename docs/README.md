@@ -58,15 +58,15 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-40 | Observability (`06-design/observability.md`) | Not written |
 | DOC-41 | Configuration reference (`06-design/configuration-reference.md`) | Not written |
 | DOC-42 | [Error handling](06-design/error-handling.md) | Review |
-| DOC-43 | Flows index (`06-design/flows/README.md`) | Not written |
+| DOC-43 | [Flows index](06-design/flows/README.md) | Review |
 | DOC-44 | Fees and payments (ledger level) (`06-design/flows/fees-and-payments.md`) | Not written |
 | DOC-45 | Online payment (`06-design/flows/online-payment.md`) | Not written |
-| DOC-46 | Identity and household (`06-design/flows/identity-and-household.md`) | Not written |
+| DOC-46 | [Identity and household](06-design/flows/identity-and-household.md) | Review |
 | DOC-47 | Tickets (`06-design/flows/tickets.md`) | Not written |
 | DOC-48 | Notices, access, vehicles (`06-design/flows/notices-access-vehicles.md`) | Not written |
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
-| DOC-50 | API guidelines (`07-api/api-guidelines.md`) | Not written |
-| DOC-51 | API endpoints (`07-api/api-endpoints.md`) | Not written |
+| DOC-50 | [API guidelines](07-api/api-guidelines.md) | Review |
+| DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74 specified, E-75…E-168 numbered) | Draft |
 | DOC-52 | SSE and webhooks (`07-api/sse-and-webhooks.md`) | Not written |
 | DOC-53 | UX principles and information architecture (`08-ux-ui/ux-principles-and-ia.md`) | Not written |
 | DOC-54 | Design system (`08-ux-ui/design-system.md`) | Not written |

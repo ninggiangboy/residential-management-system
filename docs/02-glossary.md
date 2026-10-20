@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-20 (DR-128…141: sessions, staff accounts and household terms) · DOC-06
+> Status: **Review** · Updated: 2026-10-20 (DR-128…150: sessions, staff accounts, household, API terms) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -307,6 +307,12 @@ This document defines the words of the project, as the project uses them. Every 
 
 | Term | Local name | Definition | Related |
 | --- | --- | --- | --- |
+| gate (request gate) | — | One check a request meets on its way to a use case, in a fixed order: maintenance, CORS, media type and size, app version, IP bucket, authentication, role or unit guard, terms, step-up declaration, account buckets, validation. A request without a valid credential never receives a validation answer. | DR-143, DOC-50 §7 |
+| `operationId` | — | The unique lowerCamel name of an endpoint in OpenAPI (`createPaymentIntent`), fixed in DOC-51 §2 together with `x-endpoint-id`. | DR-142, DOC-50 §3 |
+| `ImportHandler` | — | The interface by which a module serves one `kind` of import behind the shared routes `POST /staff/imports`, `GET /staff/imports/{id}` and `POST /staff/imports/{id}/commit`: `{kind, validate, get, commit}`. `apps/api` routes by `kind`. | DR-149, DOC-51 §10 |
+| public config | — | `GET /public/config`: the minimum app versions, store links, languages and the Manager's contact block, answered without a token and cached 60 seconds. | DR-145, DOC-51 §3 |
+| session id (`sid`) | — | The id of a refresh family, carried in the access token; the key of the session list, of a revocation and of a device token. | DOC-26 §3 |
+| `request_in_progress` | — | The 409 a duplicate of an unfinished create receives while its idempotency key is `in_progress`; the client retries with the same key. | DR-143, DOC-42 §5.1 |
 | modular monolith | — | One deployable API made of modules with their own schema and public contracts. Chosen because the money invariant needs local database transactions. | ADR-0002 |
 | module | — | A business unit of the code with its own schema: `identity`, `building`, `residency`, `finance`, `tickets`, `access`, `vehicles`, `notices`, `notification`, `wiki`, `audit`, `reporting`, `realtime`. | DR-03 |
 | DTO | — | A plain data object returned by a contract or an endpoint; contains no domain behavior and, for residents, no staff-only field. | DR-42 |
@@ -333,7 +339,7 @@ This document defines the words of the project, as the project uses them. Every 
 | arbiter | — | The one row whose conditional update decides a race (the charge, `gateway_event`, the intent, the ticket, the QR nonce, the OTP challenge). The loser sees zero rows. | original SDD §2.1, §8.2 |
 | conditional update | — | `UPDATE … WHERE <expected state> RETURNING`; zero rows means the state already changed. | DR-14 |
 | `version` | — | An integer on aggregates edited by several actors, used for optimistic locking with `If-Match`. | DR-12, DR-74 |
-| idempotency key | — | The `Idempotency-Key` header stored in `platform.idempotency_key`: the same key with the same body replays the stored response (`Idempotent-Replayed: true`). | DR-74 |
+| idempotency key | — | The `Idempotency-Key` header stored in `platform.idempotency_key`: the same key with the same body replays the stored response (`Idempotent-Replayed: true`). One key per user intent, 8…128 characters, required on the routes marked `R` in DOC-51; only a committed 2xx is stored. | DR-74, DR-143, DOC-50 §8 |
 | request id | — | The `X-Request-Id` on every request and log line; the only means of following one request in phase 1 (no traces). | DR-63 |
 | rate bucket | — | A PostgreSQL token bucket (`identity.rate_bucket`) that limits OTP, sign-in and other endpoints. | DR-64 |
 | audit log | — | `audit.audit_log`: an append-only row per staff mutation, written in the mutation's transaction. | FR-37, DR-57 |

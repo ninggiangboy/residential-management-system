@@ -164,7 +164,7 @@ CREATE INDEX staff_account_building_role_idx ON identity.staff_account (building
 | `status` | `invited` (no password yet), `active`, `locked` (locked by a Manager or Admin, FR-14.3), `disabled` (deactivated by the Admin). The temporary lockout after failed sign-ins is **not** a status: it is `locked_until` while the status stays `active` (DR-107). |
 | `password_hash` | argon2id string; `NULL` only while `invited` (the `CHECK` below). |
 | `failed_attempts`, `locked_until` | The lockout counter of FR-13.1 and the end of the temporary lock. Both are reset by a success, by an unlock and by a password reset. The limit and the duration (5 and 15 minutes) are building settings read by the use case, never hard-coded in SQL. |
-| `language`, `push_enabled`, `avatar_key` | Profile settings; `language` decides the language of mail and push (FR-29). |
+| `language`, `push_enabled`, `avatar_key` | Profile settings (`avatar_key` holds the `file_object` id as text, *noted 2026-10-20, DR-146*); `language` decides the language of mail and push (FR-29). |
 | `version` | Optimistic lock for edits by two Admins (DR-12). |
 
 **Indexes**

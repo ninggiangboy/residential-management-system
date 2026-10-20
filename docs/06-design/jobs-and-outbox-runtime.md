@@ -376,7 +376,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | Endpoint (ops port) | Meaning |
 | --- | --- |
 | `GET /health/live` | The process is up and its event loop answers |
-| `GET /health/ready` | A database ping within 2 s, **and** the relay has finished a pass within the last `max(10 × OUTBOX_POLL_INTERVAL_MS, 10 s)`. It reports `maintenance: true/false` and stays 200 during maintenance. 503 `degraded` otherwise |
+| `GET /health/ready` (*noted 2026-10-20, DR-145:* the `api` role checks the database only; the public `/api/v1/health/ready` answers `{status, maintenance}` without naming a dependency) | A database ping within 2 s, **and** the relay has finished a pass within the last `max(10 × OUTBOX_POLL_INTERVAL_MS, 10 s)`. It reports `maintenance: true/false` and stays 200 during maintenance. 503 `degraded` otherwise |
 
 ### 5.3 Maintenance
 

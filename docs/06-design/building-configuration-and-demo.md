@@ -301,6 +301,7 @@ A secret is masked as `••••` plus its last 4 characters; one shorter tha
   "stepUp": { "password": "…", "code": "482913" } }
 ```
 
+- **Addressing** (*noted 2026-10-20, DR-148*): the body names the `provider`, which identifies the single active row; there is no `id`. `If-Match` carries the row's version and is required once the row exists (428 when missing); the first creation answers 201 and a change 200. `POST /staff/gateway/check` writes no audit row (it changes no business field).
 - **Partial secrets.** A secret field that is present replaces the stored one; a field that is absent keeps it (the form shows masked values and sends only what the Admin retyped). A **new** configuration, or a change of `driver`, needs every field of the driver.
 - **Step-up.** The Admin asks for a code with `POST /staff/step-up {"action": "gateway_config"}` (204; the code is mailed to the Admin, valid 10 minutes, single use). The names of the actions are the stored ones — `gateway_config`, `admin_change`, `staff_email` (DOC-16 §4.4) — and `IdentityApi.verifyStepUp` takes the same names; DOC-09 §7.3 is corrected (DR-126). A request without `stepUp` is 403 `step_up_required`; any failure of the proof is 403 `step_up_failed` (DOC-42).
 - **Every change of this resource needs it:** secrets, receiving account, driver, status (enable, disable), including an unchanged `PUT` that only re-saves.

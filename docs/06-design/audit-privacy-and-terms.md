@@ -172,7 +172,7 @@ One row per action the design knows today. Each document that adds staff mutatio
 | `residency.membership.add` · `.update` · `.lock` · `.unlock` · `.remove` | `membership` | Manager, Admin | `status`, `memberType`, `canPay` | | FR-17, FR-18 |
 | `residency.owner.transfer` | `unit` | Manager, Admin | `owner` (member id), `removedOthers` | R | FR-18 |
 | `residency.login_phone.change` | `resident_account` | Manager, Admin | `phone` (masked) | | FR-18.4 |
-| `identity.staff.create` · `.update` · `.lock` · `.unlock` · `.disable` · `.enable` | `staff_account` | Admin; Manager for Technician and Guard | `role`, `status`, `email` (masked) | | FR-14 |
+| `identity.staff.create` · `.update` · `.lock` · `.unlock` · `.disable` · `.enable` | `staff_account` | Admin; Manager for Technician and Guard | `role`, `status`, `email` (masked) | | FR-14 (*revised 2026-10-20, DR-147:* `PATCH /staff/me` writes `.update` with `details.self = true` and `fullName` masked; `.disable` and a role change with `reassignTo` carry `details.reassignedTo` and a reason) |
 | `identity.staff.force_lock` | `staff_account` | Admin | `status`, `reassignedTo` | R | FR-14.3 |
 | `identity.account.deletion_approve` | `resident_account` | Manager, Admin | `deletionApprovedAt` | | FR-39.3 |
 | `identity.account.delete_execute` | `resident_account` | **system** (§3.6) | `status` | | FR-39.3 |
@@ -339,6 +339,8 @@ The refusal is 403 `terms_required`:
              "details": { "required": [ { "kind": "terms", "version": 4, "versionId": "018f…c4" },
                                         { "kind": "privacy", "version": 1, "versionId": "018f…c3" } ] } } }
 ```
+
+*Noted 2026-10-20 (DR-143):* the gate runs inside the `unit(capability)` guard, so a token-only route (`/me`, `/me/contact`, `/me/sessions`, `/me/devices`, `/me/terms*`, `/me/account/deletion`) is without a gate by construction; the list below names them for clarity.
 
 **Exempt routes** (they answer without acceptance): `/auth/*`, `GET /me`, `PATCH /me`, `/me/terms*`, `/public/*`, `/health/*`, and `POST/DELETE /me/account/deletion`. The last is an addition to DR-59's list: a person who does not accept the new terms must still be able to leave (DR-125). Staff routes have no terms gate.
 

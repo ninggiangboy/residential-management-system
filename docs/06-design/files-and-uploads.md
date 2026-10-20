@@ -179,7 +179,7 @@ The client sends the bytes to `url` with the header. R2 refuses a different `Con
 
 Called by the client after the `PUT` (`POST /me|staff/uploads/{id}/verify`, DR-123). No transaction is open while it talks to R2.
 
-1. Load the row of this building and this account; `status` must be `pending`. Another account's file is 404.
+1. Load the row of this building and this account; `status` must be `pending`. A file that is already `verified` answers the same 200 without touching R2 (a retry after a lost response, *revised 2026-10-20, DR-146*); an `attached` or `deleted` file, and another account's file, are 404.
 2. `HEAD` the object. Missing: 422 `file_not_verified` with `details[0].code = "missing"`; the row stays `pending` so the client can retry within the window.
 3. Size: `ContentLength` must be between 1 and the maximum of the purpose; `ContentType` must equal the registered mime. A failure goes to step 6.
 4. Magic bytes: `GET` with `Range: bytes=0-4095` and apply the rule of §7 for the mime. A failure goes to step 6.
@@ -287,6 +287,7 @@ SELECT coalesce(sum(size), 0) AS used_bytes
 - **Check.** At `register`: `used + declared size > quota` gives 413 `quota_exceeded`. The check and the insert are not one atomic step, so several uploads registered at the same instant can overshoot by at most their number times 50 MB; that is accepted, and the hourly job and the alert correct it.
 - **Alert.** The hourly `storage_quota` job sets the gauge `storage_usage_ratio` (DOC-38 §4.2); DOC-40 alerts at 0.8 (40 GiB), by email and Telegram to the Owner and the Admin (DR-63, FR-40.1), and at 1.0.
 - **At 100%.** Client uploads are refused; text-only actions continue; generated files continue (DR-123). The remedy is to raise `storageQuotaBytes` or remove old files (degraded mode, DOC-10 §8).
+- **Breakdown** (*noted 2026-10-20, DR-148*): `GET /staff/storage` adds `byPurpose [{purpose, files, bytes}]` and `computedAt` from one `GROUP BY purpose` over the same rows; no new index.
 - **Counted.** Every row not `deleted`: pending, verified and attached files, thumbnails and generated files. A `deleted` row stops counting at once, before the object leaves R2.
 - **Planned growth.** About 4.6 GB per building per year (DOC-10 §5.3), so the alert is reached after about 8.7 years; the figure is planned, from the sample building.
 

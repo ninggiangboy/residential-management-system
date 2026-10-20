@@ -153,7 +153,7 @@ flowchart LR
 - **Main flow:**
   1. On `W-Fee-Import` the Manager downloads the template (`GET /staff/imports/templates/fee_batch`; Vietnamese and English header aliases are both accepted, DR-22) and fills it.
   2. The Manager enters the batch header in the form: name (vi, optional en), fee month `10/2026`, due date (proposed as today + `defaultDueDays` 10 = 2026-10-15 when created on 2026-10-05), notice language.
-  3. The browser uploads the file with a presigned `PUT` (`POST /staff/uploads`, verified by `HEAD`), then calls `POST /staff/imports {kind: "fee_batch", fileKey}`.
+  3. The browser uploads the file with a presigned `PUT` (`POST /staff/uploads`, verified by `HEAD`), then calls `POST /staff/imports {kind: "fee_batch", fileId}` (*revised 2026-10-20, DR-149*).
   4. The API validates the file synchronously (≤ 5 MB, ≤ 5,000 rows; a 2,000-row file answers in ≤ 10 s, FR-01.7) and answers with the preview stored in `import_job`: counts, the first 50 valid rows and up to 500 errors `{row, column, code, message}`. Example: 240 rows, 236 valid, 4 errors (rows 12, 57, 58, 201).
   5. The Manager reads the errors and presses "Save valid rows". `POST /staff/imports/{id}/commit` runs one transaction: `import_job` `validated → committed`, a draft batch with code `PH-2610-01` and 236 draft charges with their lines (FR-01.1, FR-03.4).
   6. On `W-Fee-Batch` the Manager sees the 4 units without a charge, fixes one by hand (`PUT /staff/charges/{id}` with `If-Match`; the charge `version` is guarded, FR-02.2) and previews a fee notice PDF (`W-Fee-Notice`).
@@ -481,7 +481,7 @@ flowchart LR
 - **Preconditions:** The Manager is signed in. For the import, the template of kind `unit_owner`.
 - **Main flow (import):**
   1. On `W-Import` the Manager downloads the template (`GET /staff/imports/templates/unit_owner`), fills unit code, floor, bedrooms, area, occupancy, owner full name, phone, optional email, CCCD and date of birth.
-  2. The browser uploads the file; `POST /staff/imports {kind: "unit_owner", fileKey}` validates it synchronously (a 2,000-row file with 40 errors previews in ≤ 10 s, NFR-12) and stores the preview in `residency.import_job`.
+  2. The browser uploads the file; `POST /staff/imports {kind: "unit_owner", fileId}` (*revised 2026-10-20, DR-149: the id of the verified upload, not an object key*) validates it synchronously (a 2,000-row file with 40 errors previews in ≤ 10 s, NFR-12) and stores the preview in `residency.import_job`.
   3. The preview lists valid rows, rows that update an existing unit ("12 units exist, will be updated") and row errors.
   4. The Manager presses "Save valid rows" (`POST /staff/imports/{id}/commit`): one transaction creates or updates units, resident profiles and owner memberships.
   5. The uploaded file is deleted when the job commits or expires (it holds national ID numbers, DR-22).
@@ -499,7 +499,7 @@ flowchart LR
   - 3d. Lock or remove a member from `W-Unit-Detail` (`PATCH /staff/memberships/{id}`); a membership locked by the Manager can be unlocked only by the Manager (FR-17.4).
 - **Error flows:**
   - E1. One phone appears for two different people → the second row is a row error. A unit that already has an owner and a file naming another → row error "transfer is a deliberate action". An existing account is linked and its name is not overwritten; the preview says so (FR-18.1).
-  - E2. A file of 5.2 MB or 5,001 rows → 400 `validation_failed` (FR-01.2 limits apply). A job older than 24 h → 409 `import_expired`.
+  - E2. A file of 5.2 MB → 400 `validation_failed` rule `file_too_large` at the upload; 5,001 rows → 400 `validation_failed` rule `too_many_rows` and no job is stored (FR-01.2 limits apply; *revised 2026-10-20, DR-149*). A job older than 24 h → 409 `import_expired`.
   - E3. The new login phone already has an account → 409 `phone_in_use` · UI: "This number already belongs to another account." (FR-18.4).
   - E4. Two commits of the same job → one commit; the second sees `committed`.
   - E5. Transfer while the old owner is deleting their account → the account deletion stays refused with 409 `owner_must_transfer` until the transfer commits (UC-27).

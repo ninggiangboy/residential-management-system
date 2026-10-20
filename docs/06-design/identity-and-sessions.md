@@ -1,6 +1,6 @@
 # Identity and sessions
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-26
+> Status: **Review** · Updated: 2026-10-20 (DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
 > Depends on: original SDD §7, §17.1, §19.3, [DR](../00-decision-register.md) (DR-36…39, 59, 60, 64, 65, 68, 73, 74, 83, 85, 87, 99, 107, 108, 125, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-03](../01-product/requirements.md) (FR-13…15, 45, 50), [DOC-04](../01-product/use-cases.md) (UC-14, UC-17, UC-26), [DOC-09](../03-architecture/messaging-contracts.md) §6.3, §7.3, [DOC-12](../03-architecture/code-architecture.md) §5.3, §8, §12, [DOC-16](../05-data/identity-and-residency-model.md) §4, [DOC-17](../05-data/operations-model.md) §3, [DOC-35](audit-privacy-and-terms.md) §10, [DOC-36](building-configuration-and-demo.md) §3, §7, §9, §10, [DOC-42](error-handling.md) §5.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity: staff), P1-11 (identity: resident OTP), P1-14 (staff API), P1-22 (SMS and mail adapters), DOC-27, DOC-39, DOC-41, DOC-51, EXP-09, EXP-10, RB-12
 
@@ -338,7 +338,9 @@ Both use `identity.password_token` (DOC-16 §4.4): 256 random bits, stored as SH
 | Account status needed | `invited` | `active` |
 | After use | `invited → active` | counters cleared, every family revoked (`password_changed`) |
 
-The links open in a browser; the apps have no change-password screen (DR-39). The raw token travels only in `secretEnc` of the command (DR-117) and in the link.
+The links open in a browser; the apps have no change-password screen (DR-39).
+
+*Revised 2026-10-20 (DR-150):* a reset request answers no earlier than `RESET_MIN_RESPONSE_MS` (150 ms, default) after it began, so the active-account path (two more writes) and the unknown-email path have the same response time class (FI-16); the `UPDATE staff_account` of the set-password step carries `AND status = :expected` (`invited` for an invite, `active` for a reset), and zero rows rolls the transaction back, leaves the link unconsumed and answers 400 `token_invalid`. The raw token travels only in `secretEnc` of the command (DR-117) and in the link.
 
 **Reset request.** `POST /auth/staff/password-reset { "email": "…" }` always answers `202 {}` and takes the same time class for every input.
 1. Draw one token from `reset:email:<lower(email)>` (3 per hour) and one from `reset:ip:<ip>` (10 per hour). Either empty: 429. Both buckets are keyed by the input, not by whether the account exists, so the 429 reveals nothing (FR-13.4).
@@ -373,6 +375,8 @@ The use cases behind `/staff/accounts*` (FR-14, UC-17). The screens are `W-Staff
 | Unlock | `POST /staff/accounts/{id}/unlock` | the same | no | Clears `failed_attempts` and `locked_until`; `locked → active`. One endpoint for both locks (FR-13.6) |
 | Disable, enable | `POST /staff/accounts/{id}/disable`, `…/enable` | Admin | no | `disabled` revokes every family (`account_disabled`); the email stays reserved (DOC-20 §2.1) |
 | Resend invite | `POST /auth/staff/invite/resend` `{ staffId }` | Admin; Manager (Technician, Guard) | no | Only for `invited`; consumes the older token; audit `identity.staff.update` with `details.invite = "resent"` |
+
+*Revised 2026-10-20 (DR-147):* a Manager lists and reads all four roles (`GET /staff/accounts`, `GET /staff/accounts/{id}`); only actions on an Admin or a Manager stay 403. Source states: lock from `active`; unlock from `locked` or while `locked_until > now()`; disable from `invited`, `active` or `locked`; enable from `disabled` only (it returns `invited` when no password was ever set); anything else is 409 `invalid_transition`. `reassignTo` on lock, disable and role change always needs a `reason` (5…500 characters).
 
 Rules (DR-133):
 
@@ -411,6 +415,8 @@ sequenceDiagram
     API-->>W: 403 step_up_failed
   end
 ```
+
+*Revised 2026-10-20 (DR-147):* for a step-up action the route first refuses a non-Admin with 403 `forbidden`, and only an Admin without `stepUp` gets 403 `step_up_required`.
 
 **Request.** `POST /staff/step-up { "action": "gateway_config" }` (Admin only, 204). In one transaction: consume the live code of `(staff_id, 'step_up', action)`, insert the new row, write `identity.mail_requested.v1` kind `step_up_code` (`params {action}`, `secretEnc` the encrypted code, `expiresAt` +10 minutes). The code is 6 digits from the CSPRNG (uniform by rejection, as the OTP). The stored value is `HMAC-SHA256(OTP_HMAC_KEY, "stepup:" || staff_id || ":" || action || ":" || code)` in hex, so a code is bound to the person and the action: a code requested for `staff_email` does not open `gateway_config`, and another Admin's code is a different value (DR-132). The request draws one token from `stepup:staff:<id>` (5 per hour, `platform.rate_bucket`); empty is 429. The statements are DOC-16 §4.4 (AU-S01).
 
