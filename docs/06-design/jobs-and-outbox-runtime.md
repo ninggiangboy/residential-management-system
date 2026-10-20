@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-38
+> Status: **Review** · Updated: 2026-10-20 (DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -264,7 +264,7 @@ A job body opens its own short transactions (claim, then work; DOC-12 §8.2) and
 
 `building.job_run` (DOC-17 §3.2) is written once, at the end of a run, through the `JobRunStore` port, with status `succeeded` or `failed`. Whether a run writes a row follows DR-101:
 
-| Run | Row | Gauge `job_last_success_timestamp{job}` |
+| Run | Row | Gauge `job_last_success_timestamp{job_name}` |
 | --- | --- | --- |
 | Schedule of one hour or longer (`hourly`, `daily`, `weekly`, `monthly`) | Always | Updated on success |
 | Sub-hourly (`every`) that did work (`did > 0`) or failed | Written | Updated on success |
@@ -424,8 +424,8 @@ The names are those DR-63 and DOC-10 already use; DOC-40 defines them with the a
 | --- | --- | --- |
 | `outbox_oldest_unpublished_age_seconds{schema}` | `SELECT extract(epoch FROM now() - min(occurred_at)) FROM <schema>.outbox_messages WHERE published_at IS NULL AND dead_at IS NULL` per scrape (JB-12: 180 s on a table with a 3-minute-old and a 20-second-old pending row) | Warning at 2 minutes |
 | `outbox_dead_letters{schema}` | `SELECT count(*) … WHERE dead_at IS NOT NULL` (JB-12: 1) | Alert at 1, RB-05 |
-| `job_last_success_timestamp{job}` | Set by the runtime on success; restored at boot (§3.5) | Alert at twice the interval, per job |
-| `job_runs_total{job,status}`, `job_duration_seconds{job}` | The runtime | Dashboards |
+| `job_last_success_timestamp{job_name}` | Set by the runtime on success; restored at boot (§3.5) | Alert at twice the interval, per job |
+| `job_runs_total{job_name,status}`, `job_duration_seconds{job_name}` | The runtime | Dashboards |
 | `worker_relay_last_pass_timestamp` | The relay loop | Readiness (§5.2) |
 
 ## 9. Required tests

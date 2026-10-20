@@ -403,6 +403,12 @@ This document defines the words of the project, as the project uses them. Every 
 | trust boundary (TB1–TB10) | — | A numbered line in the container diagram where the caller changes and a credential is checked (for example TB1 resident app to API, TB4 payOS webhook to API). The STRIDE table of the security document walks them. | DOC-07 §7, DOC-39 |
 | deployment unit | — | A process or container that is started and stopped on its own: `api-1`, `api-2`, `worker`, `caddy`, `cloudflared`, monitoring. | DR-05, DOC-07 §4.3 |
 | ops port | — | The internal port that serves `/health/*` and `/metrics`; neither Caddy nor the Tunnel routes it. Configured by `OPS_PORT`. | DR-07, DOC-07 |
+| authorization matrix | — | The generated test of EXP-10: every route called as each of 16 actors on the `own` and `foreign` scope, with the expected outcome computed from the route's `audience` metadata. It passes with 0 unexpected 2xx. | DR-151, DOC-39 §4 |
+| unexpected refusal | — | A matrix cell that should pass the gate (`ALLOW`) but answers 401, 403 or 404. It fails the run like an unexpected 2xx. | DR-151 |
+| client IP | — | The address `clientIp()` returns: the socket peer, or `CF-Connecting-IP` when the peer is a trusted proxy. A bucket key uses the `/64` prefix of an IPv6 address. | DR-152, DOC-39 §5.3 |
+| `job_name` | — | The label that names a job in a metric (`job_last_success_timestamp{job_name}`); the label `job` is Prometheus's own. | DR-154 |
+| silence (alert) | — | An Alertmanager silence: how an operator acknowledges an alert and stops its repeats. | DR-155, DOC-40 §6 |
+| boot validation | — | The 13 rules `loadConfig` checks before a process starts; a failure writes one `config_invalid` line without secret values and exits 78. | DR-156, DOC-41 §17 |
 | `platform` schema | — | The schema owned by the vendored core packages, not by a module: `maintenance`, `idempotency_key` and `rate_bucket` for every limiter except sign-in, OTP and reset. | DR-85 |
 | autonomous transaction | — | A transaction on a separate pool connection (`database.autonomous`) that commits before the ambient one ends. Only `identity` uses it, to count failed step-up proofs so that the count survives the rollback of the action. | DR-132, DOC-12 §8.1 |
 | composition root | — | The place where an app wires modules together (`apps/api`): the only code allowed to import several modules' manifests. | DOC-07, DOC-12 |

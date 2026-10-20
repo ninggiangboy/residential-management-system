@@ -54,9 +54,9 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-36 | [Building configuration and demo](06-design/building-configuration-and-demo.md) | Review |
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Review |
 | DOC-38 | [Jobs and outbox runtime](06-design/jobs-and-outbox-runtime.md) | Review |
-| DOC-39 | Security (`06-design/security.md`) | Not written |
-| DOC-40 | Observability (`06-design/observability.md`) | Not written |
-| DOC-41 | Configuration reference (`06-design/configuration-reference.md`) | Not written |
+| DOC-39 | [Security](06-design/security.md) (skeleton: final in P6) | Draft |
+| DOC-40 | [Observability](06-design/observability.md) (skeleton: payment alerts P3, all P6) | Draft |
+| DOC-41 | [Configuration reference](06-design/configuration-reference.md) (skeleton) | Draft |
 | DOC-42 | [Error handling](06-design/error-handling.md) | Review |
 | DOC-43 | [Flows index](06-design/flows/README.md) | Review |
 | DOC-44 | Fees and payments (ledger level) (`06-design/flows/fees-and-payments.md`) | Not written |

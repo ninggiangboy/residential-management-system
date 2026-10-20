@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Draft** · Updated: 2026-10-19 (DR-120: job names; DR-123: `bulk_zip`) · DOC-20
+> Status: **Draft** · Updated: 2026-10-20 (DR-154: label `job_name`; earlier: DR-120, DR-123) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -18,7 +18,7 @@ This document says how long each kind of data lives and how it leaves: what is n
 Rules that hold everywhere:
 
 1. **Retention is a default, not a promise.** The periods are what the code does until the legal dossier says otherwise; changing one is a new DR and a change to the purge statement (§5), nothing else.
-2. **A purge job writes a `job_run` row** when it deleted something or failed, and updates the gauge `job_last_success_timestamp{job}` otherwise (DR-101). A purge that has not succeeded for twice its interval alerts (DOC-40).
+2. **A purge job writes a `job_run` row** when it deleted something or failed, and updates the gauge `job_last_success_timestamp{job_name}` otherwise (DR-101). A purge that has not succeeded for twice its interval alerts (DOC-40).
 3. **A purge deletes in batches of at most 1,000 rows** when a table can be large (`audit_log`, `inbox_entry`, `file_object`); at the sizes of §9 a single statement is fine for the small tables, and the statements of §5 are written that way.
 4. **Personal data is removed with the object that holds it** wherever the object may go (a profile at deletion, an import file at commit); a table that keeps a personal field for a legal reason says so in §7.
 

@@ -1,6 +1,6 @@
 # Quality attributes
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-10
+> Status: **Review** · Updated: 2026-10-20 (DR-154: label `job_name`) · DOC-10
 > Depends on: original SDD §3.4, §19, §20, [DR](../00-decision-register.md) (DR-05, 06, 21, 30, 52, 56, 57, 61…64, 66, 67, 75, 77, 78, 80, 83, 85), [DOC-01](../01-product/vision-and-scope.md) §4, [DOC-03](../01-product/requirements.md) §2, [DOC-06](../02-glossary.md), [DOC-07](system-context-and-containers.md) §3–§4
 > Main readers: DOC-38, DOC-40, DOC-70, DOC-72, DOC-96 (EXP-07), DOC-97 (EXP-08), P1-03, P1-18, P1-20, P6-05, P6-07
 
@@ -327,7 +327,7 @@ Decisions made while writing, decided by Claude (delegated by the Owner):
 
 - **DR-101 · Job rows and processed messages are bounded.**
   - *Problem:* DR-62 says every run of a job writes a `building.job_run` row. The worker's ticks (`notice_scheduler` and `intent_requery` every 30 s, `notice_reclaim` every 60 s, `push_receipts` every 5 min) are 7,566 rows per day, 0.57 GB per year, more than all other data of the sample building (§5.3). DR-62 also has no purge for `job_run`, and none for processed `outbox_messages` and `inbox` rows (the reference deletes published rows after 7 days, `retentionDays`).
-  - *Decision:* A run writes a `job_run` row when its schedule is one hour or longer, or when it did work or failed; a tick that found nothing to do only updates the gauge `job_last_success_timestamp{job}` (no row). `job_run` rows older than `JOB_RUN_RETENTION_DAYS` = 30 are deleted by the daily `token_purge` slot. Published outbox rows and the inbox rows of delivered messages are deleted after `OUTBOX_RETENTION_DAYS` = 7 by the relay cleanup (at most every 10 minutes, one instance, the lock of DR-62).
+  - *Decision:* A run writes a `job_run` row when its schedule is one hour or longer, or when it did work or failed; a tick that found nothing to do only updates the gauge `job_last_success_timestamp{job_name}` (no row). `job_run` rows older than `JOB_RUN_RETENTION_DAYS` = 30 are deleted by the daily `token_purge` slot. Published outbox rows and the inbox rows of delivered messages are deleted after `OUTBOX_RETENTION_DAYS` = 7 by the relay cleanup (at most every 10 minutes, one instance, the lock of DR-62).
   - *Consequences:* The "last success" metric survives a worker restart only after the next tick (≤ 60 s). Outbox payloads that hold a one-time code leave the database after 7 days.
   - *Write to:* DOC-38, DOC-41, DOC-20, DOC-40.
 - **DR-102 · Memory-overcommit rules and the staging database settings.**

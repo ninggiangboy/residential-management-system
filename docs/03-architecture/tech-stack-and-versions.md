@@ -1,6 +1,6 @@
 # Tech stack and versions
 
-> Status: **Review** · Updated: 2026-10-19 (DR-114: phone metadata, reader option) · DOC-11
+> Status: **Review** · Updated: 2026-10-20 (DR-154: `prom-client` row; earlier: DR-114) · DOC-11
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83), master plan §0.4, [DOC-06](../02-glossary.md)
 > Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
 
@@ -79,6 +79,7 @@ This document pins every runtime, library, tool, CI action, image and font the s
 | `libphonenumber-js` | **1.13.15** | E.164 normalization of Vietnamese numbers (DR-36). Import the `libphonenumber-js/max` metadata: the default `min` bundle accepts `0123456789` as a valid number and `max` rejects it (DR-114, DOC-18 §1.3) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/libphonenumber-js) |
 | `intl-messageformat` | **12.1.3** | ICU messages in the shared catalog (DR-71) | BSD-3-Clause | 2026-10-19 | [npm](https://www.npmjs.com/package/intl-messageformat) |
 | `pino` | **10.4.0** | JSON logs with the request id (DR-63) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/pino) |
+| `prom-client` | **15.1.3** (Apache-2.0; engines Node `^16 \|\| ^18 \|\| >=20`, Bun not stated) | Counters, gauges and histograms on the ops port (DOC-40 §2, DR-63). Its default metrics use `perf_hooks` functions that Bun implements only in part, so P1-18 checks `collectDefaultMetrics` on Bun 1.4.3; the fallback is a small exposition writer in `@core/telemetry` | Apache-2.0 | 2026-10-20 | [npm registry](https://registry.npmjs.org/prom-client/latest), [issue 570](https://github.com/siimon/prom-client/issues/570) |
 | `nodemailer` | **10.1.7** | SMTP client behind the `Mailer` port (DR-68) | MIT-0 | 2026-10-19 | [npm](https://www.npmjs.com/package/nodemailer) |
 | SMS provider adapter | **open Owner/client input** (DR-68, before P1-10). The `SmsSender` port is fixed; the adapter package or HTTP client is chosen with the provider | Brandname OTP, delivery receipts | n/a | n/a | [DR-68](../00-decision-register.md) |
 | `exceljs` | **4.4.0** (published 2023-10-19) | Excel import and streaming export (FR-01, FR-35). It is the latest stable and stays; unmaintained for three years, so P1-01 runs a read/write smoke test and P1-13 the import tests. The streaming reader returns date cells as Excel serial numbers unless opened with `styles: 'cache'` (DOC-18 §1.1). A replacement needs a DR | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/exceljs) |

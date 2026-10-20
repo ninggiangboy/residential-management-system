@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-132: bucket `stepup:staff:<id>`) · DOC-17
+> Status: **Draft** · Updated: 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -571,7 +571,7 @@ RETURNING id;
 ### 3.2 `job_run`
 
 - **Grain:** one run of a job that did work, failed, or is scheduled hourly or less often (DR-62, DR-101). **Business key:** `id`.
-- **Written by:** `building`, through the `JobRunStore` port that the job runner calls (DOC-07 §6.2). **Read by:** the metrics collector at start-up, to restore `job_last_success_timestamp{job}` after a restart (DR-63).
+- **Written by:** `building`, through the `JobRunStore` port that the job runner calls (DOC-07 §6.2). **Read by:** the metrics collector at start-up, to restore `job_last_success_timestamp{job_name}` after a restart (DR-63).
 - **Allow-list:** the table has no `building_id`; a job is not a business object of a building (some jobs loop over buildings and say so in `details`). It is added to DOC-14 §5.3 in this change.
 
 ```sql
@@ -592,7 +592,7 @@ CREATE INDEX ix_job_run_started ON building.job_run (started_at);
 CREATE INDEX ix_job_run_name_success ON building.job_run (name, finished_at DESC) WHERE status = 'succeeded';
 ```
 
-- A row is written **once, at the end** of a run, so there is no `running` status: a worker that dies mid-run leaves no row, and the gauge `job_last_success_timestamp{job}` plus its alert (DOC-40) is what notices the silence. A run that waited for a singleton lock and found it taken writes nothing.
+- A row is written **once, at the end** of a run, so there is no `running` status: a worker that dies mid-run leaves no row, and the gauge `job_last_success_timestamp{job_name}` plus its alert (DOC-40) is what notices the silence. A run that waited for a singleton lock and found it taken writes nothing.
 - `name` is the job name of the catalog in DR-62 (`invariant_check`, `audit_purge`, …). `details` carries the counts of the run (`{"deleted": 1204}`) and, for `failed`, a truncated error message (≤ 500 characters, never a payload).
 - Rows older than `JOB_RUN_RETENTION_DAYS` = 30 are deleted by the daily `token_purge` slot (DR-101). `ix_job_run_started` serves that delete; `ix_job_run_name_success` serves the restart query.
 
