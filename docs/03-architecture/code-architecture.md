@@ -51,6 +51,7 @@ residential-management-system/
 │   └── CORE_VERSION         # upstream commit of the last sync (§13)
 ├── docker/                  # Dockerfile.api, compose.{local,base,staging,production}.yml (DR-158)
 ├── ops/                     # configuration mounted or installed on a host: caddy, prometheus, alertmanager, loki, alloy, grafana, postgres, pgbackrest, backup, host, deploy (DOC-70 §3.2)
+├── tools/                   # depcruise/ (dependency-cruiser + TypeScript 6, DR-230), arch-fixtures/ (one failing tree per rule), compat/ (compatibility smoke tests)
 ├── docs/  scripts/
 └── biome.json  tsconfig.base.json  knip.json  .jscpd.json
     .dependency-cruiser.apps.cjs  .dependency-cruiser.modules.cjs  .dependency-cruiser.packages.cjs
@@ -273,7 +274,7 @@ export const residentRoutes = (d: FinanceRouteDeps) =>
 
 ## 6. Enforcement in CI
 
-`bun run check:arch` runs dependency-cruiser three times, once per configuration. Every rule has `severity: 'error'`, test files are excluded, and `tsPreCompilationDeps: true` is set so that `import type` counts as a dependency (otherwise `import type { … } from 'drizzle-orm'` in a domain file slips through). The same stage (`verify`, DR-08) also runs Biome, typecheck, knip, jscpd, catalog parity, the scope lint (§7.3) and the authorization-matrix route-metadata check (§5.3). Behavior of the options below was checked against the dependency-cruiser rules reference on 2026-10-19 (https://github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md); the configuration is verified against the pinned version in P1-01 (DOC-11).
+`bun run check:arch` runs dependency-cruiser three times, once per configuration. Every rule has `severity: 'error'`, test files are excluded, and `tsPreCompilationDeps: true` is set so that `import type` counts as a dependency (otherwise `import type { … } from 'drizzle-orm'` in a domain file slips through). The same stage (`verify`, DR-08) also runs Biome, typecheck, knip, jscpd, catalog parity, the scope lint (§7.3) and the authorization-matrix route-metadata check (§5.3). Behavior of the options below was checked against the dependency-cruiser rules reference on 2026-10-19 (https://github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md); the configuration is verified against the pinned version in P1-01 (DOC-11). dependency-cruiser 18.7.0 supports `typescript` below 7 only and cruises nothing under TypeScript 7, so `check:arch` (`scripts/check-arch.ts`) runs it from `tools/depcruise`, which carries TypeScript 6.0.3 (DR-230). `bun run check:arch:fixtures` cruises the negative fixtures of §6.2.
 
 ### 6.1 `.dependency-cruiser.apps.cjs`
 
@@ -368,7 +369,7 @@ module.exports = {
 }
 ```
 
-`@core/*` packages resolve to `packages/core-*` files; the rules therefore name directories. The `package.json#exports` map is the second net (§2.3). A negative fixture directory (`tools/arch-fixtures/`, one file per rule that must fail) is cruised by a test, so a rule that silently stops matching is noticed.
+`@core/*` packages resolve to `packages/core-*` files; the rules therefore name directories. The `package.json#exports` map is the second net (§2.3). A negative fixture directory (`tools/arch-fixtures/cases/<config>__<rule>/`, one tree per rule that must fail, plus a clean `<config>__ok` tree per configuration) is copied to a temporary directory and cruised by `bun run check:arch:fixtures`, so a rule that silently stops matching is noticed. P1-01 wrote the cases for `clients-import-the-api-type-only`, `modules-talk-only-through-contracts`, `domain-is-pure` and `core-core-imports-only-its-allowed-packages`; each later rule adds its case with the code that first needs it.
 
 ### 6.3 `.dependency-cruiser.packages.cjs`
 
@@ -487,7 +488,7 @@ Rules that follow from the shape:
 
 ### 7.3 The scope lint
 
-The lint is a merge gate from P1 (DR-12). Whether it is a Biome GritQL rule or a Bun script that walks the TypeScript AST is decided in P1-01 by whether GritQL can express the condition below; the behavior is the same.
+The lint is a merge gate from P1 (DR-12). **P1-01 decided: a Bun script that walks the AST** (DOC-11 §2, row 5). A Biome GritQL plugin can flag a `.where(…)` without `inBuilding`, but it cannot know which tables are scoped, cannot flag a query with no `.where`, and cannot compare the `schema.ts` files with the scoped list. TypeScript 7 has no stable JavaScript API yet, so P1-07, which writes the script, chooses and pins the parser.
 
 | Check | Fails when |
 | --- | --- |
