@@ -19,7 +19,8 @@ export interface TestDb {
   /** `rms_app`, at most 10 connections. */
   readonly sql: Sql
   /** `rms_migrator`: for fixtures that need DDL or the audit table. */
-  admin(): Sql
+  /** `max: 1` lets a script that holds its own BEGIN and COMMIT run (the grants step). */
+  admin(max?: number): Sql
   /** N separate connections as `rms_app` (the race harness). */
   connect(max: number): Sql
   drop(): Promise<void>
@@ -56,20 +57,39 @@ export function templateHash(root = repoRoot): string {
   const hash = createHash('sha256')
   const files = [
     join(root, 'ops/postgres/0001-provision.sql'),
+    join(root, 'ops/postgres/0000-bootstrap.sql'),
     join(root, 'ops/postgres/0900-grants.sql'),
     ...filesUnder(join(root, 'modules'), '.sql'),
   ].filter((file) => existsSync(file))
   for (const file of files) hash.update(file.slice(root.length)).update(readFileSync(file))
-  hash.update(`seed:${SAMPLE_SEED_VERSION}`)
+  // Bumped when this file changes how a template is built (a template of an older recipe is never reused).
+  hash.update(`seed:${SAMPLE_SEED_VERSION}:builder:2`)
   return hash.digest('hex').slice(0, 8)
+}
+
+/**
+ * The statements of `0001-provision.sql` after its `\connect` line: function privileges live in the catalog of each database,
+ * so a database made from `template1` needs them again (DOC-19 §3). Run by the superuser.
+ */
+async function grantBackupFunctions(database: string): Promise<void> {
+  const provision = readFileSync(join(repoRoot, 'ops/postgres/0001-provision.sql'), 'utf8')
+  const after = provision.slice(provision.indexOf('\\connect'))
+  const statements = after
+    .split('\n')
+    .filter((line) => line.startsWith('GRANT EXECUTE'))
+    .map((line) => line.replace(/--.*$/, '').trim())
+  const su = connect(withDatabase(adminUrl(), database))
+  try {
+    for (const statement of statements) await su.unsafe(statement)
+  } finally {
+    await su.end()
+  }
 }
 
 /** Runs the module migrations and the grants step on a freshly created template, as `rms_migrator` (DOC-88 §6.1 step 2). */
 async function migrateTemplate(database: string): Promise<void> {
-  const script = join(repoRoot, 'scripts/db.ts')
-  // `db:migrate` exists from P1-06; until then a template has no schemas and an empty module catalog needs none.
-  if (!existsSync(script)) return
-  const proc = Bun.spawn(['bun', script, 'migrate'], {
+  const script = join(repoRoot, 'scripts/migrate.ts')
+  const proc = Bun.spawn(['bun', script], {
     cwd: repoRoot,
     env: { ...process.env, MIGRATION_DATABASE_URL: withDatabase(migratorUrl(), database) },
     stdout: 'pipe',
@@ -93,6 +113,7 @@ export async function ensureTemplate(root: Sql, kind: TemplateKind): Promise<str
       (await root`SELECT 1 FROM pg_database WHERE datname = ${database}`).length > 0
     if (!(await exists(emptyName))) {
       await root.unsafe(`CREATE DATABASE ${emptyName} OWNER rms_migrator`)
+      await grantBackupFunctions(emptyName)
       await migrateTemplate(emptyName)
       await root.unsafe(`ALTER DATABASE ${emptyName} IS_TEMPLATE true`)
     }
@@ -131,7 +152,7 @@ export async function cloneTemplate(kind: TemplateKind = 'empty'): Promise<TestD
     name,
     url,
     sql,
-    admin: () => connect(withDatabase(migratorUrl(), name), 2),
+    admin: (max = 2) => connect(withDatabase(migratorUrl(), name), max),
     connect: (max) => connect(url, max),
     async drop() {
       await sql.end({ timeout: 2 })

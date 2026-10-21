@@ -47,7 +47,7 @@ describe('/health/ready (DOC-51 E-02)', () => {
   })
 
   test('the ops path lists the database check with its latency', async () => {
-    const { getOps } = setup()
+    const { getOps } = setup(localEnv({ APP_ROLES: 'api' }))
     const body = (await (await getOps('/health/ready')).json()) as {
       status: string
       checks: { database: { ok: boolean; latencyMs: number } }
@@ -58,7 +58,7 @@ describe('/health/ready (DOC-51 E-02)', () => {
   })
 
   test('P1-04 it is 503 degraded when the database is down, on both ports, without the error shape', async () => {
-    const { get, getOps, database } = setup()
+    const { get, getOps, database } = setup(localEnv({ APP_ROLES: 'api' }))
     database.up = false
     const publicRes = await get('/health/ready')
     expect(publicRes.status).toBe(503)
@@ -71,6 +71,26 @@ describe('/health/ready (DOC-51 E-02)', () => {
       checks: { database: { ok: false, latencyMs: expect.any(Number) } },
     })
     expect(opsRes.headers.get('retry-after')).toBeNull()
+  })
+
+  test('JB-26 a worker also reports its relay: 503 until the loop has finished a pass, 200 while it runs', async () => {
+    const { getOps, container } = setup()
+    const before = await getOps('/health/ready')
+    expect(before.status).toBe(503)
+    expect(((await before.json()) as { checks: { relay: { ok: boolean } } }).checks.relay.ok).toBe(
+      false,
+    )
+    container.runtime.relay.start()
+    try {
+      let status = 503
+      for (let i = 0; i < 40 && status !== 200; i++) {
+        status = (await getOps('/health/ready')).status
+        if (status !== 200) await Bun.sleep(50)
+      }
+      expect(status).toBe(200)
+    } finally {
+      await container.runtime.relay.stop()
+    }
   })
 
   test('ER-14 a database that does not answer within the timeout fails readiness', async () => {
