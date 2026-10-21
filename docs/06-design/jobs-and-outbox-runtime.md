@@ -1,12 +1,12 @@
 # Jobs and outbox runtime
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
 This document says how the `worker` role runs: the outbox relay that delivers messages to handlers, the timers that start jobs, the locks that keep a job from running twice at once, the `job_run` record, the catalog of every job with its schedule and what happens when a run is missed, and how the process starts, pauses and stops. It does not hold the event catalog and the retry classes (DOC-09), the tables (DOC-17 §3), the statements of the purge jobs (DOC-20 §5), the semantics of each job's work (the design document of its module) or the alerts on these jobs (DOC-40).
 
-**Tested on PostgreSQL 18.6 (`postgres:18.6`, aarch64) on 2026-10-19.** Every statement of §2 and §3 was run on a database built from the DDL of DOC-17 §3.2 and §3.3 (the `finance` schema stands for any module), and the tests marked "run" in §9 passed; the slot arithmetic of §3.3 was run under Bun with the cases of its table. The runtime itself does not exist yet; the tests marked "P1-05" are the acceptance of that task.
+**Tested on PostgreSQL 18.6 (`postgres:18.6`, aarch64) on 2026-10-19.** Every statement of §2 and §3 was run on a database built from the DDL of DOC-17 §3.2 and §3.3 (the `finance` schema stands for any module), and the tests marked "run" in §9 passed; the slot arithmetic of §3.3 was run under Bun with the cases of its table. The runtime was built in P1-05 (2026-10-21, DR-249); the tests marked "run" in §9 passed against it on PostgreSQL 18.6, and §9 says which row ran how.
 
 Every new decision in this document is recorded as DR-120 or DR-121 and summarized in §10. The command messages that the jobs write for the files (`building.file_delete_requested.v1`, `building.thumbnail_requested.v1`) are DR-122 (DOC-37) and appear in the catalog of DOC-09.
 
@@ -157,7 +157,7 @@ bun run --filter @app/api outbox:requeue -- --id <uuid>        # or --type finan
 bun run --filter @app/api outbox:discard -- --id <uuid>        # delete a dead row after reading it
 ```
 
-`requeue` sets `dead_at = NULL, attempts = 0, locked_until = NULL, last_error = NULL, next_attempt_at = now()`. It is safe because the inbox blocks every handler that already finished, so only the unfinished handlers run again. The scripts connect as `rms_app` and write an audit row with `actor_kind = 'system'` and `details {"operator": "<OS user>"}` (RB-05).
+`requeue` sets `dead_at = NULL, attempts = 0, locked_until = NULL, last_error = NULL, next_attempt_at = now()`. It is safe because the inbox blocks every handler that already finished, so only the unfinished handlers run again. The scripts connect as `rms_app` and write an audit row with `actor_kind = 'system'` and `details {"operator": "<OS user>"}` (RB-05). *As built in P1-05:* the scripts exist (`outbox.ts`, `jobs.ts` in `apps/api/scripts`) and the audit row is added when the `audit` module exists (P1-08).
 
 ## 3. The job runtime
 
@@ -174,7 +174,8 @@ interface JobDefinition {
     | { kind: 'monthly'; day: number; at: 'HH:MM' }
   readonly mode: 'claim' | 'lock' | 'snapshot'      // §3.2
   readonly graceMinutes: number               // §3.3; 0 = no catch-up
-  run(ctx: JobContext): Promise<JobResult>    // ctx: clock, signal (aborted at shutdown), paused() (maintenance), buildings, logger
+  run(ctx: JobContext): Promise<JobResult>    // ctx: clock, signal (aborted at shutdown), paused() (maintenance), buildings(), logger,
+                                              //       manual, withLock(fn) (lock mode, once per batch), snapshot(fn) (snapshot mode)
 }
 type JobResult = { did: number; details: Record<string, unknown> }   // did = rows or objects worked on; 0 = idle
 ```
@@ -262,7 +263,7 @@ A job body opens its own short transactions (claim, then work; DOC-12 §8.2) and
 
 ### 3.5 `job_run` and the gauge
 
-`building.job_run` (DOC-17 §3.2) is written once, at the end of a run, through the `JobRunStore` port, with status `succeeded` or `failed`. Whether a run writes a row follows DR-101:
+`building.job_run` (DOC-17 §3.2) is written once, at the end of a run, through the `JobRunStore` port (`SqlJobRunStore` of `@core/runtime` writes it with SQL until the `building` module, P1-07, owns an implementation; until its migration exists a read answers "no runs" and a write is logged), with status `succeeded` or `failed`. Whether a run writes a row follows DR-101:
 
 | Run | Row | Gauge `job_last_success_timestamp{job_name}` |
 | --- | --- | --- |
@@ -365,13 +366,15 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 
 ### 5.1 Boot
 
-1. Load and validate the configuration (the worker slice: §2.6, §3, the pool).
-2. Build the container: repositories, handlers, job definitions (DOC-12 §4.3).
-3. `maintenance.refresh()`; it throws at boot rather than guess. If the flag is on, the relay starts paused and the scheduler starts in the "maintenance" state of §5.3.
-4. Start the ops server (`/health/*`, `/metrics`) and then the relay.
-5. Read the restart query once (§3.3), start the interval timers, and start the scheduler loop; the first tick performs the catch-up of any missed clock job.
+1. Load and validate the configuration (the worker slice: §2.6, §3, the pool). An invalid environment writes one `config_invalid` line and exits 78 (DOC-41 §17).
+2. Build the container: repositories, handlers, job definitions (DOC-12 §4.3). The pool opens no connection yet.
+3. Start the ops server (`/health/*`; `/metrics` from P1-18): `/health/ready` is 503 `degraded` from here until the database answers (DR-248).
+4. Wait for the database: a ping every second for 30 seconds (below).
+5. `maintenance.refresh()`; it throws at boot rather than guess. If the flag is on, the relay starts paused and the scheduler starts in the "maintenance" state of §5.3.
+6. `api` role: start the API server on `PORT`; nothing is served there before step 4 passed.
+7. `worker` role: start the relay; read the restart query once (§3.3), start the interval timers, and start the scheduler loop; the first tick performs the catch-up of any missed clock job.
 
-**Database absent at start (DR-161).** After a host reboot Docker restarts the containers before PostgreSQL, which waits for Docker's bridge (DOC-70 §6.2, §8.2). Step 1 and step 3 therefore retry the first connection for 30 seconds; if it still fails the process exits with code 1 (not 78: the configuration is valid) and Docker restarts it. `/health/ready` is 503 while the database is unreachable. `api` does the same at its own boot.
+**Database absent at start (DR-161).** After a host reboot Docker restarts the containers before PostgreSQL, which waits for Docker's bridge (DOC-70 §6.2, §8.2). Step 4 therefore retries the first connection every second for 30 seconds; if it still fails the process logs `database_unreachable` at `fatal` and exits with code 1 (not 78: the configuration is valid) and Docker restarts it. `/health/ready` on the ops port is 503 while the database is unreachable. `api` does the same at its own boot. P1-04 implements it (`waitForDatabase`) and tests it with a dead port: 503 on the ops port, no answer on `PORT`, exit 1 after 30 s.
 
 ### 5.2 Health
 
@@ -450,18 +453,20 @@ Prefix `JB-` (jobs and outbox runtime). Tests marked **run** were executed on 20
 | JB-12 | Two pending rows (3 min, 20 s), one dead, one published | The gauge queries run | Oldest unpublished 180 s; dead letters 1 | run |
 | JB-13 | A role without superuser | A `snapshot` transaction runs | `repeatable read`, read-only, `statement_timeout` 5 min, lock taken | run |
 | JB-14 | The cases of §3.3 | `decide` and `lastSlot` run | The decisions of the table; 9 assertions pass, including two daylight-saving cases | run |
-| JB-15 | A message with three handlers, the relay killed after the first | The relay restarts after the lease | The message is delivered again; the first handler's inbox row blocks a repeat; no lost and no duplicated effect | P1-05 |
-| JB-16 | Two workers on one database | Both run for 60 s with 10,000 messages | Disjoint claims, every message published once, no handler effect twice | P1-05 |
-| JB-17 | Every job of §4 | It is run twice in a row on the same data | The second run changes nothing | P1-05 |
-| JB-18 | Two workers start `orphan_uploads` at the same moment | Both run | One skips on `false` and writes no row; the other finishes | P1-05 |
-| JB-19 | A fake clock at 03:00 with the worker stopped, then started at 15:00 and 16:30 | The scheduler ticks | `invariant_check` runs at 15:00, not at 16:30 (grace 12 h) | P1-05 |
-| JB-20 | A job that throws | Its slot arrives | One `failed` row with ≤ 500 characters; no retry before the next slot; the gauge unchanged | P1-05 |
-| JB-21 | `SIGTERM` during a batch job of 10 batches | The worker stops | It finishes the current batch, runs no more, exits 0 within 40 s; the next run completes the work | P1-05 |
-| JB-22 | `platform.maintenance` set on, then off | The worker is running | The relay claims nothing and no job starts while on; after off, a clock job whose slot passed in the window runs if in grace | P1-05 |
-| JB-23 | A producer writes a type that is not in `outboxPolicies` | It calls `OutboxWriter.add` | The wrapper throws; nothing is written | P1-05 |
-| JB-24 | The relay's sources and the sources in `outbox.ts` | The test lists them | They are equal | P1-05 |
-| JB-25 | A sub-hourly job that finds nothing, then one that works, then one that fails | Each runs | No row, one row, one `failed` row; the gauge moves on the first two | P1-05 |
-| JB-26 | `/health/ready` with the relay stalled for 30 s | It is called | 503 `degraded`; 200 again after a pass | P1-05 |
+| JB-15 | A message with three handlers, the relay killed after the first | The relay restarts after the lease | The message is delivered again; the first handler's inbox row blocks a repeat; no lost and no duplicated effect | **run** (P1-05) |
+| JB-16 | Two workers on one database | Both run for 60 s with 10,000 messages | Disjoint claims, every message published once, no handler effect twice | **run** (P1-05) |
+| JB-17 | Every job of §4 | It is run twice in a row on the same data | The second run changes nothing | per module (each job's task) |
+| JB-18 | Two workers start `orphan_uploads` at the same moment | Both run | One skips on `false` and writes no row; the other finishes | **run** (P1-05) |
+| JB-19 | A fake clock at 03:00 with the worker stopped, then started at 15:00 and 16:30 | The scheduler ticks | `invariant_check` runs at 15:00, not at 16:30 (grace 12 h) | **run** (P1-05) |
+| JB-20 | A job that throws | Its slot arrives | One `failed` row with ≤ 500 characters; no retry before the next slot; the gauge unchanged | **run** (P1-05) |
+| JB-21 | `SIGTERM` during a batch job of 10 batches | The worker stops | It finishes the current batch, runs no more, exits 0 within 40 s; the next run completes the work | **run** (P1-05) |
+| JB-22 | `platform.maintenance` set on, then off | The worker is running | The relay claims nothing and no job starts while on; after off, a clock job whose slot passed in the window runs if in grace | **run** (P1-05) |
+| JB-23 | A producer writes a type that is not in `outboxPolicies` | It calls `OutboxWriter.add` | The wrapper throws; nothing is written | **run** (P1-05) |
+| JB-24 | The relay's sources and the sources in `outbox.ts` | The test lists them | They are equal | **run** (P1-05) |
+| JB-25 | A sub-hourly job that finds nothing, then one that works, then one that fails | Each runs | No row, one row, one `failed` row; the gauge moves on the first two | **run** (P1-05) |
+| JB-26 | `/health/ready` with the relay stalled for 30 s | It is called | 503 `degraded`; 200 again after a pass | **run** (P1-05) |
+
+**How the P1-05 rows were run** (`apps/api/tests/integration/*.integration.test.ts`, `packages/core-runtime/src/schedule.test.ts`, each file on its own clone of the template database, `rms_app` as the role, a `probe` schema standing in for a publishing module until the real ones exist). JB-01 to JB-07, JB-11 and JB-13 also ran against the code, not only as statements (`OutboxRelay.drain`, `OutboxAdmin`, `SqlJobRunStore`, `ctx.snapshot`); JB-08 and JB-09 ran through `ctx.withLock` (the killed session was terminated by a superuser connection, because `rms_migrator` cannot see another role's query text); JB-10 also compares the 23 names, modules, modes and grace windows of `JOB_CATALOG` with the table of §4.1 and with the keys of DOC-41 §11. **JB-14** ran as `schedule.test.ts` (12 tests). **JB-15** starts a second process (`relay-worker.ts`) whose second handler sleeps, kills it with `SIGKILL` when four first handlers have written their effect, and lets a second relay take over after the 2-second lease: every `(message, handler)` effect exists once and every message was claimed twice. **JB-16** ran 1,500 messages over 60 aggregates on two relays with two pools (not 10,000 for 60 seconds): every effect once, no row claimed twice, both relays worked. **JB-19** ran on real timers with a settable clock and a 1-second tick. **JB-21** ran on the runtime (`stop` returns within a batch's time and a later run completes the work); the process-level `SIGTERM` exit 0 is in the boot test of P1-04. **JB-26** is the freshness of `relay.isFresh` and the `relay` entry of the ops readiness (DOC-51 E-02), tested with a stalled loop. **JB-17** (every job twice) is the acceptance of each job's own task: the runner side (a second run writes its own row and nothing else) is JB-25.
 
 ## 10. Decisions made while writing
 
@@ -469,6 +474,7 @@ Prefix `JB-` (jobs and outbox runtime). Tests marked **run** were executed on 20
 | --- | --- | --- |
 | DR-120 | The job catalog: `export_run` and `fee_notice_run` (claim loops every 5 s), `realtime_purge` (hourly), the unique names `import_purge` (residency), `finance_purge` (finance), `integrity_weekly` (residency) and `integrity_notices` (notices); hourly jobs at :05, :15, :25, :35, :45; grace windows (hourly none, daily 12 h, weekly 24 h, monthly 7 days, `demo_reset` 2 h) | §4 |
 | DR-121 | Runtime rules: the singleton lock is taken at the start of every transaction of a job and a `snapshot` job holds it for its one transaction; a failed run is not retried before its next slot; a 15-second scheduler tick; `JOBS_TIME_ZONE`; the shutdown order and its 40 s limit; `outbox:discard` and `jobs:run` | §2.7, §3, §5, §7 |
+| DR-249 | As built in P1-05: `JobContext` has `withLock` and `snapshot`; the `job_run` table is written by `SqlJobRunStore` of `@core/runtime` until `building` ships its own; `outbox:*` scripts write no audit row until P1-08; the retry class map is `outboxPolicies` of the manifests | §2.7, §3 |
 | DR-122 | Deleting a file from R2 and making a thumbnail are outbox commands of `building` (DOC-37); `building` becomes a publishing module | §2, §4.2 |
 
 ## 11. Not in this document
@@ -496,4 +502,4 @@ Prefix `JB-` (jobs and outbox runtime). Tests marked **run** were executed on 20
 
 ## Open questions
 
-None. The decisions made while writing (DR-120 to DR-122) are decided and do not block Phase 1. The grace windows and the 15-second tick are defaults for P1-05 to confirm under the fake clock (JB-19). The command messages of DR-122 are added to the catalog of DOC-09 in the change that writes DOC-37.
+None. The decisions made while writing (DR-120 to DR-122, DR-249) are decided and do not block Phase 1. The grace windows and the 15-second tick were confirmed under a settable clock in P1-05 (JB-19). The command messages of DR-122 are added to the catalog of DOC-09 in the change that writes DOC-37.

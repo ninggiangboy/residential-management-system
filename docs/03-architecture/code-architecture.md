@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-02: `core-core` → `core-kernel`, `core-web-core` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -224,18 +224,20 @@ No dependency-injection container is used: the wiring is plain code that reads t
 
 ```
 apps/api/src/
-├── main.ts                    # parses APP_ROLES, starts api and/or worker
-├── app.ts                     # buildApp(container): plugin order, one .use() per module → export type App
+├── main.ts                    # boot: configuration → container → ops server → database wait → api and/or worker (DOC-38 §5.1)
+├── app.ts                     # buildApp(container): plugin order, one .use() per module → export type App; buildOpsApp(container)
 ├── bootstrap/
+│   ├── config/                # the slices of DOC-41 (slices.ts), the loader and the boot rules (load.ts), key rings (rings.ts)
 │   ├── container.ts           # createContainer(config, logger, overrides): the only place that knows concrete adapters
-│   ├── module-catalog.ts      # manifests of the installed modules, in migration order
-│   └── guards.ts              # resident, staff and unit guards (§5.3)
-└── scripts/                   # db:migrate, outbox:list, seed:demo, payos:sim (no business logic)
+│   ├── boot.ts                # waitForDatabase: 30 s of retries, then exit 1 (DR-161)
+│   ├── module-catalog.ts      # manifests of the installed modules, in migration order (empty until P1-07)
+│   └── guards.ts              # resident, staff and unit guards (§5.3); written with the first guard in P1-10
+└── scripts/                   # config-example, healthcheck; db:migrate, outbox:list, seed:demo, payos:sim follow (no business logic)
 ```
 
 `createContainer` order follows the contract graph of DOC-07 §5.2, providers first: host (config, logger, clock, ids, database, storage, mailer, SMS) → `identity` → `building` → `audit` → `residency` → `finance`, `tickets`, `access`, `vehicles`, `notices` → `notification` (with every producer's integration) → `wiki` → `reporting` → `realtime` → `createRuntime` (bus, relay, maintenance flag, timers). `ContainerOverrides` lets e2e tests swap the mailer, SMS, payment gateway (`fake`), clock and storage while keeping the rest of the real graph.
 
-`buildApp` mounts plugins in this order: request context → error handler → CORS → maintenance gate → OpenAPI (not in production) → health → one static `.use(module.routes)` per module. A loop over modules turns the types the Eden client infers into `any`; a test fails when a module with routes is not mounted. `export type App = ReturnType<typeof buildApp>` is the only thing clients import (§5.4).
+`buildApp` mounts plugins in this order: request context → request line → error handler → CORS → maintenance gate → OpenAPI (not in production) → health → one static `.use(module.routes)` per module. Every route plugin is created with `routePlugin()` of `@core/http` (`normalize: false`, so an unknown key of a body is 400 `unknown_key`), and the guards of gates 7 to 10 are `transform` hooks because Elysia validates a body before `beforeHandle` (DR-247, DOC-50 §7). `buildOpsApp` is in `app.ts` too: only `main.ts` and `app.ts` may import the container (§6.1). A loop over modules turns the types the Eden client infers into `any`; a test fails when a module with routes is not mounted. `export type App = ReturnType<typeof buildApp>` is the only thing clients import (§5.4).
 
 ### 5.2 `module-catalog.ts`
 
@@ -428,7 +430,7 @@ module.exports = {
 }
 ```
 
-`ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
+`ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. The exclusion of test files covers `*.test.ts` and, since P1-04, the folders `apps/*/tests/` and `modules/*/test/` (integration tests build the container) and `apps/*/dist/` (a build output). Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
 
 ## 7. `BuildingScope` repositories (DR-12)
 
@@ -518,7 +520,8 @@ Behavior the vendored `@core/db` must have (P1-02 checked each one in the copy o
 2. `database.transaction` inside an open transaction is a **savepoint** (the Drizzle nested-transaction behavior). `settle()` uses it for the rollback to the savepoint taken after the `gateway_event` claim (DR-14, DOC-23). *Missing in the reference (`Database` had only `run`); added in P1-02 as a local change; tests: a failed inner transaction rolls back only its own writes, a released savepoint keeps them.*
 3. `OutboxWriter.add` throws when no transaction is open: an event written outside the aggregate's transaction would defeat the outbox. *In the reference as it was (`DrizzleOutboxWriter` checks `inTransaction`).*
 4. A transaction fails with SQLSTATE `40001` or `40P01` are retried by the use case wrapper, not by the repository (FR-08.8: up to 3 times, 20–60 ms jitter). *Not a core behavior: the wrapper is application code, written with the first use case (P1-06).*
-5. `database.autonomous(fn)` runs `fn` in a transaction on a **separate pool connection**, outside the ambient one, and commits it before returning. Only `identity` uses it, to count a failed step-up proof so that the count survives the rollback of the action that asked (DR-132, DOC-26 §4.5). *Revised 2026-10-20 (DR-132). Missing in the reference; added in P1-02 as a local change; it needs a pool of two or more connections; test: the autonomous write survives the rollback of the caller.*
+5. `database.transaction(fn, { isolationLevel, accessMode })` takes the options of a **top-level** transaction: a `snapshot` job reads at `repeatable read`, read only (DOC-38 §3.2). *Added in P1-05; test: JB-13.*
+6. `database.autonomous(fn)` runs `fn` in a transaction on a **separate pool connection**, outside the ambient one, and commits it before returning. Only `identity` uses it, to count a failed step-up proof so that the count survives the rollback of the action that asked (DR-132, DOC-26 §4.5). *Revised 2026-10-20 (DR-132). Missing in the reference; added in P1-02 as a local change; it needs a pool of two or more connections; test: the autonomous write survives the rollback of the caller.*
 
 ### 8.2 Where a transaction begins
 
@@ -721,7 +724,7 @@ export function assertCan(c: UnitContext, cap: Capability): void   // throws For
 
 ## 12. Exception types and their answers
 
-The domain and application layers throw typed errors; they never build an HTTP response. The error handler plugin of `@core/http` maps every error to `{ "error": { "code", "message", "details" } }` (DR-74). The classes come from the reference `@core/kernel` (`DomainError(code, message, kind)` and subclasses); the kinds and the codes below are this project's. The complete catalog of codes, retry classes and message keys is DOC-42.
+The domain and application layers throw typed errors; they never build an HTTP response. The error handler plugin of `@core/http` maps every error to `{ "error": { "code", "message", "details" } }` (DR-74). The classes come from the reference `@core/kernel` (`DomainError(code, message, kind, { details, retryAfterSeconds })` and subclasses, extended in P1-04 to the full list below); the kinds and the codes below are this project's. The complete catalog of codes, retry classes and message keys is DOC-42.
 
 | Class (kind) | HTTP | Thrown when | Example codes (DR-74, DOC-03) |
 | --- | --- | --- | --- |

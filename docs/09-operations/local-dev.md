@@ -1,12 +1,12 @@
 # Local development
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-246: the Git hooks in §4; P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-237; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-06: `db:migrate`, `db:generate`, `db:reset`, `test:grants`, setup step 5 run; P1-05: `outbox:*` and `jobs:run`; P1-04: the API targets, the five application keys, §13 check 3 run; DR-248; DR-246: the Git hooks in §4; P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-250; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 
 This document takes a developer from an empty machine to the whole stack running: tools, the `bun run` targets, ports, the demo accounts and the fixed OTP, how to reset, and the problems a Bun + Expo workspace is known to cause. It does not hold the deployed environments (DOC-70), the pipeline (DOC-71), the Expo build profiles (DOC-73), the meaning of a configuration key (DOC-41) or the test method (DOC-88).
 
-**State of this document.** The scripts below are written task by task: P1-01 (tooling), P1-03 (local infrastructure, done 2026-10-21), P1-04 (API), P1-06 (database). What exists today is the first four steps of `bun run setup`, `infra:*`, `keys:generate` (the infrastructure keys) and `check:tools`; everything marked P1-04 or later has not been written, and its command states the output **that task must produce**. The dry run of DR-227 (the acceptance of P1-03) is recorded in §14: it covers steps 1 to 4 of §4, because steps 5 and 6 do not exist yet.
+**State of this document.** The scripts below are written task by task: P1-01 (tooling), P1-03 (local infrastructure, done 2026-10-21), P1-04 (API, done 2026-10-21), P1-06 (database). What exists today is the first four steps of `bun run setup`, `infra:*`, `keys:generate` (the infrastructure and the application keys), `check:tools`, `dev:api`, `config:example`, `test:integration` and `test:db-clean`; everything marked P1-05 or later has not been written, and its command states the output **that task must produce**. The dry run of DR-227 (the acceptance of P1-03) is recorded in §14: it covers steps 1 to 4 of §4, because steps 5 and 6 do not exist yet.
 
 ## 1. Purpose and scope
 
@@ -99,9 +99,9 @@ bun run dev
 | --- | --- | --- |
 | 1 | `scripts/check-tools.ts`: Bun, Node, Docker, Compose versions against `.tool-versions` and §2 | `tools ok` |
 | 2 | `bun install --frozen-lockfile` | `bun install` summary; `bun.lock` unchanged (`git status` is clean) |
-| 3 | `bun run keys:generate`: creates `.env.local` (§8) when it does not exist | `created .env.local (21 keys)` (P1-04 adds the application keys, so the count grows); on a second run `kept .env.local` and no change |
+| 3 | `bun run keys:generate`: creates `.env.local` (§8) when it does not exist | `created .env.local (26 keys)` (21 infrastructure keys of P1-03 and the 5 application keys of P1-04); on a second run `kept .env.local` and no change |
 | 4 | `bun run infra:up` (§6) | A table of three services, each `healthy`, and `infra up in <n> s`; 3 minutes or less |
-| 5 | `bun run db:migrate`: the migrations of every module in catalog order, then the grants step (DOC-19 §3.1, steps 2 to 4) | `migrated 14 schemas`, `grants applied`. Until P1-06: `skipped: \`bun run db:migrate\` does not exist before P1-06` |
+| 5 | `bun run db:migrate`: the migrations of every module in catalog order, then the grants step (DOC-19 §3.1, steps 2 to 4) | `bootstrap applied`, one `✔ <module> migrated (<n> applied)` per module that has migrations, `migrated: <n> pending applied, 14 schemas`, `grants applied` (run in P1-06: `migrated: 0 pending applied, 14 schemas`, since no module has a migration yet) |
 | 6 | `bun run seed:demo` (§9) | `demo seeded: 240 units, 8 residents, 4 staff`. Until P1-12: `skipped: …` as in step 5 |
 
 **Git hooks (DR-246).** Step 2 also installs the hooks: `bun install` runs the root `prepare` script, `husky`, which points `core.hooksPath` at `.husky/_`. Each hook is a fast subset of CI, which stays the gate:
@@ -136,32 +136,35 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | --- | --- | --- |
 | `check:tools` | Step 1 of `setup`: the installed tools against `.tool-versions` (§3) | P1-03 |
 | `setup` | §4 steps 1 to 6 | P1-03 |
-| `keys:generate` | Writes `.env.local` and the throw-away database passwords for `local` (§8). Idempotent: it never changes a value that exists and appends a key that is missing. `--out <dir>` writes the files form (`*_FILE`) used on the staging host (DOC-70 §9) | P1-03 (ports, passwords, URLs, S3 keys), P1-04 (the application keys and `--out`) |
+| `keys:generate` | Writes `.env.local` and the throw-away database passwords for `local` (§8). Idempotent: it never changes a value that exists and appends a key that is missing. `--out <dir>` writes the files form (`*_FILE`) used on the staging host (DOC-70 §9) | P1-03 (ports, passwords, URLs, S3 keys), P1-04 (the five application keys), P1-20 (`--out` and `--env`, DR-248: the files are used on the host) |
 | `infra:up` | `scripts/infra.ts up`: `docker compose -f docker/compose.local.yml --env-file .env.local up -d --wait --wait-timeout 180`, then the table of §6. Exit 2 and `.env.local not found: run bun run keys:generate` without the file | P1-03 |
 | `infra:down` | `scripts/infra.ts down`: the same with `down` (data volumes kept) | P1-03 |
 | `infra:reset` | `scripts/infra.ts reset`: `down -v` then `up`: **deletes the local database and the object store** (§11) | P1-03 |
 | `dev` | `api,worker` in one process on `PORT` and `OPS_PORT`, plus Vite on 5173 | P1-04 |
-| `dev:api` | The API and worker only (no web) | P1-04 |
+| `dev:api` | The API and worker only (no web): `bun --env-file=.env.local --watch src/main.ts` in `apps/api` | P1-04 (done) |
+| `config:example` | Writes `.env.example` from the configuration slices (DOC-41 §2, CF-17) | P1-04 (done) |
 | `dev:web` | Vite only | P1-09 (done) |
 | `dev:resident`, `dev:staff` | `expo start --dev-client` for the resident app on Metro port 8081 and the staff app on 8082 (§10) | P1-17 |
 | `db:generate` | drizzle-kit generates the next migration of a module (`--filter @mod/<name>`) from its `schema.ts` (DOC-14 §14) | P1-06 |
-| `db:migrate` | Applies the pending migrations of every module in catalog order on one connection with `prepare: false`, then the grants step; as `rms_migrator` (DOC-19 §3.1) | P1-06 |
+| `db:migrate` | `scripts/migrate.ts`: `0000-bootstrap.sql`, then the pending migrations of every module in catalog order on one connection with `prepare: false`, then `0900-grants.sql`; as `rms_migrator` (DOC-19 §3.1). Idempotent; exit 1 and a message on the first failure | P1-06 (done) |
+| `outbox:list`, `outbox:requeue`, `outbox:discard` | Dead letters of the modules' outboxes: `bun run --filter @app/api outbox:list`; `outbox:requeue -- --id <uuid>` (or `--type`); `outbox:discard -- --id <uuid>` (DOC-38 §2.7, RB-05) | P1-05 (done) |
+| `jobs:run` | `bun run --filter @app/api jobs:run -- --name <job>`: one run of one job now, `details.manual = true` (DOC-38 §7) | P1-05 (done) |
 | `seed:demo` | Runs `resetDemo` then `seedDemo` of every module for the demo building (DOC-36 §10.2). Safe to run again | P1-12 |
-| `db:reset` | `DROP DATABASE`, then provision, migrate and seed: the quick reset (§11) | P1-06 |
+| `db:reset` | Drops every object of the fourteen schemas and every `drizzle_<module>` history as `rms_migrator`, then runs `db:migrate` (and `seed:demo` once it exists); refuses any profile but `local` and `test` (§11) | P1-06 (done) |
 | `payos:sim` | Signs and POSTs a gateway webhook to the local API (§9.3) | P3-03 |
 | `lint`, `typecheck`, `check:arch`, `check:scope`, `check:i18n` | Biome (with the color-literal plugin, DR-237); TypeScript; the three dependency-cruiser configs plus knip and jscpd; the building-scope lint; catalog parity and content tests (`bun test packages/i18n-catalog`, DOC-68 §9; run by `verify` too) (DOC-71 §4.1, stage `verify`) | P1-01, P1-12, P1-09 (`check:i18n`) |
 | `tokens:build` | Writes `packages/design-tokens/generated/` from `tokens.json` (DOC-54 §2.1); `--check` only reports. A test fails when the committed files differ | P1-09 |
 | `check` | Every check of the `verify` stage in one go (`lint`, `typecheck`, `check:arch`, `check:arch:fixtures`, `quality:unused`, `quality:dup`, `check:scope`, `check:i18n`, `check:authz-metadata`, `check:dependabot`, `check:test-ids`); it runs all of them, prints a table and reports a target that does not exist yet as skipped with its task (DR-240). It replaces P1-01's `verify` script | P1-19 |
 | `test` | Unit tests of every workspace (`bun test`, no database); `bun run test:unit` does not exist | P1-01 |
 | `test:coverage` | The same tests with lcov per workspace and the table of DOC-88 §10 (warnings only, DR-77) | P1-19 |
-| `test:integration` | Integration tests against the local PostgreSQL; each file clones the template database (DOC-88 §6) | P1-04 |
+| `test:integration` | Integration tests against the local PostgreSQL; each file clones the template database (DOC-88 §6) through `@rms/test-support` | P1-04 (done) |
 | `test:race` | The race harness (`apps/api/test/race`) | P2-03 |
 | `test:authz` | The authorization matrix generator and run (EXP-10, DOC-39 §4) | P1-15 |
 | `test:e2e` | Playwright flows of the web CMS against `dev` | P1-16 (the first flows; P1-09 has no screen to drive) |
-| `test:grants` | The permission tests of DOC-19 §9 against a fresh cluster (`packages/testing/grants.test.ts`) | P1-06 |
+| `test:grants` | The permission tests of DOC-19 §9 on clones of the migrated template (`apps/api/tests/grants`) | P1-06 (done) |
 | `test:mobile` | Maestro flows against a development build on a simulator (on demand, DOC-88 §11) | P1-17 |
 | `test:load` | k6 profile named by `--profile`, against the host named by `TEST_BASE_URL` (EXP-07; staging only, DOC-88 §11) | P6-01 |
-| `test:db-clean` | Drops the leftover test databases `rms_test_*` and stale sample templates (DOC-88 §6) | P1-04 |
+| `test:db-clean` | Drops the leftover test databases `rms_t_*` and the templates `rms_tpl_*` of an older hash (DOC-88 §6) | P1-04 (done) |
 | `check:test-ids` | Compares the IDs of every "Required tests" table with the test titles; **warns, never fails** (DOC-88 §5, DR-169) | P1-19 |
 | `check:commits` | Validates the pull-request title and the commit messages against the pattern of DOC-71 §11.2 | P1-19 |
 | `pr:merge <n>` | Squash-merges pull request `<n>` into `dev` only when `gate` is green on its head and the branch is up to date (DOC-71 §11.1, DR-241); needs `gh` signed in | P1-19 |
@@ -233,7 +236,7 @@ Rules:
 
 - **`APP_ENV`, never `NODE_ENV`** decides behavior (DR-156). Expo sets `NODE_ENV` from the command (`NODE_ENV=test npx expo start` loads `.env.development`, DOC-11 §6.4), so an `.env` file must not depend on it.
 - In `local` and `test` a secret may be a plain value (DOC-41 §2 rule 4). `keys:generate` writes plain values to `.env.local`. The same command with `--out` writes the `_FILE` form for a host.
-- What `keys:generate` creates for `local` (CF-16). **Since P1-03:** `APP_ENV`, the five ports, `RMS_POSTGRES_PASSWORD` and the three role passwords, `DATABASE_URL` (`rms_app`), `MIGRATION_DATABASE_URL` (`rms_migrator`), `READONLY_DATABASE_URL`, `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_FORCE_PATH_STYLE`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `DEMO_STAFF_PASSWORD` (set to `demo-password-1`, DOC-36 §9.1): 21 keys. **P1-04 adds:** `JWT_KEYS` (one ES256 key, `k1`), `QR_KEYS` (`v1`), `OTP_HMAC_KEY`, `SETTINGS_ENCRYPTION_KEYS` (`k1`), `PII_ENCRYPTION_KEYS` (`k1`). Passwords are 48 hexadecimal characters, so they need no escaping in a URL. Losing `.env.local` loses the local PII key: the local data is then unreadable and `infra:reset` is the way out. That is acceptable for `local` only.
+- What `keys:generate` creates for `local` (CF-16). **Since P1-03:** `APP_ENV`, the five ports, `RMS_POSTGRES_PASSWORD` and the three role passwords, `DATABASE_URL` (`rms_app`), `MIGRATION_DATABASE_URL` (`rms_migrator`), `READONLY_DATABASE_URL`, `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_FORCE_PATH_STYLE`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `DEMO_STAFF_PASSWORD` (set to `demo-password-1`, DOC-36 §9.1): 21 keys. **P1-04 adds (done):** `JWT_KEYS` (one ES256 key, `k1`), `QR_KEYS` (`v1`), `OTP_HMAC_KEY`, `SETTINGS_ENCRYPTION_KEYS` (`k1`), `PII_ENCRYPTION_KEYS` (`k1`). Passwords are 48 hexadecimal characters, so they need no escaping in a URL. Losing `.env.local` loses the local PII key: the local data is then unreadable and `infra:reset` is the way out. That is acceptable for `local` only.
 - The drivers in `local` are `SMS_DRIVER=console` and `MAIL_DRIVER=console` (DOC-41 §16): a code or a link is printed in the API log, one line each (§9.4). To see rendered mail in Mailpit set `MAIL_DRIVER=smtp`, `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `MAIL_FROM=dev@rms.invalid` in `.env.local`.
 - `OPENAPI_ENABLED` is `true`: the Scalar page is at `http://localhost:3000/api/v1/docs`.
 
@@ -359,15 +362,15 @@ The camera QR scan and the push token need a **physical device** (`expo-device`,
 
 ## 13. Checks of this document
 
-These are the checks a reviewer runs after P1-03. Checks 1 and 2 were run on 2026-10-21 for steps 1 to 4 (§14); checks 3 to 5 need P1-04, P1-06 and P1-12; checks 6 and 7 are open until the later targets exist. Check 1 is the dry run of DR-227: it is the acceptance of P1-03, not of the M0 review. They are not test cases and take no test ID.
+These are the checks a reviewer runs after P1-03. Checks 1 and 2 were run on 2026-10-21 for steps 1 to 4 (§14); check 3 was run in P1-04 for the two `ready` commands (`/metrics` waits for P1-18); checks 4 and 5 need P1-06 and P1-12; checks 6 and 7 are open until the later targets exist. Check 1 is the dry run of DR-227: it is the acceptance of P1-03, not of the M0 review. They are not test cases and take no test ID.
 
 | # | Check | Expected |
 | --- | --- | --- |
 | 1 | On a clean user account (no Bun, no Node, Docker only): install the tools of §3, clone, run `bun run setup` | Steps 1 to 6 pass; `infra:up` healthy in 3 minutes or less (P1-03) |
 | 2 | `bun run setup` a second time | No file changes (`git status` clean); `.env.local` kept; the seed does not duplicate |
-| 3 | The curl commands of §4 | `ready` on both ports; `/metrics` text |
+| 3 | The curl commands of §4 | `ready` on both ports (run in P1-04: `{"status":"ok","maintenance":false}` and the same with `checks.database`); `/metrics` text (P1-18) |
 | 4 | Sign in as `admin@demo.rms.invalid`, then as `+12025550101` with `123456` in the resident app | Both succeed; the resident sees unit `A-1508` |
-| 5 | `bun run db:reset` | The seed is back; the sessions of check 4 no longer work |
+| 5 | `bun run db:reset` | The schemas are dropped and migrated again (run in P1-06: `dropped 14 schemas`, then the output of step 5); the seed is back once `seed:demo` exists; the sessions of check 4 no longer work |
 | 6 | Every command in §5 marked P1-xx exists once that task is done | `bun run <target>` exits 0 or prints its usage |
 | 7 | Every port of §7 | Is the one in use; no other port appears in the repository's documents (`grep`) |
 
@@ -439,5 +442,5 @@ Differences between the first draft of this document and what the dry run showed
 ## Open questions
 
 - **The dry run on a clean user account** is done for the repository side only (§14.1); the part that needs a machine with no tools is open (see the end of §14.1). Decided by the Owner on 2026-10-21 (DR-227): it is check 1 of §13 and the acceptance of P1-03.
-- Steps 5 and 6 of §4, the targets marked P1-04 and later, and checks 3 to 7 of §13 wait for their tasks.
-- Decisions made while writing: DR-157, DR-231, DR-233. Decided by the Owner: DR-227.
+- Steps 5 and 6 of §4, the targets marked P1-05 and later, and checks 4 to 7 of §13 wait for their tasks.
+- Decisions made while writing: DR-157, DR-231, DR-233, DR-248. Decided by the Owner: DR-227.

@@ -1,6 +1,6 @@
 # API guidelines
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-226: catalog count; earlier: DR-168: `app_version_requests_total`) · DOC-50
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-04: the lifecycle check of §7, DR-247; DR-239: the trunk is `dev`; earlier 2026-10-21: DR-226: catalog count; earlier: DR-168: `app_version_requests_total`) · DOC-50
 > Depends on: original SDD §17.2, §17.3, [DR](../00-decision-register.md) (DR-07, 36…39, 64, 71, 74, 75, 83, 84, 123, 127, DR-142…, DR-226), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-12](../03-architecture/code-architecture.md) §5.3, §8.3, §12, [DOC-17](../05-data/operations-model.md) §3 (`platform.idempotency_key`), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-35](../06-design/audit-privacy-and-terms.md) §9, [DOC-37](../06-design/files-and-uploads.md), [DOC-42](../06-design/error-handling.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04 (`apps/api` composition root), P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every task that adds an endpoint, DOC-51, DOC-52, DOC-55, DOC-99, EXP-10
 
@@ -116,7 +116,7 @@ A `POST` that creates and returns 201 sets `Location: /api/v1/<path of the resou
 
 ### 5.3 CORS
 
-Only the web CMS is cross-origin. The native apps send no `Origin`. The API allows one origin per environment (`https://admin.<domain>`; staging `https://admin-staging.<domain>`; local `http://localhost:5173`), `Access-Control-Allow-Credentials: true`, the request headers `Authorization, Content-Type, If-Match, Idempotency-Key, X-Unit-Id, X-App-Id, X-App-Version, X-Request-Id, X-Requested-With, Accept-Language`, the methods `GET, POST, PUT, PATCH, DELETE, OPTIONS`, the exposed headers `X-Request-Id, ETag, Retry-After, Idempotent-Replayed, Location, Content-Disposition`, and `Access-Control-Max-Age: 600` (DR-83 item 5, DR-74). Any other origin gets no CORS headers. The list of allowed origins is configuration (`CORS_ORIGINS`, DOC-41); DOC-39 owns the rest of the web security headers.
+Only the web CMS is cross-origin. The native apps send no `Origin`. The API allows one origin per environment (`https://admin.<domain>`; staging `https://admin-staging.<domain>`; local `http://localhost:5173`), `Access-Control-Allow-Credentials: true`, the request headers `Authorization, Content-Type, If-Match, Idempotency-Key, X-Unit-Id, X-App-Id, X-App-Version, X-Request-Id, X-Requested-With, Accept-Language`, the methods `GET, POST, PUT, PATCH, DELETE, OPTIONS`, the exposed headers `X-Request-Id, ETag, Retry-After, Idempotent-Replayed, Location, Content-Disposition`, and `Access-Control-Max-Age: 600` (DR-83 item 5, DR-74). Any other origin gets no CORS headers at all (the plugin is `corsPlugin` of `@core/http`: `@elysiajs/cors` answers `Allow-Credentials: true` to every origin, DR-247). The list of allowed origins is configuration (`CORS_ORIGINS`, DOC-41); DOC-39 owns the rest of the web security headers.
 
 ## 6. Formats
 
@@ -136,7 +136,7 @@ Only the web CMS is cross-origin. The native apps send no `Origin`. The API allo
 | Text | NFC, leading and trailing spaces trimmed on input; no HTML in any text field except the restricted Markdown of terms (DOC-36 §8) | |
 | Search text `q` | at most 100 characters after trimming; matching rules are the endpoint's (DOC-27 §11) | |
 | Language | `"vi"` or `"en"` | |
-| Request body | JSON object; unknown keys are 400 `validation_failed` with rule `unknown_key`; at most 2 MB (Caddy answers a bare 413 first, DOC-42 §3) | |
+| Request body | JSON object; unknown keys are 400 `validation_failed` with rule `unknown_key` (route plugins are `routePlugin()`, bodies are `strictObject`: Elysia's default `normalize` would strip the key, DR-247); at most 2 MB (Caddy answers a bare 413 first, DOC-42 §3) | |
 
 Clients format money and dates for display: `2.838.000 đ` in Vietnamese, `₫2,838,000` in English; the date `2026-10-09` is `09/10/2026` and `Oct 9, 2026` (P1-09 formatter table, original SDD §17.3). A client never parses a localized string.
 
@@ -160,7 +160,7 @@ A request meets these checks in this order and stops at the first that refuses. 
 | 12 | Schema validation | 400 `validation_failed` | all with parameters or a body |
 | 13 | The use case: idempotency (§8), rules (422), existence (404), conflicts (409) | DOC-42 | all |
 
-**A request without a valid credential never receives a validation answer.** The framework's lifecycle may validate a body before an authorization hook runs (to be confirmed against the Elysia version pinned in DOC-11 when P1-04 starts), so the guards of gates 7 to 10 are installed where they run first, and test AG-04 proves the order on every route of `/me/*` and `/staff/*` with a missing token and an invalid body: the answer is 401. How P1-04 achieves it is the implementer's choice; the test decides.
+**A request without a valid credential never receives a validation answer.** Elysia 1.4.30 validates a body **before** `beforeHandle` and `resolve` and after `onTransform` (measured in P1-04: `onRequest` → `onParse` → `onTransform` → validation → `beforeHandle` → handler, DR-247). The guards of gates 7 to 10 are therefore installed as `transform` hooks (a route option or `onTransform`), never as `beforeHandle` or `resolve`, and test AG-04 proves the order on every route of `/me/*` and `/staff/*` with a missing token and an invalid body: the answer is 401. `apps/api/src/app.test.ts` already pins the lifecycle; AG-04 over the real routes is written with the first guard (P1-10) and run by the matrix of P1-15.
 
 A request refused at a gate before 13 leaves no idempotency row (§8), no audit row and no outbox row.
 
@@ -376,4 +376,4 @@ Every new decision is a DR (decided by Claude, delegated by the Owner) and is su
 
 ## Open questions
 
-None. Decisions made while writing are DR-142 to DR-145 and DR-147 (§18); the Elysia lifecycle point of §7 is a check for P1-04, covered by test AG-04.
+None. Decisions made while writing are DR-142 to DR-145 and DR-147 (§18) and DR-247 (the lifecycle result of §7, `routePlugin`, the CORS plugin).
