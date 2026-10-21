@@ -10,7 +10,8 @@
         "src/bootstrap/module-catalog.ts",
         "scripts/*.ts",
         "src/**/*.test.ts",
-        "tests/**/*.test.ts"
+        "tests/**/*.test.ts",
+        "tests/integration/relay-worker.ts"
       ],
       "project": ["src/**/*.ts", "scripts/*.ts", "tests/**/*.ts"]
     },

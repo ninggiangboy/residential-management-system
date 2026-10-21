@@ -15,19 +15,16 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
-    "@core/config": "workspace:*",
     "@core/context": "workspace:*",
     "@core/kernel": "workspace:*",
     "@core/db": "workspace:*",
     "@core/telemetry": "workspace:*"
   },
   "peerDependencies": {
-    "drizzle-orm": "0.45.4",
-    "zod": "4.6.7"
+    "drizzle-orm": "0.45.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.3",
-    "drizzle-orm": "0.45.4",
-    "zod": "4.6.7"
+    "drizzle-orm": "0.45.4"
   }
 }

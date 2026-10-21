@@ -12,6 +12,11 @@ export type Executor = Pick<DrizzleDb, 'select' | 'insert' | 'update' | 'delete'
 /** A Drizzle transaction: an `Executor` that can open a nested transaction, which PostgreSQL runs as a savepoint. */
 type Transaction = Executor & { transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> }
 
+export interface TransactionOptions {
+  isolationLevel?: 'read committed' | 'repeatable read' | 'serializable'
+  accessMode?: 'read only' | 'read write'
+}
+
 export interface DatabaseOptions {
   url: string
   poolMax: number
@@ -53,14 +58,15 @@ export class Database implements UnitOfWork {
 
   /**
    * Begins a transaction. Inside an open one it is a savepoint: if `fn` throws, only its own writes are rolled back and
-   * the error propagates, so the caller can catch it and carry on in the outer transaction (DOC-12 §8.1).
+   * the error propagates, so the caller can catch it and carry on in the outer transaction (DOC-12 §8.1). `options` apply
+   * to a top-level transaction only (a `snapshot` job reads at `repeatable read`, read only; DOC-38 §3.2).
    */
-  async transaction<T>(fn: () => Promise<T>): Promise<T> {
+  async transaction<T>(fn: () => Promise<T>, options?: TransactionOptions): Promise<T> {
     const outer = this.txStorage.getStore()
     const begin = <R>(body: (tx: Transaction) => Promise<R>) =>
       outer
         ? outer.transaction(body)
-        : this.db.transaction((tx) => body(tx as unknown as Transaction))
+        : this.db.transaction((tx) => body(tx as unknown as Transaction), options)
     return begin((tx) => this.txStorage.run(tx, fn))
   }
 

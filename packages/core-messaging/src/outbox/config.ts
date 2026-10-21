@@ -1,25 +1,25 @@
-import { defineSlice, posInt } from '@core/config'
-import { z } from 'zod'
+/**
+ * The retry classes of DOC-09 §4.2: a class is the number of attempts a message gets. A type belongs to one class, named in
+ * the `outboxPolicies` of its module's manifest; a type that is not named is `default`.
+ */
+export const RETRY_CLASSES = ['default', 'sms', 'push', 'intent_cancel'] as const
+export type RetryClass = (typeof RETRY_CLASSES)[number]
 
-export const outboxConfig = defineSlice({
-  title: 'Outbox relay (events between modules)',
-  schema: z.object({
-    OUTBOX_POLL_INTERVAL_MS: posInt(1000).describe('How often the relay looks for new messages.'),
-    OUTBOX_BATCH_SIZE: posInt(200).describe('Messages claimed per relay batch.'),
-    OUTBOX_CONCURRENCY: posInt(8).describe(
-      'Aggregates processed in parallel per batch; keep below DB_POOL_MAX. Messages of one aggregate stay ordered.',
-    ),
-    OUTBOX_LEASE_SECONDS: posInt(30).describe(
-      'How long a claimed message stays reserved for this relay. Past it another relay may take it, so keep it above the slowest handler (image processing).',
-    ),
-    OUTBOX_DEFER_BUDGET_HOURS: z.coerce
-      .number()
-      .positive()
-      .default(24)
-      .describe(
-        'Maximum time a message may be deferred by a rate limit (mail) before it is considered dead.',
-      ),
-  }),
-})
+/** What the relay needs to know about one message type. */
+export interface OutboxPolicy {
+  /** The attempt that dead-letters the message (attempts are counted at claim time). */
+  maxAttempts: number
+}
 
-export type OutboxConfig = z.infer<typeof outboxConfig.schema>
+/** The relay's settings (DOC-38 §2.6). The application builds them from the configuration slice of DOC-41 §11. */
+export interface OutboxSettings {
+  pollIntervalMs: number
+  batchSize: number
+  concurrency: number
+  leaseSeconds: number
+  backoffBaseSeconds: number
+  backoffMaxSeconds: number
+  deferBudgetHours: number
+  retentionDays: number
+  cleanupIntervalMinutes: number
+}

@@ -47,6 +47,12 @@ const api = core.APP_ROLES.includes('api')
   : null
 if (api) logger.info({ port: core.PORT }, 'api_listening')
 
+const worker = core.APP_ROLES.includes('worker')
+if (worker) {
+  await container.runtime.startWorker()
+  logger.info({ jobs: container.runtime.jobs.names }, 'worker_started')
+}
+
 let shuttingDown = false
 async function shutdown(signal: string) {
   if (shuttingDown) return
@@ -55,9 +61,14 @@ async function shutdown(signal: string) {
   // Readiness answers 503 `stopping` from here on, so the proxy drains this process before it stops (DOC-38 §5.4).
   container.lifecycle.stopping = true
   await api?.stop()
+  // The relay finishes the batch in flight and running jobs get WORKER_STOP_TIMEOUT_SECONDS to return (DOC-38 §5.4).
+  const stillRunning = worker
+    ? await container.runtime.stopWorker(core.WORKER_STOP_TIMEOUT_SECONDS * 1000)
+    : []
+  if (stillRunning.length > 0) logger.error({ jobs: stillRunning }, 'worker_stop_timed_out')
   await container.close()
   await ops.stop()
-  process.exit(0)
+  process.exit(stillRunning.length > 0 ? 1 : 0)
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'))
 process.on('SIGINT', () => void shutdown('SIGINT'))

@@ -7,12 +7,15 @@ import { and, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm'
 import type { Envelope, MessageHeaders } from '../envelope'
 import { RetryLaterError } from '../errors'
 import type { MessagePublisher } from '../ports'
-import type { OutboxTable } from './tables'
+import type { OutboxPolicy } from './config'
+import type { InboxTable, OutboxTable } from './tables'
 
 export interface OutboxSource {
-  /** Name of the module emitting the event (written to envelope.source). */
+  /** Name of the module emitting the event (written to envelope.source); also the schema. */
   name: string
   table: OutboxTable
+  /** The inbox of the same schema, cleaned with the outbox (DOC-38 §2.5). */
+  inboxTable?: InboxTable
 }
 
 export interface OutboxRelayOptions {
@@ -24,8 +27,16 @@ export interface OutboxRelayOptions {
    */
   concurrency?: number
   leaseSeconds?: number
+  /** The class of a message type: how many attempts it gets (DOC-09 §4.2). */
+  policy?: (type: string) => OutboxPolicy
+  /** Used when `policy` is not given. */
   maxAttempts?: number
+  /** Backoff after a failed attempt: `min(base × 2^(attempts − 1), max)` seconds (DOC-38 §2.3). */
+  backoffBaseSeconds?: number
+  backoffMaxSeconds?: number
   retentionDays?: number
+  /** At most one cleanup pass per source this often. */
+  cleanupIntervalMs?: number
   /** Maximum time a message may be deferred by RetryLaterError (rate limit) before it is considered dead. */
   deferBudgetMs?: number
   /** Default delay when RetryLaterError carries no retryAfterMs. */
@@ -55,12 +66,16 @@ export class OutboxRelay {
   /** The batch being processed right now, if any. */
   private working?: Promise<number>
   private lastCleanup = 0
+  private lastPass: number | undefined
 
   private readonly batchSize: number
   private readonly concurrency: number
   private readonly leaseSeconds: number
-  private readonly maxAttempts: number
+  private readonly policy: (type: string) => OutboxPolicy
+  private readonly backoffBaseSeconds: number
+  private readonly backoffMaxSeconds: number
   private readonly retentionDays: number
+  private readonly cleanupIntervalMs: number
   private readonly deferBudgetMs: number
   private readonly defaultDeferMs: number
 
@@ -71,11 +86,15 @@ export class OutboxRelay {
     private logger: Logger,
     private options: OutboxRelayOptions,
   ) {
-    this.batchSize = options.batchSize ?? 200
-    this.concurrency = Math.max(1, options.concurrency ?? 8)
-    this.leaseSeconds = options.leaseSeconds ?? 30
-    this.maxAttempts = options.maxAttempts ?? 10
+    this.batchSize = options.batchSize ?? 50
+    this.concurrency = Math.max(1, options.concurrency ?? 4)
+    this.leaseSeconds = options.leaseSeconds ?? 60
+    const maxAttempts = options.maxAttempts ?? 8
+    this.policy = options.policy ?? (() => ({ maxAttempts }))
+    this.backoffBaseSeconds = options.backoffBaseSeconds ?? 5
+    this.backoffMaxSeconds = options.backoffMaxSeconds ?? 900
     this.retentionDays = options.retentionDays ?? 7
+    this.cleanupIntervalMs = options.cleanupIntervalMs ?? 10 * 60_000
     this.deferBudgetMs = options.deferBudgetMs ?? 24 * 3600_000
     this.defaultDeferMs = options.defaultDeferMs ?? 30_000
   }
@@ -105,6 +124,24 @@ export class OutboxRelay {
     this.paused = false
   }
 
+  /**
+   * True when the loop finished a pass (a pass that found nothing, or a paused one, counts) within `maxAgeMs`: the
+   * readiness check of the worker (DOC-38 §5.2). False before the first pass and when the loop is stalled.
+   */
+  isFresh(maxAgeMs: number): boolean {
+    return this.lastPass !== undefined && Date.now() - this.lastPass <= maxAgeMs
+  }
+
+  /** The modules whose outbox this relay reads, in order (JB-24 compares them with `outbox:list`). */
+  get sourceNames(): string[] {
+    return this.sources.map((source) => source.name)
+  }
+
+  /** When the loop last finished a pass, for the gauge `worker_relay_last_pass_timestamp` (DOC-38 §8). */
+  get lastPassAt(): Date | undefined {
+    return this.lastPass === undefined ? undefined : new Date(this.lastPass)
+  }
+
   private async run(): Promise<void> {
     while (this.running) {
       let processed = 0
@@ -113,6 +150,7 @@ export class OutboxRelay {
         processed = await this.working
         this.working = undefined
       }
+      this.lastPass = Date.now()
       // Keep going immediately while there is work, sleep only when idle (or paused).
       if (processed === 0) await sleep(this.options.pollIntervalMs)
     }
@@ -127,7 +165,7 @@ export class OutboxRelay {
       }
       if (!this.paused) await this.maybeCleanup()
     } catch (err) {
-      this.logger.error({ err }, 'outbox relay tick failed')
+      this.logger.error({ err }, 'outbox_tick_failed')
     }
     return processed
   }
@@ -193,12 +231,10 @@ export class OutboxRelay {
       payload: row.payload,
       headers: row.headers as MessageHeaders,
     }
-    // Handlers run in the context of the request that caused the event: their log lines carry its correlation id, and the
-    // events they write in turn keep it (causation = this message).
-    const context = {
-      requestId: row.id,
-      correlationId: row.headers.correlationId ?? row.id,
-    }
+    // A handler line carries the correlation id of the message as its request id, so a line of the worker joins the request
+    // that began the chain (DOC-40 §3.1); the events a handler writes in turn keep it (causation = this message).
+    const correlationId = row.headers.correlationId ?? row.id
+    const context = { requestId: correlationId, correlationId }
     // Continues the trace of whatever wrote the event (a request, or a handler that emitted a follow-up event).
     const published = await requestContext.run(context, () =>
       withSpan(
@@ -234,7 +270,7 @@ export class OutboxRelay {
     await this.safely(row, () =>
       this.database.db
         .update(table)
-        .set({ publishedAt: new Date(), lockedUntil: null, lastError: null })
+        .set({ publishedAt: sql`now()`, lockedUntil: null, lastError: null })
         .where(inArrayId(table, row.id)),
     )
   }
@@ -244,13 +280,14 @@ export class OutboxRelay {
     try {
       await fn()
     } catch (err) {
-      this.logger.error({ err, messageId: row.id }, 'outbox bookkeeping failed, lease will expire')
+      this.logger.error({ err, messageId: row.id }, 'outbox_bookkeeping_failed')
     }
   }
 
+  /** DOC-38 §2.3: back off `min(base × 2^(attempts − 1), max)`, or die at the class limit of the type. */
   private async recordFailure(
     source: OutboxSource,
-    row: { id: string; attempts: number; occurredAt: Date },
+    row: { id: string; type: string; attempts: number; occurredAt: Date },
     err: unknown,
   ) {
     const errors = flattenErrors(err)
@@ -264,20 +301,19 @@ export class OutboxRelay {
 
     const { table } = source
     const message = err instanceof Error ? err.message : String(err)
-    const dead = row.attempts >= this.maxAttempts
-    // Exponential backoff: 2s, 4s, 8s … up to 5 minutes.
-    const delaySeconds = Math.min(2 ** row.attempts, 300)
+    const { maxAttempts } = this.policy(row.type)
+    const dead = row.attempts >= maxAttempts
     this.logger.warn(
-      { messageId: row.id, attempts: row.attempts, dead, err: message },
-      'outbox publish failed',
+      { messageId: row.id, type: row.type, attempts: row.attempts, dead, err: message },
+      dead ? 'outbox_dead_letter' : 'outbox_publish_failed',
     )
     await this.database.db
       .update(table)
       .set({
         lockedUntil: null,
         lastError: message.slice(0, 2000),
-        nextAttemptAt: sql`now() + make_interval(secs => ${delaySeconds})`,
-        deadAt: dead ? new Date() : null,
+        nextAttemptAt: sql`now() + make_interval(secs => least(${this.backoffBaseSeconds} * power(2, ${table.attempts} - 1), ${this.backoffMaxSeconds}))`,
+        deadAt: dead ? sql`now()` : null,
       })
       .where(inArrayId(table, row.id))
   }
@@ -293,44 +329,42 @@ export class OutboxRelay {
   ) {
     const { table } = source
     const message = errors.map((e) => e.message).join('; ')
-    const ageMs = Date.now() - row.occurredAt.getTime()
-    const exhausted = ageMs > this.deferBudgetMs
     const hinted = Math.max(0, ...errors.map((e) => e.retryAfterMs ?? 0))
-    // 0–10% jitter so messages deferred together do not all return at the same instant.
-    const baseMs = hinted > 0 ? hinted : this.defaultDeferMs
-    const delayMs = Math.ceil(baseMs * (1 + Math.random() * 0.1))
-    this.logger.info(
-      { messageId: row.id, delayMs, ageMs, exhausted, reason: message },
-      exhausted ? 'outbox message exhausted its deferral budget' : 'outbox message deferred',
-    )
+    const delaySeconds = (hinted > 0 ? hinted : this.defaultDeferMs) / 1000
+    this.logger.info({ messageId: row.id, delaySeconds, reason: message }, 'outbox_deferred')
     await this.database.db
       .update(table)
       .set({
         lockedUntil: null,
         attempts: sql`greatest(${table.attempts} - 1, 0)`,
         lastError: `deferred: ${message}`.slice(0, 2000),
-        nextAttemptAt: sql`now() + make_interval(secs => ${delayMs / 1000})`,
-        deadAt: exhausted ? new Date() : null,
+        // 0-10 % jitter so messages deferred together do not all return at the same instant.
+        nextAttemptAt: sql`now() + make_interval(secs => ${delaySeconds} * (1 + 0.1 * random()))`,
+        deadAt: sql`case when ${table.occurredAt} < now() - make_interval(secs => ${this.deferBudgetMs / 1000}) then now() end`,
       })
       .where(inArrayId(table, row.id))
   }
 
-  /** Deletes published messages past retention (the payload may contain one-time tokens). Runs on one instance only. */
   private async maybeCleanup(): Promise<void> {
-    if (Date.now() - this.lastCleanup < 10 * 60_000) return
+    if (Date.now() - this.lastCleanup < this.cleanupIntervalMs) return
     this.lastCleanup = Date.now()
-    for (const { name, table } of this.sources) {
-      await withAdvisoryXactLock(this.database, `outbox-cleanup:${name}`, async () => {
-        await this.database.executor
-          .delete(table)
-          .where(
-            and(
-              isNotNull(table.publishedAt),
-              lt(table.publishedAt, sql`now() - make_interval(days => ${this.retentionDays})`),
-            ),
-          )
-      })
-    }
+    for (const source of this.sources) await this.cleanup(source)
+  }
+
+  /**
+   * Deletes published messages and delivered inbox rows past retention (the payload may contain one-time tokens). One
+   * instance does it: the others skip without waiting (DOC-38 §2.5). Dead letters are never deleted.
+   */
+  async cleanup(source: OutboxSource): Promise<void> {
+    const { name, table, inboxTable } = source
+    await withAdvisoryXactLock(this.database, `outbox-cleanup:${name}`, async () => {
+      const cutoff = sql`now() - make_interval(days => ${this.retentionDays})`
+      await this.database.executor
+        .delete(table)
+        .where(and(isNotNull(table.publishedAt), lt(table.publishedAt, cutoff)))
+      if (inboxTable)
+        await this.database.executor.delete(inboxTable).where(lt(inboxTable.processedAt, cutoff))
+    })
   }
 }
 

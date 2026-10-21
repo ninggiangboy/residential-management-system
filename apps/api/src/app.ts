@@ -100,11 +100,14 @@ export type App = ReturnType<typeof buildApp>
  * The ops port (`OPS_PORT`): `/health/live`, `/health/ready` with every check, and later `/metrics` (P1-18). Bound to the
  * Docker network and never routed by Caddy or the Tunnel (DR-07), so it has no prefix, no CORS and no maintenance gate.
  */
-export function buildOpsApp({ config, database, maintenance, lifecycle }: Container) {
+export function buildOpsApp({ config, database, maintenance, lifecycle, runtime }: Container) {
+  // The worker also answers for its relay: a stalled loop is not ready (DOC-38 §5.2).
+  const checks = config.core.APP_ROLES.includes('worker') ? [runtime.relayCheck] : []
   return new Elysia().group('/health', (health) =>
     health.use(liveRoute()).use(
       readyRoute({
         database,
+        checks,
         maintenance,
         stopping: () => lifecycle.stopping,
         timeoutMs: config.core.READINESS_DB_TIMEOUT_MS,
