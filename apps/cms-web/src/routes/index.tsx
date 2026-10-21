@@ -7,7 +7,7 @@ export const Route = createFileRoute('/')({ component: Home })
 function Home() {
   const [status, setStatus] = useState('…')
   useEffect(() => {
-    api.api.v1.health.live.get().then(({ data }) => setStatus(data?.status ?? 'down'))
+    api.api.v1.health.ready.get().then(({ data }) => setStatus(data?.status ?? 'down'))
   }, [])
   return <p className="p-4 text-body-strong">API: {status}</p>
 }

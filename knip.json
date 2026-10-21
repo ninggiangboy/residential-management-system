@@ -6,8 +6,13 @@
       "project": ["scripts/*.ts", "tools/arch-fixtures/*.ts", "tools/compat/*.ts"]
     },
     "apps/api": {
-      "entry": ["src/**/*.test.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/bootstrap/module-catalog.ts",
+        "scripts/*.ts",
+        "src/**/*.test.ts",
+        "tests/**/*.test.ts"
+      ],
+      "project": ["src/**/*.ts", "scripts/*.ts", "tests/**/*.ts"]
     },
     "packages/shared-types": {
       "entry": ["src/**/*.test.ts"],
@@ -42,6 +47,10 @@
     "packages/design-tokens": {
       "entry": ["src/**/*.test.ts", "scripts/*.ts"],
       "project": ["src/**/*.ts", "scripts/*.ts"]
+    },
+    "packages/test-support": {
+      "entry": ["src/db-clean.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

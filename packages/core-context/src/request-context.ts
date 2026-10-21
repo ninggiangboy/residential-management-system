@@ -5,6 +5,12 @@ export interface RequestContext {
   requestId: string
   correlationId: string
   userId?: string
+  /** Who the request acts for, filled by the guards once the token is verified; ids only, never a name, phone or email (DOC-42 §8.1). */
+  accountKind?: 'staff' | 'resident'
+  accountId?: string
+  role?: string
+  buildingId?: string
+  unitId?: string
   /** OTel context holding the request's span (set by the tracing plugin; new spans and outbox writes hang under it). */
   otel?: Context
 }

@@ -1,6 +1,6 @@
 import { t } from 'elysia'
 
-/** Matches `body()` in error-handler.plugin.ts — every error has this shape. */
+/** Matches `bodyOf()` in error-handler.plugin.ts — every error has this shape (DOC-42 §3). */
 const errorShape = {
   error: t.Object({
     code: t.String({
@@ -8,11 +8,11 @@ const errorShape = {
       examples: ['not_found'],
     }),
     message: t.String({ description: 'Human-readable message' }),
-    requestId: t.Optional(
-      t.String({ description: 'Same as the x-request-id header, used to look up logs' }),
-    ),
     details: t.Optional(
-      t.Unknown({ description: 'Only on validation_error: a list of { path, message }' }),
+      t.Unknown({
+        description:
+          'validation_failed: a list of { path, code, message }; elsewhere an object whose keys the catalog lists (DOC-42 §5)',
+      }),
     ),
   }),
 }
@@ -41,7 +41,7 @@ export const errorResponse = (status: ErrorStatus, ...codes: string[]) =>
 
 /** Schema validation errors (400) occur on every route that takes input, so they are bundled in and a route declares only its own. */
 export const validationError = (...codes: string[]) =>
-  errorResponse(400, 'validation_error', ...codes)
+  errorResponse(400, 'validation_failed', ...codes)
 
 export const BEARER_SCHEME = 'bearerAuth'
 
@@ -50,12 +50,12 @@ export const bearerSecurity = [{ [BEARER_SCHEME]: [] }]
 /** The document the API serves; `tags` are the sections each module describes itself (`AppModule.docs`). */
 export const openapiDocumentation = (tags: readonly { name: string; description: string }[]) => ({
   info: {
-    title: 'Elysia Architecture API',
-    version: '0.1.0',
+    title: 'Residential management API',
+    version: '1.0.0',
     description:
-      'Modular monolith backend. Sign in with a magic link; the access token (JWT) is sent via `Authorization: Bearer`, ' +
-      'and the refresh token lives in the HttpOnly cookie `refresh_token`.\n\n' +
-      'Every error has the shape `{ "error": { "code", "message", "requestId", "details?" } }`.',
+      'One JSON-over-HTTPS API for the web CMS, the resident app and the staff app (DOC-50). The access token (JWT) is sent via ' +
+      '`Authorization: Bearer`; the web CMS keeps its refresh token in an HttpOnly cookie.\n\n' +
+      'Every error has the shape `{ "error": { "code", "message", "details?" } }`; `X-Request-Id` is on every answer.',
   },
   tags: [{ name: 'health', description: 'Service health checks' }, ...tags],
   components: {
@@ -65,7 +65,7 @@ export const openapiDocumentation = (tags: readonly { name: string; description:
         scheme: 'bearer',
         bearerFormat: 'JWT',
         description:
-          'Access token obtained from `POST /auth/magic-link/verify` or `POST /auth/refresh`',
+          'The 15-minute access token of `POST /auth/staff/login`, `POST /auth/otp/verify` or `POST /auth/refresh`',
       },
     },
   },

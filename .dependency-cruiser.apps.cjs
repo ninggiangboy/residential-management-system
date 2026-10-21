@@ -48,7 +48,7 @@ module.exports = {
   ],
   options: {
     tsPreCompilationDeps: true,
-    exclude: { path: '\\.test\\.ts$' },
+    exclude: { path: '(\\.test\\.ts$|^apps/[^/]+/(tests|dist)/)' },
     tsConfig: { fileName: 'tsconfig.json' },
     doNotFollow: { path: 'node_modules' },
     enhancedResolveOptions: {

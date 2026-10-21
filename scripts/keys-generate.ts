@@ -3,6 +3,7 @@
  * changed; a missing key is appended. A port set in the environment (`RMS_PG_PORT=5433 bun run keys:generate`) is written
  * the first time. The variables are written in the order the dotenv expansion needs: ports and passwords first, URLs after.
  */
+import { generateKeyPairSync } from 'node:crypto'
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
 import { envFile, readEnvFile } from './lib/env'
 
@@ -13,6 +14,18 @@ const url = (role: string, password: string) =>
   `postgres://${role}:${ref(password)}@localhost:${ref('RMS_PG_PORT')}/rms`
 
 const secret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('hex')
+
+const base64Key = (bytes: number) =>
+  Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString('base64')
+
+/** A key ring with one key (DOC-41 §6), on one line and single-quoted so dotenv leaves the JSON alone. */
+const ring = (kid: string, key: string) => `'${JSON.stringify({ [kid]: key })}'`
+
+/** An ES256 (P-256) private key in PEM; the `\n` escapes of JSON keep the ring on one line. */
+const es256 = () =>
+  generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    .privateKey.export({ type: 'pkcs8', format: 'pem' })
+    .toString()
 
 const generated: [key: string, value: () => string][] = [
   ['APP_ENV', () => 'local'],
@@ -37,6 +50,12 @@ const generated: [key: string, value: () => string][] = [
   ['S3_ACCESS_KEY_ID', () => `rms${secret().slice(0, 16)}`],
   ['S3_SECRET_ACCESS_KEY', secret],
   ['DEMO_STAFF_PASSWORD', () => 'demo-password-1'],
+  // The application keys (P1-04, DOC-41 §6): a ring is `{"<kid>": "<key>"}`, the newest kid signs and all verify.
+  ['JWT_KEYS', () => ring('k1', es256())],
+  ['QR_KEYS', () => ring('v1', base64Key(32))],
+  ['OTP_HMAC_KEY', () => base64Key(32)],
+  ['SETTINGS_ENCRYPTION_KEYS', () => ring('k1', base64Key(32))],
+  ['PII_ENCRYPTION_KEYS', () => ring('k1', base64Key(32))],
 ]
 
 const existed = existsSync(envFile)

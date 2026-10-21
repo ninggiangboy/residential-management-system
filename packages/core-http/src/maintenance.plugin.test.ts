@@ -4,14 +4,14 @@ import { maintenancePlugin } from './maintenance.plugin'
 
 function setup() {
   const mode = { active: false }
-  const app = new Elysia({ prefix: '/api' })
+  const app = new Elysia({ prefix: '/api/v1' })
     .use(maintenancePlugin(mode, 42))
     .get('/things', () => ({ ok: true }))
     .post('/billing/webhooks/stripe', () => ({ ok: true }))
     .get('/health/live', () => ({ status: 'ok' }))
     .get('/health/ready', () => ({ status: 'ready' }))
   const get = (path: string, method = 'GET') =>
-    app.handle(new Request(`http://localhost/api${path}`, { method }))
+    app.handle(new Request(`http://localhost/api/v1${path}`, { method }))
   return { mode, get }
 }
 

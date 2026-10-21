@@ -36,7 +36,11 @@
     "setup": "bun scripts/setup.ts",
     "prepare": "husky || true",
     "dev:web": "bun run --filter @app/cms-web dev",
-    "build": "bun run --filter @app/cms-web build && bun run --filter @app/resident-app --filter @app/staff-app typecheck"
+    "build": "bun run --filter @app/cms-web build && bun run --filter @app/resident-app --filter @app/staff-app typecheck",
+    "dev:api": "bun run --cwd apps/api dev",
+    "config:example": "bun run --cwd apps/api config:example",
+    "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
+    "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
