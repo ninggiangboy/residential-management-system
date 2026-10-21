@@ -1,7 +1,7 @@
 # Observability
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
-> Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
+> Status: **Draft** · Updated: 2026-10-21 (DR-228: alert addresses are placeholders; earlier: DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
 This document says what the system reports about itself and who is told when it goes wrong: the logs and their fields, the metric catalog, the alert rules in PromQL linked to the runbooks, the dashboards, and how an alert reaches a person. It does not hold the install of the stack (DOC-70), the pins (DOC-11 §7), the budgets (DOC-10 §6), the runbook steps (DOC-74…87) or the configuration keys (DOC-41).
@@ -534,4 +534,4 @@ tests:
 
 - **The Access policy of `monitor.<domain>`** (allowed emails, session length) is set in DOC-70 (DR-88, decided).
 - **The metrics library on Bun** and **the Alertmanager Telegram keys** are verified in P1-18 (§2); the pin goes to DOC-11 §3 and §7 then.
-- **The addresses and chat id of §6** are Owner input (P0-03).
+- **The addresses and chat id of §6** are Owner input, decided as placeholders (`<alert-email>`, `<telegram-chat-id>`) until the acceptance of P1-18 on staging; locally the alerts go to Mailpit (DR-228, Owner, 2026-10-21; DOC-70 §2 rows 11 and 12).

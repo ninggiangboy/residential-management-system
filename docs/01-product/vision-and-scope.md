@@ -1,7 +1,7 @@
 # Vision and scope
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-01
-> Depends on: original SDD §1–§3, §21–§22, [DR](../00-decision-register.md) (DR-06, 17, 47, 58, 79, 80, 81, 83, 84), [DOC-06](../02-glossary.md), master plan §1, §4
+> Status: **Review** · Updated: 2026-10-21 (DR-68: providers picked before P1-22) · DOC-01
+> Depends on: original SDD §1–§3, §21–§22, [DR](../00-decision-register.md) (DR-06, 17, 47, 58, 79, 80, 81, 83, 84, DR-68), [DOC-06](../02-glossary.md), master plan §1, §4
 > Main readers: Owner (project), P0-18…P0-35, every later document that cites a goal or a scope boundary
 
 This document says what the Residential Management System is for, what it must achieve in numbers, what it covers and what it does not. It holds no design. Requirements are in [DOC-03](requirements.md), personas in [DOC-02](personas-and-journeys.md), the architecture in DOC-07, the plan and cut order in the [master plan](../00-master-plan.md).
@@ -139,7 +139,7 @@ Work proceeds on these defaults (DR-81). An answer from the client that differs 
 | --- | --- | --- | --- |
 | payOS behavior (webhook retry, expired-link transfers, rate limits, order-code range, fees) | The assumptions of original SDD §6.5, checked against a gateway sandbox when the Owner reports one. No sandbox: the `fake` driver, then one real minimum-amount payment before go-live (P6-09) | Before P3-01 | DR-25 |
 | Receiving account linked through payOS | Not linked: transfer content at most 9 characters (`TT2FMZ9`) | Start of P3 | DR-27 |
-| SMS provider and brandname, mail relay | Chosen by the Owner or client | Before P1-10 | DR-68 |
+| SMS provider and brandname, mail relay | Chosen by the Owner or client; not chosen yet, the ports and the `console`/`allowlist` drivers come first | Before P1-22 (M1 needs a real SMS OTP) | DR-68 |
 | PostgreSQL hosting | The Owner's VPS, native PostgreSQL 18, pgBackRest to R2 | Start of P1 | DR-67, DR-83 |
 | Ticket deadlines | Phase 2 (decided) | Decided 2026-10-19 | DR-47 |
 | Meaning of a "closed" batch | A manual reporting freeze; charges stay payable (decided) | Decided 2026-10-19 | DR-20 |
@@ -187,7 +187,7 @@ Only the risks that decide scope or the value of the system are listed here; the
 | A transfer is made twice or with another amount | Rows in the money log | Nothing is posted; the Manager refunds outside the system; the resident sees a neutral message (DR-84) |
 | One person cannot carry the plan | M1 more than 3 weeks late | The cut order and the two-person split |
 | One provider holds the edge, files and backups | A Cloudflare account problem | Accepted by the Owner (2026-10-19); encrypted repository with offline key custody; the weekly `pg_dump` is portable (DR-66) |
-| SMS brandname approval is slow | No approval 3 weeks after choosing the provider | Start before P1-10; unbranded route as the fallback |
+| SMS brandname approval is slow | No approval 3 weeks after choosing the provider | Start as soon as the Owner picks the provider (before P1-22); unbranded route as the fallback |
 | Scope creep from the 113-feature checklist | Features with no FR | Every feature is mapped to an FR or marked out of scope (P0-07, DOC-05) |
 
 ## 10. Not in this document

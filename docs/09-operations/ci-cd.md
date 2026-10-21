@@ -1,6 +1,6 @@
 # CI/CD
 
-> Status: **Review** · Updated: 2026-10-20 (DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
+> Status: **Review** · Updated: 2026-10-21 (DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
 > Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
@@ -434,7 +434,7 @@ Trunk-based (DR-08): short-lived branches, squash-merged pull requests, protecte
 | Required status checks | `gate` only; branch must be up to date |
 | Allowed merge method | Squash only; linear history |
 | Force push and deletion | Denied, also for administrators |
-| Reviews | One approval from the code owners of the touched paths **when the repository has more than one contributor**; none while the Owner is alone (DR-166, Owner input) |
+| Reviews | One approval from the code owners of the touched paths **when the repository has more than one contributor**; none while the Owner is alone (DR-166, confirmed by the Owner on 2026-10-21) |
 | Tag protection | `v*` creatable by the Owner only |
 
 ### 11.2 Commits and titles
@@ -575,6 +575,6 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 - **Commit SHAs of the actions** are resolved by P1-19 when it writes the workflows (DR-95). The tags are DOC-11 §9.
 - **The `cloudflared access ssh` flag names** (`--service-token-id`, `--service-token-secret`) and **the GHCR read token type** (a classic personal access token with `read:packages`, or a fine-grained token) are checked by P1-20 against the pinned `cloudflared` and the GitHub documentation.
-- **Review rule of §11.1** depends on whether a second contributor joins; Owner input.
+- **Review rule of §11.1** (it depends on whether a second contributor joins): decided by DR-166 and confirmed by the Owner on 2026-10-21 ("up to you, other people may join the repository later"). The rule does not change: no required review while the Owner is alone, one code-owner approval once a second contributor joins.
 - **EAS flags of §9.2** (`--environment`, `eas update:republish`, `eas update:rollback`) are checked against `eas-cli` 25.2.0 by P6-10.
 - Decisions made while writing: DR-163…166.

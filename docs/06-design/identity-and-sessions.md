@@ -1,6 +1,6 @@
 # Identity and sessions
 
-> Status: **Review** · Updated: 2026-10-21 (DR-225: `client` in the session lists; DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
+> Status: **Review** · Updated: 2026-10-21 (DR-68: providers picked at P1-22, fake drivers before; DR-225: `client` in the session lists; DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
 > Depends on: original SDD §7, §17.1, §19.3, [DR](../00-decision-register.md) (DR-36…39, 59, 60, 64, 65, 68, 73, 74, 83, 85, 87, 99, 107, 108, 125, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-03](../01-product/requirements.md) (FR-13…15, 45, 50), [DOC-04](../01-product/use-cases.md) (UC-14, UC-17, UC-26), [DOC-09](../03-architecture/messaging-contracts.md) §6.3, §7.3, [DOC-12](../03-architecture/code-architecture.md) §5.3, §8, §12, [DOC-16](../05-data/identity-and-residency-model.md) §4, [DOC-17](../05-data/operations-model.md) §3, [DOC-35](audit-privacy-and-terms.md) §10, [DOC-36](building-configuration-and-demo.md) §3, §7, §9, §10, [DOC-42](error-handling.md) §5.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity: staff), P1-11 (identity: resident OTP), P1-14 (staff API), P1-22 (SMS and mail adapters), DOC-27, DOC-39, DOC-41, DOC-51, EXP-09, EXP-10, RB-12
 
@@ -522,9 +522,9 @@ The provider counts as down when `failing >= SMS_DOWN_FAILURES` (3) **and** `del
 | --- | --- | --- | --- |
 | `local`, `test` | `console` | `console` | The message, code included, is written to the log |
 | `staging` | `allowlist` | `allowlist` | A real send only for numbers in `SMS_ALLOWLIST` and addresses in `MAIL_ALLOWLIST`; any other recipient is logged `not_allowlisted` and **returns normally** |
-| `production` | `provider` | `smtp` | The adapter chosen by DR-68; the brandname registered |
+| `production` | `provider` | `smtp` | The adapter chosen by DR-68 (the Owner picks before P1-22); the brandname registered |
 
-The boot guard refuses `production` when `SMS_DRIVER` is `console` or `allowlist` or the mail driver is the console (DOC-36 §10.1 check 4). The provider adapter (`modules/identity/src/infrastructure/sms/<provider>.ts`) is written in P1-22 after the Owner records the provider in DR-68; it needs only `send` and reports an HTTP failure as an exception. A delivery receipt is not used in phase 1.
+The boot guard refuses `production` when `SMS_DRIVER` is `console` or `allowlist` or the mail driver is the console (DOC-36 §10.1 check 4). The provider adapter (`modules/identity/src/infrastructure/sms/<provider>.ts`) is written in P1-22 after the Owner picks the provider (DR-68, Owner 2026-10-21); it needs only `send` and reports an HTTP failure as an exception. A delivery receipt is not used in phase 1. Until P1-22 there is no adapter behind the `allowlist` driver: P1-10 and P1-11 run on `console` and `allowlist` (every message to a recipient outside the list is logged `not_allowlisted`) and on Mailpit for local mail.
 
 ## 6. Rate buckets
 
@@ -780,4 +780,4 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 
 ## Open questions
 
-None yet. Decisions made while writing are DR-128 to DR-135 (§14); they are decided and do not block Phase 1. The provider and brandname of the SMS adapter are the Owner's (DR-68, before P1-10); the Argon2 parameters are confirmed on the staging host in P1-10 (DR-39).
+None yet. Decisions made while writing are DR-128 to DR-135 (§14); they are decided and do not block Phase 1. The provider and brandname of the SMS adapter are the Owner's (DR-68: not chosen yet, ports and fake drivers first; the Owner picks before P1-22, which M1 needs for the real SMS OTP); the Argon2 parameters are confirmed on the staging host in P1-10 (DR-39).

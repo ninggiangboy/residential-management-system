@@ -1,6 +1,6 @@
 # Tech stack and versions
 
-> Status: **Review** · Updated: 2026-10-20 (DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
+> Status: **Review** · Updated: 2026-10-21 (DR-68: provider adapter pinned at P1-22; earlier: DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83, 180…188), master plan §0.4, [DOC-06](../02-glossary.md)
 > Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
 
@@ -83,7 +83,7 @@ This document pins every runtime, library, tool, CI action, image and font the s
 | `pino` | **10.4.0** | JSON logs with the request id (DR-63) | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/pino) |
 | `prom-client` | **15.1.3** (Apache-2.0; engines Node `^16 \|\| ^18 \|\| >=20`, Bun not stated) | Counters, gauges and histograms on the ops port (DOC-40 §2, DR-63). Its default metrics use `perf_hooks` functions that Bun implements only in part, so P1-18 checks `collectDefaultMetrics` on Bun 1.4.3; the fallback is a small exposition writer in `@core/telemetry` | Apache-2.0 | 2026-10-20 | [npm registry](https://registry.npmjs.org/prom-client/latest), [issue 570](https://github.com/siimon/prom-client/issues/570) |
 | `nodemailer` | **10.1.7** | SMTP client behind the `Mailer` port (DR-68) | MIT-0 | 2026-10-19 | [npm](https://www.npmjs.com/package/nodemailer) |
-| SMS provider adapter | **open Owner/client input** (DR-68, before P1-10). The `SmsSender` port is fixed; the adapter package or HTTP client is chosen with the provider | Brandname OTP, delivery receipts | n/a | n/a | [DR-68](../00-decision-register.md) |
+| SMS provider adapter | **open Owner/client input** (DR-68; the Owner picks before P1-22, P1-10 does not wait). The `SmsSender` port is fixed; the adapter package or HTTP client is chosen with the provider | Brandname OTP, delivery receipts | n/a | n/a | [DR-68](../00-decision-register.md) |
 | `exceljs` | **4.4.0** (published 2023-10-19) | Excel import and streaming export (FR-01, FR-35). It is the latest stable and stays; unmaintained for three years, so P1-01 runs a read/write smoke test and P1-13 the import tests. The streaming reader returns date cells as Excel serial numbers unless opened with `styles: 'cache'` (DOC-18 §1.1). A replacement needs a DR | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/exceljs) |
 | `@react-pdf/renderer` | **4.9.0** | Fee notices, receipts, reports, library export (DR-56). P2-13 and EXP-08 measure it on Bun | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/@react-pdf/renderer) |
 | `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` | **3.1152.0** (both) | S3 API against Cloudflare R2: presigned PUT, `HEAD`, `DELETE` (DR-61, DR-83) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@aws-sdk/client-s3) |
@@ -334,7 +334,7 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 ## Open questions
 
-- **SMS provider and SMTP relay (DR-68):** the adapter packages cannot be pinned until the Owner or client chooses the providers. Not blocking this document; blocking P1-10.
+- **SMS provider and SMTP relay (DR-68, Owner 2026-10-21):** the providers are not chosen yet, so the adapter packages cannot be pinned. The ports `SmsSender` and `Mailer` are built first with the `console` and `allowlist` drivers and Mailpit; the pins are added in P1-22 when the Owner picks. Not blocking this document or P1-10; blocking P1-22 and M1.
 - **Local S3-compatible object store:** chosen and pinned by P1-03 after it verifies the candidates on the web.
 - **Grafana Alloy pin:** set to 1.20.1 here; P1-18 re-verifies it on the day it is used (a pin older than 30 days is checked again).
 - None. Decisions made while writing are DR-93, DR-94 and DR-95.

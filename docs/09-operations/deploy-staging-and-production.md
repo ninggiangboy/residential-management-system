@@ -1,12 +1,12 @@
 # Deploy: staging and production
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-31) · DOC-70
-> Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
+> Status: **Draft** · Updated: 2026-10-21 (DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
+> Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
 > Main readers: P0-03, P1-18, P1-20, P1-22, P6-05, P6-13; the Owner and the operator who builds a host; [DOC-72](backup-restore.md) (backup, restore), [DOC-71](ci-cd.md) (calls the deploy command)
 
 This document builds one environment from nothing: the inputs the Owner must supply, the VPS and its hardening, the Cloudflare setup, native PostgreSQL and pgBackRest, the compose files, the Caddyfile and the Tunnel, the secrets as files, the rolling deploy script, the migrations, the first deploy and the teardown. It does not hold the pipeline that calls the deploy command (DOC-71), the restore procedure and the drill (DOC-72, RB-10), the meaning of a configuration key (DOC-41), the alert rules (DOC-40) or the application's design (DOC-07). Staging and production use the same files; §12 lists the few values that differ.
 
-**State of this document.** Nothing has been installed: there is no VPS, no Cloudflare account configured and no domain yet (the inputs of §2 are open). Every command is written from the vendor documentation read on 2026-10-20 (sources in §17) and **not run**. P1-20 builds staging by following this document and corrects it where reality differs; each place that task must confirm is marked **P1-20 checks**. The values for production are the same files with the sizes of DR-06.
+**State of this document.** Nothing has been installed: there is no VPS, no Cloudflare account configured and no domain yet (the inputs of §2 are open and are placeholders until the task that needs them, DR-228). Every command is written from the vendor documentation read on 2026-10-20 (sources in §17) and **not run**. P1-20 builds staging by following this document and corrects it where reality differs; each place that task must confirm is marked **P1-20 checks**. The values for production are the same files with the sizes of DR-06.
 
 ## 1. Purpose and scope
 
@@ -28,25 +28,27 @@ This document builds one environment from nothing: the inputs the Owner must sup
 
 ## 2. Owner inputs (P0-03)
 
-Task P0-03 collects these and records them in this table. **All are open on 2026-10-20**; the column *Needed by* is the task that stops without it.
+Task P0-03 collects these and records them in this table. **The documents never hold the real data** (DR-228, Owner, 2026-10-21): they use placeholders (`<domain>`, `<reverse-domain>`, `<company-name>`, `<tax-code>`, `<github-org>`, …), and the Owner supplies the real value only when the task that needs it starts, to the place that uses it (the Cloudflare account, the EAS project, the secret files of §9, the operator), never to this repository. The column *Needed by* is the task that stops without the real value; the column *Blocking?* says what happens before that task. **No input is needed to start coding phase 1**: P1-01…P1-16, P1-19 and P1-21 run locally with placeholders, Mailpit and the fake drivers.
 
-| # | Input | Used in | Needed by | Status |
-| --- | --- | --- | --- | --- |
-| 1 | Company legal name, address, tax code | Terms, receipts, store listings (DOC-73) | P1-12, P6-10 | Open |
-| 2 | **Company domain** `<domain>` and where it is registered; the Owner can change its name servers to Cloudflare | §5.1; every host name | P1-20 | Open |
-| 3 | Cloudflare account: owner email, two-factor on; R2 enabled; what the free plan asks (payment method) | §5 | P1-20 | Open |
-| 4 | **VPS provider, location, plan and price** for staging (2 vCPU, 4 GB, 60 GB) and production (4 vCPU, 8 GB, 100 GB), Ubuntu Server 26.04 LTS available (else 24.04, DR-83); out-of-band console access; whether the location is in Vietnam (DR-58 residency review) | §3, §4 | P1-20 | Open |
-| 5 | Operators: names and emails of the Owner and of the Admin who operates the system; their SSH public keys | §4.3, §5.2 (Access allow-list) | P1-20 | Open |
-| 6 | GitHub organization and repository (private); who administers it | DOC-71 | P1-01 | Open |
-| 7 | App display names, bundle ids `<reverse-domain>.rms.resident` and `<reverse-domain>.rms.staff` (DR-69) | DOC-73 | P1-17 | Open |
-| 8 | Apple Developer Program account; Google Play Console account; Expo organization (all company-owned) | DOC-73 | P1-17, P6-10 | Open |
-| 9 | Receiving bank account (bank, number, holder) and payOS merchant account with test credentials (P0-04) | DOC-24 | P3-01 | Open |
-| 10 | SMS provider with brandname OTP and SMTP relay chosen (DR-68); brandname registration started | DOC-26, §9 | P1-10, P1-22 | Open |
-| 11 | A second mail account for alert delivery (not the application's SMTP), and a Telegram bot with the chat id of the alert group (DR-63) | §10 | P1-18 | Open |
-| 12 | An external uptime probe service (free tier) and who receives its messages (DOC-40 §6) | NFR-10 | P1-18 | Open |
-| 13 | Manager contact; time zone confirmation `Asia/Ho_Chi_Minh` (DR-09) | DOC-36 | P1-12 | Open |
-| 14 | Where the Owner keeps the **sealed offline copies** of the PII key and the pgBackRest passphrase (a safe or a password manager with an emergency kit) | §9.3 | P1-20 | Open |
-| 15 | Expo push credentials: FCM service account and APNs key (DOC-73) | `EXPO_ACCESS_TOKEN`, §9 | P1-17 | Open |
+| # | Input | Used in | Needed by | Blocking? | Status |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Company legal name, address, tax code | Terms, receipts, store listings (DOC-73) | P1-12, P6-10 | **Placeholder, then required.** The terms seed of P1-12 uses `<company-name>`, `<company-address>`, `<tax-code>`; the real text is needed before the staging UAT and for the store listing (P6-10) | Open |
+| 2 | **Company domain** `<domain>` and where it is registered; the Owner can change its name servers to Cloudflare | §5.1; every host name | P1-20 | **Required at P1-20 (staging), not before.** Lead time: buying the domain and moving its name servers to Cloudflare can take days | Open |
+| 3 | Cloudflare account: owner email, two-factor on; R2 enabled; what the free plan asks (payment method) | §5 | P1-20 | **Required at P1-20 (staging), not before** | Open |
+| 4 | **VPS provider, location, plan and price** for staging (2 vCPU, 4 GB, 60 GB) and production (4 vCPU, 8 GB, 100 GB), Ubuntu Server 26.04 LTS available (else 24.04, DR-83); out-of-band console access; whether the location is in Vietnam (DR-58 residency review) | §3, §4 | P1-20 | **Required at P1-20 (staging), not before**; production is needed at P6 | Open |
+| 5 | Operators: names and emails of the Owner and of the Admin who operates the system; their SSH public keys | §4.3, §5.2 (Access allow-list) | P1-20 | **Required at P1-20 (staging), not before** | Open |
+| 6 | GitHub organization and repository (private); who administers it | DOC-71 | P1-01 | **Not blocking: satisfied.** The repository already exists; documents use `<github-org>` | Satisfied |
+| 7 | App display names, bundle ids `<reverse-domain>.rms.resident` and `<reverse-domain>.rms.staff` (DR-69) | DOC-73 | P1-17 | **Placeholder, then required.** `<reverse-domain>` and `<app-name>` until the first EAS build of P1-17, which needs the real ids | Open |
+| 8 | Apple Developer Program account; Google Play Console account; Expo organization (all company-owned) | DOC-73 | P1-17, P6-10 | **Expo organization: required at P1-17.** Apple Developer: only for an iOS device build or a store build; Google Play: only for the store build (P6-10). The Android development build and the simulators work without either. Lead time: Apple Developer enrolment (company verification takes days to weeks) | Open |
+| 9 | Receiving bank account (bank, number, holder) and payOS merchant account with test credentials (P0-04) | DOC-24 | P3-01 | **Not P1.** Needed at P3 (P3-01); the fake driver runs until then | Open |
+| 10 | SMS provider with brandname OTP and SMTP relay chosen (DR-68: not chosen yet; ports, `console`/`allowlist` drivers and Mailpit first); brandname registration started | DOC-26, §9 | P1-22 (and M1, which needs a real SMS OTP) | **Required at P1-22, not before.** P1-10 and P1-11 run on the fake drivers. Lead time: brandname registration takes up to about 3 weeks after the pick | Open |
+| 11 | A second mail account for alert delivery (not the application's SMTP), and a Telegram bot with the chat id of the alert group (DR-63) | §10 | P1-18 | **Required for the acceptance of P1-18 on staging** (the alert must reach email and Telegram); locally the alerts go to Mailpit | Open |
+| 12 | An external uptime probe service (free tier) and who receives its messages (DOC-40 §6) | NFR-10 | P1-18 | **Required for the acceptance of P1-18 on staging**; not needed locally | Open |
+| 13 | Manager contact; time zone confirmation `Asia/Ho_Chi_Minh` (DR-09) | DOC-36 | P1-12 | **Placeholder (demo seed), then required** before the staging UAT. The time zone is already decided (DR-09) | Open |
+| 14 | Where the Owner keeps the **sealed offline copies** of the PII key and the pgBackRest passphrase (a safe or a password manager with an emergency kit) | §9.3 | P1-20 | **Required at P1-20 (staging), not before**; the keys of staging are created then (EXP-09 of P1-23 runs on it) | Open |
+| 15 | Expo push credentials: FCM service account and APNs key (DOC-73) | `EXPO_ACCESS_TOKEN`, §9 | P1-17 | **Required for the acceptance of P1-17 on a real device** (a push reaching a phone); the development build and simulators run without | Open |
+
+**Lead times to start early** (DR-228): the SMS brandname registration (up to about 3 weeks, row 10), the Apple Developer enrolment (row 8) and the domain registration with the name-server change (row 2). None blocks coding; each can delay the staging UAT or the first iOS build if started late.
 
 No input is a secret to write in this repository: the table records *that* the Owner supplied it and where it is kept.
 
@@ -1357,8 +1359,7 @@ Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot
 
 ## Open questions
 
-- **Everything in §2 is open** until P0-03 collects it; none of it blocks writing this document, all of it blocks P1-20.
-- **Application boot with the database absent** (the 30-second retry then exit 1, §6.2) is a requirement on P1-04 that DOC-38 §5 and DOC-12 do not state yet; propagate it there.
+- **The Owner inputs of §2** are open by design: the documents use placeholders and the real value arrives with the task that needs it (DR-228, decided by the Owner on 2026-10-21; column *Blocking?*). None blocks writing this document or starting P1; the lead times are in §2.
 - **DR-160 (Bot Fight Mode off)** weakens the edge relative to DR-83 item 4; the Owner confirmed it on 2026-10-20. The alternative, to keep it on, would let a challenge hit an app or the gateway callback.
 - **Whether the free plan offers** *Access for `*.pages.dev`*, accepts the `starts_with` operator and host condition in the one rate rule, and covers the staff count in Access is checked by P1-20.
 - **The GHCR token type**, the `cloudflared` flags, the Alertmanager `*_file` keys, the Alloy option names and the `postgres_exporter` options are checked by P1-20 and P1-18 as marked.

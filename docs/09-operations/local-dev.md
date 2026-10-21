@@ -1,12 +1,12 @@
 # Local development
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-31) · DOC-69
-> Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
+> Status: **Draft** · Updated: 2026-10-21 (DR-227: the dry run is the acceptance of P1-03; earlier: P0-31) · DOC-69
+> Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 
 This document takes a developer from an empty machine to the whole stack running: tools, the `bun run` targets, ports, the demo accounts and the fixed OTP, how to reset, and the problems a Bun + Expo workspace is known to cause. It does not hold the deployed environments (DOC-70), the pipeline (DOC-71), the Expo build profiles (DOC-73), the meaning of a configuration key (DOC-41) or the test method (DOC-88).
 
-**State of this document.** The repository does not exist yet: the scripts below are written in P1-01 (tooling), P1-03 (local infrastructure), P1-04 (API) and P1-06 (database). Each command therefore states the output **that task must produce**; none of it has been run. The dry run on a clean user account (acceptance of P0-31) is moved to the acceptance of P1-03 (`bun run setup` from a fresh clone, healthy in 3 minutes or less) and recorded in §14 when it is done.
+**State of this document.** The repository does not exist yet: the scripts below are written in P1-01 (tooling), P1-03 (local infrastructure), P1-04 (API) and P1-06 (database). Each command therefore states the output **that task must produce**; none of it has been run. The dry run on a clean user account is not a condition of the M0 approval of this document: the Owner decided on 2026-10-21 (DR-227) that it is the acceptance of P1-03 (`bun run setup` from a fresh clone, healthy in 3 minutes or less), recorded in §14 when it is done.
 
 ## 1. Purpose and scope
 
@@ -332,7 +332,7 @@ The camera QR scan and the push token need a **physical device** (`expo-device`,
 
 ## 13. Checks of this document
 
-These are the checks a reviewer runs after P1-03; they are **not run** yet (§ State of this document). They are not test cases and take no test ID.
+These are the checks a reviewer runs after P1-03; they are **not run** yet (§ State of this document). Check 1 is the dry run of DR-227: it is the acceptance of P1-03, not of the M0 review. They are not test cases and take no test ID.
 
 | # | Check | Expected |
 | --- | --- | --- |
@@ -350,6 +350,7 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 | ID | Title | State | Where used |
 | --- | --- | --- | --- |
+| DR-227 | The dry run of this document is the acceptance of P1-03, not a condition of the M0 approval (Owner, 2026-10-21) | Decided | State of this document, §13 check 1 |
 | DR-157 | Local development: the names of the root `bun run` targets, the port table and the compose variables of `compose.local.yml`; Expo tooling runs on Node (`bunx expo`, never `--bun`) with the `--linker hoisted` fallback of DR-01; local roles are provisioned by `0001-provision.sql` in the `initdb.d` script of the `postgres` container | Decided | §3, §5, §6, §7, §12 |
 
 ## 15. Not in this document
@@ -378,5 +379,5 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 ## Open questions
 
 - **The local object store** (SeaweedFS or RustFS) is chosen and pinned by P1-03 after it checks both on the web (DOC-11 §1). §6 and §7 hold its ports as placeholders (9000, 9001) until then.
-- **The dry run on a clean account** (acceptance of P0-31) cannot be done before the scripts exist; it is check 1 of §13 and the acceptance of P1-03. Until then this document stays `Draft`.
-- Decisions made while writing: DR-157.
+- **The dry run on a clean account** cannot be done before the scripts exist. Decided by the Owner on 2026-10-21 (DR-227): it is check 1 of §13 and the acceptance of P1-03, and the M0 approval of this document does not wait for it. P1-03 records the result in §14 and corrects this document where reality differs.
+- Decisions made while writing: DR-157. Decided by the Owner: DR-227.

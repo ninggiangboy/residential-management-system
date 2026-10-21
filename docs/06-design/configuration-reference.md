@@ -1,7 +1,7 @@
 # Configuration reference
 
-> Status: **Draft** · Updated: 2026-10-20 (skeleton, P0-30; DR-151…156) · DOC-41
-> Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
+> Status: **Draft** · Updated: 2026-10-21 (DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
 This document lists every configuration key of the system: the environment variables of `api` and `worker`, the build-time variables of the web CMS and the two mobile apps, the secrets, and their defaults per profile. It also lists the building settings, only to say they are **not** environment. It does not explain what a key does beyond one sentence: the behavior lives in the document named in the *Source* column. It does not hold infrastructure configuration (the Caddyfile, `docker-compose.yml`, the Prometheus and Alertmanager files): those are DOC-70 and DOC-40.
@@ -100,7 +100,7 @@ A ring is refused when it is empty, when a value has the wrong length or encodin
 | `ADMIN_BASE_URL` | url | `http://localhost:5173` | **required** in `staging`, `production` | Base of invite and reset links (DOC-26 §9) |
 | `APP_DOWNLOAD_URL` | url | none | **required** in `staging`, `production` | Link in the invitation SMS (DOC-26 §9, DR-137) |
 | `MIN_APP_VERSION_RESIDENT`, `MIN_APP_VERSION_STAFF` | semver | `1.0.0` | | Below it the API answers 426 `upgrade_required` (DR-69, DR-145, DOC-50 §16) |
-| `STORE_URL_RESIDENT_IOS`, `STORE_URL_RESIDENT_ANDROID`, `STORE_URL_STAFF_IOS`, `STORE_URL_STAFF_ANDROID` | url | none | **required** in `production` (the final links are Owner input, P0-03) | `details.storeUrl` of 426 and `GET /public/config` (DR-145) |
+| `STORE_URL_RESIDENT_IOS`, `STORE_URL_RESIDENT_ANDROID`, `STORE_URL_STAFF_IOS`, `STORE_URL_STAFF_ANDROID` | url | none | **required** in `production` (the final links are Owner input, placeholders until P6-10, DR-228) | `details.storeUrl` of 426 and `GET /public/config` (DR-145) |
 | `IDEMPOTENCY_TTL_HOURS` | int | 24 | | Retention of `platform.idempotency_key` (DR-74, DOC-50 §8) |
 | `API_BODY_LIMIT_BYTES` | int | 2097152 | | Body limit when Caddy is absent (local, test); Caddy enforces 2 MB in staging and production (DOC-50 §16) |
 | `OPENAPI_ENABLED` | bool | `true` | `test` `false`; `staging` `true`; `production` `false` (the boot guard refuses `true`) | OpenAPI and Scalar at `/api/v1/openapi.json`, `/api/v1/docs` (DR-64, AG-03) |
@@ -358,6 +358,6 @@ Prefix `CF-` (configuration; unused before this document; master plan §0.2, DR-
 
 ## Open questions
 
-- **Names of the `SMS_*` keys.** They depend on the provider the Owner records in DR-68 (before P1-10); fixed in P1-22. Not blocking the skeleton.
+- **Names of the `SMS_*` keys.** They depend on the provider the Owner picks (DR-68, Owner decision 2026-10-21: not chosen yet, ports and `console`/`allowlist` drivers first); the names are fixed in P1-22 and `SMS_*` stays a pattern until then. Decided by DR-68; not blocking the skeleton.
 - **`WEBHOOK_KNOWN_IPS` needs the gateway documentation or sandbox** (DR-25). Empty until then.
-- **Final `STORE_URL_*` values** are Owner input (P0-03).
+- **Final `STORE_URL_*` values** are Owner input, a placeholder until the store build of P6-10 (DR-228, Owner, 2026-10-21; DOC-70 §2).

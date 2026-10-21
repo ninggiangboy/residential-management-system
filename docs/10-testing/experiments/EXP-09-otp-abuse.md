@@ -1,7 +1,7 @@
 # EXP-09: The OTP limits bound SMS cost per phone and per IP, and no guess succeeds in five attempts
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-32; DR-171 decided) · DOC-98 / EXP-09
-> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §7.3, §20.2, [DR](../../00-decision-register.md) (DR-37, 64, 77, 78, 80, 134, 152), [DOC-26](../../06-design/identity-and-sessions.md) §5, §6, §10, [DOC-39](../../06-design/security.md) §5.3, §6, §11.4, [DOC-40](../../06-design/observability.md) §4.3, [DOC-88](../test-strategy.md) §12, [DOC-16](../../05-data/identity-and-residency-model.md) §4.3, §4.6
+> Status: **Draft** · Updated: 2026-10-21 (DR-68: the run needs no real provider; earlier: P0-32; DR-171 decided) · DOC-98 / EXP-09
+> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §7.3, §20.2, [DR](../../00-decision-register.md) (DR-37, 64, 77, 78, 80, 134, 152, DR-68), [DOC-26](../../06-design/identity-and-sessions.md) §5, §6, §10, [DOC-39](../../06-design/security.md) §5.3, §6, §11.4, [DOC-40](../../06-design/observability.md) §4.3, [DOC-88](../test-strategy.md) §12, [DOC-16](../../05-data/identity-and-residency-model.md) §4.3, §4.6
 > Main readers: P1-11 (the code under test), P1-23 (the run); the evaluation of NFR-07
 
 This experiment shows, on the staging host, that a hostile caller cannot make the system send more SMS than the bucket arithmetic allows, from one phone or from one IP, and cannot guess a code in the five attempts a challenge gives. It does not test the daily cap of 3,000 (AU-25 does, with a fake clock; sending 3,000 challenges on staging proves nothing more), SMS delivery to a real handset (P1-22), or the sign-in itself (AU-20…30, FI-).
@@ -309,7 +309,7 @@ Result file (one per run; the envelope is DOC-88 §12, `metrics` is this documen
 
 ## 11. Results
 
-Not run. The run is P1-23 (after P1-11 and P1-22); the results of record are the files under `docs/10-testing/experiments/results/` and the table of §9.
+Not run. The run is P1-23 (after P1-11 and P1-20). It needs no real provider: `SMS_DRIVER=allowlist` with an allow-list that holds none of the test phones sends nothing, so it can run before the Owner has picked the providers (DR-68, Owner 2026-10-21), and provider billing is checked in P1-22; the results of record are the files under `docs/10-testing/experiments/results/` and the table of §9.
 
 ## 12. Open questions
 
