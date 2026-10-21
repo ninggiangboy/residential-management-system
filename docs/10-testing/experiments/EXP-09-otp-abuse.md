@@ -1,6 +1,6 @@
 # EXP-09: The OTP limits bound SMS cost per phone and per IP, and no guess succeeds in five attempts
 
-> Status: **Draft** · Updated: 2026-10-21 (DR-68: the run needs no real provider; earlier: P0-32; DR-171 decided) · DOC-98 / EXP-09
+> Status: **Approved** (Owner, 2026-10-21, as the first version (run in P1-23)) · Updated: 2026-10-21 (DR-68: the run needs no real provider; earlier: P0-32; DR-171 decided) · DOC-98 / EXP-09
 > Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §7.3, §20.2, [DR](../../00-decision-register.md) (DR-37, 64, 77, 78, 80, 134, 152, DR-68), [DOC-26](../../06-design/identity-and-sessions.md) §5, §6, §10, [DOC-39](../../06-design/security.md) §5.3, §6, §11.4, [DOC-40](../../06-design/observability.md) §4.3, [DOC-88](../test-strategy.md) §12, [DOC-16](../../05-data/identity-and-residency-model.md) §4.3, §4.6
 > Main readers: P1-11 (the code under test), P1-23 (the run); the evaluation of NFR-07
 

@@ -1,6 +1,6 @@
 # Resident: QR, notices, account
 
-> Status: **Review** (the P1 sections: the account group) · Updated: 2026-10-20 · DOC-60
+> Status: **Approved** (Owner, 2026-10-21, for the account group (gate P1); QR, notices and library are owed to P4 and P5) (the P1 sections: the account group) · Updated: 2026-10-20 · DOC-60
 > Depends on: original SDD §7.4, §18, [DR](../../00-decision-register.md) (DR-38, 40, 48, 52, 59, 69, 70, 71, 72, 73, 74, 128, 146), [DOC-02](../../01-product/personas-and-journeys.md), [DOC-03](../../01-product/requirements.md) (FR-16, FR-39, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-14, UC-26, UC-27), [DOC-26](../../06-design/identity-and-sessions.md) §3.7, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-35](../../06-design/audit-privacy-and-terms.md) §10, [DOC-42](../../06-design/error-handling.md), [DOC-51](../../07-api/api-endpoints.md) (E-03, E-12…E-25), [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md)
 > Main readers: P1-17 (resident app shell), P1-09 (i18n catalog), P1-00 (doc gate), the writers of DOC-68, P4-00 and P5-00 for the later screens
 

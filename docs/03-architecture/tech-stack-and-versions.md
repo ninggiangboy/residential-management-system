@@ -1,6 +1,6 @@
 # Tech stack and versions
 
-> Status: **Review** · Updated: 2026-10-21 (DR-68: provider adapter pinned at P1-22; earlier: DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-68: provider adapter pinned at P1-22; earlier: DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83, 180…188), master plan §0.4, [DOC-06](../02-glossary.md)
 > Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
 

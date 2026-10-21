@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Review** · Updated: 2026-10-21 (DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -538,7 +538,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `AG-` | API guidelines | [DOC-50](../07-api/api-guidelines.md) §17 | `AG-01…26` | Review | P1-04 |
 | `FF-` | Flows: fees and payments | DOC-44 | not written | planned (P2) | P2 |
 | `FO-` | Flows: online payment | DOC-45 | not written | planned (P3) | P3 |
-| `FI-` | Flows: identity and household | [DOC-46](../06-design/flows/identity-and-household.md) | `FI-01…96` except numbers 31 and 32, which the block of FL-19 reserves and the file does not contain | Review | P1-10…P1-12 |
+| `FI-` | Flows: identity and household | [DOC-46](../06-design/flows/identity-and-household.md) | `FI-01…96` except numbers 31 and 32, which stay unused (struck 2026-10-21) | Review | P1-10…P1-12 |
 | `FT-` | Flows: tickets | DOC-47 | not written | planned (P4) | P4 |
 | `FN-` | Flows: notices, access, vehicles | DOC-48 | not written | planned (P4, P5) | P4, P5 |
 | `FA-` | Flows: admin, reports, library | DOC-49 | not written | planned (P5, P6) | P5, P6 |
@@ -613,4 +613,4 @@ Every new decision in this document is recorded as DR-169 (decided, Claude deleg
 - None of the decisions of §17 is open. Decisions made while writing: DR-169; DR-171 and DR-173 (in DOC-98 and DOC-99) were decided by the Owner on 2026-10-20.
 - **`bun test` parallelism.** Whether Bun 1.4.3 runs test files in parallel, and how many databases a run clones at once, is checked in P1-01; the design needs none (a file owns its database), so any scheduler is safe.
 - **`packages/testing/grants.test.ts`.** DOC-19 §9 names this path; the vendored testing package is `packages/core-testing` (DOC-12 §13). The path is settled when P1-06 writes the file; this document uses DOC-19's path until then.
-- **`FI-` numbers 31 and 32.** DOC-46 reserves them in the block of FL-19 (`FI-21…32`) and the file has no rows for them. DOC-46's author writes them or strikes them (conventions §1).
+- **`FI-` numbers 31 and 32.** Struck on 2026-10-21: the block of FL-19 is `FI-21…30` and the two numbers stay unused.

@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 

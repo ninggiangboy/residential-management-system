@@ -1,6 +1,6 @@
 # UI states and copy
 
-> Status: **Review** · Updated: 2026-10-21 (DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-21 (DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
 > Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 

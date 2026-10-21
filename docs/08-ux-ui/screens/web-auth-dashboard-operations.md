@@ -1,6 +1,6 @@
 # Web: sign-in, dashboard, operations
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-64
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the rest is owed to P4, P5 and P6) · Updated: 2026-10-20 · DOC-64
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-38, 39, 41…47, 64, 71, 72, 75, 84, 128, 130, 147, 150), [DOC-03](../../01-product/requirements.md) (FR-13, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-17, UC-26), [DOC-26](../../06-design/identity-and-sessions.md) §3.3, §4, [DOC-37](../../06-design/files-and-uploads.md) §4, [DOC-42](../../06-design/error-handling.md) §5, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-05…E-08, E-11, E-12, E-30…E-38), [DOC-53](../ux-principles-and-ia.md) §3.4, §4, [DOC-55](../client-architecture.md) §5, §6, §17, [DOC-56](README.md) §5, §6, [DOC-54](../design-system.md)
 > Main readers: P1-16 (web CMS shell), P1-14, P1-15, the writers of DOC-65 and DOC-67 (they use the shell described here), P4, P5 and P6 tasks that build the later screens of this file
 

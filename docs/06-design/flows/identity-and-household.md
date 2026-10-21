@@ -1,6 +1,6 @@
 # Identity and household flows
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-46
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-46
 > Depends on: [DOC-43](README.md), [DOC-04](../../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-17, UC-27), [DOC-03](../../01-product/requirements.md) (FR-13…18, FR-39, FR-41, FR-45, FR-50), [DOC-26](../identity-and-sessions.md), [DOC-27](../residency-and-memberships.md), [DOC-35](../audit-privacy-and-terms.md) §9, §10, [DOC-36](../building-configuration-and-demo.md) §7, [DOC-37](../files-and-uploads.md), [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-42](../error-handling.md), [DOC-51](../../07-api/api-endpoints.md), [DOC-50](../../07-api/api-guidelines.md), [DR](../../00-decision-register.md) (DR-36…41, 59, 74, 127…141, DR-142…), [DOC-06](../../02-glossary.md)
 > Main readers: P1-10…P1-17, P1-14 (staff, unit and resident API), P1-21, P1-22, DOC-57, DOC-60, DOC-61, DOC-64, DOC-65, DOC-67, DOC-88, EXP-09, EXP-10
 
@@ -2051,5 +2051,4 @@ Lower layer: `AU-43…50`, `AU-12`, `AU-16`. These rows check the journey, the d
 
 ## Open questions
 
-- Which screen carries the web forgot-password email form: a state of `W-Login` (as written in FL-18.2) or its own artboard. DOC-64 decides; the flow follows.
-- The copy owed to DOC-68 is marked `(copy owed to DOC-68)` in the flows (the `password_weak` and `phone_invalid` messages, the rounding of `{minutes}`, the label of the step-up dialog's "send a new code" button).
+None. Both earlier questions are answered: DOC-64 §1 carries the web forgot-password form as a dialog of `W-Login`, as FL-18.2 writes it; the messages marked `(copy owed to DOC-68)` are in DOC-68 (`password_weak`, `phone_invalid`; DR-220, DR-223) and the step-up dialog's resend button in DOC-67 (`web.step-up.cta.resend`). Numbers 31 and 32 of the `FI-` block were reserved for FL-19 and never used; they stay unused (a number is never reused).

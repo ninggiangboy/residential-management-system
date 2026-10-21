@@ -1,6 +1,6 @@
 # Web: system
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-67
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-10-20 · DOC-67
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-33, 38, 39, 41…47, 59, 72, 74, 128, 133, 147, 148), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-38, FR-41, FR-50), [DOC-04](../../01-product/use-cases.md) (UC-17), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-36](../../06-design/building-configuration-and-demo.md) §4…8, [DOC-37](../../06-design/files-and-uploads.md), [DOC-51](../../07-api/api-endpoints.md) (E-08, E-38…E-56), [DOC-42](../../06-design/error-handling.md) §5, [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md), DOC-54
 > Main readers: P1-16 (web CMS shell: `W-Staff`, `W-Staff-New`, `W-Building`), P1-14, P1-15, the writers of DOC-64…66 (they cite the step-up rule below), P3 and P6 (the later table), EXP-10
 

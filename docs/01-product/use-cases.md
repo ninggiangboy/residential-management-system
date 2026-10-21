@@ -1,6 +1,6 @@
 # Use cases
 
-> Status: **Review** · Updated: 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
 > Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-05, DOC-21…49 (each detailed flow `FL-xx` expands one use case), DOC-51 (endpoints), DOC-56…67 (screens), P0-29, every task `Pn-xx` that builds a use case
 

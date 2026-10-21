@@ -1,6 +1,6 @@
 # Mobile release
 
-> Status: **Draft** · Updated: 2026-10-21 (DR-228: Owner inputs are placeholders until the task that needs them; earlier: skeleton, P0-31) · DOC-73
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-21 (DR-228: Owner inputs are placeholders until the task that needs them; earlier: skeleton, P0-31) · DOC-73
 > Depends on: original SDD §4.3, §21, [DR](../00-decision-register.md) (DR-37, 52, 60, 69, 70, 82, 94, 95, DR-167, 168, DR-228), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §6, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §7, §15, [DOC-50](../07-api/api-guidelines.md) §7, §16, [DOC-69](local-dev.md) §10, [DOC-71](ci-cd.md) §9
 > Main readers: P1-17 (the first development builds), P6-10 (store builds and submission); the Owner (store accounts, review notes)
 

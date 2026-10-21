@@ -1,6 +1,6 @@
 # Messaging contracts
 
-> Status: **Review** · Updated: 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
 > Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 

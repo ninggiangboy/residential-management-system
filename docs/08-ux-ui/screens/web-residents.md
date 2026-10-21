@@ -1,6 +1,6 @@
 # Web: residents
 
-> Status: **Review** · Updated: 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
+> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
 > Main readers: P1-16 (web CMS shell: sign in, create staff, import units), P1-13, P1-14, DOC-68 (copy), DOC-88 (prefix `UIWR-`)
 

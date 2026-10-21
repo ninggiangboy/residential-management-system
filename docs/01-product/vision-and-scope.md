@@ -1,6 +1,6 @@
 # Vision and scope
 
-> Status: **Review** · Updated: 2026-10-21 (DR-68: providers picked before P1-22) · DOC-01
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-68: providers picked before P1-22) · DOC-01
 > Depends on: original SDD §1–§3, §21–§22, [DR](../00-decision-register.md) (DR-06, 17, 47, 58, 79, 80, 81, 83, 84, DR-68), [DOC-06](../02-glossary.md), master plan §1, §4
 > Main readers: Owner (project), P0-18…P0-35, every later document that cites a goal or a scope boundary
 

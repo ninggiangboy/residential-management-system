@@ -1,6 +1,6 @@
 # Personas and journeys
 
-> Status: **Review** · Updated: 2026-10-20 (DR-128: no "tries left" on the staff login) · DOC-02
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-128: no "tries left" on the staff login) · DOC-02
 > Depends on: original SDD §3.1, §7.4, §18, [DR](../00-decision-register.md) (DR-40, 46, 48, 72, 81, 84), [DOC-01](vision-and-scope.md), [DOC-06](../02-glossary.md), `references/design-screens.md`
 > Main readers: DOC-03, DOC-04, DOC-53, DOC-56…67 (screen specifications cite a journey step), P0-18…P0-34
 

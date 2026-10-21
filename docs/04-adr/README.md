@@ -1,6 +1,6 @@
 # ADR index
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-13
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-19 · DOC-13
 > Depends on: [DR](../00-decision-register.md), [master plan](../00-master-plan.md) §3.2, [ADR-0001](0001-record-architecture-decisions.md)
 > Main readers: every task `Pn-00` (doc gate), reviewers of pull requests that touch an architecture decision
 

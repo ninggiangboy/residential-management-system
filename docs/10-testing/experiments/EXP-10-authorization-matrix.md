@@ -1,6 +1,6 @@
 # EXP-10: Every route refuses every actor it should refuse, and serves every actor it should serve
 
-> Status: **Draft** · Updated: 2026-10-21 (DR-226: 74 routes in the first version, 169 in the final; earlier: P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
+> Status: **Approved** (Owner, 2026-10-21, as the first version (run in P1-15); final in P6) · Updated: 2026-10-21 (DR-226: 74 routes in the first version, 169 in the final; earlier: P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
 > Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151, DR-226), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
 > Main readers: P1-15 (first version), P6-08 (final); the evaluation of NFR-08
 

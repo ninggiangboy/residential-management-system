@@ -1,6 +1,6 @@
 # Feature catalog
 
-> Status: **Review** · Updated: 2026-10-21 (DR-91, DR-92 decided) · DOC-05
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-91, DR-92 decided) · DOC-05
 > Depends on: original SDD §2.3, §14, §21, [DR](../00-decision-register.md) (DR-17, 19, 20, 38, 39, 44, 47, 49, 55, 60, 72, 76, 79, 81, 84, DR-91, DR-92), [DOC-01](vision-and-scope.md) §5, §8, [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md), master plan §3.4, §4.3, [product proposal](../references/product-proposal.md)
 > Main readers: P0-07, DOC-04, DOC-56 (screens by feature), the phase tasks `Pn-xx` (scope of each milestone), DOC-88 (which feature each test protects)
 

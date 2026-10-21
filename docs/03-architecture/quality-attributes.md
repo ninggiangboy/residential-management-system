@@ -1,6 +1,6 @@
 # Quality attributes
 
-> Status: **Review** · Updated: 2026-10-20 (DR-179: pointer to the client budgets; earlier DR-154: label `job_name`) · DOC-10
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-179: pointer to the client budgets; earlier DR-154: label `job_name`) · DOC-10
 > Depends on: original SDD §3.4, §19, §20, [DR](../00-decision-register.md) (DR-05, 06, 21, 30, 52, 56, 57, 61…64, 66, 67, 75, 77, 78, 80, 83, 85), [DOC-01](../01-product/vision-and-scope.md) §4, [DOC-03](../01-product/requirements.md) §2, [DOC-06](../02-glossary.md), [DOC-07](system-context-and-containers.md) §3–§4
 > Main readers: DOC-38, DOC-40, DOC-70, DOC-72, DOC-96 (EXP-07), DOC-97 (EXP-08), P1-03, P1-18, P1-20, P6-05, P6-07
 

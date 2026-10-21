@@ -1,6 +1,6 @@
 # Local development
 
-> Status: **Review** · Updated: 2026-10-21 (DR-227: the dry run is the acceptance of P1-03; earlier: P0-31) · DOC-69
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-227: the dry run is the acceptance of P1-03; earlier: P0-31) · DOC-69
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 

@@ -1,6 +1,6 @@
 # Screens index
 
-> Status: **Review** · Updated: 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-27, 33, 38, 39, 40, 41…47, 48, 59, 69…72, 74, 75, 84, 128), [DOC-03](../../01-product/requirements.md), [DOC-04](../../01-product/use-cases.md), [DOC-14](../../05-data/data-conventions.md) (human codes), [DOC-27](../../06-design/residency-and-memberships.md) §3.2 (policy table), [DOC-51](../../07-api/api-endpoints.md), DOC-53, DOC-54, DOC-55, [design screens catalog](../../references/design-screens.md)
 > Main readers: the writers of DOC-57…67 and DOC-68, P1-16, P1-17 (the client shells), P1-09 (i18n catalog), every task that builds or tests a screen
 

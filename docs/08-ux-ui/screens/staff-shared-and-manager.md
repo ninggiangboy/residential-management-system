@@ -1,6 +1,6 @@
 # Staff app: shared and Manager
 
-> Status: **Review** (§1, the P1 sections: sign-in and account) · Updated: 2026-10-20 · DOC-61
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the B-screens are owed) (§1, the P1 sections: sign-in and account) · Updated: 2026-10-20 · DOC-61
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-38, 39, 41…47, 52, 69, 70, 71, 72, 73, 74, 128, 147), [DOC-02](../../01-product/personas-and-journeys.md), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-17, UC-26), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-42](../../06-design/error-handling.md), [DOC-51](../../07-api/api-endpoints.md) (E-03, E-05, E-06, E-12, E-30…E-37), [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md)
 > Main readers: P1-17 (staff app shell), P1-09 (i18n catalog), P1-00 (doc gate), the writers of DOC-62, DOC-63 and DOC-68, P4-00 and P5-00 for the later screens
 

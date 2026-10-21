@@ -1,6 +1,6 @@
 # Identity and residency model
 
-> Status: **Review** · Updated: 2026-10-21 (DR-226: E-169 reads `import_job_building_idx`; DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: E-169 reads `import_job_building_idx`; DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
 > Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity), P1-11 (residency), P1-13 (imports), DOC-19 (grants), DOC-26, DOC-27, DOC-35, DOC-46, DOC-51, EXP-09, EXP-10
 

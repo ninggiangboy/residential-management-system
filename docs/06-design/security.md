@@ -1,6 +1,6 @@
 # Security
 
-> Status: **Draft** · Updated: 2026-10-21 (DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-21 (DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
 > Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 147, 151, 152, 153, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
 > Main readers: P1-04, P1-10, P1-14, P1-15 (route metadata and the matrix), P1-16 (the web CMS headers), P1-20 (Caddy), P3-03, P5-09, P6-08 (the review), DOC-70, DOC-71, DOC-99 (EXP-10), DOC-98 (EXP-09)
 

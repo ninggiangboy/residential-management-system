@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Review** · Updated: 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 

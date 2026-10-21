@@ -1,6 +1,6 @@
 # Requirements
 
-> Status: **Review** · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
 > Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-04, DOC-05, DOC-21…42 (every design document cites an FR), P0-19, every task `Pn-xx` (acceptance), `docs/10-testing` (test cases)
 

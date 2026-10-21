@@ -1,6 +1,6 @@
 # Resident app: sign-in and home
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-57
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-57
 > Depends on: original SDD §7.3, §7.4, §18, [DR](../../00-decision-register.md) (DR-37, 38, 40, 41…47, 59, 60, 69…72, 74, 128), [DOC-56](README.md) (convention, notes N1…N12), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, [DOC-54](../design-system.md) (components), [DOC-26](../../06-design/identity-and-sessions.md) §5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-35](../../06-design/audit-privacy-and-terms.md) §9, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-09, E-10, E-13, E-15…E-17, E-22), [DOC-42](../../06-design/error-handling.md) §5
 > Main readers: P1-11 (OTP), P1-17 (resident app shell, Maestro), P1-09 (catalog keys), the writers of DOC-58…60 and DOC-68, whoever builds a home card in P2…P5
 

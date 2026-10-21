@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Review** · Updated: 2026-10-20 (DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
