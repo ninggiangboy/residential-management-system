@@ -106,7 +106,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `bun run test:integration` | `*.int.test.ts`, `*.contract.test.ts` with real adapters, `apps/api/test/authz` | `bun run infra:up` |
 | `bun run test:race` | `*.race.test.ts` with `TEST_RACE_PROFILE=ci` (override with the variable) | `bun run infra:up` |
 | `bun run test:authz` | the authorization-matrix generator and its mutation checks (§13) | `bun run infra:up` |
-| `bun run test:grants` | `packages/testing/grants.test.ts` of DOC-19 §9 against a fresh cluster | `bun run infra:up` |
+| `bun run test:grants` | `apps/api/tests/grants/` (DOC-19 §9) on clones of the migrated template | `bun run infra:up` |
 | `bun run test:e2e` | Playwright against `bun run dev` | `bun run infra:up` |
 | `bun run test:mobile` | Maestro flows against a development build | a simulator |
 | `bun run test:load` | k6 profile named by `--profile` | the staging host |
@@ -613,5 +613,5 @@ Every new decision in this document is recorded as DR-169 (decided, Claude deleg
 
 - None of the decisions of §17 is open. Decisions made while writing: DR-169; DR-171 and DR-173 (in DOC-98 and DOC-99) were decided by the Owner on 2026-10-20.
 - **`bun test` parallelism.** Whether Bun 1.4.3 runs test files in parallel, and how many databases a run clones at once, is checked in P1-01; the design needs none (a file owns its database), so any scheduler is safe.
-- **`packages/testing/grants.test.ts`.** DOC-19 §9 names this path; the vendored testing package is `packages/core-testing` (DOC-12 §13). The path is settled when P1-06 writes the file; this document uses DOC-19's path until then.
+- **`apps/api/tests/grants/`.** DOC-19 §9 named `packages/testing/grants.test.ts`; the vendored testing package is `packages/core-testing` (DOC-12 §13) and the tests need the catalog and the migration script of `apps/api`, so P1-06 wrote them there (DR-237).
 - **`FI-` numbers 31 and 32.** Struck on 2026-10-21: the block of FL-19 is `FI-21…30` and the two numbers stay unused.
