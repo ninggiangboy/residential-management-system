@@ -1,7 +1,7 @@
 # Requirements
 
-> Status: **Review** · Updated: 2026-10-20 (DR-137: invitation SMS only for owner adds) · DOC-03
-> Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
+> Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-04, DOC-05, DOC-21…42 (every design document cites an FR), P0-19, every task `Pn-xx` (acceptance), `docs/10-testing` (test cases)
 
 This document lists what the system must do (FR-01…50) and how well (NFR-01…14), each with acceptance criteria that a test can check. It holds no design: how a rule is built is in the design documents named in §4. Use cases are in DOC-04, features in DOC-05.
@@ -153,11 +153,11 @@ This document lists what the system must do (FR-01…50) and how well (NFR-01…
 
 | ID | Requirement | Acceptance criteria | Priority | Verification |
 | --- | --- | --- | --- | --- |
-| FR-09.1 | A charge paid in cash meanwhile | **G** charge A (2,488,000 đ) paid in cash, intent covering A and B (350,000 đ) **W** the confirmation for 2,838,000 đ arrives **T** no payment is created, B stays `open`, the `gateway_event` has outcome `charge_already_paid` and appears in the money log, and the payment invariant holds | M | `IN-` tests, EXP-03 |
+| FR-09.1 | A charge paid in cash meanwhile | **G** charge A (2,488,000 đ) paid in cash, intent covering A and B (350,000 đ) **W** the confirmation for 2,838,000 đ arrives **T** no payment is created, B stays `open`, the `gateway_event` has outcome `charge_already_paid` and appears in the money log, the status of the intent returns `unmatchedTransfer {amount: 2838000, receivedAt}` and the resident gets no push and no inbox entry (DR-96, which applies to `amount_short`, `amount_over`, `charge_already_paid` and `charge_recalled` and not to `posted`, `duplicate_transfer` or `unknown_order`), and the payment invariant holds | M | `IN-` tests, EXP-03 |
 | FR-09.2 | Short transfer | **G** an intent for 2,838,000 đ **W** a confirmation for 2,000,000 đ arrives **T** outcome `amount_short`, nothing posted, the intent stays `pending`, its status returns `unmatchedTransfer {amount: 2000000, receivedAt}`, every active Manager and Admin gets an inbox entry, and the resident gets no push and no inbox entry | M | `IN-` tests |
-| FR-09.3 | Over transfer | **G** the same intent **W** 3,000,000 đ arrives **T** outcome `amount_over`; nothing posted | M | `IN-` tests |
+| FR-09.3 | Over transfer | **G** the same intent **W** 3,000,000 đ arrives **T** outcome `amount_over`; nothing posted; `unmatchedTransfer {amount: 3000000, receivedAt}` in the status (DR-96) | M | `IN-` tests |
 | FR-09.4 | Second transfer | **G** an intent already `paid` **W** another confirmation with a different `reference` arrives **T** outcome `duplicate_transfer` | M | `IN-`, EXP-01 |
-| FR-09.5 | A recalled charge | **G** a charge of the intent is `void` **W** an exact confirmation arrives **T** outcome `charge_recalled`; no part of the intent is posted | M | `IN-`, EXP-04 |
+| FR-09.5 | A recalled charge | **G** a charge of the intent is `void` **W** an exact confirmation arrives **T** outcome `charge_recalled`; no part of the intent is posted; `unmatchedTransfer` in the status (DR-96) | M | `IN-`, EXP-04 |
 | FR-09.6 | Unknown order | **G** an order code with no intent in this building **W** a signed confirmation arrives **T** outcome `unknown_order`; the payOS registration test payload is answered 200 and writes no row | M | `IN-`, `PX-` tests |
 | FR-09.7 | A late exact confirmation is posted | **G** an intent `expired` whose charges are all `open` **W** an exact confirmation arrives **T** it is posted as usual | M | `IN-` tests |
 | FR-09.8 | Never matched elsewhere | **G** any wrong transfer **W** processed **T** it is never applied to another charge, period or payment; a charge is cleared only by an exact payment or a manual payment of whole charges | M | `LG-`, `IN-` tests |

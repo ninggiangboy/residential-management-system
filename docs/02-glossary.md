@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Review** · Updated: 2026-10-20 (DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Review** · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -147,7 +147,7 @@ This document defines the words of the project, as the project uses them. Every 
 | reviewed | — | State of a log row after the Manager marks it with a note of at least 5 characters, once. Handled outside the system; the ledger does not change. | FR-46, DR-16 |
 | money to check | — | The dashboard counter of open log rows; a new open row alerts every active Manager and Admin (`finance.money_unposted.v1`). | FR-47, DR-16 |
 | `UnitMoneyPanel` | — | The component that shows the log rows of one unit on the unit detail screen and on the debt screen. | DR-72 |
-| `unmatchedTransfer` | — | The object `{amount, receivedAt}` returned in the status of an intent that stays `pending` after a transfer of another amount. The app shows a neutral message; no push, no inbox entry. | DR-84 |
+| `unmatchedTransfer` | — | The object `{amount, receivedAt}` returned in the status of an intent that is not `paid` after money was received and not posted (outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`). The app shows a neutral message; no push, no inbox entry. | DR-84, DR-96 |
 | refund | — | Returning a wrong transfer to the payer. Done by the Manager outside the system; the system keeps only the log. | DR-84 |
 
 ## 4. Online payment

@@ -38,7 +38,7 @@ The write path that decides a race is ADR-0006; the settlement contract is ADR-0
 **Negative**
 
 - The ledger no longer shows every received đồng. Money that reached the bank but was not posted is visible only in the money log and in bank-statement reconciliation (DR-84). This is the accepted trade-off.
-- The Manager does the reconciliation of wrong transfers by hand, and the resident is told only that a transfer "does not match" (DR-84 item 8, DR-96 proposed).
+- The Manager does the reconciliation of wrong transfers by hand, and the resident is told only that a transfer "does not match" (DR-84 item 8, DR-96).
 - `charge.status` is still a cache of "one live allocation exists" and drifts if any code path bypasses the write path of ADR-0006; the unique index, the `CHECK` constraints and the nightly check are the nets.
 - A derived journal for an accounting module remains possible but is not built.
 

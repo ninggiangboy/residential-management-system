@@ -1,7 +1,7 @@
 # Feature catalog
 
-> Status: **Review** · Updated: 2026-10-19 · DOC-05
-> Depends on: original SDD §2.3, §14, §21, [DR](../00-decision-register.md) (DR-17, 19, 20, 38, 39, 44, 47, 49, 55, 60, 72, 76, 79, 81, 84), [DOC-01](vision-and-scope.md) §5, §8, [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md), master plan §3.4, §4.3, [product proposal](../references/product-proposal.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-91, DR-92 decided) · DOC-05
+> Depends on: original SDD §2.3, §14, §21, [DR](../00-decision-register.md) (DR-17, 19, 20, 38, 39, 44, 47, 49, 55, 60, 72, 76, 79, 81, 84, DR-91, DR-92), [DOC-01](vision-and-scope.md) §5, §8, [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md), master plan §3.4, §4.3, [product proposal](../references/product-proposal.md)
 > Main readers: P0-07, DOC-04, DOC-56 (screens by feature), the phase tasks `Pn-xx` (scope of each milestone), DOC-88 (which feature each test protects)
 
 This document gives every feature of the client's product proposal an identifier `F-<GROUP>-xx`, ties it to requirements and use cases, and says in which phase it is complete, on which app it runs and where it is cut when time runs short. It holds no behavior: acceptance criteria are in [DOC-03](requirements.md), flows in DOC-04, design in the `06-design` documents.
@@ -462,5 +462,5 @@ An NFR is a property of features, not a feature. The features that carry it:
 
 ## Open questions
 
-- **DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites)** are proposed for the Owner; each removes one proposal row. DR-89 and DR-90 are decided (Claude, delegated by Owner). Not blocking P1.
+- **DR-91 (no Manager-created payment link) and DR-92 (no pinned favorites)** are decided by the Owner (2026-10-21, accepted as proposed); F-PAY-05 and F-WIK-09 stay "Not built". DR-89 and DR-90 are decided (Claude, delegated by Owner).
 - **Propagation done with DR-89:** "139 features" is corrected to 113 in DOC-01, DOC-03 §3, the master plan (§3.2 DOC-05, P0-07) and DR-79. `references/` keeps the proposal's own wording and is not edited. DR-90 widens FR-48 in DOC-03 (kinds of export).

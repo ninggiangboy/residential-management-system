@@ -1,7 +1,7 @@
 # Use cases
 
-> Status: **Review** · Updated: 2026-10-20 (DR-128: no "tries left" on the staff login) · DOC-04
-> Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
+> Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-05, DOC-21…49 (each detailed flow `FL-xx` expands one use case), DOC-51 (endpoints), DOC-56…67 (screens), P0-29, every task `Pn-xx` that builds a use case
 
 This document describes how each actor reaches a goal with the system: 30 use cases (UC-01…30), each with its main, alternative and error flows and the race branches that two actors can create. It holds no design. The rules and numbers are in the requirements ([DOC-03](requirements.md)), the mechanisms in the design documents, and the step-by-step call sequences in the detailed flows (`06-design/flows/`, `FL-xx`).
@@ -246,7 +246,7 @@ flowchart LR
   - 7a. **"I have transferred".** The payer taps the button: `POST /me/payments/intents/{id}/check`. If `last_checked_at` is older than 30 s an immediate re-query runs; otherwise the current status returns without a gateway call (FR-10.3).
   - 7b. **Change method or cancel.** The payer, any other member who can pay for the unit, or a Manager cancels a `pending` intent (`POST /me/payments/intents/{id}/cancel`): `pending → cancelling`, charges released, cancel command queued (DR-28 rule 4).
   - 7c. **The payer closes the app.** The intent continues; the confirmation is still settled; the receipts are in `Fee-History` and the inbox.
-  - 7d. **A transfer of another amount.** The payer edits the amount in the bank app and sends 2,000,000 đ. Nothing is posted; the intent stays `pending`; the status response carries `unmatchedTransfer {amount: 2000000, receivedAt}` and the app shows `Pay-Mismatch`: "We received a transfer that does not match the amount to pay. The management office will check and contact you." No push and no inbox entry go to the resident (FR-09.2, FR-29.7, DR-84 item 8). The Manager gets a money-log row (UC-21). The payer may wait for expiry or cancel, then start a new intent. *Which outcomes set `unmatchedTransfer` is decided in DR-96.*
+  - 7d. **A transfer of another amount.** The payer edits the amount in the bank app and sends 2,000,000 đ. Nothing is posted; the intent stays `pending`; the status response carries `unmatchedTransfer {amount: 2000000, receivedAt}` and the app shows `Pay-Mismatch`: "We received a transfer that does not match the amount to pay. The management office will check and contact you." No push and no inbox entry go to the resident (FR-09.2, FR-29.7, DR-84 item 8). The Manager gets a money-log row (UC-21). The payer may wait for expiry or cancel, then start a new intent. *Which outcomes set `unmatchedTransfer` is decided in DR-96: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`.*
   - 7e. **The QR validity passed.** After `display_until` the app shows "This QR code has expired" with a "New code" button, which repeats step 3 and takes branch 2c on the payer's own intent.
   - 9a. The payer is a tenant without `can_pay` or a helper → the pay button does not exist (`Fees-NoPay`, `Home-Helper`) and the API answers 403.
 - **Error flows:**
@@ -515,7 +515,7 @@ flowchart LR
   | Transfer and an owner locking a member | `credential_version` and membership status in one transaction | Whichever commits second sees the new state; a locked member is removed by the transfer anyway |
   | A phone change and a sign-in with the old number | Session revocation and `refresh_family` | The old refresh tokens are revoked at the change; the next request with the old token fails |
 
-- **Related:** FR-18, FR-17.4; NFR-12; screens `W-Import`, `W-Units`, `W-Unit-Detail`, `W-Residents`, `W-Resident-Add`; endpoints `GET /staff/imports/templates/{kind}`, `POST /staff/imports`, `POST /staff/imports/{id}/commit`, `GET/POST /staff/units`, `GET/PATCH /staff/units/{id}`, `POST /staff/units/{id}/owner`, `GET /staff/units/{id}/history`, `GET/POST /staff/residents`, `PATCH /staff/residents/{id}/phone`, `PATCH /staff/memberships/{id}`; events `residency.owner_changed.v1`, `residency.membership_changed.v1`, `identity.session_revoked.v1`; flows FL-22, FL-23.
+- **Related:** FR-18, FR-17.4; NFR-12; screens `W-Import`, `W-Units`, `W-Unit-Detail`, `W-Residents`, `W-Resident-Add`; endpoints `GET /staff/imports/templates/{kind}`, `POST /staff/imports`, `POST /staff/imports/{id}/commit`, `GET /staff/imports`, `GET/POST /staff/units`, `GET/PATCH /staff/units/{id}`, `POST /staff/units/{id}/owner`, `GET /staff/units/{id}/history`, `GET/POST /staff/residents`, `PATCH /staff/residents/{id}/phone`, `PATCH /staff/memberships/{id}`; events `residency.owner_changed.v1`, `residency.membership_changed.v1`, `identity.session_revoked.v1`; flows FL-22, FL-23.
 
 ## UC-14 · Sign in with OTP; pick a unit
 
@@ -1200,12 +1200,12 @@ Every requirement of [DOC-03](requirements.md) appears in at least one use case.
 
 ## 8. New decisions made while writing
 
-Made while writing and recorded in the decision register: DR-96 (proposed, Owner to decide) and DR-97 (decided, Claude delegated by the Owner).
+Made while writing and recorded in the decision register: DR-96 (decided by the Owner, 2026-10-21) and DR-97 (decided, Claude delegated by the Owner).
 
 ### DR-96 · Which unposted outcomes set `unmatchedTransfer` on the intent
 
 - **Problem:** DR-84 item 8 says an intent stays `pending` when a transfer of another amount arrives and the status endpoint returns `unmatchedTransfer {amount, receivedAt}`. It does not say what the resident sees for the other unposted outcomes of an exact or duplicate transfer (`charge_already_paid`, `charge_recalled`, `duplicate_transfer`, `amount_over`). A resident who transferred money and sees nothing will transfer again.
-- **Decision (proposed):** The status endpoint returns `unmatchedTransfer` for every outcome that left money received and the intent not `paid`: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`. Not for `posted` (the intent is `paid`), `duplicate_transfer` (the intent is already `paid` and shows its receipts) or `unknown_order` (no intent). The message is the one of DR-84 item 8 for all four; the app reveals nothing else, in particular not the reason. No push and no inbox entry go to the resident (DR-53).
+- **Decision (Owner, 2026-10-21, accepted as proposed):** The status endpoint returns `unmatchedTransfer` for every outcome that left money received and the intent not `paid`: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`. Not for `posted` (the intent is `paid`), `duplicate_transfer` (the intent is already `paid` and shows its receipts) or `unknown_order` (no intent). The message is the one of DR-84 item 8 for all four; the app reveals nothing else, in particular not the reason. No push and no inbox entry go to the resident (DR-53).
 - **Consequences:** One field, one message, no new screen; a resident whose charge was paid in cash and who also transferred sees the neutral message while `Fees` shows the charge `paid`. The Manager refunds outside the system as before.
 - **Write to:** DOC-23, DOC-51, DOC-58, DOC-68, DOC-03 (FR-09.1 wording).
 
@@ -1232,7 +1232,6 @@ Made while writing and recorded in the decision register: DR-96 (proposed, Owner
 
 ## Open questions
 
-- **DR-96:** proposed in §8 (it extends DR-84 item 8, which the Owner decided); the document stays `Review` until the Owner decides it. DR-97 is decided. Not blocking P1.
 - **Exact codes of "refused" cases (DOC-42, 2026-10-19):** fixed in the flows above: `invalid_transition` (recall of a closed or recalled batch), `money_log_already_reviewed`, `payment_not_voidable`, `charge_not_voidable`, `plate_in_use`, `rating_window_closed`, `step_up_required` and `step_up_failed`. A ticket cancelled past `accepted` by the resident is `ticket_already_accepted`; the Manager's cancel past `accepted` is `invalid_transition` (DR-127).
 - **Locking of intent creation against recall and void (DOC-23):** UC-03 and UC-04 require that an intent created at the same instant as a recall or a void of one of its charges ends cancelled or refused, never holding a `void` charge. The mechanism (a row lock on the charges in the creation transaction, or a post-commit check) is fixed in DOC-23.
 - **Gateway-specific values (DR-25, DR-27, DR-28, DR-30, DR-31):** the 2,000 and 500,000,000 đ limits, the 9-character content, the 30-minute QR validity and the 60-minute hold used in UC-03 and UC-18 are defaults until the Owner reports a gateway sandbox.
