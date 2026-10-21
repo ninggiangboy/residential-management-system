@@ -1,0 +1,84 @@
+# Local infrastructure (DOC-69 §6): PostgreSQL, an S3-compatible object store and Mailpit.
+# Started by `bun run infra:up`; every value below comes from .env.local (bun run keys:generate).
+# Ports are published on 127.0.0.1 only: nothing here has real credentials, and a LAN host must not reach it.
+name: rms
+
+services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_PASSWORD: ${RMS_POSTGRES_PASSWORD:?run bun run keys:generate}
+      RMS_MIGRATOR_PASSWORD: ${RMS_MIGRATOR_PASSWORD:?run bun run keys:generate}
+      RMS_APP_PASSWORD: ${RMS_APP_PASSWORD:?run bun run keys:generate}
+      RMS_READONLY_PASSWORD: ${RMS_READONLY_PASSWORD:?run bun run keys:generate}
+    ports:
+      - 127.0.0.1:${RMS_PG_PORT:-5432}:5432
+    volumes:
+      - rms-pg:/var/lib/postgresql
+      - ./postgres/init/10-provision.sh:/docker-entrypoint-initdb.d/10-provision.sh:ro
+      - ../ops/postgres/0001-provision.sql:/provision/0001-provision.sql:ro
+    healthcheck:
+      # TCP on purpose: during the first start the temporary server only listens on the socket, so the check
+      # cannot pass before the provisioning script has finished.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d rms']
+      interval: 2s
+      timeout: 3s
+      retries: 60
+      start_period: 5s
+
+  objectstore:
+    image: chrislusf/seaweedfs:4.48
+    command: server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -filer -volume.max=8 -master.volumeSizeLimitMB=512
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?run bun run keys:generate}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?run bun run keys:generate}
+    ports:
+      - 127.0.0.1:${RMS_S3_PORT:-9000}:8333 # S3 API
+      - 127.0.0.1:${RMS_S3_CONSOLE_PORT:-9001}:8888 # filer: browse the buckets
+    volumes:
+      - rms-s3:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8333/healthz']
+      interval: 2s
+      timeout: 3s
+      retries: 60
+      start_period: 3s
+
+  # One-shot: creates the bucket and its CORS rule, then exits 0. Safe to run again.
+  objectstore-init:
+    image: amazon/aws-cli:2.38.3
+    depends_on:
+      objectstore:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - |
+        s3="aws --endpoint-url http://objectstore:8333"
+        $$s3 s3api head-bucket --bucket rms-local-files 2>/dev/null || $$s3 s3api create-bucket --bucket rms-local-files
+        $$s3 s3api put-bucket-cors --bucket rms-local-files --cors-configuration '{"CORSRules":[{"AllowedOrigins":["http://localhost:5173"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"ExposeHeaders":["ETag"],"MaxAgeSeconds":3000}]}'
+        echo "bucket rms-local-files ready"
+    restart: 'no'
+
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    environment:
+      # Do not reverse-DNS the SMTP client: slow by default on Docker Desktop and OrbStack.
+      MP_SMTP_DISABLE_RDNS: 'true'
+    ports:
+      - 127.0.0.1:${RMS_MAIL_PORT:-1025}:1025 # SMTP
+      - 127.0.0.1:${RMS_MAIL_UI_PORT:-8025}:8025 # web UI
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  rms-pg:
+    name: rms-pg
+  rms-s3:
+    name: rms-s3

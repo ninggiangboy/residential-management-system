@@ -16,7 +16,13 @@
     "quality:unused": "knip",
     "quality:dup": "jscpd",
     "verify": "bun run lint && bun run typecheck && bun run check:arch && bun run check:arch:fixtures && bun run quality:unused && bun run quality:dup",
-    "check:compat": "bun test tools/compat"
+    "check:compat": "bun test tools/compat",
+    "check:tools": "bun scripts/check-tools.ts",
+    "keys:generate": "bun scripts/keys-generate.ts",
+    "infra:up": "bun scripts/infra.ts up",
+    "infra:down": "bun scripts/infra.ts down",
+    "infra:reset": "bun scripts/infra.ts reset",
+    "setup": "bun scripts/setup.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
