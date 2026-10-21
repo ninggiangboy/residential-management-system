@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Residential Staff",
+    "slug": "rms-staff",
+    "scheme": "rms-staff",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-dev-client"],
+    "ios": { "bundleIdentifier": "vn.rms.staff" },
+    "android": { "package": "vn.rms.staff" }
+  }
+}

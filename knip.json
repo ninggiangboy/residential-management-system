@@ -1,0 +1,45 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts", "tools/arch-fixtures/*.test.ts", "tools/compat/*.test.ts"],
+      "project": ["scripts/*.ts", "tools/arch-fixtures/*.ts", "tools/compat/*.ts"]
+    },
+    "apps/api": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/shared-types": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/resident-app": {
+      "entry": ["app/**/*.{ts,tsx}", "*.config.js"],
+      "project": ["app/**/*.{ts,tsx}", "src/**/*.ts", "*.config.js"],
+      "expo": false,
+      "metro": false,
+      "babel": false,
+      "tailwind": false,
+      "ignoreDependencies": ["expo-dev-client"]
+    },
+    "apps/staff-app": {
+      "entry": ["app/**/*.{ts,tsx}", "*.config.js"],
+      "project": ["app/**/*.{ts,tsx}", "src/**/*.ts", "*.config.js"],
+      "expo": false,
+      "metro": false,
+      "babel": false,
+      "tailwind": false,
+      "ignoreDependencies": ["expo-dev-client"]
+    },
+    "apps/web": {
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["tailwindcss"]
+    }
+  },
+  "rules": {
+    "exports": "warn",
+    "types": "warn",
+    "nsExports": "warn",
+    "nsTypes": "warn"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "path": ["apps", "modules", "packages"],
+  "minLines": 10,
+  "minTokens": 70,
+  "threshold": 3,
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/migrations/**",
+    "**/*.test.ts",
+    "**/routeTree.gen.ts",
+    "**/components/ui/**",
+    "**/apps/*-app/app/**",
+    "**/apps/*-app/src/api.ts",
+    "**/package.json",
+    "**/app.json",
+    "**/tsconfig.json"
+  ]
+}

@@ -1,0 +1,3 @@
+[install]
+# Metro and Vite resolve through node_modules; the isolated linker of Bun 1.3+ hides workspace packages from Metro (DOC-11 §10 row 1)
+linker = "hoisted"

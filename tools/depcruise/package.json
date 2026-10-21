@@ -1,0 +1,9 @@
+{
+  "name": "rms-depcruise",
+  "private": true,
+  "description": "dependency-cruiser with its own TypeScript 6 compiler: 18.7.0 needs typescript < 7 to tell `import type` from a value import (DOC-11 §10 row 2). Not a workspace member; the product stays on TypeScript 7.",
+  "devDependencies": {
+    "dependency-cruiser": "18.7.0",
+    "typescript": "6.0.3"
+  }
+}

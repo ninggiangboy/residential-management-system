@@ -1,0 +1,29 @@
+{
+  "name": "residential-management-system",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "modules/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "bun run --filter './apps/*' --filter './modules/*' --filter './packages/*' typecheck",
+    "test": "bun run --filter './apps/*' --filter './modules/*' --filter './packages/*' test",
+    "check:arch": "bun scripts/check-arch.ts",
+    "check:arch:fixtures": "bun test tools/arch-fixtures",
+    "quality:unused": "knip",
+    "quality:dup": "jscpd",
+    "verify": "bun run lint && bun run typecheck && bun run check:arch && bun run check:arch:fixtures && bun run quality:unused && bun run quality:dup",
+    "check:compat": "bun test tools/compat"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "1.4.3",
+    "exceljs": "4.4.0",
+    "jscpd": "5.4.2",
+    "knip": "6.42.1",
+    "typescript": "7.0.2"
+  }
+}
