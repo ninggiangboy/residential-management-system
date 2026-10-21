@@ -1,8 +1,9 @@
 import { type Clock, type IdGenerator, SystemClock, UuidV7Generator } from '@core/core'
 import { Database } from '@core/db'
-import { MaintenanceMode, MaintenanceStore } from '@core/runtime'
+import { type AppModule, createRuntime, type MaintenanceStore, SqlJobRunStore } from '@core/runtime'
 import type { Logger } from '@core/telemetry'
 import type { Config } from './config'
+import { MODULE_CATALOG } from './module-catalog'
 
 /**
  * Replacements for what a test must not share with the real world (DOC-12 §5.1). The mailer, SMS sender, payment gateway,
@@ -40,12 +41,45 @@ export function createContainer(
     prepare: config.db.DB_PREPARE,
   })
 
-  // Not started here (tests build containers too): `main.ts` reads it once before serving, then polls.
-  const maintenance = new MaintenanceMode(
-    overrides.maintenanceStore ?? new MaintenanceStore(database),
+  /** Modules in install order. A module that needs others takes them from the `modules` of its own install call. */
+  const installed: AppModule[] = []
+
+  const { jobs: jobsConfig, db, core } = config
+  const runtime = createRuntime({
+    modules: installed,
+    manifests: MODULE_CATALOG,
+    database,
+    clock,
+    ids,
     logger,
-    config.core.MAINTENANCE_POLL_INTERVAL_MS,
-  )
+    relay: {
+      pollIntervalMs: jobsConfig.OUTBOX_POLL_INTERVAL_MS,
+      batchSize: jobsConfig.OUTBOX_BATCH_SIZE,
+      concurrency: jobsConfig.OUTBOX_CONCURRENCY,
+      leaseSeconds: jobsConfig.OUTBOX_LEASE_SECONDS,
+      backoffBaseSeconds: jobsConfig.OUTBOX_BACKOFF_BASE_SECONDS,
+      backoffMaxSeconds: jobsConfig.OUTBOX_BACKOFF_MAX_SECONDS,
+      deferBudgetHours: jobsConfig.OUTBOX_DEFER_BUDGET_HOURS,
+      retentionDays: jobsConfig.OUTBOX_RETENTION_DAYS,
+      cleanupIntervalMinutes: jobsConfig.OUTBOX_CLEANUP_INTERVAL_MINUTES,
+      attempts: {
+        default: jobsConfig.OUTBOX_MAX_ATTEMPTS,
+        sms: jobsConfig.OUTBOX_SMS_MAX_ATTEMPTS,
+        push: jobsConfig.OUTBOX_PUSH_MAX_ATTEMPTS,
+        intent_cancel: jobsConfig.OUTBOX_INTENT_CANCEL_MAX_ATTEMPTS,
+      },
+    },
+    jobs: {
+      store: new SqlJobRunStore(database),
+      timeZone: core.JOBS_TIME_ZONE,
+      tickSeconds: jobsConfig.JOBS_SCHEDULER_TICK_SECONDS,
+    },
+    dbPoolMax: db.DB_POOL_MAX,
+    maintenance: {
+      pollIntervalMs: core.MAINTENANCE_POLL_INTERVAL_MS,
+      store: overrides.maintenanceStore,
+    },
+  })
   const lifecycle: Lifecycle = { stopping: false }
 
   return {
@@ -54,13 +88,11 @@ export function createContainer(
     clock,
     ids,
     database,
-    maintenance,
+    runtime,
+    maintenance: runtime.maintenance,
     lifecycle,
-    /** Stops the timers and closes the pool. The HTTP servers are stopped first by the caller. */
-    async close() {
-      maintenance.stop()
-      await database.close()
-    },
+    /** Stops the timers and closes the pool. The HTTP servers and the worker are stopped first by the caller. */
+    close: () => runtime.close(),
   }
 }
 

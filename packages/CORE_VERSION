@@ -31,3 +31,14 @@ local-changes:
     `routePlugin` (`normalize: false`, AG-20) and `strictObject`; `maintenancePlugin` answers the shape of DOC-42 (P1-04)
   - core-runtime: `healthRoutes` is replaced by `readyRoute` and `liveRoute` (DOC-51 E-01, E-02: `ok`/`degraded`/`stopping`, checks with
     latency, the public path lists no dependency) (P1-04)
+  - core-messaging: `OutboxRelay` takes `policy(type) -> { maxAttempts }`, `backoffBaseSeconds`, `backoffMaxSeconds`, `cleanupIntervalMs`
+    and the sources carry their inbox (DR-118); the backoff, the dead-letter limit and the deferral budget are computed by the database
+    clock in one UPDATE (DOC-38 §2.3); cleanup also deletes delivered inbox rows; `isFresh(maxAgeMs)`, `lastPassAt` and `sourceNames`;
+    handler lines carry the message's correlation id as their request id; `DrizzleOutboxWriter` takes `OutboxRules` (the catalog
+    of the module, the source, `buildingId`, the payload limit: JB-23, MC-05); new `OutboxAdmin` (list, requeue, discard dead
+    letters); the zod `outboxConfig` slice is removed (the application builds `OutboxSettings` from DOC-41) (P1-05)
+  - core-db: `Database.transaction(fn, { isolationLevel, accessMode })` for the `snapshot` jobs (P1-05)
+  - core-runtime: `AppModule.jobs` is `JobDefinition[]` (not `ModuleJobs`); new `JobRuntime` (interval timers, the clock-job scheduler,
+    `job_run` rows, `ctx.withLock`/`ctx.snapshot`, pause, stop with a timeout, `runNow`), `schedule.ts` (`lastSlot`, `decide`),
+    `SqlJobRunStore`; `createRuntime` takes the relay settings, the manifests (for `outboxPolicies`) and the job settings and
+    returns `relayCheck`, `startWorker`, `stopWorker`; `intervalJobs`/`noJobs` are removed (P1-05)

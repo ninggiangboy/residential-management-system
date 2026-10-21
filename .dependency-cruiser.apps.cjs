@@ -27,7 +27,7 @@ module.exports = {
     {
       name: 'only-main-and-app-import-the-container',
       severity: 'error',
-      from: { path: '^apps/api/', pathNot: '^apps/api/src/(main|app)\\.ts$' },
+      from: { path: '^apps/api/', pathNot: '^apps/api/(src/(main|app)\\.ts|scripts/[^/]+\\.ts)$' },
       to: { path: '^apps/api/src/bootstrap/container\\.ts$' },
     },
     {
