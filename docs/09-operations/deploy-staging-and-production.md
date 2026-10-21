@@ -657,7 +657,7 @@ Migrations are a separate step of a deploy, never run at application boot (DOC-1
 
 1. read `MIGRATION_DATABASE_URL_FILE`; connect with `prepare: false`;
 2. `0000-bootstrap.sql` (idempotent), the pending migrations of every module in catalog order, then `0900-grants.sql` in one transaction (DOC-19 §3.1, steps 2 to 4);
-3. print `migrated: <n> pending applied`, `grants applied`; exit 0, or non-zero on the first failure.
+3. print `migrated: <n> pending applied, <k> schemas` and `grants applied`; exit 0, or non-zero on the first failure (built in P1-06).
 
 The step runs **before** the containers of the new image start and while the old ones serve. That is safe only because of expand then contract (DR-08, original SDD §16.3): the old image works against a schema that has gained a column, a table or an index. A migration that cannot satisfy this is a **contract** step and uses the maintenance flag (§6.4). The `migrate` container runs as the uid of `deploy` so it can read the 0400 secret file; the file is mounted into no other container.
 

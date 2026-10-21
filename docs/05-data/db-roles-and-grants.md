@@ -1,6 +1,6 @@
 # Database roles and grants
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-19 · DOC-19
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-237) · 2026-10-19 · DOC-19
 > Depends on: original SDD §19.1, [DR](../00-decision-register.md) (DR-12, 57, 65, 66, 67, 83, 85, 105, 110, 112, 113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2, §5, §12, [DOC-16](identity-and-residency-model.md), [DOC-17](operations-model.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.1, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles and migrations), P1-08 (append-only audit), P1-20 (the VPS), CI (the permission tests), DOC-41, DOC-70, DOC-72, RB-12
 
@@ -114,11 +114,11 @@ Notes:
 | 4 | `rms_migrator` | `0900-grants.sql` (§4) | Every `db:migrate`, last; idempotent |
 | 5 | `rms_app` | `api` and `worker` start | After step 4 |
 
-During a deploy the maintenance flag is on from before step 2 until the new version is ready; the deploy script writes it as `rms_migrator` (DOC-17 §3.4). Steps 2 to 4 are one command, `bun run db:migrate`; the grants step cannot be forgotten because it is not a separate command (P1-06).
+During a deploy the maintenance flag is on from before step 2 until the new version is ready; the deploy script writes it as `rms_migrator` (DOC-17 §3.4). Steps 2 to 4 are one command, `bun run db:migrate` (`scripts/migrate.ts`, built in P1-06); the grants step cannot be forgotten because it is not a separate command. The files are `ops/postgres/0000-bootstrap.sql` and `ops/postgres/0900-grants.sql`; the migration step reads them next to the repository (the image copies `ops/postgres`, DOC-71 §6.1).
 
 ## 4. The grants step (`0900-grants.sql`)
 
-Run by `rms_migrator` after the last module migration of every release. It is **idempotent** and **atomic**: it revokes what `rms_app` and `rms_readonly` hold on the tables and sequences of the fourteen schemas and grants the final state again, in one transaction, so the result does not depend on what was granted before and no request sees the half-way state. Nobody grants by hand; the script is edited instead.
+Run by `rms_migrator` after the last module migration of every release. It is **idempotent** and **atomic**: it revokes what `rms_app` and `rms_readonly` hold on the tables and sequences of the fourteen schemas and grants the final state again, in one transaction, so the result does not depend on what was granted before and no request sees the half-way state. Nobody grants by hand; the script is edited instead. *As built in P1-06 (DR-237):* the three exceptions that name an object of a module (`audit.audit_log`, `audit.purge`) are applied only when that object exists, and a table whose every column is excluded stays closed, so the script also runs on a database that holds the platform only; `platform.maintenance` exists from the bootstrap.
 
 ```sql
 -- 0900-grants.sql: run by rms_migrator after the last module migration of every release (db:migrate does it).
@@ -289,9 +289,11 @@ Tested on PostgreSQL 18.6 on 2026-10-19: `0001-provision.sql`, then `0000-bootst
 - **Login tests** (GRT-77…88) open a real connection: SCRAM over a non-loopback address for the roles with a password (the image's loopback is `trust`, which would hide a wrong password), the local socket for `rms_backup`.
 - **Catalog checks** (GRT-89…97) are queries over `pg_class`, `pg_attribute`, `pg_namespace` and `has_*_privilege` that must return **no rows**. They cover every table that exists, including the ones later documents add, which is what makes "every role × schema" true without listing tables.
 
-**In CI (P1-06).** A job `db-grants` starts a `postgres:18.6` service container, runs `0001-provision.sql` with random passwords, then `bun run db:migrate`, then the test file `packages/testing/grants.test.ts`, which holds the matrix of §5 as data, runs GRT-01…88 as written and runs the queries of GRT-89…97 expecting no rows. It runs on every pull request that touches a migration, a `schema.ts` or `0900-grants.sql`, and on `main`. A failing test blocks the merge.
+**In CI (P1-06).** A job `db-grants` starts a `postgres:18.6` service container, runs `0001-provision.sql` with random passwords, then `bun run db:migrate`, then the test files `apps/api/tests/grants/grants.test.ts` and `migrate.test.ts` (`bun run test:grants`; DR-237 moved them from `packages/testing/`), which holds the matrix of §5 as data, runs GRT-01…88 as written and runs the queries of GRT-89…97 expecting no rows. It runs on every pull request that touches a migration, a `schema.ts` or `0900-grants.sql`, and on `main`. A failing test blocks the merge.
 
 The seed rows the tests touch are inserted by the superuser first (a building, a staff account with a password hash, a resident profile with an encrypted CCCD and a date of birth, a gateway configuration with a secret, a maintenance row, an outbox message with an SMS code, an audit row).
+
+**As run in P1-06 (2026-10-21, PostgreSQL 18.6, `apps/api/tests/grants`).** The modules that own the tables of the matrix do not exist yet, so `fixtures.ts` creates **stand-ins** with the same schema, table and sensitive columns (`identity.staff_account` with `password_hash`, `building.gateway_config` with `secrets_enc`, `residency.resident_profile` with `cccd_enc` and `date_of_birth`, the outbox, the inbox, `audit.audit_log` with its append-only trigger and `audit.purge`, a terms table with a trigger) on a clone of the migrated template, and the grants step runs again over them; the statements run as the role (`SET LOCAL ROLE`, rolled back) from a superuser connection. **86 of 87 passed and 1 is skipped**: GRT-01…76 as the table says (GRT-55 and GRT-56 need the four `GRANT EXECUTE` of the provisioning script in the cloned database, which the template builder applies), the login tests GRT-77…85 and GRT-88 over real SCRAM connections, the catalog checks GRT-89…97 on every table that exists, and the bootstrap checks of DOC-14 §16 (1, 9, 13, unaccent and trigram search, idempotency). GRT-86 and GRT-87 (`rms_backup` over the local socket with peer authentication) are skipped with a reason: they need the OS user `postgres` and run on the host in P1-20. When a module is written its migration creates the real table and its stand-in is deleted from `fixtures.ts`; the catalog checks already cover it.
 
 ### 9.2 Statement tests
 
@@ -425,6 +427,7 @@ GRT-97 also prints the table-count matrix of §5 (the second table there).
 
 | ID | Decision | Where used |
 | --- | --- | --- |
+| DR-237 | As built in P1-06: guarded exceptions in the grants step, the migration script and its output, `db:reset` as a schema drop by the migrator, the permission tests in `apps/api/tests/grants` with stand-ins for the tables of modules not written yet | §3.1, §4, §9 |
 | DR-113 | The four roles' attributes and settings; the grants step as one idempotent script computed from nothing (fail-closed) instead of default privileges; the denied tables and column rules of `rms_readonly`; `rms_readonly` also serves the exporter (`pg_monitor`); `rms_backup` is a non-superuser with `pg_read_all_data` and the backup functions, with a fallback; `READONLY_DATABASE_URL` joins the secret inventory | §2–§8 |
 
 ## 11. Not in this document
