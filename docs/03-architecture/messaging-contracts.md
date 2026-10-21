@@ -1201,7 +1201,7 @@ Each rule has a check (MC- tests of §9, or CI).
 
 ## 9. Required tests
 
-Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the core package and in each module's integration tests (DOC-88 indexes the prefix).
+Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the core package and in each module's integration tests (DOC-88 indexes the prefix). **Run in P1-05 (2026-10-21)** against PostgreSQL 18.6 with a `probe` module: MC-02 (source and aggregate; the correlation headers need a request context and are run with the first use case), MC-03, MC-04, MC-05 (the limit and the missing `buildingId`; the 500-reminder example waits for DOC-31's fixture), MC-07, MC-08, MC-16, MC-17 and MC-18. The others need the catalog files or the handlers of their modules.
 
 | ID | Given | When | Then |
 | --- | --- | --- | --- |
