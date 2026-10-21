@@ -103,5 +103,10 @@ module.exports = {
     tsPreCompilationDeps: true,
     exclude: { path: '\\.test\\.ts$' },
     tsConfig: { fileName: 'tsconfig.json' },
+    doNotFollow: { path: 'node_modules' },
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['bun', 'import', 'default'],
+    },
   },
 }

@@ -1,0 +1,29 @@
+{
+  "name": "@core/auth",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@core/context": "workspace:*",
+    "@core/core": "workspace:*",
+    "@core/http": "workspace:*"
+  },
+  "peerDependencies": {
+    "elysia": "1.4.30"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "elysia": "1.4.30"
+  }
+}

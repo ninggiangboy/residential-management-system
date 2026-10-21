@@ -1,12 +1,12 @@
 /**
  * Rules for packages/* (DOC-12 §6.3): which other workspace packages each may import, and which
- * packages may use a framework. `ALLOWED` is recomputed from the vendored package.json files in P1-02.
+ * packages may use a framework. `ALLOWED` was recomputed from the vendored package.json files in P1-02 (production imports only; tests are excluded).
  * A package is liftable into its own repository exactly when none of these rules needs bending.
  */
 const ALLOWED = {
   'core-core': [],
-  'core-config': ['core-core'],
-  'core-context': ['core-core'],
+  'core-config': [],
+  'core-context': [],
   'core-telemetry': ['core-config', 'core-context'],
   'core-db': ['core-core', 'core-config'],
   'core-messaging': ['core-core', 'core-db', 'core-config', 'core-context', 'core-telemetry'],
@@ -20,13 +20,12 @@ const ALLOWED = {
     'core-db',
     'core-messaging',
     'core-telemetry',
-    'core-http',
     'core-mail',
     'core-storage',
   ],
   'core-i18n': [],
-  'core-testing': ['core-core', 'core-messaging', 'core-db'],
-  'core-web-core': ['core-i18n'],
+  'core-testing': ['core-core', 'core-messaging', 'core-mail', 'core-storage'],
+  'core-web-core': [],
   'shared-types': [],
   'design-tokens': [],
   'i18n-catalog': ['shared-types'],
@@ -73,5 +72,10 @@ module.exports = {
     tsPreCompilationDeps: true,
     exclude: { path: '\\.test\\.ts$' },
     tsConfig: { fileName: 'tsconfig.json' },
+    doNotFollow: { path: 'node_modules' },
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['bun', 'import', 'default'],
+    },
   },
 }

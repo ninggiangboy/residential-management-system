@@ -1,0 +1,37 @@
+{
+  "name": "@core/runtime",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@core/config": "workspace:*",
+    "@core/core": "workspace:*",
+    "@core/db": "workspace:*",
+    "@core/mail": "workspace:*",
+    "@core/messaging": "workspace:*",
+    "@core/storage": "workspace:*",
+    "@core/telemetry": "workspace:*"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "0.45.4",
+    "elysia": "1.4.30",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "drizzle-orm": "0.45.4",
+    "elysia": "1.4.30",
+    "zod": "4.6.7"
+  }
+}

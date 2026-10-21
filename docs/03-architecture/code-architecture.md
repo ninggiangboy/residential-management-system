@@ -1,12 +1,12 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
 This document says how the code is laid out and which imports are allowed: the repository and its package scopes, the layers inside a module, the module template, the composition root, the three dependency-cruiser configurations, the `BuildingScope` repositories, the ambient transaction, DTOs, `UnitContext` and its policy function, the exception types, the rule for syncing the vendored `core-*` packages and the review checklist. It holds no table (DOC-14…17), no event schema (DOC-09), no endpoint (DOC-51) and no version number (DOC-11). Which modules exist and who owns which table is DOC-07 §5–§6; this document does not repeat it.
 
-Code samples are TypeScript signatures that show the shape the tasks implement. Names of vendored helpers (`UnitOfWork`, `OutboxWriter`, `AggregateRoot`…) come from the reference repository and are checked against the vendored copy in P1-02; where this document relies on a behavior the copy must have, it says so.
+Code samples are TypeScript signatures that show the shape the tasks implement. Names of vendored helpers (`UnitOfWork`, `OutboxWriter`, `AggregateRoot`…) come from the reference repository and were checked against the vendored copy in P1-02; where this document relies on a behavior the copy must have, it says so.
 
 ## 1. Scope and reading guide
 
@@ -428,7 +428,7 @@ module.exports = {
 }
 ```
 
-`ALLOWED` is the starting table copied from the reference graph; P1-02 recomputes it from the vendored `package.json` files and fixes the table in the same change (a difference is a finding, not a rule to loosen). A package is liftable into its own repository exactly when none of its rules needs bending.
+`ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web-core` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
 
 ## 7. `BuildingScope` repositories (DR-12)
 
@@ -512,13 +512,13 @@ interface Database {
 interface UnitOfWork { run<T>(fn: () => Promise<T>): Promise<T> }   // application-layer port; Database implements it
 ```
 
-Behavior the vendored `@core/db` must have (P1-02 confirms in the copy and adds it where missing):
+Behavior the vendored `@core/db` must have (P1-02 checked each one in the copy on 2026-10-21 and added what was missing; `packages/core-db/src/database.test.ts` runs against the local PostgreSQL):
 
-1. `UnitOfWork.run` called inside an open transaction **joins** it; it does not begin a second one.
-2. `database.transaction` inside an open transaction is a **savepoint** (the Drizzle nested-transaction behavior). `settle()` uses it for the rollback to the savepoint taken after the `gateway_event` claim (DR-14, DOC-23).
-3. `OutboxWriter.add` throws when no transaction is open: an event written outside the aggregate's transaction would defeat the outbox.
-4. A transaction fails with SQLSTATE `40001` or `40P01` are retried by the use case wrapper, not by the repository (FR-08.8: up to 3 times, 20–60 ms jitter).
-5. `database.autonomous(fn)` runs `fn` in a transaction on a **separate pool connection**, outside the ambient one, and commits it before returning. Only `identity` uses it, to count a failed step-up proof so that the count survives the rollback of the action that asked (DR-132, DOC-26 §4.5). *Revised 2026-10-20 (DR-132).*
+1. `UnitOfWork.run` called inside an open transaction **joins** it; it does not begin a second one. *In the reference as it was; test: the inner failure rolls back everything.*
+2. `database.transaction` inside an open transaction is a **savepoint** (the Drizzle nested-transaction behavior). `settle()` uses it for the rollback to the savepoint taken after the `gateway_event` claim (DR-14, DOC-23). *Missing in the reference (`Database` had only `run`); added in P1-02 as a local change; tests: a failed inner transaction rolls back only its own writes, a released savepoint keeps them.*
+3. `OutboxWriter.add` throws when no transaction is open: an event written outside the aggregate's transaction would defeat the outbox. *In the reference as it was (`DrizzleOutboxWriter` checks `inTransaction`).*
+4. A transaction fails with SQLSTATE `40001` or `40P01` are retried by the use case wrapper, not by the repository (FR-08.8: up to 3 times, 20–60 ms jitter). *Not a core behavior: the wrapper is application code, written with the first use case (P1-06).*
+5. `database.autonomous(fn)` runs `fn` in a transaction on a **separate pool connection**, outside the ambient one, and commits it before returning. Only `identity` uses it, to count a failed step-up proof so that the count survives the rollback of the action that asked (DR-132, DOC-26 §4.5). *Revised 2026-10-20 (DR-132). Missing in the reference; added in P1-02 as a local change; it needs a pool of two or more connections; test: the autonomous write survives the rollback of the caller.*
 
 ### 8.2 Where a transaction begins
 
@@ -749,7 +749,7 @@ Rules:
 
 ## 13. The vendored `core-*` packages and the sync rule (DR-02)
 
-The reference packages are private workspace packages that are on no registry, so they are copied into `packages/core-<name>` (directory) and imported as `@core/<name>`. Copy by dependency closure of the reference's messaging package; the closure is computed in P1-02.
+The reference packages are private workspace packages that are on no registry, so they are copied into `packages/core-<name>` (directory) and imported as `@core/<name>`. Copy by dependency closure of the reference's messaging package. The closure was computed in P1-02 (2026-10-21) from the reference commit recorded in `packages/CORE_VERSION`; §13.1 lists the result.
 
 ### 13.1 Mapping: reference → this repository
 
@@ -775,7 +775,9 @@ Upstream names appear only in this table, in `packages/CORE_VERSION` and in the 
 | `kit-ui` | — | — | No | The design system here is shadcn (web) and `@rms/ui-native` (DR-03, DR-70) |
 | `kit-privacy-participant` | — | — | No | The privacy module is skipped (DR-03); see DR-98 |
 
-Reference modules: `identity` and `notification` are **forked** into `modules/identity` and `modules/notification` and never synced again; `realtime` is copied as is into `modules/realtime`; `privacy`, `profile` and `billing` are skipped, and only the patterns of `billing` (idempotent webhooks, gapless numbering) are reused (DR-03). The reference scripts `gen:module`, `kit:add` and `kit:remove` are not part of the DR-02 list; modules are created by hand from §4 and P1-02 may copy the reference's `templates/module` into `tools/` if it saves time.
+**Closure (P1-02).** `core-messaging` needs `core-core`, `core-config`, `core-context`, `core-db` and `core-telemetry`; `core-runtime` adds `core-mail` and `core-storage`; `core-mail` needs `core-messaging`, so the graph is acyclic and the allowed imports of each package are exactly the `ALLOWED` map of `.dependency-cruiser.packages.cjs` (§6.3). Fourteen reference packages are copied; the reference's `kit-privacy-participant` was a dependency of `kit-runtime`, not of `kit-messaging` as the original SDD and DR-98 assumed, so the edit for DR-98 is in `core-runtime` (`AppModule.privacy` removed). Not yet in the copies, added by the task that first needs each (and then listed in `local-changes`): `SecretBox` in `core-core`, `GaplessCounter` in `core-db` (P2-02), `idempotent()` and `audience` metadata in `core-http`, the `policy(type)` hook of the relay (DR-118).
+
+Reference modules: `identity` and `notification` are **forked** into `modules/identity` and `modules/notification` and never synced again; `realtime` is copied as is into `modules/realtime`; `privacy`, `profile` and `billing` are skipped, and only the patterns of `billing` (idempotent webhooks, gapless numbering) are reused (DR-03). The reference scripts `gen:module`, `kit:add` and `kit:remove` are not part of the DR-02 list; modules are created by hand from §4 (P1-02 did not copy the reference's `templates/module`).
 
 ### 13.2 Renaming rules
 
@@ -785,17 +787,23 @@ Reference modules: `identity` and `notification` are **forked** into `modules/id
 
 ### 13.3 `packages/CORE_VERSION`
 
+A plain text file next to the packages. The file as of P1-02:
+
 ```
-upstream:   <repository path or URL of the reference>
-commit:     <full sha copied from>
-synced-on:  2026-MM-DD
+upstream:   git@github.com:ninggiangboy/elysia-architecture.git (a sibling checkout at ../elysia-architecture when copied)
+commit:     66bcc10435044415ff2e6dc55139614dd66f2888
+synced-on:  2026-10-21
 mapping:    kit-core→core-core, kit-config→core-config, … (the table of §13.1)
-omitted:    kit-ui, kit-privacy-participant (+ the edits made to core-messaging because of it)
+omitted:    kit-ui, kit-privacy-participant (+ the edit to core-runtime because of it, below); the reference `shared-types`
 local-changes:
-  - core-db: GaplessCounter, savepoint check (P1-02)
-  - core-http: idempotent(), audience metadata (P1-02)
-  - …one line per change that is not a rename
+  - all packages: dependency versions pinned to the DOC-11 versions (exact, no `^`)
+  - all packages: `exports` point at `src/*.ts`; `build` script, `files` and `tsconfig.build.json` removed; version 0.0.0
+  - core-runtime: `AppModule.privacy` and the `@core/privacy-participant` dependency removed (DR-03, DR-98)
+  - core-db: `Database.transaction()` (savepoint inside a transaction) and `Database.autonomous()` added (§8.1)
+  - OpenTelemetry pinned to the 2.12 line (DOC-11 §3, §10 row 10)
 ```
+
+Every later change that is not a rename adds one line (`GaplessCounter`, `idempotent()`, `SecretBox`, `audience` metadata, the relay `policy(type)` hook, …).
 
 ### 13.4 The rule
 
@@ -864,4 +872,4 @@ Decisions made while writing, decided by Claude (delegated by the Owner):
 - **DR-99 · The resident, unit and staff guards are built in the composition root and injected into modules as `host.guards`, and every route declares an `audience` as route metadata.**
 - **DR-100 · `Money`, `QtyMilli`, `LocalDate`, `buildingToday` and the branded id types live in `@rms/shared-types`.**
 
-Two behaviors of the vendored copy are assumed in §8.1 (a nested `transaction` is a savepoint; `UnitOfWork.run` joins an open transaction); P1-02 confirms them in the copy and records any gap as a local change in `CORE_VERSION`.
+Two behaviors of the vendored copy were assumed in §8.1 (a nested `transaction` is a savepoint; `UnitOfWork.run` joins an open transaction). P1-02 checked them on 2026-10-21: the second held in the reference, the first was missing and is now a local change in `CORE_VERSION` (`Database.transaction`), with `Database.autonomous` added for DR-132.

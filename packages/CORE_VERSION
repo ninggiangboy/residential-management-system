@@ -1,0 +1,19 @@
+upstream:   git@github.com:ninggiangboy/elysia-architecture.git (a sibling checkout at ../elysia-architecture when copied)
+commit:     66bcc10435044415ff2e6dc55139614dd66f2888
+synced-on:  2026-10-21
+mapping:    kit-core→core-core, kit-config→core-config, kit-context→core-context, kit-db→core-db, kit-telemetry→core-telemetry,
+            kit-http→core-http, kit-auth→core-auth, kit-messaging→core-messaging, kit-mail→core-mail, kit-storage→core-storage,
+            kit-runtime→core-runtime, kit-i18n→core-i18n, kit-testing→core-testing, kit-web-core→core-web-core
+            (scope @kit/* → @core/*; the table is DOC-12 §13.1)
+omitted:    kit-ui, kit-privacy-participant (+ the edit to core-runtime because of it, below); the reference `shared-types`
+            package (this project has @rms/shared-types, DOC-12 §2.2)
+local-changes:
+  - all packages: dependency versions pinned to the DOC-11 versions (exact, no `^`; `@types/bun` and the others that were `latest`)
+  - all packages: `exports` point at `src/*.ts` for the `bun`, `types` and `default` conditions (nothing is built or published, and
+    Metro has no `bun` condition); `build` script, `files` and `tsconfig.build.json` removed; `test` script is
+    `bun test --pass-with-no-tests` where the reference had none; version 0.0.0
+  - core-runtime: `AppModule.privacy` and the `@core/privacy-participant` dependency removed (DR-03, DR-98)
+  - core-db: `Database.transaction()` added: begins a transaction, and inside an open one it is a savepoint; `run()` calls it
+    when no transaction is open and still joins an open one (DOC-12 §8.1 items 1 and 2); test in `src/database.test.ts`
+  - OpenTelemetry pinned to the 2.12 line (`@opentelemetry/api` 1.9.1, `resources` and `sdk-trace-node` 2.12.0,
+    `exporter-trace-otlp-http` 0.223.0): `sdk-trace-node` 2.12.0 accepts `api` below 1.10 only (DOC-11 §3, §10)
