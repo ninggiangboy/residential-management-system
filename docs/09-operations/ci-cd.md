@@ -89,7 +89,7 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 | Output | Paths |
 | --- | --- |
 | `api` | `apps/api/**`, `modules/**`, `packages/core-*/**`, `packages/shared-types/**`, `packages/i18n-catalog/**`, `docker/**`, `ops/**`, `bun.lock` |
-| `web` | `apps/web/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `packages/client-core/**`, `packages/core-web-core/**`, `bun.lock` |
+| `web` | `apps/cms-web/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `packages/client-core/**`, `packages/core-web-core/**`, `bun.lock` |
 | `mobile` | `apps/resident-app/**`, `apps/staff-app/**`, `packages/mobile-core/**`, `packages/client-core/**`, `packages/ui-native/**`, `packages/design-tokens/**`, `packages/i18n-catalog/**`, `packages/shared-types/**`, `bun.lock` |
 | `docs` | `docs/**` |
 
@@ -370,9 +370,9 @@ The time of a rollback is **measured** in P1-20 (staging) and P6-13 (production)
 | Item | Rule |
 | --- | --- |
 | Projects | Two Pages projects with direct upload: `rms-admin-staging` (domain `admin-staging.<domain>`) and `rms-admin-production` (`admin.<domain>`). A custom domain on a branch alias would need a hand-edited, proxied CNAME and falls through to production if it is not proxied (Cloudflare Pages documentation, read 2026-10-20), so each environment has its own project (DR-165; DR-83 item 1 said "Pages branch") |
-| Build | `bun run --filter @app/web build` with the build variables of DOC-41 §15: `VITE_API_BASE_URL=https://api-staging.<domain>/api/v1`, `VITE_APP_ENV=staging` (production: `https://api.<domain>/api/v1`, `production`) |
-| `_headers` | The file of DOC-39 §5.1 is a template in `apps/web/public/_headers.template`; the job substitutes `<domain>` and `<files-host>` and writes `dist/_headers`. SC-14 parses the result |
-| Deploy | `cloudflare/wrangler-action` v4.1.3 with `wrangler` 4.151.1: `pages deploy apps/web/dist --project-name rms-admin-<env> --branch main` (the project's production branch, so the custom domain follows it); `commitHash` and `commitMessage` set from the job |
+| Build | `bun run --filter @app/cms-web build` with the build variables of DOC-41 §15: `VITE_API_BASE_URL=https://api-staging.<domain>/api/v1`, `VITE_APP_ENV=staging` (production: `https://api.<domain>/api/v1`, `production`) |
+| `_headers` | The file of DOC-39 §5.1 is a template in `apps/cms-web/public/_headers.template`; the job substitutes `<domain>` and `<files-host>` and writes `dist/_headers`. SC-14 parses the result |
+| Deploy | `cloudflare/wrangler-action` v4.1.3 with `wrangler` 4.151.1: `pages deploy apps/cms-web/dist --project-name rms-admin-<env> --branch main` (the project's production branch, so the custom domain follows it); `commitHash` and `commitMessage` set from the job |
 | Cache | `/assets/*` immutable for a year (hashed file names); `index.html` is not cached by the browser (`Cache-Control: no-cache` in `_headers`) |
 | Order | After the API deploy, so a new bundle never calls an endpoint the old API lacks (the API change is backward compatible and ships first) |
 | Smoke | `GET https://admin-staging.<domain>/` returns 200 with the `_headers` values (§7.3 step 6) |

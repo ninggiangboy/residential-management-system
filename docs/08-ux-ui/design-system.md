@@ -34,7 +34,7 @@ flowchart LR
   G --> T["tailwind.css: Tailwind 4 theme mapping to the variables"]
   G --> N["native.ts: theme object for NativeWind and StyleSheet constants"]
   G --> S["status.json check against shared-types (DS-04)"]
-  C --> W["apps/web (shadcn components)"]
+  C --> W["apps/cms-web (shadcn components)"]
   T --> W
   N --> M["@rms/ui-native, both Expo apps"]
 ```
@@ -182,7 +182,7 @@ Hosting and format (DR-180):
 
 | Platform | Files | Why |
 | --- | --- | --- |
-| Web CMS | Self-hosted `woff2` in `apps/web/public/fonts` (Geologica 400/500/600/700 and Big Shoulders 700), `font-display: swap`, `<link rel="preload">` for Geologica 400 and 600. The measured size of the static instances is about 41 KB per Geologica weight and 36 KB for Big Shoulders (≈ 200 KB in total, before subsetting) | The CSP has `font-src 'self'` (DOC-39 §5.1), so Google Fonts cannot be used; self-hosting also avoids a third-party call from the CMS |
+| Web CMS | Self-hosted `woff2` in `apps/cms-web/public/fonts` (Geologica 400/500/600/700 and Big Shoulders 700), `font-display: swap`, `<link rel="preload">` for Geologica 400 and 600. The measured size of the static instances is about 41 KB per Geologica weight and 36 KB for Big Shoulders (≈ 200 KB in total, before subsetting) | The CSP has `font-src 'self'` (DOC-39 §5.1), so Google Fonts cannot be used; self-hosting also avoids a third-party call from the CMS |
 | Expo apps | Static `ttf` instances in `packages/design-tokens/fonts`, loaded with `expo-font` before the splash screen hides | React Native does not use variable fonts or `woff2`. The instances were produced and checked on 2026-10-20: `fonttools varLib.instancer Geologica[...].ttf wght=400 CRSV=0 SHRP=0 slnt=0 -o Geologica-400.ttf` (also 500, 600, 700) and `wght=700 opsz=72` for Big Shoulders; 139 KB per Geologica file, 94 KB for Big Shoulders; the weight class of each output matches |
 
 `OFL.txt` of both families is copied beside the files. Be Vietnam Pro is no longer a UI font: DOC-11 §5 and §6 (the `expo-font` row) say "PDF and app typography" and need the word "app" removed (§16).
@@ -360,7 +360,7 @@ The canvas `VehicleCard` has a third state `expired` ("Thẻ hết hạn"); the 
 
 ### 7.1 Rules
 
-- One component set, two implementations: the web CMS uses shadcn/ui on Radix (source copied into `apps/web/src/components/ui`, restyled by the tokens, no runtime UI dependency); the Expo apps use `@rms/ui-native`, which re-implements the same component names with React Native primitives, NativeWind classes and the same props. A screen specification names the Hiên component; both platforms resolve it.
+- One component set, two implementations: the web CMS uses shadcn/ui on Radix (source copied into `apps/cms-web/src/components/ui`, restyled by the tokens, no runtime UI dependency); the Expo apps use `@rms/ui-native`, which re-implements the same component names with React Native primitives, NativeWind classes and the same props. A screen specification names the Hiên component; both platforms resolve it.
 - Props follow the canvas bundle: `variant` (`primary`, `outline`, `ghost`, `tonal`, `gold`, `danger`), `size` (`sm`, `md`, `lg`), `tone`, `icon`, `block`, `loading`. A new variant needs a change to this document.
 - No component calls the API or reads the unit context; they receive data and handlers (DOC-55 owns the containers).
 - `@rms/ui-native` depends only on `design-tokens`, `shared-types` and `core-i18n` (DOC-12 §2.2). The sheet and the dialog use the React Native `Modal` and Reanimated (already pinned, DOC-11 §6); no extra bottom-sheet library is added. The `Modal` `animated` prop is deprecated in React Native 0.87+ (DOC-11 §6), so animation is done in the component.
@@ -430,7 +430,7 @@ Both packages expose an `Icon` component fed by a **registry** (`icons.ts`): a t
 
 ### 7.5 Web parts the canvas draws without a component
 
-The web artboards are built from plain markup around the Hiên parts. These are made into reusable web components in `apps/web/src/components`, not into Hiên components:
+The web artboards are built from plain markup around the Hiên parts. These are made into reusable web components in `apps/cms-web/src/components`, not into Hiên components:
 
 | Part | Drawn on | Built from |
 | --- | --- | --- |
@@ -487,7 +487,7 @@ Breakpoints (DR-186). The CMS is designed at 1440 px and works from 1024 px: Tai
 
 **Charts.** The dashboard and reports draw three things in the canvas: a month column chart (`UsageBars`: one `button` per column, the selected column shows its value, a `figure` with a caption), a stacked proportion bar with a legend (aging buckets on `W-Reports`, a `role="img"` with the full numbers in its `aria-label`), and horizontal progress bars for read rates. DR-185:
 
-- They are built from the tokens as plain components in `apps/web/src/components/charts`, not with Recharts. Recharts (3.10.1, DOC-11 §4) stays pinned but unused until a chart needs axes, a line or a tooltip; P6 (DOC-66, DOC-64 dashboard) decides that case.
+- They are built from the tokens as plain components in `apps/cms-web/src/components/charts`, not with Recharts. Recharts (3.10.1, DOC-11 §4) stays pinned but unused until a chart needs axes, a line or a tooltip; P6 (DOC-66, DOC-64 dashboard) decides that case.
 - Colors come from the tokens only: `teal` for the main series, `info` for a second one, `lamp` never for data (§3.3), and the four aging buckets use `teal`, `info`, `lamp-soft` with an `on-lamp-soft` outline and `danger`, always with a legend that has text. Two series are never told apart by hue alone: each also differs in lightness or in a pattern.
 - Every chart has a text alternative: the figure caption and either a data table (web, collapsible "Xem số liệu") or an `aria-label` that lists the values. Values print with the money and percent formats of §9.
 - Interactions: select a column by click or Enter; no hover-only information.
@@ -540,7 +540,7 @@ Prefix `DS-` (design system; unused before this document; master plan §0.2; DOC
 | DS-03 | `native.ts` and `tokens.css` | Both are loaded | Same keys and resolved values per theme; the NativeWind theme object has no key the CSS lacks |
 | DS-04 | The enumerations of the data documents (`fee_batch`, `charge`, `payment_intent`, `ticket`, `vehicle`, `membership`, `resident_account`, `staff_account`, `notice`, `unit`) and `status.json` | The check walks every value | Each value has a row (tone, icon, label key, per audience); tone is one of the five; the icon is in the registry; the label key exists in `vi` and `en` with the same placeholders; a value added to a `CHECK` without a row fails |
 | DS-05 | The shipped font files (web `woff2`, native `ttf`) | `cmap` is read with fontTools (CI helper) | All 147 Vietnamese letters, `đ`, `Đ` and `₫` are present in Geologica (400, 500, 600, 700) and Big Shoulders (700); a missing glyph fails |
-| DS-06 | The icon registries of `apps/web` and `ui-native` | The names are compared and the source is scanned | Same names on both; no `Icon name` outside the registry; no `lucide-react` import remains |
+| DS-06 | The icon registries of `apps/cms-web` and `ui-native` | The names are compared and the source is scanned | Same names on both; no `Icon name` outside the registry; no `lucide-react` import remains |
 | DS-07 | Every interactive component at its smallest size | Rendered (web in Playwright, native in the test renderer) | The hit area is at least 44 × 44 px, including `hitSlop` or padding |
 | DS-08 | The web sign-in, profile, staff list, units and import pages, in light and dark, at 200% zoom and with reduced motion | Playwright with axe | 0 serious or critical axe violations; focus ring visible; no clipped text; no running animation under `reduce`; `<html lang>` equals the chosen language |
 
@@ -595,7 +595,7 @@ Each is recorded in the decision register (DR-180…187), decided by Claude unde
 | --- | --- |
 | Decision register | Done: DR-180…187 are in the register with their decision-log line |
 | Glossary (DOC-06) | New terms: **Hiên** (the design system), **design token**, **plate** (UI: the component that shows a code or a plate; not the vehicle plate), **tone** (neutral, info, success, warning, danger), **well** (the icon tile behind a service or notice icon), **Tag** (status label), **hero card** |
-| DOC-11 | §4 add `react-day-picker` (when verified) and replace the `lucide-react` row with the two Phosphor packages and `sonner`; §4 note that shadcn components go to `apps/web/src/components/ui` (the row says `packages/ui-web`, which DOC-12 §2.1 does not have); §5 add Geologica and Big Shoulders (OFL) and keep Be Vietnam Pro for PDFs; §6 the `expo-font` row says "Geologica and Big Shoulders loading"; add `phosphor-react-native` 3.0.6 and `react-native-svg` as an explicit dependency; §8 add `@axe-core/playwright` |
+| DOC-11 | §4 add `react-day-picker` (when verified) and replace the `lucide-react` row with the two Phosphor packages and `sonner`; §4 note that shadcn components go to `apps/cms-web/src/components/ui` (the row says `packages/ui-web`, which DOC-12 §2.1 does not have); §5 add Geologica and Big Shoulders (OFL) and keep Be Vietnam Pro for PDFs; §6 the `expo-font` row says "Geologica and Big Shoulders loading"; add `phosphor-react-native` 3.0.6 and `react-native-svg` as an explicit dependency; §8 add `@axe-core/playwright` |
 | Master plan §0.2 | Add test prefix `DS-` (design system, DOC-54) |
 | DOC-88 | Prefix index row for `DS-` |
 | DOC-68 | The proposed labels of §6 and the `en` side; the `IconButton` label keys |

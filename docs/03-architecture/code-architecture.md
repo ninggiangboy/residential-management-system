@@ -34,7 +34,7 @@ Code samples are TypeScript signatures that show the shape the tasks implement. 
 residential-management-system/
 ├── apps/
 │   ├── api/                 # @app/api: composition root, HTTP server, worker role
-│   ├── web/                 # @app/web
+│   ├── web/                 # @app/cms-web
 │   ├── resident-app/        # @app/resident-app
 │   └── staff-app/           # @app/staff-app
 ├── modules/                 # @mod/<name>: one PostgreSQL schema each (DOC-07 §5.1)
@@ -67,7 +67,7 @@ Bun workspaces are `apps/*`, `modules/*` and `packages/*`. There are no changese
 | `@mod/<m>` | A business module (§4) | `@core/*` (by layer, §3); `@rms/shared-types`; **only the `contracts` export** of another `@mod/<n>` | Another module's `domain`, `application`, `infrastructure`, `presentation`; `@app/*`; `@rms/ui-native`, `@rms/mobile-core` |
 | `@rms/*` | Project packages shared by apps and clients (`client-core` and `shared-types` are pure TypeScript with no DOM and no React Native, DR-188) | Other `@rms/*`; `@core/i18n`; `@core/web-core` (web only) | `@mod/*`, `@app/*`, server-only `@core/*` |
 | `@app/api` | The composition root | Every module through its exports map: `.`, `./manifest`, `./config`, `./schema`, `./integrations/<consumer>` | A module's internals; a driver package directly (§6.2) |
-| `@app/web`, `@app/resident-app`, `@app/staff-app` | Clients | `@rms/*`, `@core/i18n`, `@core/web-core`; **`import type { App } from '@app/api'` only** | `@mod/*`, any value import from `@app/api` (DR-04) |
+| `@app/cms-web`, `@app/resident-app`, `@app/staff-app` | Clients | `@rms/*`, `@core/i18n`, `@core/web-core`; **`import type { App } from '@app/api'` only** | `@mod/*`, any value import from `@app/api` (DR-04) |
 
 `@rms/shared-types` is a leaf: no workspace dependency, no framework, no I/O. It holds the language codes, roles, member types, capability names, status literals, error codes, the `Money` brand and its helpers (§9.3) and the time helpers (§9.4). Both server domain code and clients may import it (DR-100).
 
@@ -270,7 +270,7 @@ export const residentRoutes = (d: FinanceRouteDeps) =>
 
 ### 5.4 The type-only `App` import
 
-`apps/web`, `apps/resident-app` and `apps/staff-app` get end-to-end types from `import type { App } from '@app/api'`. A value import would pull server code into a bundle. The rule is enforced twice: by the apps configuration (§6.1, `dependencyTypesNot: ['type-only']`) and by `verbatimModuleSyntax` in `tsconfig.base.json`, which makes a plain `import { App }` of a type an error in the editor.
+`apps/cms-web`, `apps/resident-app` and `apps/staff-app` get end-to-end types from `import type { App } from '@app/api'`. A value import would pull server code into a bundle. The rule is enforced twice: by the apps configuration (§6.1, `dependencyTypesNot: ['type-only']`) and by `verbatimModuleSyntax` in `tsconfig.base.json`, which makes a plain `import { App }` of a type an error in the editor.
 
 ## 6. Enforcement in CI
 
@@ -284,10 +284,10 @@ const SERVER_ONLY = '^(modules|packages/core-(db|messaging|http|auth|runtime|sto
 module.exports = {
   forbidden: [
     { name: 'clients-import-the-api-type-only', severity: 'error',
-      from: { path: '^apps/(web|resident-app|staff-app)/' },
+      from: { path: '^apps/(cms-web|resident-app|staff-app)/' },
       to: { path: '^apps/api/', dependencyTypesNot: ['type-only'] } },
     { name: 'clients-do-not-import-server-code', severity: 'error',
-      from: { path: '^apps/(web|resident-app|staff-app)/' },
+      from: { path: '^apps/(cms-web|resident-app|staff-app)/' },
       to: { path: SERVER_ONLY } },
     { name: 'apps-do-not-import-each-other', severity: 'error',
       from: { path: '^apps/([^/]+)/' },

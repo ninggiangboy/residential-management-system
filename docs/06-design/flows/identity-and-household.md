@@ -882,7 +882,7 @@ The flow has three sub-flows because each is longer than the 25 arrows a diagram
 | --- | --- | --- | --- |
 | `Owner`, `Manager`, `Member` | Actor | — | DOC-06 §1 |
 | `Members`, `Member-Add`, `Member-Actions` | Screen | `apps/resident-app` (screen files owed) | DOC-59 |
-| `W-Resident-Add`, `W-Unit-Detail` | Screen | `apps/web` (screen files owed) | DOC-65 |
+| `W-Resident-Add`, `W-Unit-Detail` | Screen | `apps/cms-web` (screen files owed) | DOC-65 |
 | `resident-app` | Client | `apps/resident-app`; calls go through the typed client `apiClient` (no logic) | DOC-55 |
 | `api` | API | `modules/residency/src/presentation/resident-routes.ts`, `staff-routes.ts` | DOC-51 E-26…E-29, E-64, E-69 |
 | `UnitGuard` | Guard | `apps/api/src/bootstrap/guards.ts`, `unit(capability)` | DOC-27 §3.1 |
@@ -1162,7 +1162,7 @@ Prefix `FI-` (this document, FI-51…FI-62). "Lower layer" names the unit test t
 | Participant | Kind | Code | Defined in |
 | --- | --- | --- | --- |
 | `Manager` | Actor | — | DOC-06 §1 |
-| `W-Unit-Detail` | Screen | `apps/web` (screen file owed) | DOC-65 |
+| `W-Unit-Detail` | Screen | `apps/cms-web` (screen file owed) | DOC-65 |
 | `resident-app` | Client | `apps/resident-app` (the old session, FL-22.2) | DOC-55 |
 | `api` | API | `modules/residency/src/presentation/staff-routes.ts`, `modules/identity/src/presentation/auth-routes.ts` | DOC-51 E-59, E-61, E-65, E-67, E-11 |
 | `StaffGuard` | Guard | `staff('admin','manager')` | DOC-12 §5.3 |
@@ -1389,7 +1389,7 @@ The validation is synchronous inside E-72 (DR-21, option B): no worker, no `vali
 | Participant | Kind | Code | Defined in |
 | --- | --- | --- | --- |
 | `Manager` | Actor | — | DOC-06 §1 |
-| `W-Import` | Screen | `apps/web` (screen file owed) | DOC-65 |
+| `W-Import` | Screen | `apps/cms-web` (screen file owed) | DOC-65 |
 | `api` | API | `modules/residency/src/presentation/staff-routes.ts`; the upload routes of `building` | DOC-51 E-36, E-37, E-71…E-74 |
 | `StaffGuard` | Guard | `staff('admin','manager')` | DOC-12 §5.3 |
 | `FilesApi` | Contract | `register`, `verify`, `remove` | DOC-37 §3 |
@@ -1621,7 +1621,7 @@ stateDiagram-v2
 | --- | --- | --- | --- |
 | `Resident`, `Manager` | Actor | — | DOC-06 §1 |
 | `Account-Deletion` | Screen | `apps/resident-app` (screen file owed) | DOC-60 |
-| `W-Residents` | Screen | `apps/web` (screen file owed) | DOC-65 |
+| `W-Residents` | Screen | `apps/cms-web` (screen file owed) | DOC-65 |
 | `api` | API | `modules/identity/src/presentation/resident-routes.ts`, `modules/residency/src/presentation/staff-routes.ts` | DOC-51 E-18, E-19, E-63, E-68 |
 | `ResidentGuard` | Guard | `resident` (token only: no `X-Unit-Id`, no terms gate) | DOC-12 §5.3 |
 | `StaffGuard` | Guard | `staff('admin','manager')` | DOC-12 §5.3 |

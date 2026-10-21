@@ -365,7 +365,7 @@ Test IDs are `XX-nn` with one prefix per document (master plan §0.2, DOC-88). T
 | DOC-67 | `UIWS-` | Web system |
 | DOC-68 | `UICP-` | UI states and copy (reserved for its own tests, for example the catalog parity cases) |
 
-Numbers run through the whole document (`UIRA-01`, `UIRA-02`…), two digits at least, never reused. The screen is named in the criterion, not in the ID. Playwright files live in `apps/web/e2e/` and Maestro flows in `apps/resident-app/.maestro/` and `apps/staff-app/.maestro/` (DOC-88). The prefix index of DOC-88 owes one row per prefix above.
+Numbers run through the whole document (`UIRA-01`, `UIRA-02`…), two digits at least, never reused. The screen is named in the criterion, not in the ID. Playwright files live in `apps/cms-web/e2e/` and Maestro flows in `apps/resident-app/.maestro/` and `apps/staff-app/.maestro/` (DOC-88). The prefix index of DOC-88 owes one row per prefix above.
 
 ### 6.4 Microcopy keys
 

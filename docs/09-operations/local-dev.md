@@ -145,7 +145,7 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `check:authz-metadata` | Fails when a route has no audience metadata (AG-01, SC-01) | P1-15 |
 | `db:provision-ci` | Runs `0001-provision.sql` as `postgres` with the generated passwords: the CI twin of the `initdb.d` script of §6 (DOC-71 §4.2) | P1-19 |
 | `exp:<nn>` | One experiment run, for example `exp:09` (DOC-98) | per experiment |
-| `build` | `apps/web` production bundle and the type check of the apps | P1-09 |
+| `build` | `apps/cms-web` production bundle and the type check of the apps | P1-09 |
 | `docker:build` | Builds the `rms-api` image locally as `rms-api:local` (DOC-71 §6) | P1-19 |
 
 The reference repository's `kit:add`, `kit:remove`, `gen:module` and `check:add-matrix` targets are **not** carried over unless a task adds them (DR-02); `gen:module` may be added by P1-02 if a module template script is wanted.
@@ -200,7 +200,7 @@ Ports are fixed so that documents, screenshots and the `CORS_ORIGINS` default ag
 | --- | --- | --- |
 | `.env.example` | Every key of DOC-41 §4 to §13 with its default and no secret value. **Generated** from the configuration schema (CF-17); never edited by hand | Yes |
 | `.env.local` | `APP_ENV=local`, the database URLs, the key rings, the S3 credentials, the compose passwords. Made by `keys:generate`; may be edited to override a default | **No** (`.gitignore`; gitleaks would catch it) |
-| `apps/web/.env.local` | `VITE_API_BASE_URL`, `VITE_APP_ENV`: only when the API is not on `localhost:3000` | No |
+| `apps/cms-web/.env.local` | `VITE_API_BASE_URL`, `VITE_APP_ENV`: only when the API is not on `localhost:3000` | No |
 | `apps/resident-app/.env.local`, `apps/staff-app/.env.local` | `API_BASE_URL`, `APP_ENV` (§10) | No |
 
 Rules:

@@ -31,7 +31,7 @@
       "tailwind": false,
       "ignoreDependencies": ["expo-dev-client"]
     },
-    "apps/web": {
+    "apps/cms-web": {
       "project": ["src/**/*.{ts,tsx}"],
       "ignoreDependencies": ["tailwindcss"]
     }

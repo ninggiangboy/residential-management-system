@@ -169,7 +169,7 @@ Errors use `error.unit_code_in_use`, `error.validation_failed`, `error.invalid_c
 
 ### 10. E2E cases
 
-File `apps/web/e2e/units.spec.ts`: UIWR-01…UIWR-06 (list, filters in the URL, search, add). Part of the P1-16 run "sign in, create staff, import units".
+File `apps/cms-web/e2e/units.spec.ts`: UIWR-01…UIWR-06 (list, filters in the URL, search, add). Part of the P1-16 run "sign in, create staff, import units".
 
 ### 11. Open questions
 
@@ -349,7 +349,7 @@ Errors use `error.version_conflict`, `error.unit_code_in_use`, `error.member_exi
 
 ### 10. E2E cases
 
-File `apps/web/e2e/unit-detail.spec.ts`: UIWR-07…UIWR-15, in the flows "household management" (UIWR-07, 11, 12, 13), "transfer" (UIWR-08, 09, 14) and "login phone" (UIWR-10).
+File `apps/cms-web/e2e/unit-detail.spec.ts`: UIWR-07…UIWR-15, in the flows "household management" (UIWR-07, 11, 12, 13), "transfer" (UIWR-08, 09, 14) and "login phone" (UIWR-10).
 
 ### 11. Open questions
 
@@ -491,7 +491,7 @@ Errors use `error.version_conflict`, `error.owner_must_transfer`, `error.deletio
 
 ### 10. E2E cases
 
-File `apps/web/e2e/residents.spec.ts`: UIWR-16…UIWR-23, in the flows "search and filters" (UIWR-16…19) and "profile and deletion" (UIWR-20…23). UIWR-17 is the Playwright check "no CCCD in `W-Residents`" of UX-18.
+File `apps/cms-web/e2e/residents.spec.ts`: UIWR-16…UIWR-23, in the flows "search and filters" (UIWR-16…19) and "profile and deletion" (UIWR-20…23). UIWR-17 is the Playwright check "no CCCD in `W-Residents`" of UX-18.
 
 ### 11. Open questions
 
@@ -595,7 +595,7 @@ Roles use `common.member-type.<type>`. Errors use `error.unit_has_owner`, `error
 
 ### 10. E2E cases
 
-File `apps/web/e2e/resident-add.spec.ts`: UIWR-24…UIWR-29, one flow "give a person to a unit".
+File `apps/cms-web/e2e/resident-add.spec.ts`: UIWR-24…UIWR-29, one flow "give a person to a unit".
 
 ### 11. Open questions
 
@@ -779,7 +779,7 @@ Issue messages are not keys of this screen: each row shows `issues[].message` as
 
 ### 10. E2E cases
 
-File `apps/web/e2e/import.spec.ts`: the flow "import units" (UIWR-30, 31, 32, 33, 37, 38) is the P1-16 case "import units"; the flow "bad files and expiry" holds UIWR-34, 35, 36, 39, 40; the flow "recent imports" holds UIWR-41, 42. The 2,000-row fixture is the one of IM-30.
+File `apps/cms-web/e2e/import.spec.ts`: the flow "import units" (UIWR-30, 31, 32, 33, 37, 38) is the P1-16 case "import units"; the flow "bad files and expiry" holds UIWR-34, 35, 36, 39, 40; the flow "recent imports" holds UIWR-41, 42. The 2,000-row fixture is the one of IM-30.
 
 ### 11. Open questions
 

@@ -52,7 +52,7 @@ flowchart TB
 | Integration | Statements, constraints, conditional updates, transactions, outbox, grants, DDL, the HTTP app without a listener | `bun test` on PostgreSQL 18.6 | `modules/<m>/test/*.int.test.ts`, `apps/api/test/*.int.test.ts` | ≤ 6 min, about 100 ms to clone a database (DOC-39 §4.5) |
 | Race | Exactly one winner, no deadlock, no half effect under N parallel sessions | `bun test` and the harness of §8 | `modules/<m>/test/race/*.race.test.ts`, `apps/api/test/race/` | CI profile ≤ 90 s; nightly profile ≤ 20 min |
 | Authorization | 0 unexpected 2xx and 0 unexpected refusals on every route | generated, `bun test` | `apps/api/test/authz/` | ≤ 3 min for 169 routes |
-| Web end to end | The CMS flows: import and publish a batch, record a payment, assign a ticket | Playwright 1.64.1 | `apps/web/e2e/` | ≤ 6 min, one worker |
+| Web end to end | The CMS flows: import and publish a batch, record a payment, assign a ticket | Playwright 1.64.1 | `apps/cms-web/e2e/` | ≤ 6 min, one worker |
 | Mobile | Critical resident and staff flows on simulators | Maestro 2.11.0 | `apps/resident-app/.maestro/`, `apps/staff-app/.maestro/` | on demand |
 | Load | Mixed traffic, payment burst, fan-out | k6 2.3.0 | `apps/api/test/load/` | EXP-07, on demand |
 | Experiments | The twelve claims of original SDD §20.2 | scripts in `apps/api/test/exp/` | DOC-90…101 | per experiment |
@@ -80,7 +80,7 @@ flowchart TB
 | `realtime` | ● | — | ● SSE over `app.handle` (prefix assigned by DOC-52) | — | ● | ● | — | — |
 | `@core/*` packages | ● their own suites | ● `MC-` and the port suites | ● `MC-`, `JB-` | ● outbox claim | — | — | — | — |
 | `apps/api` | ● | — | ● `AG-`, `ER-`, `CF-`, `SC-`, `OB-`, `JB-` | ● `apps/api/test/race` | ● | — | — | EXP-07, 10, 12 |
-| `apps/web` | ● catalog parity, money format | — | — | — | — | ● Playwright | — | — |
+| `apps/cms-web` | ● catalog parity, money format | — | — | — | — | ● Playwright | — | — |
 | `apps/resident-app`, `apps/staff-app`, `@rms/mobile-core` | ● logic packages | — | — | — | — | — | ● Maestro | — |
 | Database (DDL, grants, retention) | — | — | ● `IDM-`, `OPM-`, `GRT-`, `DLC-` | — | — | — | — | EXP-11, 12 |
 
@@ -125,7 +125,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `*.int.test.ts` | integration | `modules/identity/test/otp.int.test.ts` |
 | `*.race.test.ts` | race | `modules/finance/test/race/allocate.race.test.ts` |
 | `*.authz.test.ts` | authorization | `apps/api/test/authz/matrix.authz.test.ts` |
-| `*.spec.ts` | Playwright | `apps/web/e2e/fee-batch.spec.ts` |
+| `*.spec.ts` | Playwright | `apps/cms-web/e2e/fee-batch.spec.ts` |
 | `*.yaml` | Maestro | `apps/resident-app/.maestro/otp-sign-in.yaml` |
 | `exp<NN>-<name>.ts` | experiment script | `apps/api/test/exp/exp09-otp-abuse.ts` |
 
@@ -419,7 +419,7 @@ CI reports line and branch coverage per module. **No target fails the build** (O
 | `finance`, `identity` | 90 | 85 |
 | `access`, `tickets`, `notices`, `residency` | 80 | 75 |
 | Other modules | 70 | 60 |
-| `apps/web` | 60 | — |
+| `apps/cms-web` | 60 | — |
 | Mobile logic packages (`@rms/mobile-core` and similar) | 70 | — |
 
 Mechanism: `bun test --coverage` with an `lcov` reporter in the stages `unit` and `integration`; `scripts/coverage-report.ts` merges the reports, prints a table per scope and writes a `::warning` annotation for each scope below its target. **`bunfig.toml` sets no `coverageThreshold`**, because a threshold makes the test command exit non-zero. P1-19 verifies this on Bun 1.4.3. The report is uploaded as a CI artifact and the table is in the job summary.
@@ -434,7 +434,7 @@ The stage names are those of DOC-71. A pull request must pass `verify`, `unit`, 
 | `unit` | every pull request | `bun run test` with coverage | yes |
 | `integration` | every pull request; `db-grants` also on changes to a migration, a `schema.ts` or `0900-grants.sql` | `test:integration` on the `postgres:18.6` service container: use cases, repositories, DDL and statement tests (`IDM-`, `OPM-`, `GRT-`, `DLC-`), contract tests with real adapters, `AG-`, `ER-`, `CF-`, `JB-`, `MC-`, `OB-`, `AU-`, `RM-`, `AD-`, `BD-`, `FS-`, the race tests in the `ci` profile, **the authorization matrix** (`test:authz`, §13), coverage | yes |
 | `build` | every pull request (no push) and `main` (push `sha-<7>`) | image `rms-api`; boot smoke (the process starts with the generated `.env.example` profile `test`, `/health/ready` answers 200; CF-16, CF-17) | yes (DR-163) |
-| `e2e-web` | path-gated: `apps/web/**`, `apps/api/**`, `packages/**` | Playwright against `bun run dev`, Mailpit, the local store; SC-15 | no on a pull request; it gates the staging deploy (DR-163) |
+| `e2e-web` | path-gated: `apps/cms-web/**`, `apps/api/**`, `packages/**` | Playwright against `bun run dev`, Mailpit, the local store; SC-15 | no on a pull request; it gates the staging deploy (DR-163) |
 | `security` | pull requests; weekly | gitleaks, Trivy (filesystem; image on `main`), CodeQL, dependency review: SC-20, SC-21, SC-31 | yes (DR-153) |
 | `deploy-staging` | `main` | migration, rolling restart, smoke test: SC-16 and SC-22 once after the first deploy, `GET /api/v1/health/ready` | blocks the deploy |
 | `deploy-production` | `v*` tag with approval | the same smoke test | blocks the deploy |

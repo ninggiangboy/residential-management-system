@@ -36,14 +36,14 @@ Quick pass: the Owner has the design canvas, so this document fixes structure an
 
 | App | Directory, package | Audience | Runs on | Navigation |
 | --- | --- | --- | --- | --- |
-| Web CMS | `apps/web`, `@app/web` | Admin, Manager | Browser; static files on Cloudflare Pages (DR-83) | TanStack Router, file-based |
+| Web CMS | `apps/cms-web`, `@app/cms-web` | Admin, Manager | Browser; static files on Cloudflare Pages (DR-83) | TanStack Router, file-based |
 | Resident app | `apps/resident-app`, `@app/resident-app` | Owner, family, tenant, helper | Expo SDK 58, New Architecture, development builds (DR-82) | expo-router |
 | Staff app | `apps/staff-app`, `@app/staff-app` | Manager, Technician, Guard | the same | expo-router |
 
 The directory names are those of DOC-12 §2.1 (the plan's task text says `mobile-*`; DOC-12 wins).
 
 ```
-apps/web/
+apps/cms-web/
 ├── index.html  vite.config.ts  tailwind.config.ts   # the preset comes from @rms/design-tokens
 ├── e2e/                                             # Playwright (DOC-88)
 └── src/
@@ -76,15 +76,15 @@ apps/resident-app/                                   # apps/staff-app/ has the s
 | Package | Directory | Holds | Imported by |
 | --- | --- | --- | --- |
 | `@rms/shared-types` | `packages/shared-types` | Language codes, roles, member types, capability names, status literals, error codes, `Money`, time helpers, **`formatMoney`/`formatDate`** (DR-71) | everything |
-| `@rms/client-core` | `packages/client-core` | New (DR-188). Pure TypeScript, no DOM and no React Native: `createAuthenticatedFetch`, `parseApiError`, `classify`, `retryPlan`, `newIntent`, query-key helpers, `singleFlight`, the `TokenStore` and `Gates` interfaces | `@rms/mobile-core`, `@app/web` |
+| `@rms/client-core` | `packages/client-core` | New (DR-188). Pure TypeScript, no DOM and no React Native: `createAuthenticatedFetch`, `parseApiError`, `classify`, `retryPlan`, `newIntent`, query-key helpers, `singleFlight`, the `TokenStore` and `Gates` interfaces | `@rms/mobile-core`, `@app/cms-web` |
 | `@rms/i18n-catalog` | `packages/i18n-catalog` | `vi` and `en` catalogs for UI, API error messages, notification templates, emails, PDFs (DR-71) | clients, API |
 | `@rms/design-tokens` | `packages/design-tokens` | Token JSON from the canvas; generates the Tailwind preset and the NativeWind theme (P1-09, DOC-54) | web, `ui-native` |
 | `@rms/ui-native` | `packages/ui-native` | The design-system components once for both Expo apps (DOC-54) | the two apps |
 | `@rms/mobile-core` | `packages/mobile-core` | Mobile adapters over `client-core`: secure-store token store, refresh transport, the Eden factory, unit context, push registration, netinfo and AppState wiring, upload helper, i18n setup, error reporter | the two apps |
 | `@core/i18n` | `packages/core-i18n` | ICU messages, typed catalogs, parity helpers (vendored, DR-02) | `i18n-catalog`, clients |
-| `@core/web-core` | `packages/core-web-core` | The SSE client over `fetch` (web only, §13) | `@app/web` |
+| `@core/web-core` | `packages/core-web-core` | The SSE client over `fetch` (web only, §13) | `@app/cms-web` |
 
-Rules (DOC-12 §2.2, §6): clients import `import type { App } from '@app/api'` and nothing else from the API; a value import fails `check:arch` (DR-04). `@rms/client-core` and `@rms/shared-types` import neither React Native nor the DOM, so they run under Vitest on Bun. `apps/web` does not import `@rms/mobile-core` or `@rms/ui-native`; the apps do not import `@core/web-core`. The shadcn component source lives in `apps/web/src/components/ui`, not in a package (DR-188; DOC-11 §4 says `packages/ui-web` and is owed a correction).
+Rules (DOC-12 §2.2, §6): clients import `import type { App } from '@app/api'` and nothing else from the API; a value import fails `check:arch` (DR-04). `@rms/client-core` and `@rms/shared-types` import neither React Native nor the DOM, so they run under Vitest on Bun. `apps/cms-web` does not import `@rms/mobile-core` or `@rms/ui-native`; the apps do not import `@core/web-core`. The shadcn component source lives in `apps/cms-web/src/components/ui`, not in a package (DR-188; DOC-11 §4 says `packages/ui-web` and is owed a correction).
 
 **Visual layer (DOC-54).** Fonts: the web serves self-hosted `woff2` (Geologica, Big Shoulders); the apps load the static `ttf` instances with `expo-font` before the splash screen hides (DR-180). Theme: each client follows the operating system, `prefers-color-scheme` on the web and `useColorScheme()` on native, with `data-theme` set on the root; there is no stored preference and no toggle in phase 1 (DR-182). Icons: one typed registry of Phosphor names per platform, so an unknown name does not compile (DR-181, DOC-54 §7.3).
 
@@ -108,7 +108,7 @@ Read at build time, baked into the bundle, no secret (DOC-41 §15). Nothing here
 
 | Client | Key | Where it comes from | Used for |
 | --- | --- | --- | --- |
-| Web | `VITE_API_BASE_URL`, `VITE_APP_ENV` | Pages build variables; `apps/web/.env.local` locally | API base (ends in `/api/v1`); footer badge on non-production builds |
+| Web | `VITE_API_BASE_URL`, `VITE_APP_ENV` | Pages build variables; `apps/cms-web/.env.local` locally | API base (ends in `/api/v1`); footer badge on non-production builds |
 | Apps | `API_BASE_URL`, `APP_ENV` | EAS profile `env` and EAS environment variables; read in `app.config.ts`, exposed as `extra` | the same |
 | Apps | `version`, slug | `app.config.ts` | `X-App-Version`, `X-App-Id` (`resident` or `staff`); derived, never configured |
 
@@ -145,7 +145,7 @@ export function createAuthenticatedFetch(o: {
 ```
 
 ```ts
-// @rms/mobile-core and apps/web/src/api/client.ts
+// @rms/mobile-core and apps/cms-web/src/api/client.ts
 const origin = new URL(env.baseUrl).origin
 export const api = treaty<App>(origin, { fetcher: createAuthenticatedFetch({ … }) }).api.v1
 ```
@@ -648,7 +648,7 @@ Delegated design details (the Owner delegated documentation decisions that touch
 
 | ID | Decision | Used in |
 | --- | --- | --- |
-| DR-188 | A new package `packages/client-core` (`@rms/client-core`, pure TypeScript) holds the fetcher, error classification, retry plan, intent keys, query-key helpers and single-flight, so the web and the two apps do not triple the logic. The shadcn component source lives in `apps/web/src/components/ui` (no `packages/ui-web`). `@core/web-core` supplies only the SSE client; its `authFetch` is not used because the refresh rules here are project-specific | §2.2, §4 |
+| DR-188 | A new package `packages/client-core` (`@rms/client-core`, pure TypeScript) holds the fetcher, error classification, retry plan, intent keys, query-key helpers and single-flight, so the web and the two apps do not triple the logic. The shadcn component source lives in `apps/cms-web/src/components/ui` (no `packages/ui-web`). `@core/web-core` supplies only the SSE client; its `authFetch` is not used because the refresh rules here are project-specific | §2.2, §4 |
 | DR-189 | Access token in memory only on every platform; mobile refresh token in secure-store with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, written before replay; a refresh with no answer is never a sign-out (retry inside the grace window, then state `unknown`); web tabs share the refresh through Web Locks and `BroadcastChannel` | §5 |
 | DR-190 | Server-state defaults of §8.1; offline is read-only with no write queue; the persisted cache is opt-in per query (`meta.persist`), per account, with the allow-list of §9.2 that excludes money, QR, members, vehicles and access-control lookups | §8, §9 |
 | DR-191 | Unit context rules: stored unit id, automatic selection with one membership, `removeQueries(['unit', previous])` on switch, lost membership returns to `Unit-Pick` | §7 |

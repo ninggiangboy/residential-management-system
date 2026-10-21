@@ -1070,7 +1070,7 @@ One file per functional area (`06-design/flows/<area>.md`) with the ordinary hea
 
 | Participant | Kind | Code | Defined in |
 | --- | --- | --- | --- |
-| `W-Fee-Record` | Screen | `apps/web/src/routes/finance/record.tsx` | DOC-66 |
+| `W-Fee-Record` | Screen | `apps/cms-web/src/routes/finance/record.tsx` | DOC-66 |
 | `api` | API | `PaymentController.create` | DOC-51 E-xx |
 | `RecordManualPayment` | Service | `RecordManualPayment.execute(cmd)` | DOC-22 §3 |
 | `db` | Data store | `payment`, `allocation`, `charge`, `receipt`, `document_counter` | DOC-15 |

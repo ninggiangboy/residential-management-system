@@ -154,7 +154,7 @@ Loading: the hero shows skeleton lines until E-03 answers; the form is usable at
 
 ### 10. E2E cases
 
-`apps/web/e2e/auth-sign-in.spec.ts`: UIWO-01…05, 07…10. UIWO-06 is covered by the `AU-` rate test of E-05 and by a Playwright route mock for the banner.
+`apps/cms-web/e2e/auth-sign-in.spec.ts`: UIWO-01…05, 07…10. UIWO-06 is covered by the `AU-` rate test of E-05 and by a Playwright route mock for the banner.
 
 ### 11. Open questions
 
@@ -228,7 +228,7 @@ Offline: the resend button is disabled with the reason. Loading, empty, stale an
 
 ### 10. E2E cases
 
-`apps/web/e2e/auth-reset.spec.ts`: UIWO-11…14, with UIWO-15…19 of `W-Reset`.
+`apps/cms-web/e2e/auth-reset.spec.ts`: UIWO-11…14, with UIWO-15…19 of `W-Reset`.
 
 ### 11. Open questions
 
@@ -316,7 +316,7 @@ Loading: none before the form. Offline: the save button is disabled with the rea
 
 ### 10. E2E cases
 
-`apps/web/e2e/auth-reset.spec.ts`: UIWO-15…19 (the email in the invite mail is read from Mailpit in the test environment).
+`apps/cms-web/e2e/auth-reset.spec.ts`: UIWO-15…19 (the email in the invite mail is read from Mailpit in the test environment).
 
 ### 11. Open questions
 
@@ -424,7 +424,7 @@ Loading: skeleton cards (150 ms rule, UX-10). Error on E-30: the page error stat
 
 ### 10. E2E cases
 
-`apps/web/e2e/profile.spec.ts`: UIWO-20…26. The P1-16 Playwright flows "sign in, create staff, import units" use UIWO-01 and the shell of this document.
+`apps/cms-web/e2e/profile.spec.ts`: UIWO-20…26. The P1-16 Playwright flows "sign in, create staff, import units" use UIWO-01 and the shell of this document.
 
 ### 11. Open questions
 

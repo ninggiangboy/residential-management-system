@@ -9,13 +9,13 @@ module.exports = {
     {
       name: 'clients-import-the-api-type-only',
       severity: 'error',
-      from: { path: '^apps/(web|resident-app|staff-app)/' },
+      from: { path: '^apps/(cms-web|resident-app|staff-app)/' },
       to: { path: '^apps/api/', dependencyTypesNot: ['type-only'] },
     },
     {
       name: 'clients-do-not-import-server-code',
       severity: 'error',
-      from: { path: '^apps/(web|resident-app|staff-app)/' },
+      from: { path: '^apps/(cms-web|resident-app|staff-app)/' },
       to: { path: SERVER_ONLY },
     },
     {
