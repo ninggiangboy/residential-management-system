@@ -1,6 +1,6 @@
 # Decision Register
 
-> Status: **Review** · Updated: 2026-10-20 (DR-174…225 added with the P1 UX/UI documents; DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
+> Status: **Review** · Updated: 2026-10-21 (DR-91, 92, 96 decided; DR-68 providers not chosen yet; DR-226…228 added; DR-174…225 added with the P1 UX/UI documents; DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
 
 The original SDD is strong on the hard part: the money invariant, the arbiter row of every race (charge, `gateway_event`, ticket, nonce), the state machines, the options analyses and the experiments that prove them. It is thin on "exactly how" in the places that surround that core: the finance tables it does not list, the Excel and bank-statement formats, how the reference's kit packages are vendored (as `core-*`), the cross-module contracts that the module rule forces, the payOS facts it admits it does not know, the jobs and their schedules, time zones, personal-data handling, hosting, backup and the screens the design never drew. It also contains a few contradictions (transfer-content length, the audit transaction, the invalid-signature row, the 24-hour RPO against "never lose a payment", the `now()::date` aging query) that would surface as bugs if coded as written. Each gap below is one decision with one concrete proposal. The DRs that fix schemas, contracts and repository layout must be decided before any code.
 
@@ -71,6 +71,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-64, DOC-65 and DOC-67: DR-209 (no echoed email or absolute expiry), DR-210 (forgot-password dialog), DR-211 (`W-Profile` one page), DR-212 (fields E-57 and E-63 return for the list screens), DR-213 (`unitCode` in import issues; browser CSV), DR-214 (four member types on the add form), DR-215 (phone lookup shows no personal data), DR-216 (step-up dialog opens proactively and reactively), DR-217 (`W-Staff` counts), DR-218 (staff edit reuses the create dialog), DR-219 (`W-Building` one page) | DOC-64, DOC-65, DOC-67, DOC-51, DOC-18, DOC-27, DOC-35, DOC-53 |
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-68: DR-220 (rule codes share the `error.` namespace), DR-221 (one name per shared string), DR-222 (two ticket status families), DR-223 (formatter details), DR-224 (parity compares ICU arguments) | DOC-68, DOC-42, DOC-55, DOC-56, DOC-57, DOC-64, DOC-67 |
 | 2026-10-21 | Claude (delegated by Owner) | DR-225: the session lists carry `client` (`web` \| `app`), a new `refresh_family.client` column; asked by the Owner ("ok theo đề xuất") | DOC-16, DOC-26, DOC-51, DOC-60, DOC-61, DOC-64 |
+| 2026-10-21 | Owner | P1 gate review answers. DR-96, DR-91, DR-92 decided as proposed (`unmatchedTransfer` for `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`; no Manager-created payment link; no pinned library favorites). DR-68: the SMS provider and the SMTP relay are not chosen yet; ports, `console`/`allowlist` drivers and Mailpit first, real adapters in P1-22 when the Owner picks (P1-10 no longer waits; M1 and P1-22 do). DR-226: `GET /staff/imports` is built as E-169 (catalog E-01…E-169). DR-227: M0 approval of DOC-69 does not wait for the dry run; it is the acceptance of P1-03. CI review rule (DOC-71 §11.1): "up to you, other people may join later", so DR-166 stands and the open question is closed. DR-228: documents hold placeholders, real Owner data is supplied only when the task that needs it starts, and DOC-70 §2 classifies each input | DR-68, DR-91, DR-92, DR-96, DR-166, DR-226, DR-227, DR-228, DOC-03, DOC-04, DOC-05, DOC-11, DOC-26, DOC-40, DOC-41, DOC-50, DOC-51, DOC-65, DOC-68, DOC-69, DOC-70, DOC-71, DOC-73, DOC-88, DOC-98, DOC-99, master plan |
 
 ---
 
@@ -698,18 +699,18 @@ flowchart TB
 - **Consequences:** Lost encryption keys mean re-entering the gateway credentials, not data loss. A driver with another secret set needs a field list in DOC-24, not a migration.
 - **Write to:** DOC-36, DOC-24, DOC-17, DOC-39, RB-12.
 
-### DR-91 · A payment link created by the Manager for a resident is not built — **Proposed**
+### DR-91 · A payment link created by the Manager for a resident is not built — **Decided (Owner, 2026-10-21)**
 - **Problem:** The proposal lists "payment links" (F-PAY-05). A payment intent belongs to a member who selects the charges, and a second creation path would need its own race rules (DR-28).
 - **Options:** (1) not built: the resident creates the link in the app (FR-07) and the Manager sends a debt reminder (FR-12.4); (2) the Manager creates an intent on behalf of a unit.
-- **Decision (proposed):** Option 1, the simplest rule that keeps money correct. A Manager who wants cash in sends a reminder or records a manual payment (FR-05).
+- **Decision:** Option 1, the simplest rule that keeps money correct, accepted as proposed by the Owner (2026-10-21). A Manager who wants cash in sends a reminder or records a manual payment (FR-05).
 - **Consequences:** F-PAY-05 stays "Not built".
 - **Write to:** DOC-05, DOC-23.
 
-### DR-96 · Which unposted outcomes set `unmatchedTransfer` on the intent — **Proposed**
+### DR-96 · Which unposted outcomes set `unmatchedTransfer` on the intent — **Decided (Owner, 2026-10-21)**
 - **Problem:** DR-84 item 8 says an intent stays `pending` when a transfer of another amount arrives and the status endpoint returns `unmatchedTransfer {amount, receivedAt}`. It does not say what the resident sees for the other unposted outcomes. A resident whose charge was paid in cash and who also transferred sees nothing, and may transfer again.
-- **Decision (proposed):** The status endpoint returns `unmatchedTransfer` for every outcome that leaves money received and the intent not `paid`: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, with the same neutral message of DR-84 item 8. Not for `posted` (the intent is `paid`), `duplicate_transfer` (the intent already shows its receipts) or `unknown_order` (no intent). Still no push and no inbox entry.
+- **Decision:** Accepted as proposed by the Owner (2026-10-21). The status endpoint returns `unmatchedTransfer` for every outcome that leaves money received and the intent not `paid`: `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, with the same neutral message of DR-84 item 8. Not for `posted` (the intent is `paid`), `duplicate_transfer` (the intent already shows its receipts) or `unknown_order` (no intent). Still no push and no inbox entry.
 - **Consequences:** One field, one message, no new screen. The Manager refunds outside the system as before.
-- **Write to:** DOC-23, DOC-51, DOC-58, DOC-68, DOC-03 (FR-09.1 wording once decided).
+- **Write to:** DOC-23, DOC-51, DOC-58, DOC-68, DOC-03 (FR-09.1). Applied 2026-10-21 to DOC-03, DOC-04, DOC-51 and DOC-68; DOC-23 and DOC-58 are written from this DR.
 
 ## G. Reconciliation
 
@@ -1149,9 +1150,9 @@ flowchart TB
 - **Consequences:** The wording of FR-48 widens to name the two kinds.
 - **Write to:** DOC-03 (FR-48), DOC-33, DOC-51.
 
-### DR-92 · Pinning favorite library pages is not built — **Proposed**
+### DR-92 · Pinning favorite library pages is not built — **Decided (Owner, 2026-10-21)**
 - **Problem:** The proposal lists "pin favorites" for the library (F-WIK-09); no endpoint, screen or FR exists.
-- **Decision (proposed):** Not built; the folder tree and search (FR-33) reach every page.
+- **Decision:** Not built, accepted as proposed by the Owner (2026-10-21); the folder tree and search (FR-33) reach every page.
 - **Consequences:** F-WIK-09 stays "Not built".
 - **Write to:** DOC-05, DOC-32.
 
@@ -1299,7 +1300,8 @@ flowchart TB
 - **Problem:** SDD §22 leaves the SMS provider ("provider to choose"), brandname registration (which in Vietnam takes time and has per-message cost) and the SMTP relay open. Residents cannot sign in without SMS.
 - **Decision (proposed):** Port `SmsSender` and `Mailer`; one adapter each. The Owner/client chooses the providers and the choice is recorded here before P1-10 (it is a decision, not an experiment). Compare two or three Vietnamese SMS providers that support brandname OTP (price per message, brandname registration lead time, delivery receipts, API quality, sandbox) and one SMTP relay (deliverability with SPF/DKIM/DMARC for the company domain, location, price). Decision rule: pick the cheapest provider with a delivery-receipt API and brandname approval ≤ 3 weeks; register the brandname during P0/P1 so it is ready for staging UAT. SMS and mail drivers per environment: `console` (local), `allowlist` (staging), real (production). Mail carries only links and generic text (DR-58).
 - **Consequences:** Brandname approval is a calendar-time dependency; if it is late, go-live can use an unbranded OTP route at higher cost.
-- **Write to:** DOC-26, DOC-11, DOC-70.
+- **Owner decision (2026-10-21):** The SMS provider and the SMTP relay are **not chosen yet**. The ports `SmsSender` and `Mailer` are built first with the `console` and `allowlist` drivers, and local mail goes to Mailpit; the real adapters are written in **P1-22**, when the Owner picks the providers. *Revised 2026-10-21:* P1-10 no longer waits for the choice (the sentence "recorded here before P1-10" above is replaced by "recorded before P1-22"); P1-22 has the precondition "the Owner has picked the providers", and milestone M1 still needs a real SMS OTP on a phone, so it waits for P1-22. The comparison criteria and the decision rule above stay as the way to choose. The names of the `SMS_*` and `SMTP_*` keys are fixed in P1-22 (DOC-41); until then the ports, the fake drivers and the key `SMS_DRIVER` are enough. Lead time: brandname registration takes up to about 3 weeks and starts only after the pick, so the Owner should pick early enough that it is approved before the staging UAT.
+- **Write to:** DOC-26, DOC-11, DOC-70, DOC-41, master plan P1-10 and P1-22.
 
 ### DR-88 · Operators reach Grafana at `monitor.<domain>`, behind Cloudflare Access — **Decided (Owner, 2026-10-20)**
 - **Problem:** DR-83 gives no public host for monitoring, and DR-63 sends alerts by email and Telegram. An operator still needs the dashboards.
@@ -1367,7 +1369,7 @@ flowchart TB
 ### DR-151 · The authorization matrix: input, actors, expected outcome, output — **Decided (Claude, delegated by Owner, 2026-10-20)**
 - **Problem:** DOC-50 §2 fixes the route metadata and P1-15 says "the generator builds role × member type × own/foreign unit and building", but nothing says what it reads (the mounted `App` or the OpenAPI document), who the actors are, how an expected result is computed without copying the bug it tests, what a pass is, or what happens to a cell that mutates data.
 - **Decision:** (1) The generator reads the routes of the mounted `App` in process; the OpenAPI document carries the same record as `x-endpoint-id`, `x-audience`, `x-step-up`, `x-idempotent` for clients and AG-02. (2) Sixteen actors: `anon`, `tok.expired`, `res.owner`, `res.family`, `res.tenant_pay`, `res.tenant_nopay`, `res.helper`, `res.locked`, `res.terms_pending`, `res.stranger`, `staff.admin`, `staff.manager`, `staff.technician`, `staff.guard`, `staff.disabled`, `staff.admin_b2`; two scopes, `own` and `foreign` (U2 of the same building for a resident route, building B2 for a staff route). (3) `expected()` is a pure function of the audience; the capability truth values come from an independent hand-typed copy of the DOC-27 §3.2 table, not from the production function. `ALLOW` means the gate passes (2xx or a business 400, 409, 412, 422, 428); a 401, 403 or 404 on an `ALLOW` cell is an *unexpected refusal* and fails like an unexpected 2xx. A permitted actor on a `foreign` object gets 404, never 403; a list route gets a leak scan for the other scope's ids. (4) Refusal cells run before `ALLOW` cells of a route; fixtures are restored from a template database before the next route; a path parameter without a fixture fails the run before any request. (5) Output `authz-matrix.json` and `authz-matrix.md` as CI artifacts, not committed; the run fails on an unexpected 2xx or 3xx, an unexpected refusal, any 5xx, a leak, a route without metadata or a missing fixture.
-- **Consequences:** P1-15 has no open question; EXP-10 (DOC-99) holds the results. The 168 routes × 16 actors are 2,688 own-scope cells.
+- **Consequences:** P1-15 has no open question; EXP-10 (DOC-99) holds the results. The 168 routes × 16 actors are 2,688 own-scope cells (*revised 2026-10-21, DR-226:* 169 routes, 2,704 cells).
 - **Write to:** DOC-39 §4, DOC-99, DOC-50 §2 (the metadata is unchanged).
 
 ### DR-152 · Security header values, a corrected CSP and the client-IP rule — revises DR-64 — **Decided (Claude, delegated by Owner, 2026-10-20)**
@@ -1461,6 +1463,7 @@ flowchart TB
 - **Problem:** DR-08 sets trunk-based development, Conventional Commits with the module as scope and `CODEOWNERS` without saying how it is enforced on squash merges or whether review is mandatory for a team of one.
 - **Decision:** (1) Squash merge only, linear history, no force push, protected `v*` tags. (2) A code-owner review is required only when the repository has more than one contributor. (3) `bun run check:commits` validates the pull-request title (which becomes the squashed commit) and each commit message against one pattern; the scopes are the thirteen module names plus `api`, `web`, `resident-app`, `staff-app`, `core`, `shared`, `ops`, `docs`, `deps`.
 - **Consequences:** Dependabot titles must be configured to match (`chore(deps)`). The Owner's review is a single point until a second contributor joins.
+  *Confirmed by the Owner (2026-10-21):* asked whether a second contributor will join, the Owner answered "up to you, other people may join the repository later"; the rule stands (no required review while the Owner is alone, one code-owner approval once a second contributor joins).
 - **Write to:** DOC-71 §11.
 
 ### DR-167 · Mobile release: independence, identifiers, EAS environments, push projects, compatibility — **Decided (Claude, delegated by Owner, 2026-10-20)**
@@ -1574,6 +1577,7 @@ flowchart TB
 - **Problem:** DR-73 lists the endpoints the SDD's table lacks, and master plan §3.2 asks DOC-51 to number every endpoint; screens, tests and the authorization matrix need stable ids before the groups are specified.
 - **Decision:** DOC-51 §2 numbers **168 endpoints `E-01…E-168`**, grouped (public and health, auth, resident account, household, staff account, staff accounts, building administration, residency, real-time and inbox, finance, tickets, vehicles and access, notices, library, reports), with method, path, `operationId`, audience, idempotency, step-up action, use case and the document that specifies it. A number is never reused; a later endpoint takes the next number. `operationId` is a unique lowerCamel verb and noun and rides in OpenAPI with the extensions `x-endpoint-id` and `x-audience`. DR-73 is completed with: `GET /me/ticket-types` (E-118), `GET /staff/accounts/{id}` (E-41), device removal by id (`DELETE /me/devices/{id}`, `DELETE /staff/devices/{id}`), `PATCH /staff/ticket-types/{id}`, `GET /staff/notices` (E-145), `GET /staff/imports/{id}` (E-73), `GET /staff/docs/pages/{id}` (E-159). Test prefixes of this batch (master plan §0.2): `AG-` API guidelines (DOC-50), and one per flow document: `FF-` DOC-44, `FO-` DOC-45, `FI-` DOC-46, `FT-` DOC-47, `FN-` DOC-48, `FA-` DOC-49.
 - **Consequences:** Phase 1 groups (E-01…E-74) are specified now; the others are specified before their phase (DOC-51 §11). The authorization-matrix generator (EXP-10) and test AG-02 join OpenAPI to the catalog.
+  *Revised 2026-10-21 (DR-226):* the catalog has 169 endpoints, `E-01…E-169`; E-169 `GET /staff/imports` is a phase 1 endpoint.
 - **Write to:** DOC-51, DOC-50, DOC-43, DOC-39, DOC-88, DOC-99, master plan §0.2.
 
 ### DR-143 · Wire formats, the order of the gates, idempotency details — **Decided (Claude, delegated by Owner, 2026-10-20)**
@@ -1623,6 +1627,13 @@ flowchart TB
 - **Decision:** (1) `StaffPasswordFlows.request` answers no earlier than `RESET_MIN_RESPONSE_MS` (150 ms) after the request began, waiting after the commit so no connection is held; the median difference between a known and an unknown email must stay under 20 ms over 50 runs (FI-16). (2) The set-password `UPDATE staff_account` carries `AND status = :expected` (`invited` for an invite, `active` for a reset); zero rows rolls the transaction back, the link is not consumed and the answer is 400 `token_invalid`.
 - **Consequences:** Every reset request takes at least 150 ms. A manual lock is never lifted by an old link and a Manager's unlock does not revive one. One configuration key (DOC-41).
 - **Write to:** DOC-26 §4.3, DOC-46 FL-18, DOC-41.
+
+### DR-226 · `GET /staff/imports` lists the import history (E-169) — **Decided (Owner, 2026-10-21)**
+- **Problem:** `W-Import` reopens one job by id (E-73) but cannot show the earlier imports of the building. DOC-16 keeps `import_job_building_idx (building_id, created_at DESC)` "for the import history list" and no endpoint reads it; DR-213 left the history out of phase 1 and DOC-51 carried the question.
+- **Options:** (1) build a list endpoint now, on the existing table and index; (2) no list: a job is reopened only through `?importId=`.
+- **Decision:** Option 1, accepted by the Owner (2026-10-21). **E-169 `GET /staff/imports` · `listImports`**, audience `staff: admin, manager`, building-scoped, a cursor page (`cursor`, `limit` 1…100, default 20, DOC-50 §10) of the building's `residency.import_job` rows, newest first, each with `importId`, `kind`, `status`, `fileName`, `counts` (`rows`, `valid`, `errors`, `warnings`), `createdBy` (name), `createdAt`, `expiresAt`, `committedAt`. Filters `kind` (default and only value in P1: `unit_owner`; `fee_batch` is added by `finance` when `finance.import_job` exists, DOC-21) and `status`. No new table, no new index, no preview rows in the list (a row is opened through E-73). A `validated` job past `expires_at` is reported as `expired`, as in E-73. Rows are kept 30 days by `import_purge` (DR-62), so the history reaches back 30 days.
+- **Consequences:** The catalog becomes `E-01…E-169`; the endpoints specified in phase 1 are E-01…E-74 and E-169. The first version of EXP-10 has 74 routes (75 minus E-01), 1,184 own-scope cells; the final matrix 169 × 16 = 2,704. Tests `IM-42`, `IM-43` (DOC-18 §4); `W-Import` gets a "recent imports" table (DOC-65, `UIWR-41`, `UIWR-42`) and four `status.import.*` labels (DOC-68).
+- **Write to:** DOC-51 (§2, §10, §11), DOC-50 (§18), DOC-39 (§4.6), DOC-88 (§3, §15), DOC-99 (EXP-10), DOC-18 §4, DOC-65 `W-Import`, DOC-68 §5.16, master plan (P0-29, P1-13), README.
 
 ## Q. Process, testing and scope
 
@@ -1677,7 +1688,7 @@ flowchart TB
   | --- | --- | --- | --- |
   | payOS facts | assumptions of SDD §6.5 until verified in the gateway sandbox (none: fake driver, then one real minimum-amount payment, P6-09) | When the Owner reports a sandbox (before P3-01) | DR-25 |
   | Receiving account linked through payOS | not linked: 9-character content (DR-27) | P3 start | DR-27 |
-  | SMS provider, brandname | chosen by the Owner/client (DR-68) | Before P1-10 | DR-68 |
+  | SMS provider, brandname | chosen by the Owner/client (DR-68); *revised 2026-10-21:* not chosen yet, the ports and the `console`/`allowlist` drivers come first | Before P1-22 (it was P1-10) | DR-68 |
   | PostgreSQL hosting | the Owner's VPS, native PostgreSQL 18, pgBackRest to R2 (DR-83) | P1 start | DR-67 |
   | Ticket deadlines | phase 2 (decided) | Decided 2026-10-19 | DR-47 |
   | Meaning of "closed" batch | reporting freeze, charges stay payable (decided) | Decided 2026-10-19 | DR-20 |
@@ -1726,6 +1737,19 @@ flowchart TB
 - **Decision:** Option 1, confirmed by the Owner (2026-10-20). No new trigger: `test:authz` already runs in `integration` on every pull request and in `nightly` (DOC-71, DOC-88 §13); the five-run record `bun run exp:10` is taken once for P6-08.
 - **Consequences:** DOC-89 (P2) lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`.
 - **Write to:** DOC-89, DOC-99, DOC-71.
+
+### DR-227 · The dry run of DOC-69 is the acceptance of P1-03, not a condition of M0 — **Decided (Owner, 2026-10-21)**
+- **Problem:** The acceptance of P0-31 says "a new machine can follow DOC-69 to a running stack (dry-run on a clean user account)". The scripts that DOC-69 describes (`bun run setup`, `infra:up`, `dev`) are written in P1-01 and P1-03, so the dry run cannot be done before M0, and DOC-69 could not reach `Approved` at the M0 review (P0-35).
+- **Options:** (1) the dry run is the acceptance of P1-03 and is recorded in DOC-69 §14 then; M0 approval of DOC-69 does not wait for it; (2) postpone the approval of DOC-69 until P1-03 is done.
+- **Decision:** Option 1, accepted by the Owner (2026-10-21). The acceptance of P0-31 for DOC-69 is "every command states the output its task must produce, and the document is complete against §3.2"; the dry run on a clean user account (`bun run setup` from a fresh clone, healthy in 3 minutes or less) is the acceptance of **P1-03**. If it finds a difference, P1-03 corrects DOC-69 in the same change.
+- **Consequences:** Check 1 of DOC-69 §13 is performed by P1-03, not by P0-35. DOC-69's open question about the dry run is closed by this DR. The Owner can approve DOC-69 at M0.
+- **Write to:** master plan P0-31 and P1-03, DOC-69 (§13 check 1, open questions), README.
+
+### DR-228 · Owner inputs are placeholders until the task that needs them — **Decided (Owner, 2026-10-21)**
+- **Problem:** DOC-70 §2 lists 15 inputs the Owner must supply (company data, domain, accounts, providers, credentials) and DOC-70, DOC-73, DOC-41 and DOC-40 carry open questions that only wait for them. It is unclear which input stops which task, and the questions cannot be closed while the data is missing, which blocks `Approved` (master plan §3.3 item 2).
+- **Decision:** (1) **The documents never hold real Owner data.** They use placeholders (`<domain>`, `<reverse-domain>`, `<company-name>`, `<tax-code>`, `<hotline>`, …) and the real value is supplied only when the task that needs it starts, to the operator or to the secret store, the EAS project or the Cloudflare account that uses it, never to the repository. (2) DOC-70 §2 gets a column *Blocking?* that classifies each input by the task that needs the real value (see the table there). **No input is needed to start coding phase 1**: P1-01…P1-16, P1-19 and P1-21 run locally with placeholders, and the GitHub repository already exists. (3) An open question that only waits for an Owner input cites this DR and is closed by it: the question is answered by "placeholder now, real value at task X" (master plan §3.3 item 2). (4) Lead times the Owner should start early: SMS brandname registration (up to about 3 weeks, DR-68), Apple Developer Program enrolment, and the domain and name-server change.
+- **Consequences:** DOC-70 §2, DOC-73, DOC-41 and DOC-40 change their open questions; the task that needs a real value (P1-12 terms seed before the staging UAT, P1-17, P1-18, P1-20, P1-22, P3-01, P6-10) says so in its acceptance when it starts. A real value is still required before the staging UAT and go-live; nothing is waived, only moved to the task that needs it. This answers the "Owner input" open questions in the sense of master plan §3.3 item 2.
+- **Write to:** DOC-70 §2, DOC-73, DOC-41, DOC-40.
 
 ## R. UX/UI: clients, design system and screen documents
 
@@ -1970,6 +1994,7 @@ Decided while writing the P1-gate documents DOC-53…57, 60, 61, 64, 65, 67 (all
 - **Problem:** The canvas's error table has a "Mã căn" column and a download "Tải danh sách lỗi"; an issue of E-72 has `row`, `column`, `code`, `params` and `message` only, and no endpoint downloads the errors.
 - **Decision:** Each entry of `preview.issues` also carries `unitCode` (normalized, `null` when the row has none). The download is generated in the browser from `issues` (CSV with a BOM, at most 500 rows). No list of past imports in phase 1; a job is reopened through `?importId=`.
 - **Consequences:** One field in the E-72/E-73 examples and DOC-18 §1.4; no new endpoint; IM-30 asserts the field.
+  *Revised 2026-10-21 (DR-226):* the list of past imports is built in phase 1 as E-169; the rest of this decision stands.
 - **Write to:** DOC-51 E-72, E-73, DOC-18 §1.4.
 
 ### DR-214 · The add form takes the four member types — **Decided (Claude, delegated by Owner, 2026-10-20)**
@@ -2052,13 +2077,13 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 | Level | Items | Why decide early |
 | --- | --- | --- |
-| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173, DR-174…225 (the P1 UX/UI documents) | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
+| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173, DR-174…225 (the P1 UX/UI documents), DR-226…228 | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
 | Blocks P2 | DR-13…20, DR-84, DR-23, 24, DR-27, DR-29, DR-52, 53, DR-56, DR-75, 76, DR-78 | Fix the ledger tables and semantics, the all-or-nothing rule, the allocation statement, the money log, batches, manual payments, order code, the `settle()` contract, the notification core, PDF rendering and the order of work |
 | Blocks P3 | DR-25, 26, DR-28, DR-30…32, DR-34, 35 | Fix payOS behavior and the fake driver, intent lifecycle, the re-query and cancel jobs, webhook hardening and reconciliation |
 | Blocks P4 | DR-43…47, DR-50, 51 | Fix ticket mechanics and the notice model and fan-out |
 | Blocks P5 | DR-48, 49, DR-54 | Fix the QR credential, vehicles and the library |
 | Blocks P6 | DR-55, DR-66, DR-168 | Reports and exports; backup and recovery (hosting is decided earlier by DR-67) |
 
-Status on 2026-10-19: every DR is decided, changed or superseded except DR-25, 26, 27, 28, 30, 31, 34, 35 (waiting for the gateway sandbox or the bank statement sample). DR-17 and DR-42 were decided on 2026-10-19.
+Status on 2026-10-19: every DR is decided, changed or superseded except DR-25, 26, 27, 28, 30, 31, 34, 35 (waiting for the gateway sandbox or the bank statement sample). DR-17 and DR-42 were decided on 2026-10-19. DR-91, DR-92 and DR-96 were decided by the Owner on 2026-10-21, with DR-226, DR-227 and DR-228 (E-169, the DOC-69 dry run, Owner inputs as placeholders).
 
 ⚠ deviations from the original SDD: DR-02, DR-03, DR-09, DR-10, DR-12, DR-14, DR-16, DR-18, DR-19, DR-20, DR-21, DR-27, DR-29, DR-32, DR-39, DR-41, DR-44, DR-45, DR-48, DR-49, DR-51, DR-55, DR-57, DR-60, DR-61, DR-66, DR-72, DR-76, DR-80, DR-84, DR-181, DR-185, DR-194.

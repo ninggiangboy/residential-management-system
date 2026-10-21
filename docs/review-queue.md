@@ -1,6 +1,6 @@
 # Review queue
 
-> Status: **Working file** · Updated: 2026-10-19 (DR-01…08, DR-10…81 decisions applied; DR-57, DR-17, DR-42 applied) · Not a project document: delete after the decisions are applied to `00-decision-register.md` and `00-master-plan.md`
+> Status: **Working file** · Updated: 2026-10-21 (Owner answers of 2026-10-21 applied: DR-96, 91, 92, 68, E-169, DOC-69 dry run, DOC-71 review rule, Owner inputs; earlier: DR-01…08, DR-10…81 decisions applied; DR-57, DR-17, DR-42 applied) · Not a project document: delete after the decisions are applied to `00-decision-register.md` and `00-master-plan.md`
 
 How it works: while the Owner reviews, each answer is one line here. The register and master plan are edited later, per cluster, in one pass (`docs-master-plan apply-decisions`). Order of review is by importance (money, security, access first).
 
@@ -52,6 +52,12 @@ How it works: while the Owner reviews, each answer is one line here. The registe
 | DR-17 (legal risk) | Owner answer: the management company issues an **e-invoice only when a resident asks for it** (the resident raises a request/ticket); the system does **not** manage e-invoices: no invoice number, no invoice table, no integration. The receipt stays "Biên lai thu tiền, not a tax invoice" | 2026-10-19 |
 | DR-17, DR-42 | Accepted as proposed: one receipt per allocation (per charge); `ResidencyApi.getMembership` DTO also returns `startedAt` for the history rule of DR-40 | 2026-10-19 |
 | DR-17 / DR-13 / DR-42 (e-invoice readiness) | Accepted (Owner): (1) the receipt snapshot stays complete (lines, quantities, unit prices, amounts, payer); (2) add nullable `finance.receipt.external_invoice jsonb` ({provider, number, issuedAt, url}); (3) add event `finance.receipt_issued.v1`, one per receipt, as the integration seam. No VAT fields, no buyer tax details, no invoice table, no provider port now (decided at integration time by a new migration). **No** extra ticket type: residents ask for an e-invoice with the existing type "Khác" | 2026-10-19 |
+| DR-96, DR-91, DR-92 | Accepted as proposed (Owner, 2026-10-21): DR-96 `unmatchedTransfer` for `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`; DR-91 no Manager-created payment link (F-PAY-05 "Not built"); DR-92 no pinned library favorites (F-WIK-09 "Not built"). DOC-04, DOC-05, DOC-03 FR-09.1/09.3/09.5, DOC-51 E-86, DOC-68, glossary, ADR-0005 updated; DOC-23 and DOC-58 are written from the DR | 2026-10-21 |
+| DR-68 | The SMS provider and the SMTP relay are not chosen yet: ports `SmsSender` and `Mailer` with the `console` and `allowlist` drivers and Mailpit first; real adapters in P1-22 when the Owner picks. P1-10 no longer waits; P1-22 and M1 do. Master plan (P1-10, P1-22, S-06, risk, M1), DOC-01, DOC-11, DOC-26, DOC-41, DOC-70 row 10 and EXP-09 updated | 2026-10-21 |
+| `GET /staff/imports` | Built as E-169 (new DR-226): catalog E-01…E-169, tests IM-42, IM-43, `W-Import` recent-imports table (UIWR-41, UIWR-42, `status.import.*`), counts in the master plan, README, DOC-50, DOC-39, DOC-88 and EXP-10 (74 routes first version, 169 final) | 2026-10-21 |
+| DOC-69 dry run | As proposed (new DR-227): M0 approval does not wait for the dry run; it is the acceptance of P1-03 (master plan P0-31 and P1-03, DOC-69 open question and §13 check 1) | 2026-10-21 |
+| CI review rule (DOC-71 §11.1) | Owner: "up to you, other people may join the repository later": DR-166 kept (note added to the DR), the DOC-71 open question closed | 2026-10-21 |
+| Owner inputs (DOC-70 §2) | New DR-228: documents hold placeholders, a real value is supplied only when the task that needs it starts; DOC-70 §2 gets the column "Blocking?" for the 15 inputs; the owner-input open questions of DOC-70, DOC-73, DOC-41 and DOC-40 cite DR-228; the stale open question about booting without the database removed from DOC-70 (DOC-38 §5.1, DR-161) | 2026-10-21 |
 
 ## Decided, not yet applied
 
