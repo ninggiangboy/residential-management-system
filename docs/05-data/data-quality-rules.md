@@ -1,7 +1,7 @@
 # Data quality rules
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
-> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
+> Status: **Draft** · Updated: 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
+> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
 This document is the catalog of the data-quality rules (`DQ-xx`) of the Excel imports: for each rule the layer where it runs, the check, its severity, what the system does, the threshold, the error code and the text the user reads in Vietnamese and in English. **Section 1 (units and owners, P1) is complete. Sections 2 (fee batches, P2) and 3 (bank statements, P3) are written when their phases start**, so the document stays `Draft` until then. It does not hold the import flow and the job states (DR-21, DOC-16 §5.5, DOC-27), the endpoints (DOC-51) or the error shape of the API (DOC-50, DOC-42).
@@ -396,6 +396,8 @@ The prefix `IM-` is shared with DOC-21 and DOC-27 (master plan §0.2). This docu
 | IM-39 | The file after the commit; the file of an expired job one hour after `expires_at` | the `file_object` is `deleted`; the `import_expire` job has removed the expired one |
 | IM-40 | An existing unit with blank floor, bedrooms, area and occupancy cells | the stored values are unchanged |
 | IM-41 | A manager without the right role calls the endpoints | 403 (DOC-39) |
+| IM-42 | `GET /staff/imports` (E-169) with 3 jobs created at different times, one `validated` past its `expires_at`, and a `limit` of 2 | newest first; the first page has 2 rows and a `nextCursor`, the second has 1 and `nextCursor` null; the stale `validated` job reads `expired`; `status=expired` finds it and `status=validated` does not; each row has `counts`, `createdBy.name` and no preview rows (DR-226) |
+| IM-43 | The same call as a Technician and as a Guard; as a Manager of building B when building A has jobs | 403 `forbidden`; building B sees none of building A's jobs (DOC-39) |
 
 ## 5. Decisions made while writing
 

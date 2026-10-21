@@ -1,7 +1,7 @@
 # Test strategy
 
-> Status: **Review** · Updated: 2026-10-20 (DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
-> Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
 This document says how the system is tested: the levels and what each proves, the tools, how a test database is made, how a race is run, which fakes exist, what CI runs at each stage and which tests wait for a schedule or a person. It also holds the **index of every test-ID prefix** (§15) and the pointers to the authorization-matrix generator (§13). It does not hold the tests themselves: each design document owns its "Required tests" table, and each experiment has its own file (DOC-90…101). It does not define the CI jobs: those are DOC-71, which uses the stage names of §11.
@@ -51,7 +51,7 @@ flowchart TB
 | Contract | A port behaves the same on the fake and on the real adapter (S3, SMTP, Expo, SMS, gateway) | `bun test` | `modules/<m>/test/contract/*.contract.test.ts`, `packages/core-testing` | ≤ 2 min |
 | Integration | Statements, constraints, conditional updates, transactions, outbox, grants, DDL, the HTTP app without a listener | `bun test` on PostgreSQL 18.6 | `modules/<m>/test/*.int.test.ts`, `apps/api/test/*.int.test.ts` | ≤ 6 min, about 100 ms to clone a database (DOC-39 §4.5) |
 | Race | Exactly one winner, no deadlock, no half effect under N parallel sessions | `bun test` and the harness of §8 | `modules/<m>/test/race/*.race.test.ts`, `apps/api/test/race/` | CI profile ≤ 90 s; nightly profile ≤ 20 min |
-| Authorization | 0 unexpected 2xx and 0 unexpected refusals on every route | generated, `bun test` | `apps/api/test/authz/` | ≤ 3 min for 168 routes |
+| Authorization | 0 unexpected 2xx and 0 unexpected refusals on every route | generated, `bun test` | `apps/api/test/authz/` | ≤ 3 min for 169 routes |
 | Web end to end | The CMS flows: import and publish a batch, record a payment, assign a ticket | Playwright 1.64.1 | `apps/web/e2e/` | ≤ 6 min, one worker |
 | Mobile | Critical resident and staff flows on simulators | Maestro 2.11.0 | `apps/resident-app/.maestro/`, `apps/staff-app/.maestro/` | on demand |
 | Load | Mixed traffic, payment burst, fan-out | k6 2.3.0 | `apps/api/test/load/` | EXP-07, on demand |
@@ -530,7 +530,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `JB-` | Jobs and outbox runtime | [DOC-38](../06-design/jobs-and-outbox-runtime.md) §9 | `JB-01…26` | Review | P1-05 |
 | `MC-` | Messaging contracts | [DOC-09](../03-architecture/messaging-contracts.md) §9 | `MC-01…20` | Review | P1-02, P1-05 |
 | `ER-` | Error handling | [DOC-42](../06-design/error-handling.md) §14 | `ER-01…45` | Review | P1-03, P1-04, P1-05 |
-| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…41`); DOC-21 starts at number 50 | `IM-01…41` | Draft (DOC-18); DOC-21 not written | P1-13, P2-04 |
+| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 starts at number 50 | `IM-01…43` | Draft (DOC-18); DOC-21 not written | P1-13, P2-04 |
 | `IDM-` | Identity and residency tables (statement and constraint tests) | [DOC-16](../05-data/identity-and-residency-model.md) §9 | `IDM-01…68`; statement tests `IDM-S01…S14` | Review | P1-05 |
 | `OPM-` | Operations-model tables | [DOC-17](../05-data/operations-model.md) §13 | `OPM-01…44`, `50…66`, `70…74`, `80…83`, `90…99` (80 tests); statement tests `OPM-S01…S12` | Draft | P1-05, P1-07 |
 | `GRT-` | Roles and grants | [DOC-19](../05-data/db-roles-and-grants.md) §9 | `GRT-01…97` | Review | P1-06 |
@@ -555,7 +555,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIST-` | Screens: staff app Technician | DOC-62 | not written | planned (P4) | P4 |
 | `UISG-` | Screens: staff app Guard | DOC-63 | not written | planned (P4, P5) | P4, P5 |
 | `UIWO-` | Screens: web sign-in, dashboard, operations | [DOC-64](../08-ux-ui/screens/web-auth-dashboard-operations.md) | `UIWO-01…26` (sign-in, profile; the rest P4…P6) | Review | P1-16 |
-| `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…40` | Review | P1-16 |
+| `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…42` | Review | P1-16 |
 | `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
 | `UICP-` | UI states and copy (catalog parity cases) | DOC-68 | reserved | planned (P1) | P1-09 |

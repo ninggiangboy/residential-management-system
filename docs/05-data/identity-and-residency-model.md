@@ -1,7 +1,7 @@
 # Identity and residency model
 
-> Status: **Review** · Updated: 2026-10-21 (DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
-> Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-226: E-169 reads `import_job_building_idx`; DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
+> Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity), P1-11 (residency), P1-13 (imports), DOC-19 (grants), DOC-26, DOC-27, DOC-35, DOC-46, DOC-51, EXP-09, EXP-10
 
 This document holds the tables of two modules: `identity` (accounts, challenges, tokens, sessions, sign-in buckets) and `residency` (units, resident profiles, memberships, unit history, the units-and-owners import). It gives the grain, keys, writers and readers of every table, runnable DDL with the reason of every index, the state machines of the status columns and sample statements. It does not hold the rules of the flows (lockout, OTP, step-up and sessions are DOC-26; households, transfers and lookups are DOC-27), the endpoints (DOC-51), the grants (DOC-19) or the conventions every table follows (DOC-14). The tables of `building`, `audit`, `platform` and the finance tables are in DOC-15 and DOC-17.
@@ -828,7 +828,7 @@ RETURNING result;
 -- 0 rows: SELECT status, expires_at … -> 409 import_expired, or already committed -> idempotent answer
 ```
 
-Indexes: `import_job_building_idx` `(building_id, created_at DESC)` for the import history list; `import_job_purge_idx` `(created_at)` for `import_purge` (weekly, keeps rows and files 30 days, DR-21, DR-62).
+Indexes: `import_job_building_idx` `(building_id, created_at DESC)` for the import history list (E-169, DR-226); `import_job_purge_idx` `(created_at)` for `import_purge` (weekly, keeps rows and files 30 days, DR-21, DR-62).
 
 ## 6. Index catalog
 

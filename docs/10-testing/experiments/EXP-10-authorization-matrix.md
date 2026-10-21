@@ -1,7 +1,7 @@
 # EXP-10: Every route refuses every actor it should refuse, and serves every actor it should serve
 
-> Status: **Draft** · Updated: 2026-10-20 (P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
-> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
+> Status: **Draft** · Updated: 2026-10-21 (DR-226: 74 routes in the first version, 169 in the final; earlier: P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
+> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151, DR-226), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
 > Main readers: P1-15 (first version), P6-08 (final); the evaluation of NFR-08
 
 The authorization matrix itself (the input, the sixteen actors, `expected()`, the run and the pass criterion) is designed in DOC-39 §4 (DR-151) and is **not repeated here**. This document adds what an experiment needs: the variables, the baseline that proves the generator can fail, the exact step-up and charge-void cases, what the first version covers, the formulas, the criteria and the result tables. It proves gates, not content (§10).
@@ -26,7 +26,7 @@ The authorization matrix itself (the input, the sixteen actors, `expected()`, th
 
 | Kind | Variable | Values |
 | --- | --- | --- |
-| Independent | Route | every route of the mounted `App` (the catalog of DOC-51 §2: 73 under `/api/v1` in the first version, 168 in the final) |
+| Independent | Route | every route of the mounted `App` (the catalog of DOC-51 §2: 74 under `/api/v1` in the first version, 169 in the final) |
 | Independent | Actor | the 16 of DOC-39 §4.2 |
 | Independent | Scope | `own`, `foreign` (DOC-39 §4.3) |
 | Independent | Step-up proof state | the 9 states of §7.1 |
@@ -111,7 +111,7 @@ The artifacts of a CI run (`authz-routes.json`, `authz-matrix.json`, `authz-matr
 | `chargeVoidCases`, `chargeVoidFailures` | cases of §7.2 and the ones that differ |
 | `deterministic` | the five `authz-matrix.json` files, stripped of timestamps and ids, have the same SHA-256 |
 
-**Sizes.** First version: 73 routes (the 74 of E-01…E-74 minus E-01, which is on the ops port) × 16 = **1,168** own-scope cells, plus the foreign cells (a few hundred). Final: 168 × 16 = **2,688** own-scope cells (DOC-39 §4.6) plus the foreign cells.
+**Sizes.** First version: 74 routes (the 75 of E-01…E-74 and E-169 minus E-01, which is on the ops port) × 16 = **1,184** own-scope cells, plus the foreign cells (a few hundred). Final: 169 × 16 = **2,704** own-scope cells (DOC-39 §4.6) plus the foreign cells.
 
 ## 7. Pass criteria and the exact cases
 
@@ -200,7 +200,7 @@ Filled by the summary; empty until the run. First version (P1-15):
 | 4 | | | | | | | | | | /11 | | |
 | 5 | | | | | | | | | | /11 | | |
 
-Final (P6-08) adds the columns `Charge-void failures` and `SC-12`, and the row `Routes` shows 168.
+Final (P6-08) adds the columns `Charge-void failures` and `SC-12`, and the row `Routes` shows 169.
 
 Result file (envelope of DOC-88 §12, `metrics` of this document):
 
@@ -248,4 +248,4 @@ Not run. The first version runs in P1-15 (after P1-14); the final run is P6-08. 
 - **DR-173 (decided, Owner, 2026-10-20; deviates from DR-78): EXP-10 does not run on the staging host.** *Problem:* DR-78 says all experiments run on the staging host, except EXP-03 and EXP-04. The matrix needs a fresh database per route batch (`CREATE DATABASE … TEMPLATE`), which needs a role with `CREATEDB` that the application roles do not have (DR-113) and that the staging cluster should not give; it has no timing criterion. *Decision:* the results of record come from the CI job `integration` at the commit under test (five repetitions by `bun run exp:10`), with the machine recorded; the staging deployment is checked by the smoke test and SC-16. *Consequences:* DOC-89 lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`. *Write to:* DOC-89, DOC-99, DOC-71.
 - **DR-172 (decided, Claude delegated): the generator's own checks are mutants injected through `host.guards`.** *Problem:* a matrix that cannot fail proves nothing, and DOC-39 §16 has only two negative tests (SC-04, SC-05). *Decision:* §3: eleven defective guards or repositories, built by the test composition root through the guard seam of DR-99, run in the same job; a surviving mutant fails the experiment. *Consequences:* the test composition root accepts guard overrides (test code only); about one more minute in `integration`. *Write to:* DOC-99, DOC-39 §16 (SC-04 and SC-05 are the first two of them), DOC-88 §13.
 - **E-100 error codes.** The cases of §7.2 assert the class of the answer until DOC-51 specifies E-100 (P2). The `charge.status` values come from DR-13 and DR-84; DOC-15 holds the DDL when it is written.
-- **The route count of the first version.** 73 is E-02…E-74 as numbered today; P1-15 records the real count at its commit, and `catalogParity` reports a route that is mounted early or late (E-75…E-77, the SSE and inbox groups of P1-26).
+- **The route count of the first version.** 74 is E-02…E-74 and E-169 as numbered today (E-169, `GET /staff/imports`, joined with DR-226 on 2026-10-21); P1-15 records the real count at its commit, and `catalogParity` reports a route that is mounted early or late (E-75…E-77, the SSE and inbox groups of P1-26).

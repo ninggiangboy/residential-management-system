@@ -1,6 +1,6 @@
 # UX principles and information architecture
 
-> Status: **Review** · Updated: 2026-10-20 (DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
+> Status: **Review** · Updated: 2026-10-21 (DR-226: `importId` row of `W-Import`; earlier: DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
 > Depends on: original SDD §6.1, §7.4, §18, [DR](../00-decision-register.md) (DR-39, 40, 43, 44, 48, 69, 70, 71, 72, 73, 74, 75, 84, 127), [DOC-01](../01-product/vision-and-scope.md), [DOC-02](../01-product/personas-and-journeys.md), [DOC-03](../01-product/requirements.md) (NFR-02, 03, 12, 13), [DOC-10](../03-architecture/quality-attributes.md), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-39](../06-design/security.md), [DOC-42](../06-design/error-handling.md) §9, [DOC-50](../07-api/api-guidelines.md), [DOC-51](../07-api/api-endpoints.md), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md)
 > Main readers: P1-09, P1-16, P1-17, every screen document DOC-57…67, DOC-54, DOC-55, DOC-68, the E2E tests of P1-16 and P1-17
 
@@ -220,7 +220,7 @@ The web CMS uses TanStack Router with file-based routes (DR-70). Rules (DR-176):
 | `W-Unit-Detail` | `/units/$unitId` | `tab` · `members`, `history`, then `debt`, `vehicles`, `money`, `tickets` · `members`; `dialog` · `edit`, `transfer`, `phone`, `member` (with `phone` and `member`, `membershipId` names the row) | Admin, Manager | P1 (members, history), P2 (debt), P3 (money), P5 (vehicles) |
 | `W-Residents` | `/residents` | `q`; `unitId`; `memberType` · `owner`, `family`, `tenant`, `helper`; `status` · `active`, `locked`; `deletion` · `requested`; `neverSignedIn` · boolean (DR-212); `cursor`, `limit` (E-63); `dialog` · `profile` with `accountId` | Admin, Manager | P1 |
 | `W-Resident-Add` | `/residents/new` | `unitId` · prefilled unit | Admin, Manager | P1 |
-| `W-Import` | `/import` | `kind` · `unit_owner` · `unit_owner`; `importId` · id (resumes a validated preview, DR-21) | Admin, Manager | P1 |
+| `W-Import` | `/import` | `kind` · `unit_owner` · `unit_owner`; `importId` · id (resumes a job: a validated preview, DR-21, or one chosen in the recent-imports table, DR-226) | Admin, Manager | P1 |
 | `W-Vehicles` | `/vehicles` | `status` · `pending`, `approved`, `rejected`, `retired` · `pending`; `q`; `cursor` | Admin, Manager | P5 |
 | `W-Fees` | `/fees` | `status` · `draft`, `published`, `recalled`, `closed` · all; `month` · `YYYY-MM`; `cursor` | Admin, Manager | P2 |
 | `W-Fee-Import` | `/fees/import` | `batchId` · id (re-import while draft) | Admin, Manager | P2 |

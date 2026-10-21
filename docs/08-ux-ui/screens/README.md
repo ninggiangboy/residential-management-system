@@ -1,6 +1,6 @@
 # Screens index
 
-> Status: **Review** · Updated: 2026-10-20 (§4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
+> Status: **Review** · Updated: 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-27, 33, 38, 39, 40, 41…47, 48, 59, 69…72, 74, 75, 84, 128), [DOC-03](../../01-product/requirements.md), [DOC-04](../../01-product/use-cases.md), [DOC-14](../../05-data/data-conventions.md) (human codes), [DOC-27](../../06-design/residency-and-memberships.md) §3.2 (policy table), [DOC-51](../../07-api/api-endpoints.md), DOC-53, DOC-54, DOC-55, [design screens catalog](../../references/design-screens.md)
 > Main readers: the writers of DOC-57…67 and DOC-68, P1-16, P1-17 (the client shells), P1-09 (i18n catalog), every task that builds or tests a screen
 
@@ -220,7 +220,7 @@ File `08-ux-ui/screens/web-residents.md` · Web CMS · 6 sections (6 designed, 0
 | `W-Resident-Add` | Create an owner by phone, or link an existing account | Admin, Manager | P1 | designed |  |
 | `W-Units` | Unit list | Admin, Manager | P1 | designed |  |
 | `W-Unit-Detail` | Unit: members, debt, vehicles; change phone, lock, transfer | Admin, Manager | P1 | designed | N12 |
-| `W-Import` | Excel import of units and residents: validate, row errors, save | Admin, Manager | P1 | designed |  |
+| `W-Import` | Excel import of units and residents: validate, row errors, save, recent imports | Admin, Manager | P1 | designed | the recent-imports table has no artboard (DR-226) |
 | `W-Vehicles` | Vehicle review with photos | Admin, Manager | P5 | designed |  |
 
 ### DOC-66 · Web: finance
@@ -293,7 +293,7 @@ The 13 rows above are the plan rows of DR-72 and stay the count of `to design` s
 | Dialog "Thêm căn hộ" | `W-Units` | DOC-65 | P1 | DOC-65 |
 | Dialogs edit unit, transfer ownership, change login phone, confirm lock, unlock and remove; the history tab; the row overflow menu | `W-Unit-Detail` | DOC-65 | P1 | DR-40, DR-212 |
 | Resident profile dialog; the deletion approval | `W-Residents` | DOC-65 | P1 | DR-59 |
-| Steps 1 and 3 of the import, the warnings section, the failed, expired and committed states | `W-Import` | DOC-65 | P1 | DR-21, DR-213 |
+| Steps 1 and 3 of the import, the recent-imports table, the warnings section, the failed, expired and committed states | `W-Import` | DOC-65 | P1 | DR-21, DR-213, DR-226 |
 | Edit mode of the create dialog; "Vô hiệu hóa tài khoản" and "Kích hoạt lại" | `W-Staff`, `W-Staff-New` | DOC-67 | P1 | DR-218 |
 
 When an artboard arrives, move the piece to its screen's section header and delete the row here (§6.6).

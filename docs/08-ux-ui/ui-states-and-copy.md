@@ -1,7 +1,7 @@
 # UI states and copy
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-68
-> Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
+> Status: **Review** · Updated: 2026-10-21 (DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 
 This document owns the words the whole product shares: the six view-state patterns, the message of **every** error code of DOC-42 §5 in Vietnamese and English, the labels of every status, the `common.*`, `auth.*`, `offline.*` and `upgrade.*` keys, and the number, date and phone formats of DR-71. A screen document owns only its own keys `<app>.<screen>.<element>` (DOC-56 §6.4) and refers to the keys here. It does not hold the endpoint list (DOC-51), the behavior of a client on an answer (DOC-55 §6), the colors and components (DOC-54) or the catalog files themselves (`@rms/i18n-catalog`, P1-09).
@@ -494,11 +494,15 @@ A configuration in effect (`W-Building`, `W-Gateway`).
 
 ### 5.16 `status.import.*`
 
-Import preview (`W-Import`, `W-Fee-Import`).
+Import preview (`W-Import`, `W-Fee-Import`) and the status of an import job in the recent-imports table (`W-Import`, E-169).
 
 | Key | `vi` | `en` | Tone | Text |
 | --- | --- | --- | --- | --- |
 | `status.import.errors` | {count} dòng lỗi | {count, plural, one {# row with errors} other {# rows with errors}} | danger | drawn |
+| `status.import.validated` | Chờ lưu | Waiting to save | info | proposed (DR-226) |
+| `status.import.committed` | Đã lưu | Saved | success | proposed (DR-226) |
+| `status.import.failed` | Không đọc được | Could not be read | danger | proposed (DR-226) |
+| `status.import.expired` | Hết hạn | Expired | neutral | proposed (DR-226) |
 
 Other labels that are not statuses: the ticket code, batch code and receipt code (plates) are never translated (DOC-54 §9).
 
@@ -605,17 +609,17 @@ Counts are the rows of the microcopy tables of each screen document (generated b
 | DOC-60 | Resident account (QR, notices, docs later) | P1 (account); P4/P5 owed | 55 | 0 | 0 | 5 |
 | DOC-61 | Staff app shared, Manager | P1 (`S-` sign-in, account); P4/P5 owed | 0 | 48 | 0 | 4 |
 | DOC-64 | Web sign-in, profile, operations | P1 (sign-in, profile); P4…P6 owed | 0 | 0 | 74 | 5 |
-| DOC-65 | Web residents | P1 (units, residents, import); P5 owed | 0 | 0 | 222 | 0 |
+| DOC-65 | Web residents | P1 (units, residents, import); P5 owed | 0 | 0 | 231 | 0 |
 | DOC-67 | Web system | P1 (staff, building, step-up); P3, P6 owed | 0 | 0 | 70 | 0 |
-| **Total** | | | **151** | **48** | **366** | **28** |
+| **Total** | | | **151** | **48** | **375** | **28** |
 
-Shared families in this document: 102 `error.*`, 69 `status.*`, 81 `common.*`, 6 `auth.*`, 5 `offline.*`, 5 `upgrade.*`.
+Shared families in this document: 102 `error.*`, 73 `status.*`, 81 `common.*`, 6 `auth.*`, 5 `offline.*`, 5 `upgrade.*`.
 
 Owed by documents not yet written, each adding its screen keys and any new `status.*`/`error.*` rows here in the same change:
 
 | Document | Screens | Phase |
 | --- | --- | --- |
-| DOC-58 | Resident fees and payment (`Fees`, `Pay-*`, `Pay-Mismatch`): `unmatchedTransfer` text "Ban quản lý sẽ kiểm tra" | P2, P3 |
+| DOC-58 | Resident fees and payment (`Fees`, `Pay-*`, `Pay-Mismatch`): `unmatchedTransfer` text "Ban quản lý sẽ kiểm tra", one neutral text for the four outcomes of DR-96 (`amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`), never the reason | P2, P3 |
 | DOC-59 | Resident requests, unit, members, vehicles | P4, P5 |
 | DOC-60 (rest) | QR, notices, inbox, docs | P4, P5 |
 | DOC-61 (rest), DOC-62, DOC-63 | Manager, Technician and Guard screens | P4, P5 |

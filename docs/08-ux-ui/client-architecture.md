@@ -1,7 +1,7 @@
 # Client architecture
 
-> Status: **Review** · Updated: 2026-10-20 (DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
-> Depends on: original SDD §4.3, §18.2, [DR](../00-decision-register.md) (DR-04, 38, 52, 61, 63, 64, 69, 70, 71, 74, 75, 82, 94, 127), [ADR-0004](../04-adr/0004-repository-layout-scopes-and-boundaries.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-12](../03-architecture/code-architecture.md) §2, §5.4, §6.1, §13, [DOC-11](../03-architecture/tech-stack-and-versions.md) §4, §6, [DOC-26](../06-design/identity-and-sessions.md) §3, [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-37](../06-design/files-and-uploads.md) §6, [DOC-42](../06-design/error-handling.md) §9–10, [DOC-50](../07-api/api-guidelines.md) §5, §8–11, [DOC-51](../07-api/api-endpoints.md), [DOC-73](../09-operations/mobile-release.md), [DOC-41](../06-design/configuration-reference.md) §15
+> Status: **Review** · Updated: 2026-10-21 (DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
+> Depends on: original SDD §4.3, §18.2, [DR](../00-decision-register.md) (DR-04, 38, 52, 61, 63, 64, 69, 70, 71, 74, 75, 82, 94, 127, DR-226), [ADR-0004](../04-adr/0004-repository-layout-scopes-and-boundaries.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-12](../03-architecture/code-architecture.md) §2, §5.4, §6.1, §13, [DOC-11](../03-architecture/tech-stack-and-versions.md) §4, §6, [DOC-26](../06-design/identity-and-sessions.md) §3, [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-37](../06-design/files-and-uploads.md) §6, [DOC-42](../06-design/error-handling.md) §9–10, [DOC-50](../07-api/api-guidelines.md) §5, §8–11, [DOC-51](../07-api/api-endpoints.md), [DOC-73](../09-operations/mobile-release.md), [DOC-41](../06-design/configuration-reference.md) §15
 > Main readers: P1-09 (i18n, tokens), P1-16 (web shell), P1-17 (mobile shells), every later screen task, DOC-53, DOC-54, DOC-56…68, DOC-88
 
 This document says how the three clients are built: the folder structure, the shared packages, the one API fetcher, sign-in and refresh on each platform, the unit context and the query keys, the rules for server state, what is kept offline, push registration, i18n, uploads, forms and error reporting. It does not say what a screen looks like (DOC-53…68), which tokens exist (DOC-54), or how the apps are built and shipped (DOC-73). Visuals come from the design canvas, whose design system is called *Hiên*; versions are in DOC-11.
@@ -352,7 +352,7 @@ export const accountKey = (...parts: readonly unknown[]) => ['me', ...parts] as 
 | `['unit', id, 'fees', filters]` | open charges of the unit | later phases |
 | `['unit', id, 'notices', {cursor}]`, `['unit', id, 'inbox']`, `['unit', id, 'requests', …]` | lists and details | later phases |
 | `['unit', id, 'members']` | household (owner only) | E-26 |
-| `['staff', 'me']`, `['staff', 'accounts', filters]`, `['staff', 'units', filters]`, `['staff', 'residents', filters]`, `['staff', 'imports', id]` | web and staff app | E-30, E-39, E-57, E-63, E-73 |
+| `['staff', 'me']`, `['staff', 'accounts', filters]`, `['staff', 'units', filters]`, `['staff', 'residents', filters]`, `['staff', 'imports', id]`, `['staff', 'imports', 'list']` | web and staff app | E-30, E-39, E-57, E-63, E-73, E-169 |
 
 ### 7.3 Switching units and losing one
 

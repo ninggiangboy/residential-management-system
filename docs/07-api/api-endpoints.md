@@ -1,10 +1,10 @@
 # API endpoints
 
-> Status: **Draft** · Updated: 2026-10-21 (DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
-> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
+> Status: **Draft** · Updated: 2026-10-21 (DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
-This document numbers every endpoint of the API (`E-01…E-168`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74`). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
+This document numbers every endpoint of the API (`E-01…E-169`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
 
 Every new decision in this document is recorded as DR-142…DR-14x and summarized in §13. Sample requests and responses use the sample building (DOC-01): unit `A-1508`, owner Nguyễn Văn An, tenant Trần Thị Bình.
 
@@ -141,6 +141,7 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-72 | `POST /staff/imports` | `createImport` | staff: admin, manager | R | | UC-13, UC-01 | §10 |
 | E-73 | `GET /staff/imports/{id}` | `getImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 | E-74 | `POST /staff/imports/{id}/commit` | `commitImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
+| E-169 | `GET /staff/imports` | `listImports` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -157,7 +158,7 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-83 | `GET /me/receipts` | `listMyReceipts` | unit: view_fees | | UC-03 | P2 |
 | E-84 | `GET /me/receipts/{id}/pdf` | `downloadMyReceipt` | unit: view_fees | | UC-03 | P2 |
 | E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 (P3); **sample owed** |
-| E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P3 |
+| E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P3 (the response carries `unmatchedTransfer {amount, receivedAt}` for the outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, DR-96) |
 | E-87 | `POST /me/payments/intents/{id}/cancel` | `cancelPaymentIntent` | unit: pay | | UC-03 | P3 |
 | E-88 | `POST /me/payments/intents/{id}/check` | `checkPaymentIntent` | unit: pay | | UC-18 | P3 |
 | E-89 | `GET /staff/fee-batches` | `listFeeBatches` | staff: admin, manager | | UC-01 | DOC-21 (P2) |
@@ -1974,7 +1975,7 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
 - **Events:** one `building.file_delete_requested.v1` per demo file. Every demo session is revoked (the accounts are deleted with their families, no event). Audit: `building.demo.reset` (`details {durationMs, units}`); the nightly job writes none (DOC-35 §3.6).
 - **Tests:** BD-37…BD-43.
 
-## 10. Residency, staff side (E-57…E-74)
+## 10. Residency, staff side (E-57…E-74, E-169)
 
 Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (DOC-12 §7); an id of another building answers 404 `not_found`, never 403. Every endpoint of this group is `staff: admin, manager` except E-70, which a Guard may call. A Manager and an Admin have the same rights here (DOC-27 §3.3). Personal data rules: a list or a search shows the full phone and a masked ID number (`•••• 1234`) and never a date of birth; only E-65 returns the full ID number and the date of birth, and it writes `pii.read` first (DOC-35 §6). Shared shapes used below:
 
@@ -2614,6 +2615,56 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Performance:** planned under 5 s for the 2,000-row file (217 ms of statements server side plus about 3 s of round trips, DOC-27 §9.3); p95 ≤ 10 s.
 - **Tests:** IM-33…IM-39, IM-40; RM-42, RM-43, RM-44, RM-45.
 
+### E-169 `GET /staff/imports` · `listImports`
+
+- **Purpose / UC:** The "recent imports" table of `W-Import`: the earlier import jobs of the building, newest first, so the Manager can reopen a preview that is still valid and see who imported what and when (UC-13, UC-01; DR-226). It lists; E-73 reads one job.
+- **Authorization:** `staff: admin, manager`. Building-scoped: the statement filters on the `bid` of the token (DOC-12 §7), so another building's jobs never appear.
+- **Parameters:**
+
+  | Name | In | Type | Required | Default | Constraints |
+  | --- | --- | --- | --- | --- | --- |
+  | `kind` | query | enum | no | `unit_owner` | `unit_owner` in phase 1. `fee_batch` is served by `finance` from `finance.import_job` once that module exists (DR-149, DOC-21); the two tables are never merged in one page |
+  | `status` | query | enum | no | | `validated`, `failed`, `committed`, `expired`. `validated` means not yet expired (`expires_at > now()`); `expired` includes a `validated` job whose `expires_at` has passed, as in E-73 |
+  | `cursor` | query | string | no | | Opaque (DOC-50 §10); 400 `invalid_cursor` when it does not decode |
+  | `limit` | query | integer | no | 20 | 1…100 |
+
+- **Response 200:** a cursor page, newest first. A row holds no preview, no valid rows and no issues: they are read through E-73.
+
+  ```json
+  {
+    "items": [
+      { "importId": "0192f3c4-c001-7000-8000-000000000b02", "kind": "unit_owner", "status": "validated",
+        "fileName": "can-ho-moc-mien-10-2026.xlsx",
+        "counts": { "rows": 240, "valid": 236, "errors": 4, "warnings": 2 },
+        "createdBy": { "staffId": "0192f3c4-5a1e-7000-8000-000000000011", "name": "Lê Minh" },
+        "createdAt": "2026-10-21T02:24:00.000Z", "expiresAt": "2026-10-22T02:24:00.000Z", "committedAt": null },
+      { "importId": "0192f3c4-c001-7000-8000-000000000b01", "kind": "unit_owner", "status": "committed",
+        "fileName": "can-ho-chu-ho-2026-10.xlsx",
+        "counts": { "rows": 2000, "valid": 1960, "errors": 40, "warnings": 6 },
+        "createdBy": { "staffId": "0192f3c4-5a1e-7000-8000-000000000011", "name": "Lê Minh" },
+        "createdAt": "2026-10-20T03:20:00.000Z", "expiresAt": "2026-10-21T03:20:00.000Z", "committedAt": "2026-10-20T03:26:41.000Z" }
+    ],
+    "nextCursor": null
+  }
+  ```
+
+  `status` follows the rule of E-73: a `validated` job whose `expiresAt` has passed is reported as `expired` at once. `counts` are the four totals of the stored preview (`result.counts`); a `failed` job (a file that could not be read) has `counts` all `0`. `createdBy.name` comes from the staff account; it is `null` only if the account is unknown to `IdentityApi`. A job is kept 30 days by `import_purge` (DR-62), so the list reaches back 30 days at most; the screen says so.
+- **Errors:** 400 `validation_failed` (unknown `kind` or `status`, `limit` out of range, an unknown key), 400 `invalid_cursor`, 401, 403 `forbidden` (Technician, Guard).
+- **Data source:** `residency.import_job` keyset on `(created_at, id)` descending through `import_job_building_idx (building_id, created_at DESC)` (DOC-16 §5.5); no new table and no new index. Names from `IdentityApi.getStaff`, one call per page. `result->'counts'` is the only part of the `jsonb` read.
+
+  ```sql
+  SELECT id, kind, status, file_name, result->'counts' AS counts, created_by, created_at, expires_at, committed_at
+    FROM residency.import_job
+   WHERE building_id = :b AND kind = :kind
+     AND (created_at, id) < (:after_created_at, :after_id)      -- absent on the first page
+   ORDER BY created_at DESC, id DESC LIMIT :limit + 1;
+  ```
+
+  The `status` filter is applied with the `CASE` that derives `expired` from `expires_at`.
+- **Cache:** `no-store`, the default of DOC-50 §12.
+- **Performance:** p95 ≤ 300 ms. At most a few dozen rows exist in 30 days; the plan is an index scan on `import_job_building_idx` (the same index as DLC-15).
+- **Tests:** IM-42, IM-43; UIWR-41, UIWR-42 (DOC-65).
+
 
 ## 11. Later groups
 
@@ -2653,6 +2704,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-23, E-35 | `DELETE /me/devices/{id}`, `DELETE /staff/devices/{id}` | Device removal is by id (DR-146) |
 | E-41 | `GET /staff/accounts/{id}` | The `ETag` for an edit with `If-Match` |
 | E-73 | `GET /staff/imports/{id}` | Read the stored preview again |
+| E-169 | `GET /staff/imports` | The import history of `W-Import` (DR-226, added after the catalog was numbered) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |
@@ -2668,12 +2720,13 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 
 | ID | Decision | Where used |
 | --- | --- | --- |
-| DR-142 | The numbered catalog (E-01…E-168), the `operationId` rule, the endpoints added to DR-73, the test prefixes of this batch (`AG-`, `FI-`, `FF-`, `FO-`, `FT-`, `FN-`, `FA-`) | §2 |
+| DR-142 | The numbered catalog (E-01…E-168; E-169 added by DR-226), the `operationId` rule, the endpoints added to DR-73, the test prefixes of this batch (`AG-`, `FI-`, `FF-`, `FO-`, `FT-`, `FN-`, `FA-`) | §2 |
 | DR-145 | Public endpoints: the public readiness route shows no dependency; the shape of `GET /public/config` and its keys | §3 |
 | DR-146 | Resident account: `PATCH /me` rules (no `If-Match`, avatar needs `X-Unit-Id`), the device endpoints (E-22, E-23), a repeated verify of a verified upload is 200 | §5 |
 | DR-147 | Staff accounts: a Manager reads the list, source states of every transition, `reassignTo` needs a reason, `PATCH /staff/me` is audited, a Manager asking for a step-up action gets `forbidden` | §7, §8 |
 | DR-148 | Building administration: the storage breakdown, `PUT /staff/gateway` is addressed by `provider`, the connection check writes no audit row | §9 |
 | DR-149 | Imports: one route dispatched by `kind` through an `ImportHandler`, the body carries `fileId`, over 5,000 rows is a 400 with no stored job, the `deletion=requested` filter of E-63 | §10 |
+| DR-226 | `GET /staff/imports` (E-169): the import history of `W-Import`, Owner decision 2026-10-21; no new table | §10 |
 | DR-143 and DR-144 are in [DOC-50](api-guidelines.md) §18. | | |
 
 ## 14. Traceability
@@ -2686,10 +2739,10 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 | §6 household | DR-40, DR-137, DR-139 | UC-15; FR-17 | RM-13…22 |
 | §7, §8 staff | DR-39, DR-133, DR-147 | UC-17, UC-26; FR-14, FR-50 | AU-08…19, AU-43…50 |
 | §9 building | DR-33, DR-111, DR-126, DR-148 | UC-17; FR-38, FR-40 | BD-01…46, FS-, AD-25…28 |
-| §10 residency | DR-21, DR-22, DR-40, DR-41, DR-114, DR-136…141, DR-149 | UC-13, UC-27, UC-28; FR-16…18 | RM-, IM-, DQ- |
+| §10 residency | DR-21, DR-22, DR-40, DR-41, DR-114, DR-136…141, DR-149, DR-226 | UC-13, UC-27, UC-28; FR-16…18 | RM-, IM-, DQ- |
 
 ## Open questions
 
-- Whether `GET /staff/imports` should list earlier imports for the `W-Import` history (DOC-16 has `import_job_building_idx`; no list endpoint exists). If yes it takes the next number.
+- **Closed by DR-226 (Owner, 2026-10-21):** `GET /staff/imports` is built as E-169 for the `W-Import` history; it uses `import_job_building_idx` and adds no table.
 - The shape of the plate search inside E-70 (`vehicles`) is DOC-30's; until then the array is empty.
-- The final store URLs and the `params` of a `fee_batch` import are Owner input (P0-03) and DOC-21.
+- The final store URLs are an Owner input: a placeholder until the task that needs them (P6-10, DR-228). The `params` of a `fee_batch` import are DOC-21's.

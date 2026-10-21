@@ -1,7 +1,7 @@
 # Web: residents
 
-> Status: **Review** · Updated: 2026-10-20 · DOC-65
-> Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
+> Status: **Review** · Updated: 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
+> Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
 > Main readers: P1-16 (web CMS shell: sign in, create staff, import units), P1-13, P1-14, DOC-68 (copy), DOC-88 (prefix `UIWR-`)
 
 This document specifies the five web screens that set up the people of the building: the unit list, the unit detail, the resident list, the form that gives a person to a unit, and the Excel import of units and owners. The phase-1 screens are all five (`W-Units`, `W-Unit-Detail`, `W-Residents`, `W-Resident-Add`, `W-Import`); `W-Vehicles` (P5) and the money blocks of the unit detail (P2, P3) are only listed in "Specified before P5 and P3". The canvas draws the five screens but not their dialogs; the dialogs are specified here with small wireframes. Tokens and components are DOC-54, the endpoints are DOC-51, and the strings of the error codes are DOC-68.
@@ -605,15 +605,15 @@ None.
 
 ## W-Import
 
-> Status: Review · Prototype: designed (steps 1 and 3, the warnings and the resume states to design) · Phase: P1 · DOC-65
+> Status: Review · Prototype: designed (steps 1 and 3, the warnings, the resume states and the recent-imports table to design) · Phase: P1 · DOC-65
 
 ### 1. Persona, use cases, permissions
 
-PS-2 Manager (PS-1 Admin the same); UC-13 main flow "import" steps 1 to 5, FR-01.2, FR-18.1, FR-18.2, NFR-12; data rules DOC-18 §1. Roles `admin`, `manager`. This screen handles `kind = unit_owner` only; the fee batch import is `W-Fee-Import` (P2, E-72 with `kind = fee_batch`).
+PS-2 Manager (PS-1 Admin the same); UC-13 main flow "import" steps 1 to 5, FR-01.2, FR-18.1, FR-18.2, NFR-12; data rules DOC-18 §1. Roles `admin`, `manager`. This screen handles `kind = unit_owner` only; the fee batch import is `W-Fee-Import` (P2, E-72 with `kind = fee_batch`). Step 1 also shows the recent imports of the building (E-169, DR-226).
 
 ### 2. URL and search params
 
-`/import`. Search: `kind` `unit_owner` (default and only value in P1), `importId` (a validated job: the page reopens its preview through E-73 after a reload, DR-21).
+`/import`. Search: `kind` `unit_owner` (default and only value in P1), `importId` (a job: the page reopens it through E-73 after a reload, DR-21; a row of the recent-imports table sets it).
 
 ### 3. Prototype
 
@@ -625,6 +625,7 @@ Do not copy:
 - The drawn "Trạng thái" error with the sample value "dang o": the real column header is "Tình trạng" (E-71) and the accepted words are in DQ-14.
 - The uploader name "bởi …": a resumed job has no uploader (E-73), so the clause is shown only for the job created in this session.
 - The file name `can-ho-moc-mien-10-2026.xlsx` and counts are sample data.
+- The canvas has no list of earlier imports. The "Nhập gần đây" table below is specified from E-169 (DR-226) and is owed an artboard.
 
 ### 4. Regions and components
 
@@ -635,6 +636,7 @@ Do not copy:
 | File card | `Card` with the file name, row count, time, buttons | steps 2 and 3 |
 | Count cards | three `Card`s (valid, errors, units to update) and one muted line (new units, new accounts, linked accounts, owners added, warnings) | `validated` |
 | Issue tables | two tables: "Dòng lỗi" (errors, first 50 then "Xem thêm") and "Cảnh báo" (collapsed) | `validated`, `failed` |
+| Recent imports (step 1) | `Card` titled "Nhập gần đây" with a table: file name, uploaded time and date, uploader, result ("{valid}/{rows} dòng hợp lệ, {errors} lỗi"), status `Tag` (`status.import.*`), row action "Mở"; "Xem thêm" loads the next cursor; a muted line says rows are kept 30 days | `loading`, `loaded`, `empty`, `error` |
 | Valid rows | collapsed section "Xem trước {n} dòng hợp lệ đầu tiên": row, unit code, owner name, phone, masked ID number, notes | `validated` |
 | Banner | `Banner` warning (errors exist), `Banner` danger (`failed`, `expired`, `import_stale`) | by state |
 | Action bar | `Button` ghost "Hủy", `Button` outline "Tải danh sách lỗi", `Button` primary with `check` "Lưu {n} dòng hợp lệ" | `validated` |
@@ -647,7 +649,9 @@ Do not copy:
 | Template file | E-71 `GET /staff/imports/templates/unit_owner` | none (a download) | fetched with the bearer token and saved as a file from `Content-Disposition`; headers follow the staff member's `language` |
 | Job (resume, result) | E-73 `GET /staff/imports/{id}` | `['staff','imports',importId]` | read when `importId` is in the URL; `status` `validated`, `failed`, `committed`, `expired` (a `validated` job past `expiresAt` already reads `expired`) |
 
-There is no list of past imports (E-73 reads one job by id): the history is not a P1 feature (DR-213). Real-time and polling: none, because validation is synchronous (DR-21).
+| Recent imports | E-169 `GET /staff/imports?limit=10` | `['staff','imports','list']` (`useInfiniteQuery`, 10 per page) | shown on step 1 only; refetched after a commit and on window focus after 30 s; `kind=unit_owner` is the only kind in P1; a `validated` job past `expiresAt` already reads `expired` |
+
+E-73 reads one job by id; E-169 lists the building's jobs of the last 30 days, newest first (DR-226; DR-213 had left the history out of phase 1). Real-time and polling: none, because validation is synchronous (DR-21).
 
 ### 6. Interactions
 
@@ -657,6 +661,8 @@ There is no list of past imports (E-73 reads one job by id): the history is not 
 | Upload | E-36 `POST /staff/uploads` `{purpose:"import", module:"residency", mime, size}` (`Idempotency-Key`) → `PUT` to the returned URL with its headers → E-37 `POST /staff/uploads/{id}/verify` | `fileId` obtained | 400 `file_type_not_allowed` / `file_too_large`; 413 `quota_exceeded`; 429 `rate_limited`; 422 `file_not_verified` with `details[0].code` (`missing` → retry the `PUT` once; `wrong_type`, `bad_content`, `empty`, `too_large` → "Không đọc được tệp. Hãy chọn lại.") (DOC-55 §12) |
 | Validate (automatic after the upload) | E-72 `POST /staff/imports` `{kind:"unit_owner", fileId}` (`Idempotency-Key`; client timeout 30 s) | `importId` goes into the URL, the preview shows (≤ 10 s for 2,000 rows, NFR-12) | 400 `validation_failed` rule `too_many_rows` → "Tệp có hơn 5.000 dòng. Hãy tách thành nhiều tệp."; rule `file_too_large`; 422 `file_not_verified`; 422 `idempotency_key_reuse` → restart; a file-layer failure is **not** an error: the job is created with `status: "failed"` and one `fail` issue (`import_no_header`, `import_file_type`, `import_duplicate_column`, `import_empty`) shown in a danger banner |
 | "Tải file mẫu" | E-71 | file saved | 403/404 → generic error |
+| "Mở" on a row of the recent imports | none (the row already holds `importId`) | `importId` goes into the URL and E-73 shows the right step: the preview for `validated` (with the save button), the counts for `committed`, the banner for `failed` and `expired` | 404 `not_found` (purged meanwhile) → generic error and the list refetches |
+| "Xem thêm" under the recent imports | E-169 with `cursor` | the next rows are appended | 400 `invalid_cursor` → drop the cursor and refetch the first page |
 | "Chọn file khác" / "Hủy" | none | the page returns to step 1 and `importId` leaves the URL; the stored job expires in 24 h and its file is deleted by the job (DOC-27 §9) | |
 | "Tải danh sách lỗi" | none (built in the browser, DR-213) | CSV `import-errors-<importId>.csv` (UTF-8 with BOM; columns row, unit code, column, severity, message) from `issues` | when `issuesTruncated` the file holds the first 500 and the page says so |
 | "Lưu {n} dòng hợp lệ" | E-74 `POST /staff/imports/{id}/commit` (no body, no key; the job status is the arbiter) | step 3 with `committed` counts; `importId` stays in the URL | 409 `import_expired` → danger banner "Bản kiểm tra đã hết hạn. Hãy tải tệp lên lại." and step 1; 409 `import_not_ready` → refetch E-73; 409 `import_stale` → danger banner "Dữ liệu đã thay đổi từ lúc kiểm tra. Hãy tải tệp lên lại." with "Chọn file khác"; 500 `internal_error` (post-check failed, rolled back) → generic error with the request id; a second press (double click or two tabs) returns the same 200 and shows the same result |
@@ -675,6 +681,7 @@ The button is disabled while the commit runs and when `counts.valid = 0`. Rows w
 | `failed` | Danger banner with the issue message, "Chọn file khác" only |
 | `expired` | Danger banner and "Chọn file khác"; the counts stay readable |
 | `committed` | Step 3: "Đã lưu: {unitsCreated} căn mới, {unitsUpdated} căn cập nhật, {accountsCreated} tài khoản mới, {accountsLinked} tài khoản liên kết, {ownersAdded} chủ hộ" and the buttons "Xem danh sách căn hộ" (`/units`) and "Nhập file khác" |
+| Recent imports `loading` / `empty` / `error` | A skeleton of three rows; "Chưa có lần nhập nào trong 30 ngày qua."; the generic error `Banner` with a retry (the rest of step 1 stays usable) |
 | Issues over 500 | the table says "Hiển thị 500 lỗi đầu tiên" (`issuesTruncated`); the counts stay complete |
 
 Error, forbidden: DOC-68. Offline: not applicable; a lost connection during the commit leaves the job `validated` or `committed`, and the page reopens the right state through `importId`.
@@ -740,6 +747,15 @@ Error, forbidden: DOC-68. Offline: not applicable; a lost connection during the 
 | `web.import.result.cta.units` | Xem danh sách căn hộ | Go to the unit list |
 | `web.import.result.cta.again` | Nhập file khác | Import another file |
 | `web.import.expires` | Bản kiểm tra giữ đến {time}, {date} | The check is kept until {time}, {date} |
+| `web.import.history.title` | Nhập gần đây | Recent imports |
+| `web.import.history.empty` | Chưa có lần nhập nào trong 30 ngày qua. | No imports in the last 30 days. |
+| `web.import.history.note` | Danh sách giữ 30 ngày gần nhất. | The list keeps the last 30 days. |
+| `web.import.history.col.file` | Tệp | File |
+| `web.import.history.col.when` | Tải lên | Uploaded |
+| `web.import.history.col.by` | Người nhập | Imported by |
+| `web.import.history.col.result` | Kết quả | Result |
+| `web.import.history.result` | {valid}/{rows} dòng hợp lệ, {errors} lỗi | {valid} of {rows} rows valid, {errors} with errors |
+| `web.import.history.open` | Mở | Open |
 
 Issue messages are not keys of this screen: each row shows `issues[].message` as the API rendered it (the texts of DQ-01…DQ-46, DOC-18 §1.2), and the stored `code` and `params` can be re-rendered by the catalog. Errors use `error.import_expired`, `error.import_not_ready`, `error.import_stale`, `error.file_not_verified`, `error.quota_exceeded`.
 
@@ -758,10 +774,12 @@ Issue messages are not keys of this screen: each row shows `issues[].message` as
 | UIWR-38 | **Given** the error list with `issuesTruncated` **When** "Tải danh sách lỗi" is pressed **Then** a CSV with a BOM and at most 500 rows downloads, and the page says the list is cut | web-e2e |
 | UIWR-39 | **Given** the data changed between the preview and the commit **Then** E-74 answers 409 `import_stale` and the page shows the "Dữ liệu đã thay đổi…" banner and "Chọn file khác" | web-e2e |
 | UIWR-40 | **Given** `/import?importId=<id>` of a `validated` job **When** the page loads **Then** E-73 is called and the same preview shows without a new upload | web-e2e |
+| UIWR-41 | **Given** three jobs (one `committed` 2,000-row job, one `validated` job, one `failed` job) **When** step 1 loads **Then** E-169 is called once with `limit=10`, the table lists them newest first with the uploader's name, the result text and a status `Tag`, and the 30-day note shows | web-e2e |
+| UIWR-42 | **Given** the recent-imports table **When** the Manager presses "Mở" on the `validated` job and then on the `committed` job **Then** `importId` is set in the URL each time, E-73 shows the preview with the save button for the first and the committed counts without a save button for the second | web-e2e |
 
 ### 10. E2E cases
 
-File `apps/web/e2e/import.spec.ts`: the flow "import units" (UIWR-30, 31, 32, 33, 37, 38) is the P1-16 case "import units"; the flow "bad files and expiry" holds UIWR-34, 35, 36, 39, 40. The 2,000-row fixture is the one of IM-30.
+File `apps/web/e2e/import.spec.ts`: the flow "import units" (UIWR-30, 31, 32, 33, 37, 38) is the P1-16 case "import units"; the flow "bad files and expiry" holds UIWR-34, 35, 36, 39, 40; the flow "recent imports" holds UIWR-41, 42. The 2,000-row fixture is the one of IM-30.
 
 ### 11. Open questions
 
@@ -788,7 +806,7 @@ These parts of the screens above have no section yet. They are listed so that th
 | ID | Title | Decided by | Write to |
 | --- | --- | --- | --- |
 | DR-212 | The unit and resident lists get the fields their screens draw: E-57 gains the filter `bedrooms`, the item field `memberCount` and `summary {total, occupied, rented, vacant}` (whole building, ignoring the filters); E-63 gains `summary {total}`, the item field `lastAppOpenAt` and the filter `neverSignedIn`; the search boxes search only what the endpoints search (unit code on `W-Units`; name and phone on `W-Residents`); the pager is forward with a client stack of cursors, with no filtered total | Claude (delegated by Owner) | DOC-51 E-57, E-63, DOC-53 §4, DOC-27 §11 |
-| DR-213 | Import: each `issues[]` entry of E-72/E-73 carries `unitCode` (nullable), so the error table can show the "Mã căn" the canvas draws; the error list is a CSV built in the browser; there is no list of past imports in phase 1 | Claude (delegated by Owner) | DOC-51 E-72, E-73, DOC-18 §1.4 |
+| DR-213 | Import: each `issues[]` entry of E-72/E-73 carries `unitCode` (nullable), so the error table can show the "Mã căn" the canvas draws; the error list is a CSV built in the browser; there is no list of past imports in phase 1 (*revised 2026-10-21, DR-226: the list is E-169*) | Claude (delegated by Owner) | DOC-51 E-72, E-73, DOC-18 §1.4 |
 | DR-214 | `W-Resident-Add` offers the four member types, because E-64 accepts them (the canvas draws the owner only); "Chủ hộ" is disabled for a unit that has an owner, with a link to the transfer | Claude (delegated by Owner) | DOC-27 §5.1, DOC-56 |
 | DR-215 | The lookup of an existing phone in `W-Resident-Add` and in the transfer dialog uses E-63 and shows the name and the masked ID number only; the canvas's read-only full ID number, date of birth and email are not shown, because only E-65 may return them (UX-18, DOC-35 §6) | Claude (delegated by Owner) | DOC-35 §6, DOC-56 |
 
@@ -802,7 +820,7 @@ These parts of the screens above have no section yet. They are listed so that th
 ### DR-213 · The import preview names the unit of an issue; the error list is a browser CSV
 
 - **Problem:** The canvas's error table has a "Mã căn" column and a download "Tải danh sách lỗi". An issue of E-72 has `row`, `column`, `code`, `params` and `message`; the unit code is in `params` for some codes only, and a row with an error is not in `validRows`. No endpoint downloads the errors, and E-73 reads one job by id, so there is no history to list.
-- **Decision:** Each entry of `preview.issues` also carries `unitCode` (the normalized code of the row, `null` when the row has none). The download is generated in the browser from `issues` (CSV with a BOM, at most 500 rows). The import page has no list of past imports; a job is reopened through `?importId=`.
+- **Decision:** Each entry of `preview.issues` also carries `unitCode` (the normalized code of the row, `null` when the row has none). The download is generated in the browser from `issues` (CSV with a BOM, at most 500 rows). The import page has no list of past imports; a job is reopened through `?importId=`. *Revised 2026-10-21 (DR-226):* step 1 lists the recent imports (E-169) and a row sets `?importId=`.
 - **Consequences:** one field in the E-72/E-73 examples and DOC-18 §1.4; no new endpoint; IM-30 asserts the field.
 - **Write to:** DOC-51 E-72, E-73, DOC-18 §1.4.
 
@@ -822,4 +840,4 @@ These parts of the screens above have no section yet. They are listed so that th
 
 ## Not yet in the canvas
 
-The following are specified above with wireframes and still need an artboard (DOC-56 §4 lists the owner and phase; these rows are owed there): `W-Units` dialog "Thêm căn hộ"; `W-Unit-Detail` dialogs (edit unit, transfer ownership, change login phone, confirm lock, unlock and remove), the history tab and the row overflow menu; `W-Residents` profile dialog and the deletion approval; `W-Import` steps 1 and 3, the warnings section and the failed, expired and committed states. All belong to P1.
+The following are specified above with wireframes and still need an artboard (DOC-56 §4 lists the owner and phase; these rows are owed there): `W-Units` dialog "Thêm căn hộ"; `W-Unit-Detail` dialogs (edit unit, transfer ownership, change login phone, confirm lock, unlock and remove), the history tab and the row overflow menu; `W-Residents` profile dialog and the deletion approval; `W-Import` steps 1 and 3, the recent-imports table (DR-226), the warnings section and the failed, expired and committed states. All belong to P1.

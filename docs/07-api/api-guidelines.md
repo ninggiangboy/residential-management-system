@@ -1,7 +1,7 @@
 # API guidelines
 
-> Status: **Review** · Updated: 2026-10-20 (DR-168: `app_version_requests_total`) · DOC-50
-> Depends on: original SDD §17.2, §17.3, [DR](../00-decision-register.md) (DR-07, 36…39, 64, 71, 74, 75, 83, 84, 123, 127, DR-142…), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-12](../03-architecture/code-architecture.md) §5.3, §8.3, §12, [DOC-17](../05-data/operations-model.md) §3 (`platform.idempotency_key`), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-35](../06-design/audit-privacy-and-terms.md) §9, [DOC-37](../06-design/files-and-uploads.md), [DOC-42](../06-design/error-handling.md), [DOC-06](../02-glossary.md)
+> Status: **Review** · Updated: 2026-10-21 (DR-226: catalog count; earlier: DR-168: `app_version_requests_total`) · DOC-50
+> Depends on: original SDD §17.2, §17.3, [DR](../00-decision-register.md) (DR-07, 36…39, 64, 71, 74, 75, 83, 84, 123, 127, DR-142…, DR-226), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-12](../03-architecture/code-architecture.md) §5.3, §8.3, §12, [DOC-17](../05-data/operations-model.md) §3 (`platform.idempotency_key`), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-35](../06-design/audit-privacy-and-terms.md) §9, [DOC-37](../06-design/files-and-uploads.md), [DOC-42](../06-design/error-handling.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04 (`apps/api` composition root), P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every task that adds an endpoint, DOC-51, DOC-52, DOC-55, DOC-99, EXP-10
 
 This document fixes the rules every endpoint follows: base path, audiences, naming, headers, formats of money, time and ids, the order of the gates, idempotency, optimistic concurrency, pagination, localization, caching and compatibility. It does not list endpoints (DOC-51), error codes and their messages (DOC-42 §5), the behavior of sign-in and sessions (DOC-26), the policy table (DOC-27 §3), the SSE stream and the webhook contract (DOC-52), or the CORS and security header configuration of the hosts (DOC-39, DOC-70).
@@ -355,7 +355,7 @@ Every new decision is a DR (decided by Claude, delegated by the Owner) and is su
 
 | ID | Decision | Where used |
 | --- | --- | --- |
-| DR-142 | The numbered endpoint catalog: 168 `E-xx` in groups, `operationId` rule, the endpoints added to DR-73's list | DOC-51 §2, §3 |
+| DR-142 | The numbered endpoint catalog: 168 `E-xx` in groups (169 with E-169, DR-226), `operationId` rule, the endpoints added to DR-73's list | DOC-51 §2, §3 |
 | DR-143 | Wire formats and the gate order: millisecond instants, `items` envelope, the gate order of §7, `request_in_progress`, key and hash rules, who is exempt from the app-version gate | §5…§8 |
 | DR-144 | Caching, rate-limit answers and compatibility rules | §12…§14 |
 | DR-145 | The public readiness route names no dependency; the shape of `GET /public/config` and the store-link keys | §2, §16 |
