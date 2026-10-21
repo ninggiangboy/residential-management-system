@@ -392,7 +392,7 @@ No artboard (DR-72, N9). Wireframe until the design exists:
 
 ### 4. Regions and components
 
-`TopBar`, `List` of `ListItem` (icon device, title `device`, subtitle last use), `Tag` "Thiết bị này" on the current row, `Button` ghost per other row, `Dialog` to confirm.
+`TopBar`, `List` of `ListItem` (icon by `client`, a phone for `app`; title `device`, subtitle last use), `Tag` "Thiết bị này" on the current row, `Button` ghost per other row, `Dialog` to confirm.
 
 ### 5. Data
 
@@ -400,7 +400,7 @@ No artboard (DR-72, N9). Wireframe until the design exists:
 | --- | --- | --- |
 | Live sessions, `current` marked | E-20 | `['me', 'sessions']` (never persisted) |
 
-Refetched on mount and after a revoke. `device` is already a readable string computed by the server from the user agent (DOC-26 §3.7).
+Refetched on mount and after a revoke. `device` is already a readable string computed by the server from the user agent (DOC-26 §3.7); `client` is `app` for every resident session (DR-225).
 
 ### 6. Interactions
 

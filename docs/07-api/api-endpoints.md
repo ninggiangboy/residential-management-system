@@ -1,6 +1,6 @@
 # API endpoints
 
-> Status: **Draft** · Updated: 2026-10-20 (DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Draft** · Updated: 2026-10-21 (DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
@@ -833,13 +833,13 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 
   ```json
   { "items": [
-    { "id": "0192f3c4-5a1e-7000-8000-000000000062", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-10-14T03:12:08.000Z",
+    { "id": "0192f3c4-5a1e-7000-8000-000000000062", "client": "app", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-10-14T03:12:08.000Z",
       "lastUsedAt": "2026-10-20T01:02:11.000Z", "current": true },
-    { "id": "0192f3c4-5a1e-7000-8000-000000000063", "device": "Pixel 9, Android 16", "createdAt": "2026-09-02T10:20:44.000Z",
+    { "id": "0192f3c4-5a1e-7000-8000-000000000063", "client": "app", "device": "Pixel 9, Android 16", "createdAt": "2026-09-02T10:20:44.000Z",
       "lastUsedAt": "2026-10-18T16:59:08.000Z", "current": false } ] }
   ```
 
-  `device` is computed on read from the stored `User-Agent` (DOC-26 §3.7); `id` is the refresh family id and the `sid` claim of the token.
+  `client` is `web` or `app`, stored on the family at sign-in (DR-225); `device` is computed on read from the stored `User-Agent` (DOC-26 §3.7); `id` is the refresh family id and the `sid` claim of the token.
 - **Errors:** 401.
 - **Data source:** the session list `SELECT` of DOC-26 §3.7 on `identity.refresh_family` (live families only), index on `(kind, account_id)`.
 - **Cache:** `no-store`.
@@ -1183,13 +1183,13 @@ These endpoints belong to the signed-in staff member and need no capability beyo
 
   ```json
   { "items": [
-    { "id": "0192f3c4-5a1e-7000-8000-000000000062", "device": "Chrome on macOS", "createdAt": "2026-10-14T03:12:08.000Z",
+    { "id": "0192f3c4-5a1e-7000-8000-000000000062", "client": "web", "device": "Chrome on macOS", "createdAt": "2026-10-14T03:12:08.000Z",
       "lastUsedAt": "2026-10-20T01:02:11.000Z", "current": true },
-    { "id": "0192f3c4-5a1e-7000-8000-000000000063", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-09-02T10:20:44.000Z",
+    { "id": "0192f3c4-5a1e-7000-8000-000000000063", "client": "app", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-09-02T10:20:44.000Z",
       "lastUsedAt": "2026-10-18T16:59:08.000Z", "current": false } ] }
   ```
 - **Errors:** 401 `unauthenticated`.
-- **Data source:** the session list statement of DOC-26 §3.7 (`identity.refresh_family`, `kind = 'staff'`, live only); `device` is computed from `user_agent` on read.
+- **Data source:** the session list statement of DOC-26 §3.7 (`identity.refresh_family`, `kind = 'staff'`, live only); `client` is a column; `device` is computed from `user_agent` on read.
 - **Performance:** p95 ≤ 100 ms (at most 10 rows).
 - **Tests:** AU-55, AU-S11.
 

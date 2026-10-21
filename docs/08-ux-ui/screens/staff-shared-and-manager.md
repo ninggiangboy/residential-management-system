@@ -351,7 +351,7 @@ Do not copy:
 | Revoke the current session | E-33 | A sign-out (below) | |
 | Sign out (confirm) | Best effort E-35, then E-12 `POST /auth/logout`, then the local steps of DOC-55 §5.4 | `S-Login` | The local steps run even if the calls fail |
 
-The password has no control: the note explains the way out (sign out, "Quên mật khẩu"), as UC-26 4a states for the apps. A staff session list row is built like the resident `Sessions` (DOC-60): `device`, "Thiết bị này", last use, a revoke button on the other rows.
+The password has no control: the note explains the way out (sign out, "Quên mật khẩu"), as UC-26 4a states for the apps. A staff session list row is built like the resident `Sessions` (DOC-60): an icon by `client` (`web` a window, `app` a phone, DR-225), `device`, "Thiết bị này", last use, a revoke button on the other rows.
 
 ### 7. States
 

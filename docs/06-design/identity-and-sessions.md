@@ -1,6 +1,6 @@
 # Identity and sessions
 
-> Status: **Review** · Updated: 2026-10-20 (DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
+> Status: **Review** · Updated: 2026-10-21 (DR-225: `client` in the session lists; DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
 > Depends on: original SDD §7, §17.1, §19.3, [DR](../00-decision-register.md) (DR-36…39, 59, 60, 64, 65, 68, 73, 74, 83, 85, 87, 99, 107, 108, 125, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-03](../01-product/requirements.md) (FR-13…15, 45, 50), [DOC-04](../01-product/use-cases.md) (UC-14, UC-17, UC-26), [DOC-09](../03-architecture/messaging-contracts.md) §6.3, §7.3, [DOC-12](../03-architecture/code-architecture.md) §5.3, §8, §12, [DOC-16](../05-data/identity-and-residency-model.md) §4, [DOC-17](../05-data/operations-model.md) §3, [DOC-35](audit-privacy-and-terms.md) §10, [DOC-36](building-configuration-and-demo.md) §3, §7, §9, §10, [DOC-42](error-handling.md) §5.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity: staff), P1-11 (identity: resident OTP), P1-14 (staff API), P1-22 (SMS and mail adapters), DOC-27, DOC-39, DOC-41, DOC-51, EXP-09, EXP-10, RB-12
 
@@ -238,7 +238,7 @@ At sign-in, before the new family is inserted, the cap statement of DOC-16 §4.5
 A session is a refresh family (`sid`). The lists show only live families (`revoked_at IS NULL AND absolute_expires_at > now()`):
 
 ```sql
-SELECT id, user_agent, created_at, last_used_at, id = :sid AS current
+SELECT id, client, user_agent, created_at, last_used_at, id = :sid AS current
   FROM identity.refresh_family
  WHERE kind = :kind AND account_id = :account_id AND revoked_at IS NULL AND absolute_expires_at > now()
  ORDER BY last_used_at DESC;
@@ -248,13 +248,13 @@ SELECT id, user_agent, created_at, last_used_at, id = :sid AS current
 
 ```json
 { "items": [
-  { "id": "0192f3c4-5a1e-7000-8000-000000000062", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-10-14T03:12:08.000Z",
+  { "id": "0192f3c4-5a1e-7000-8000-000000000062", "client": "app", "device": "iPhone17,1, iOS 19.1", "createdAt": "2026-10-14T03:12:08.000Z",
     "lastUsedAt": "2026-10-20T01:02:11.000Z", "current": true },
-  { "id": "0192f3c4-5a1e-7000-8000-000000000063", "device": "Pixel 9, Android 16", "createdAt": "2026-09-02T10:20:44.000Z",
+  { "id": "0192f3c4-5a1e-7000-8000-000000000063", "client": "app", "device": "Pixel 9, Android 16", "createdAt": "2026-09-02T10:20:44.000Z",
     "lastUsedAt": "2026-10-18T16:59:08.000Z", "current": false } ] }
 ```
 
-`device` is computed on read from `user_agent` (it is stored raw, at most 300 characters). The apps send `User-Agent: rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` (the staff app `rms-staff/…`); the label is `"<model>, <os>"`. A browser agent becomes `"<browser> on <os>"` by five patterns (Chrome, Edge, Firefox, Safari; macOS, Windows, Linux, Android, iOS); anything else is `"Unknown device"`. No library is used.
+`client` (`web` | `app`) is the column of the family, written at sign-in from the request's `client` (DR-130; a resident is always `app`, DR-225); a client picks the icon from it. `device` is computed on read from `user_agent` (it is stored raw, at most 300 characters). The apps send `User-Agent: rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` (the staff app `rms-staff/…`); the label is `"<model>, <os>"`. A browser agent becomes `"<browser> on <os>"` by five patterns (Chrome, Edge, Firefox, Safari; macOS, Windows, Linux, Android, iOS); anything else is `"Unknown device"`. No library is used.
 
 `DELETE /me/sessions/{id}` and `DELETE /staff/sessions/{id}` revoke one session with the conditional statement below and answer 204. Zero rows is 404 `not_found`: a session of another account looks like a missing one (UC-26 E3). Revoking the current session is allowed and equals a logout.
 
@@ -305,7 +305,7 @@ The consumers of the event are `realtime` (closes the SSE streams of that sessio
 4. **Temporary lock.** `locked_until > now()`: answer 423 `account_locked` with `details.retryAfter` (seconds) and a `Retry-After` header, **without checking the password** (the correct password is refused during the lock, FR-13.1).
 5. **Verify** the password with Argon2id.
 6. **Wrong password.** Run the lockout statement of DOC-16 §4.1 with `:max_attempts = lockout.maxAttempts` and `:lock_minutes = lockout.minutes` (building settings, default 5 and 15, read through `BuildingApi.getSettings`). If it returns a row whose `locked_until` is in the future, or returns no row (a parallel attempt locked the account first), answer 423 as in step 4; otherwise 401 `invalid_credentials`. The attempt that reaches the limit is the first to see 423.
-7. **Right password.** `UPDATE … SET failed_attempts = 0, locked_until = NULL, last_login_at = now()`. If `needsRehash(password_hash)` (§4.2), hash again with the current parameters and store it in the same statement. Evict old families (§3.6), insert the family and the first token, sign the access token (§3.1), answer as in §3.4.
+7. **Right password.** `UPDATE … SET failed_attempts = 0, locked_until = NULL, last_login_at = now()`. If `needsRehash(password_hash)` (§4.2), hash again with the current parameters and store it in the same statement. Evict old families (§3.6), insert the family (with the request's `client`) and the first token, sign the access token (§3.1), answer as in §3.4.
 
 The answer never says how many tries are left: that would tell a stranger which emails exist, because an unknown email has no counter. The login screen shows "The email or password is not correct." and, after the lock, "Too many attempts. Try again in {minutes} minutes." (DOC-42 §5.3). DOC-02 (journey step 1) and DOC-04 (UC-17 A) said the screen shows "2 tries left"; both are revised (DR-128). A sign-in writes no audit row (FR-37 covers mutations); it writes the log line `auth.staff_login` with `outcome`, `staffId` when known and the IP, never the email or the password.
 
@@ -463,7 +463,7 @@ The code is 6 digits from `crypto.getRandomValues`, uniform by rejection (no mod
 
 1. The consume statement of DOC-16 §4.3 (`code_hmac` equal, not consumed, not expired, `attempts < 5`) returns the phone. For a **demo account** the statement of §5.3 is used instead.
 2. No row: the attempts statement of DOC-16 §4.3 (`attempts + 1`, consumed at the fifth) and **commit**, then answer 400 `otp_invalid` with `details.attemptsLeft = 5 − attempts` (4, 3, 2, 1, 0; FR-15.3). A challenge that is unknown, expired or already consumed answers 400 `otp_invalid` with `attemptsLeft: 0`. The failure counters are written before the exception, as in §3.5.
-3. A row: load the account by phone (`active` or `deletion_requested`), evict families (§3.6), insert the family and the first token (`user_agent`, 365-day absolute limit), set `last_app_open_at` with the throttled statement below, sign the access token, read the active memberships (`ResidencyApi.listActiveMemberships`) and answer as in §3.4.
+3. A row: load the account by phone (`active` or `deletion_requested`), evict families (§3.6), insert the family and the first token (`client = 'app'`, `user_agent`, 365-day absolute limit), set `last_app_open_at` with the throttled statement below, sign the access token, read the active memberships (`ResidencyApi.listActiveMemberships`) and answer as in §3.4.
 
 ```sql
 UPDATE identity.resident_account SET last_app_open_at = now()
@@ -712,7 +712,7 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-52 | `changeResidentPhone` to a free number and to a number with an account | all families revoked (`phone_changed`) and one event each; 409 `phone_in_use` for the second and nothing changes |
 | AU-53 | `queueMemberInvitation` for a phone whose OTP bucket is empty | 429 `rate_limited`; the caller's insert rolls back |
 | AU-54 | A resident opens the app 5 times in 30 minutes | `last_app_open_at` is written once |
-| AU-55 | `GET /me/sessions` and `GET /staff/sessions` | the current session is marked; the `device` labels of `rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` and of a Chrome on macOS user agent are `iPhone17,1, iOS 19.1` and `Chrome on macOS` |
+| AU-55 | `GET /me/sessions` and `GET /staff/sessions` | the current session is marked; `client` is `web` for a staff sign-in with `client: "web"` and `app` otherwise; the `device` labels of `rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` and of a Chrome on macOS user agent are `iPhone17,1, iOS 19.1` and `Chrome on macOS` |
 
 ## 13. Statements run
 

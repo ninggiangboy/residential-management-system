@@ -341,7 +341,7 @@ Canvas artboard `W-Profile` ("Chung: Hồ sơ cá nhân"), 1440 wide, inside the
 Do not copy:
 
 - **N9.** The sessions card has no way to end a session. FR-45.1 gives every account the list and the revoke: each row except the current one gets "Đăng xuất phiên" (E-33).
-- The sample row labels "Web quản lý, Chrome trên Windows" and "App quản lý, iPhone": E-32 returns one `device` string ("Chrome on macOS") and `current`, not the client kind (endpoint gap, see the report). The row shows `device` as returned; its icon is a phone when `device` names iOS or Android, else a window.
+- The sample row labels "Web quản lý, Chrome trên Windows" and "App quản lý, iPhone": E-32 returns `client` (`web` | `app`), `device` ("Chrome on macOS") and `current` (DR-225). The row shows `device` as the title and `client` chooses the icon: a window for `web`, a phone for `app`; the sample label "Web quản lý" / "App quản lý" is `web.profile.session.client.web|app`.
 - The sample name "Nguyễn Thu Trang" and the role text: the role label comes from `role` of E-30 (`common.staff-role.*`).
 - Additions the canvas does not draw: "Gỡ ảnh" (ghost sm, shown when an avatar exists; sends `avatarFileId: null`), the revoke dialog, and the hint under "Gửi link đổi mật khẩu" about other devices.
 
@@ -397,6 +397,8 @@ Loading: skeleton cards (150 ms rule, UX-10). Error on E-30: the page error stat
 | `web.profile.card.password.cta` | Gửi link đổi mật khẩu | Send password link |
 | `web.profile.card.sessions.title` | Phiên đăng nhập gần nhất | Recent sessions |
 | `web.profile.session.current` | phiên hiện tại | this session |
+| `web.profile.session.client.web` | Web quản lý | Web CMS |
+| `web.profile.session.client.app` | App quản lý | Staff app |
 | `web.profile.session.cta` | Đăng xuất phiên | End session |
 | `web.profile.dialog.revoke.title` | Đăng xuất phiên này? | End this session? |
 | `web.profile.dialog.revoke.body` | Thiết bị đó sẽ phải đăng nhập lại. | That device will have to sign in again. |

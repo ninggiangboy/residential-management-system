@@ -1,6 +1,6 @@
 # Decision Register
 
-> Status: **Review** · Updated: 2026-10-20 (DR-174…224 added with the P1 UX/UI documents; DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
+> Status: **Review** · Updated: 2026-10-20 (DR-174…225 added with the P1 UX/UI documents; DR-157…173 added; DR-160, 171, 173 decided by the Owner 2026-10-20; DR-88 decided: `monitor.<domain>` behind Access; DR-151…156 added; DR-128…150 added; earlier: DR-124…127 added; spikes dropped; kit packages renamed core; DR-01…08 decided; DR-10…81 decided except DR-25…28, 30, 31, 34, 35; DR-17 and DR-42 decided) · Source: analysis of `residential-management-sdd.md` (the **original SDD**)
 
 The original SDD is strong on the hard part: the money invariant, the arbiter row of every race (charge, `gateway_event`, ticket, nonce), the state machines, the options analyses and the experiments that prove them. It is thin on "exactly how" in the places that surround that core: the finance tables it does not list, the Excel and bank-statement formats, how the reference's kit packages are vendored (as `core-*`), the cross-module contracts that the module rule forces, the payOS facts it admits it does not know, the jobs and their schedules, time zones, personal-data handling, hosting, backup and the screens the design never drew. It also contains a few contradictions (transfer-content length, the audit transaction, the invalid-signature row, the 24-hour RPO against "never lose a payment", the `now()::date` aging query) that would surface as bugs if coded as written. Each gap below is one decision with one concrete proposal. The DRs that fix schemas, contracts and repository layout must be decided before any code.
 
@@ -70,6 +70,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-57, DOC-60 and DOC-61: DR-198…201 (unit switcher content, push explanation sheet, home built per phase, one Terms component), DR-202 (E-13 returns `cooloffDays`, `executeAfter`), DR-203 (`Contact` shows what E-15 returns), DR-204 (`Terms` view mode), DR-205 (`formatPhone`), DR-206 (no tries-left counter or policy numbers), DR-207 (no "open mail app" button), DR-208 (reset resend 45 s) | DOC-57, DOC-60, DOC-61, DOC-51, DOC-35, DOC-55, DOC-64, DOC-68 |
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-64, DOC-65 and DOC-67: DR-209 (no echoed email or absolute expiry), DR-210 (forgot-password dialog), DR-211 (`W-Profile` one page), DR-212 (fields E-57 and E-63 return for the list screens), DR-213 (`unitCode` in import issues; browser CSV), DR-214 (four member types on the add form), DR-215 (phone lookup shows no personal data), DR-216 (step-up dialog opens proactively and reactively), DR-217 (`W-Staff` counts), DR-218 (staff edit reuses the create dialog), DR-219 (`W-Building` one page) | DOC-64, DOC-65, DOC-67, DOC-51, DOC-18, DOC-27, DOC-35, DOC-53 |
 | 2026-10-20 | Claude (delegated by Owner) | Added while writing DOC-68: DR-220 (rule codes share the `error.` namespace), DR-221 (one name per shared string), DR-222 (two ticket status families), DR-223 (formatter details), DR-224 (parity compares ICU arguments) | DOC-68, DOC-42, DOC-55, DOC-56, DOC-57, DOC-64, DOC-67 |
+| 2026-10-21 | Claude (delegated by Owner) | DR-225: the session lists carry `client` (`web` \| `app`), a new `refresh_family.client` column; asked by the Owner ("ok theo đề xuất") | DOC-16, DOC-26, DOC-51, DOC-60, DOC-61, DOC-64 |
 
 ---
 
@@ -2037,6 +2038,12 @@ Decided while writing the P1-gate documents DOC-53…57, 60, 61, 64, 65, 67 (all
 - **Decision:** Equal sets of argument names and types.
 - **Consequences:** Vietnamese strings stay simple; NFR-13 is still enforced.
 - **Write to:** DOC-68, DOC-55 §11, P1-09.
+
+### DR-225 · The session lists carry the client kind — **Decided (Claude, delegated by Owner, 2026-10-21)**
+- **Problem:** E-20 and E-32 return one `device` string computed from the User-Agent. The prototype labels a staff session "Web quản lý" or "App quản lý" with its own icon, and a client cannot tell them apart reliably from the string (an Expo app's agent has no browser name).
+- **Decision:** `identity.refresh_family` gains `client text NOT NULL CHECK (client IN ('web', 'app'))`, written at sign-in from the request's `client` (DR-130; a resident is always `app`). E-20 and E-32 return it beside `device`; the client chooses the icon (window for `web`, phone for `app`) and shows `device` as the title.
+- **Consequences:** One column in the first migration (no data to move); DOC-26 §3.7 SQL and examples, AU-55, E-20, E-32 and the three session views change.
+- **Write to:** DOC-16 §4.5, DOC-26 §3.7, DOC-51 E-20, E-32, DOC-60, DOC-61, DOC-64.
 ---
 
 ## Summary by impact
@@ -2045,7 +2052,7 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 
 | Level | Items | Why decide early |
 | --- | --- | --- |
-| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173, DR-174…224 (the P1 UX/UI documents) | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
+| Blocks P1 | DR-01…12, DR-21, 22, DR-33, DR-36…42, DR-57…65, DR-67…74, DR-77, DR-79…82, DR-85…88, DR-93…95, DR-157…167, DR-169…173, DR-174…225 (the P1 UX/UI documents) | Fix versions, repository layout, the core packages, conventions (time, codes, money), imports, gateway-secret encryption, identity and residency tables, cross-module contracts, files, jobs, audit and privacy, security, hosting and providers, client stacks, API conventions, the endpoint list and the requirement wording |
 | Blocks P2 | DR-13…20, DR-84, DR-23, 24, DR-27, DR-29, DR-52, 53, DR-56, DR-75, 76, DR-78 | Fix the ledger tables and semantics, the all-or-nothing rule, the allocation statement, the money log, batches, manual payments, order code, the `settle()` contract, the notification core, PDF rendering and the order of work |
 | Blocks P3 | DR-25, 26, DR-28, DR-30…32, DR-34, 35 | Fix payOS behavior and the fake driver, intent lifecycle, the re-query and cancel jobs, webhook hardening and reconciliation |
 | Blocks P4 | DR-43…47, DR-50, 51 | Fix ticket mechanics and the notice model and fan-out |
