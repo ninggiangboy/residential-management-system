@@ -42,3 +42,6 @@ local-changes:
     `job_run` rows, `ctx.withLock`/`ctx.snapshot`, pause, stop with a timeout, `runNow`), `schedule.ts` (`lastSlot`, `decide`),
     `SqlJobRunStore`; `createRuntime` takes the relay settings, the manifests (for `outboxPolicies`) and the job settings and
     returns `relayCheck`, `startWorker`, `stopWorker`; `intervalJobs`/`noJobs` are removed (P1-05)
+  - core-runtime: `db-cli.ts` (the reference's db:generate/db:migrate), `cluster.ts` (process supervisor) and `maintenance-config.ts` (a zod slice)
+    are removed: `scripts/migrate.ts` and `scripts/db.ts` run the migrations of this project (DOC-19 §3.1), the scaling unit is the
+    container (DOC-41 `APP_PROCESSES`) and the key is in `apps/api/src/bootstrap/config` (P1-06)

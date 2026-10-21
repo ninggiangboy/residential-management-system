@@ -20,7 +20,8 @@
     "outbox:list": "bun --env-file=../../.env.local scripts/outbox.ts list",
     "outbox:requeue": "bun --env-file=../../.env.local scripts/outbox.ts requeue",
     "outbox:discard": "bun --env-file=../../.env.local scripts/outbox.ts discard",
-    "jobs:run": "bun --env-file=../../.env.local scripts/jobs.ts"
+    "jobs:run": "bun --env-file=../../.env.local scripts/jobs.ts",
+    "test:grants": "bun --env-file=../../.env.local test tests/grants --timeout 60000 --pass-with-no-tests"
   },
   "dependencies": {
     "@core/config": "workspace:*",
