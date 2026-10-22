@@ -6,13 +6,11 @@ import type {
   MissingTerm,
 } from '../../contracts'
 import type { BuildingDirectory } from '../directory'
-import type { GetGatewayConfig } from '../use-cases/get-gateway-config'
-import type { ListMissingTerms } from '../use-cases/list-missing-terms'
+import type { BuildingQueries } from './building-queries'
 
 export interface BuildingApiDeps {
   directory: BuildingDirectory
-  getGatewayConfig: GetGatewayConfig
-  listMissingTerms: ListMissingTerms
+  queries: BuildingQueries
 }
 
 /** `BuildingApi` (DOC-36 §3.1): what the other modules know of a building; reads only, no rule of its own. */
@@ -40,7 +38,7 @@ export class BuildingApiImpl implements BuildingApi {
     provider: GatewayProvider,
     opts?: { lock?: 'share' },
   ): Promise<GatewayConfigDto | null> {
-    return this.deps.getGatewayConfig.execute(buildingId, provider, opts)
+    return this.deps.queries.gatewayConfig(buildingId, provider, opts)
   }
 
   async hasAcceptedLatestTerms(accountId: string, buildingId: string): Promise<boolean> {
@@ -48,6 +46,6 @@ export class BuildingApiImpl implements BuildingApi {
   }
 
   missingTerms(accountId: string, buildingId: string): Promise<MissingTerm[]> {
-    return this.deps.listMissingTerms.execute(accountId, buildingId)
+    return this.deps.queries.missingTerms(accountId, buildingId)
   }
 }

@@ -37,7 +37,7 @@ const buildingRow = async () =>
 const auditRows = async (action: string) =>
   h.db
     .sql`SELECT action, actor_role, object_type, object_id, changes, details FROM audit.audit_log WHERE action = ${action} ORDER BY id`
-const etag = async () => (await h.building.useCases.getBuildingSettings.execute(admin())).etag
+const etag = async () => (await h.building.queries.settings(admin())).etag
 
 describe('settings (DOC-36 §4, §5)', () => {
   test('BD-04 getSettings gives the defaults for {} and the saved keys over them', async () => {
@@ -72,9 +72,9 @@ describe('settings (DOC-36 §4, §5)', () => {
       changes: [{ field: 'feeNoticeLanguage', before: 'vi', after: 'both' }],
     })
     for (const role of ['manager', 'technician', 'guard'] as const) {
-      await expect(
-        h.building.useCases.getBuildingSettings.execute(h.staff(role)),
-      ).rejects.toBeInstanceOf(ForbiddenError)
+      await expect(h.building.queries.settings(h.staff(role))).rejects.toBeInstanceOf(
+        ForbiddenError,
+      )
       await expect(
         h.building.useCases.updateBuildingSettings.execute(h.staff(role), {
           etag: document.etag,

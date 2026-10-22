@@ -37,7 +37,7 @@ export interface GatewayConfigReaderDeps {
 }
 
 /**
- * Reads, decrypts and masks the gateway configuration, for `finance` and the webhook route (through `GetGatewayConfig`) and for
+ * Reads, decrypts and masks the gateway configuration, for `finance` and the webhook route (through `BuildingQueries`) and for
  * the Admin's view and save. A secret is encrypted with the newest key and a place-bound AAD, shown masked, and never in a log
  * or an audit row.
  */
