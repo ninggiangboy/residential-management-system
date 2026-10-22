@@ -7,8 +7,9 @@ import type { BuildingId, StaffContext, StaffId } from '@rms/shared-types'
 import { cloneTemplate, type TestDb } from '@rms/test-support'
 import { sql } from 'drizzle-orm'
 import { auditActionCatalogOf } from '../src/application/action-catalog'
-import { AuditWriter } from '../src/application/audit-writer'
 import { createAudited } from '../src/application/audited'
+import { AuditApiImpl } from '../src/application/queries/audit-api-impl'
+import { RecordAuditEntry } from '../src/application/use-cases/record-audit-entry'
 import { NoTransactionError, UndeclaredAuditActionError } from '../src/domain/errors'
 import { auditPurgeJob } from '../src/infrastructure/jobs/audit-purge'
 import { DrizzleAuditLogRepository } from '../src/infrastructure/persistence/drizzle-audit-log-repository'
@@ -27,7 +28,7 @@ const ids = new UuidV7Generator()
 
 let db: TestDb
 let database: Database
-let writer: AuditWriter
+let writer: AuditApiImpl
 let audited: ReturnType<typeof createAudited>
 
 beforeAll(async () => {
@@ -42,16 +43,18 @@ beforeAll(async () => {
     INSERT INTO scratch.payment VALUES ('${paymentId}', 'posted');`)
   await admin.end()
   database = new Database({ url: db.url, poolMax: 10, prepare: false })
-  writer = new AuditWriter({
-    repository: new DrizzleAuditLogRepository(database),
-    transaction: database,
-    ids,
-    actions: auditActionCatalogOf([
-      { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
-    ]),
-    requestInfo: requestInfoFromContext,
-    logger: { info() {}, warn() {}, error() {} },
-  })
+  writer = new AuditApiImpl(
+    new RecordAuditEntry({
+      repository: new DrizzleAuditLogRepository(database),
+      transaction: database,
+      ids,
+      actions: auditActionCatalogOf([
+        { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
+      ]),
+      requestInfo: requestInfoFromContext,
+      logger: { info() {}, warn() {}, error() {} },
+    }),
+  )
   audited = createAudited(writer)
   voidPayment = audited(
     {

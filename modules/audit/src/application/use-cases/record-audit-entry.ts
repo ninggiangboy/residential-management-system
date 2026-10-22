@@ -1,17 +1,17 @@
 import type { IdGenerator, Log } from '@core/kernel'
-import type { AuditApi, AuditEntry } from '../contracts'
-import { assertActionShape, checkedReason, preparePayload } from '../domain/entry'
-import { NoTransactionError, UndeclaredAuditActionError } from '../domain/errors'
-import { assertMasked } from '../domain/masking'
+import type { AuditEntry } from '../../contracts'
+import type { AuditLogRepository } from '../../domain/audit-log-repository'
+import { assertActionShape, checkedReason, preparePayload } from '../../domain/entry'
+import { NoTransactionError, UndeclaredAuditActionError } from '../../domain/errors'
+import { assertMasked } from '../../domain/masking'
 import type {
   AuditActionCatalog,
-  AuditLogRepository,
   AuditMetrics,
   RequestInfoProvider,
   TransactionProbe,
-} from './ports'
+} from '../ports'
 
-export interface AuditWriterDeps {
+export interface RecordAuditEntryDeps {
   repository: AuditLogRepository
   transaction: TransactionProbe
   ids: IdGenerator
@@ -25,10 +25,10 @@ export interface AuditWriterDeps {
  * `AuditApi.record` (DOC-35 §3.1, ADR-0018): joins the caller's transaction, never opens one, and throws when none is open.
  * A failed insert propagates, so the mutation rolls back with it (FR-37.1); a rolled-back mutation takes the row with it.
  */
-export class AuditWriter implements AuditApi {
-  constructor(private readonly deps: AuditWriterDeps) {}
+export class RecordAuditEntry {
+  constructor(private readonly deps: RecordAuditEntryDeps) {}
 
-  async record(entry: AuditEntry): Promise<void> {
+  async execute(entry: AuditEntry): Promise<void> {
     const { transaction, actions, ids, repository, requestInfo, logger, metrics } = this.deps
     if (!transaction.inTransaction) throw new NoTransactionError()
     assertActionShape(entry.action)
