@@ -1,6 +1,6 @@
 # API guidelines
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: catalog count; earlier: DR-168: `app_version_requests_total`) · DOC-50
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-226: catalog count; earlier: DR-168: `app_version_requests_total`) · DOC-50
 > Depends on: original SDD §17.2, §17.3, [DR](../00-decision-register.md) (DR-07, 36…39, 64, 71, 74, 75, 83, 84, 123, 127, DR-142…, DR-226), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-12](../03-architecture/code-architecture.md) §5.3, §8.3, §12, [DOC-17](../05-data/operations-model.md) §3 (`platform.idempotency_key`), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-35](../06-design/audit-privacy-and-terms.md) §9, [DOC-37](../06-design/files-and-uploads.md), [DOC-42](../06-design/error-handling.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04 (`apps/api` composition root), P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every task that adds an endpoint, DOC-51, DOC-52, DOC-55, DOC-99, EXP-10
 
@@ -284,7 +284,7 @@ A refusal is 429 `rate_limited` with `Retry-After` (integer seconds, `ceil((1 �
 
 - The path version is `/api/v1`. A change that **breaks** a client (removing or renaming a field, changing a type or a unit, tightening validation, changing a status code or an error code, a new required request field) is a new version `/api/v2` served beside `v1` for the lifetime of the oldest supported app (`MIN_APP_VERSION`), and is a DR.
 - A change that does **not** break needs no version: a new endpoint, a new optional request field, a new response field, a new enum value in a field the client treats as "other" (§6), a new error code of an existing status class, a looser validation. Clients ignore unknown response fields and unknown error `details` keys.
-- The contract is the TypeBox schema: it generates OpenAPI and the Eden Treaty types the three clients import (type only, DR-04), so a breaking schema change fails the client build instead of production. P1-19 adds a CI check that diffs the OpenAPI of the pull request against `main` and fails on a breaking change without a version bump.
+- The contract is the TypeBox schema: it generates OpenAPI and the Eden Treaty types the three clients import (type only, DR-04), so a breaking schema change fails the client build instead of production. A CI check (`check:openapi`, wired into `verify` by P1-19, written by P1-04 with the OpenAPI document) diffs the OpenAPI of the pull request against its base on `dev` and fails on a breaking change without a version bump.
 - The apps are forced forward by `MIN_APP_VERSION[app]` (426 `upgrade_required`); EAS Update never carries a breaking API change to a binary that predates it (runtime version policy, DR-69).
 - A deprecated endpoint answers with `Deprecation: true` and `Sunset: <HTTP date>` and is removed only after the minimum app version moved past it.
 

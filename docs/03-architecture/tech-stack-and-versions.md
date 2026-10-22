@@ -1,6 +1,6 @@
 # Tech stack and versions
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-02: OpenTelemetry pins for the vendored core packages, compatibility row 10 run; P1-03: SeaweedFS 4.48 chosen as the local object store (DR-231), the `amazon/aws-cli` init image, row 11 run; earlier: P1-01: pins refreshed, compatibility rows 1, 2, 3, 5, 6, 8, 9 run, DR-229 Tailwind 3.4 on mobile, DR-230 dependency-cruiser with TypeScript 6; earlier: DR-68: provider adapter pinned at P1-22; earlier: DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-19: §9 scanners as built, Trivy 0.76.1, Semgrep CE in place of CodeQL and dependency review: DR-238, DR-240; earlier: P1-02: OpenTelemetry pins for the vendored core packages, compatibility row 10 run; P1-03: SeaweedFS 4.48 chosen as the local object store (DR-231), the `amazon/aws-cli` init image, row 11 run; earlier: P1-01: pins refreshed, compatibility rows 1, 2, 3, 5, 6, 8, 9 run, DR-229 Tailwind 3.4 on mobile, DR-230 dependency-cruiser with TypeScript 6; earlier: DR-68: provider adapter pinned at P1-22; earlier: DR-180…187, DR-188: fonts, icons, toast, date picker, axe, shadcn location; earlier: DR-154: `prom-client` row; DR-114) · DOC-11
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 02, 03, 04, 05, 06, 36…39, 50, 52, 56, 61, 63, 66, 67, 68, 69, 70, 71, 82, 83, 180…188), master plan §0.4, [DOC-06](../02-glossary.md)
 > Main readers: P1-01, P1-02, P1-03, P1-09, P1-17, P1-18, P1-20, P2-13, P4-05; [DOC-12](code-architecture.md) (module and package layout), DOC-69, DOC-70, DOC-71, DOC-73
 
@@ -241,7 +241,7 @@ Third-party images are pinned to an exact tag in the Compose files (DR-95).
 
 ## 9. CI/CD actions and scanners
 
-GitHub Actions are referenced by full commit SHA with the tag in a comment; Dependabot (`github-actions` ecosystem) keeps them current (DR-01, DR-08). The tags below are the latest releases on the check date.
+GitHub Actions are referenced by full commit SHA with the tag in a comment; Dependabot (`github-actions` ecosystem) keeps them current (DR-01, DR-08). The tags below are the latest releases on the check date. P1-19 resolved the SHAs on 2026-10-22 (`git ls-remote`, the peeled commit of an annotated tag) and wrote them into the workflows; the scanner images and the `postgres` service image in `ci.yml` are not read by Dependabot and are refreshed by hand with this table.
 
 | Item | Pin (tag) | Why | Licence | Verified on | Source |
 | --- | --- | --- | --- | --- | --- |
@@ -251,14 +251,17 @@ GitHub Actions are referenced by full commit SHA with the tag in a comment; Depe
 | `actions/cache` | v6.1.0 | Dependency caches | MIT | 2026-10-19 | [releases](https://github.com/actions/cache/releases) |
 | `actions/upload-artifact`, `actions/download-artifact` | v7.0.2, v8.0.2 | Test reports and build output | MIT | 2026-10-19 | [releases](https://github.com/actions/upload-artifact/releases) |
 | `docker/setup-buildx-action`, `docker/login-action`, `docker/metadata-action`, `docker/build-push-action` | v4.4.1, v4.6.0, v6.2.0, v7.4.0 | Build and push the `rms-api` image to GHCR (DR-83) | Apache-2.0 | 2026-10-19 | [build-push-action](https://github.com/docker/build-push-action/releases) |
-| `github/codeql-action` | v4.39.0 | CodeQL on pull requests (DR-08) | MIT | 2026-10-19 | [tags](https://github.com/github/codeql-action/tags) |
-| `aquasecurity/trivy-action` and Trivy | v0.36.0 and Trivy **0.76.0** (2026-10-14) | Image and filesystem scan (DR-08) | Apache-2.0 | 2026-10-19 | [trivy-action](https://github.com/aquasecurity/trivy-action/tags), [Trivy](https://github.com/aquasecurity/trivy/releases) |
-| `gitleaks/gitleaks-action` and gitleaks | v3.0.0 and gitleaks **8.30.1** (2026-03-21) | Secret scan (DR-08). The npm package named `gitleaks` is an unrelated 2020 package and is not used | MIT | 2026-10-19 | [action](https://github.com/gitleaks/gitleaks-action/releases), [gitleaks](https://github.com/gitleaks/gitleaks/releases) |
+| ~~`github/codeql-action`~~ | not used (DR-238) | CodeQL needs GitHub Code Security on a private repository; Semgrep CE replaces it (row below) | MIT | 2026-10-22 | [docs](https://docs.github.com/en/code-security/how-tos/scan-code-for-vulnerabilities/troubleshooting/troubleshooting-analysis-errors/cannot-enable-codeql-in-a-private-repository) |
+| Semgrep CE (image `semgrep/semgrep`) | **1.182.1** (2026-10-22) | Static analysis of the `security` stage with `p/default` and `.semgrep/rules.yml` (DR-238) | LGPL-2.1 (engine); registry rules under the Semgrep Rules License | 2026-10-22 | [PyPI](https://pypi.org/project/semgrep/), [Docker Hub](https://hub.docker.com/r/semgrep/semgrep/tags) |
+| Trivy (image `aquasec/trivy`) | **0.76.1** (2026-10-21; was 0.76.0) | Filesystem vulnerabilities and licences, image scan; run with `docker run`, `aquasecurity/trivy-action` is not used (DR-240) | Apache-2.0 | 2026-10-22 | [Trivy](https://github.com/aquasecurity/trivy/releases) |
+| gitleaks (image `ghcr.io/gitleaks/gitleaks`) | **8.30.1** (2026-03-21) | Secret scan (DR-08); run with `docker run`, `gitleaks/gitleaks-action` is not used (DR-240). The npm package named `gitleaks` is an unrelated 2020 package and is not used | MIT | 2026-10-22 | [gitleaks](https://github.com/gitleaks/gitleaks/releases) |
 | `cloudflare/wrangler-action` | v4.1.3 (2026-09-24), with `wrangler` 4.151.1 | Pages deploy (DR-83) | MIT OR Apache-2.0 | 2026-10-19 | [releases](https://github.com/cloudflare/wrangler-action/releases) |
 | `expo/expo-github-action` | 9.0.0 (2026-06-02), with `eas-cli` 25.2.0 | EAS Build and Update from CI (DR-69, DR-83) | MIT | 2026-10-19 | [releases](https://github.com/expo/expo-github-action/releases) |
 | `dorny/paths-filter` | v4.0.3 | Path gating for the web and mobile jobs (DR-08) | MIT | 2026-10-19 | [releases](https://github.com/dorny/paths-filter/releases) |
-| `actions/dependency-review-action` | v5.0.0 | New vulnerable or disallowed-licence dependencies on pull requests | MIT | 2026-10-19 | [releases](https://github.com/actions/dependency-review-action/releases) |
-| Dependabot | Weekly, grouped minor and patch; ecosystems `bun` (npm), `github-actions`, `docker` | DR-01; a major upgrade and a pre-release need a DR | n/a | n/a | [DR-01](../00-decision-register.md) |
+| ~~`actions/dependency-review-action`~~ | not used (DR-238) | Needs GitHub Code Security on a private repository; the licence rule is Trivy's licence scanner, new vulnerabilities are Trivy filesystem | MIT | 2026-10-22 | [docs](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review) |
+| Dockerfile frontend | `docker/dockerfile:1.28.0` | `COPY --parents` (1.20+) in `docker/Dockerfile.api` (DR-240) | Apache-2.0 | 2026-10-22 | [docs](https://docs.docker.com/reference/dockerfile/#copy---parents) |
+| actionlint (image `rhysd/actionlint`) | 1.7.12 | Lints the workflow files; used by hand when editing them | MIT | 2026-10-22 | [releases](https://github.com/rhysd/actionlint/releases) |
+| Dependabot | Weekly, grouped minor and patch; ecosystems `bun`, `github-actions`, `docker`, `docker-compose`; the file is generated by `bun run dependabot:sync` (DR-240) | DR-01; a major upgrade and a pre-release need a DR | n/a | n/a | [DR-01](../00-decision-register.md) |
 
 ## 10. Compatibility table (filled in by P1-01, P1-02 and the tasks that verify one part)
 
