@@ -1,0 +1,66 @@
+import type { StaffContext } from '@rms/shared-types'
+import type { GatewayConfigDto, GatewayDriver, GatewayProvider, MissingTerm } from '../../contracts'
+import { GATEWAY_DRIVERS } from '../../domain/gateway-config'
+import type { GatewayConfigRepository } from '../../domain/gateway-config-repository'
+import type { TermsRepository } from '../../domain/terms-repository'
+import { assertAdmin } from '../assert-admin'
+import type { BuildingDocument, BuildingDocumentLoader } from '../building-document'
+import type { BuildingDirectory } from '../directory'
+import type { GatewayConfigReader, GatewayView } from '../gateway-config-reader'
+import { scopeOf } from '../scope-of'
+
+export interface BuildingQueriesDeps {
+  documents: BuildingDocumentLoader
+  gateways: GatewayConfigRepository
+  terms: TermsRepository
+  directory: BuildingDirectory
+  reader: GatewayConfigReader
+}
+
+/** The reads of the building: settings, gateway configuration and terms. No state change, no transaction, no rule of its own (DOC-12 §4.5 rule 3). */
+export class BuildingQueries {
+  constructor(private readonly deps: BuildingQueriesDeps) {}
+
+  /** `GET /staff/settings` (DOC-36 §4): the building row and the settings in one document, with its `ETag`. */
+  async settings(staff: StaffContext): Promise<BuildingDocument> {
+    assertAdmin(staff)
+    return this.deps.documents.load(staff.buildingId)
+  }
+
+  /** `GET /staff/gateway`: the active configurations with masked secrets and the drivers this building may use (DOC-36 §7.1). */
+  async gatewayView(staff: StaffContext) {
+    assertAdmin(staff)
+    const { gateways, directory, reader } = this.deps
+    const isDemo = await directory.isDemo(staff.buildingId)
+    const configs: GatewayView[] = []
+    for (const provider of ['payos', 'vietqr'] as const) {
+      const row = await gateways.findActive(staff.scope, provider)
+      if (row) configs.push(await reader.view(row))
+    }
+    const drivers = Object.fromEntries(
+      (Object.keys(GATEWAY_DRIVERS) as GatewayDriver[]).map((driver) => [
+        driver,
+        { fields: GATEWAY_DRIVERS[driver].fields, allowed: driver !== 'fake' || isDemo },
+      ]),
+    ) as Record<GatewayDriver, { fields: readonly string[]; allowed: boolean }>
+    return { configs, drivers }
+  }
+
+  /** `BuildingApi.getGatewayConfig` (DOC-36 §3.1): the active row of `(building, provider)`, decrypted, from a short cache unless it takes the lock. */
+  gatewayConfig(
+    buildingId: string,
+    provider: GatewayProvider,
+    opts: { lock?: 'share' } = {},
+  ): Promise<GatewayConfigDto | null> {
+    return this.deps.reader.config(buildingId, provider, opts)
+  }
+
+  /**
+   * The gate of DOC-35 §9.2: the latest version of each kind that the account has not accepted. No cache: the very next request
+   * after a publish must be refused, and two API containers cannot share an invalidation (DR-125).
+   */
+  async missingTerms(accountId: string, buildingId: string): Promise<MissingTerm[]> {
+    const rows = await this.deps.terms.missing(scopeOf(buildingId), accountId)
+    return rows.map((row) => ({ kind: row.kind, version: row.version, versionId: row.id }))
+  }
+}

@@ -69,7 +69,7 @@ describe('gateway configuration (DOC-36 §7)', () => {
       ...SECRETS,
       clientId: 'short',
     })
-    const view = await h.building.useCases.viewGatewayConfig.execute(admin)
+    const view = await h.building.queries.gatewayView(admin)
     expect(view.configs).toHaveLength(1)
     expect(JSON.stringify(view)).not.toContain('api-key-abcdef')
     expect(view.drivers.fake).toEqual({ fields: [], allowed: false })
@@ -245,16 +245,14 @@ describe('gateway configuration (DOC-36 §7)', () => {
       input({ driver: 'fake', secrets: {} }),
     )
     expect(saved.config).toMatchObject({ driver: 'fake', secrets: {} })
-    expect(
-      (await h.building.useCases.viewGatewayConfig.execute(demoAdmin)).drivers.fake.allowed,
-    ).toBe(true)
+    expect((await h.building.queries.gatewayView(demoAdmin)).drivers.fake.allowed).toBe(true)
   })
 
   test('a Manager, Technician or Guard cannot read or change the gateway', async () => {
     for (const role of ['manager', 'technician', 'guard'] as const) {
-      await expect(
-        h.building.useCases.viewGatewayConfig.execute(h.staff(role)),
-      ).rejects.toBeInstanceOf(ForbiddenError)
+      await expect(h.building.queries.gatewayView(h.staff(role))).rejects.toBeInstanceOf(
+        ForbiddenError,
+      )
       await expect(
         h.building.useCases.saveGatewayConfig.execute(h.staff(role), input()),
       ).rejects.toBeInstanceOf(ForbiddenError)

@@ -14,6 +14,10 @@ import type { Node, Ts } from './typescript-api'
  *   repository-location  An interface named `*Repository` is declared outside `domain/`.
  *   no-service-class     A class named `*Service` or `*Manager` in `application/`.
  *   execute-location     A class in `application/` outside `use-cases/` has a method named `execute`.
+ *   query-placement      A read is a use case: a file of `application/use-cases/` named `get-`, `list-`, `view-`, `find-`,
+ *                        `search-` or `count-`, or a file of `application/queries/` that is neither `<name>-api-impl.ts` nor
+ *                        `<name>-queries.ts`. Reads go in a query service (`<Name>Queries`, several methods); only commands
+ *                        are use cases.
  *   module-files         A module has no `<name>.module.ts` or no `install.ts`.
  */
 
@@ -26,6 +30,7 @@ export interface LayoutViolation {
     | 'repository-location'
     | 'no-service-class'
     | 'execute-location'
+    | 'query-placement'
     | 'module-files'
   message: string
 }
@@ -39,6 +44,8 @@ function walk(dir: string, out: string[] = []): string[] {
   }
   return out
 }
+
+const QUERY_PREFIX = /^(get|list|view|find|search|count)-/
 
 const kebab = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 
@@ -134,6 +141,26 @@ export function lintLayout(ts: Ts, root: string): LayoutViolation[] {
             add(cls, 'use-case-shape', `the file name must be ${kebab(cls.name.text)}.ts`)
         }
       }
+
+      if (inside.startsWith('application/use-cases/')) {
+        const base = inside.split('/').at(-1) ?? ''
+        if (QUERY_PREFIX.test(base))
+          violations.push({
+            file: rel(path),
+            line: 1,
+            rule: 'query-placement',
+            message: `${base} reads and changes nothing: put it as a method of a query service in application/queries/<name>-queries.ts (DOC-12 §4.5 rule 3)`,
+          })
+      }
+
+      if (inside.startsWith('application/queries/') && !/-(api-impl|queries)\.ts$/.test(inside))
+        violations.push({
+          file: rel(path),
+          line: 1,
+          rule: 'query-placement',
+          message:
+            'application/queries/ holds <name>-api-impl.ts and <name>-queries.ts only (DOC-12 §4.5 rule 3)',
+        })
 
       if (inside.startsWith('application/handlers/')) {
         const exported = classes.filter((c) => isExported(ts, c))

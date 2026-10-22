@@ -106,6 +106,27 @@ describe('the layout lint (DOC-12 §4.5)', () => {
     expect(rules(root)).toEqual(['execute-location'])
   })
 
+  test('query-placement: a read as a use case', () => {
+    const root = tree({
+      'application/use-cases/get-storage-usage.ts': `export class GetStorageUsage { execute() {} }`,
+    })
+    expect(rules(root)).toEqual(['query-placement'])
+  })
+
+  test('query-placement: a file in queries/ that is not a contract implementation or a query service', () => {
+    const root = tree({ 'application/queries/storage.ts': 'export class Storage {}' })
+    expect(rules(root)).toEqual(['query-placement'])
+  })
+
+  test('a query service in queries/ passes', () => {
+    const root = tree({
+      'application/queries/file-queries.ts':
+        'export class FileQueries { usage() {} signedUrl() {} }',
+      'application/queries/files-api-impl.ts': 'export class FilesApiImpl {}',
+    })
+    expect(lintLayout(ts, root)).toEqual([])
+  })
+
   test('module-files: no module file and no install', () => {
     const root = tree({ 'index.ts': 'export {}' }, false)
     expect(lintLayout(ts, root).map((v) => v.message)).toEqual([

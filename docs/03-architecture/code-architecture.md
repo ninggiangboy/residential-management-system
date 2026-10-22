@@ -102,7 +102,7 @@ flowchart LR
 | Layer | Contains | May import | Must not know |
 | --- | --- | --- | --- |
 | `domain` | Aggregates with behavior (every entity that has a status or an invariant), value objects, state transition rules, domain errors, repository **interfaces** (`<aggregate>-repository.ts`, DR-254) | `@core/kernel`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
-| `application` | Use cases in `use-cases/` (one class and one `execute` per file; commands and queries alike), the contract implementation in `queries/<name>-api-impl.ts`, integration-event handlers in `handlers/` (one per file), ports for everything outside (`Clock`, `OutboxWriter`, `ObjectStore`, gateways) in `ports.ts`, the audit and idempotency wrappers (§8), DTO mappers (DR-254) | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
+| `application` | Commands as use cases in `use-cases/` (one class and one `execute` per file), reads in one or a few query services in `queries/<name>-queries.ts` (one class, one method per read), the contract implementation in `queries/<name>-api-impl.ts`, integration-event handlers in `handlers/` (one per file), ports for everything outside (`Clock`, `OutboxWriter`, `ObjectStore`, gateways) in `ports.ts`, the audit and idempotency wrappers (§8), DTO mappers (DR-254) | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
 | `infrastructure` | Drizzle repositories and row mappers, driver adapters (payOS, Expo, SMS, SMTP, R2), `DrizzleOutboxWriter`, `DrizzleInboxGuard` | `application`, `domain`, `@core/*`, the npm drivers | `presentation` |
 | `presentation` | Elysia route plugins, TypeBox request and response schemas, OpenAPI detail, the audience declaration of each route (§5.3) | `application`, `domain` types for mapping, `@core/http`, `@core/auth` | `infrastructure` (it receives use cases, never repositories) |
 | `contracts` | Interfaces with plain DTOs, event names and payload types, pure literals and pure functions without imports | Nothing from its own module, no `@core/*`; types only from `@rms/shared-types` | Everything else |
@@ -142,9 +142,9 @@ modules/finance/
     │   ├── charge-repository.ts  fee-batch-repository.ts  …            # repository interfaces, one per aggregate
     │   └── errors.ts                 # ChargeChangedError … (§12)
     ├── application/
-    │   ├── use-cases/                # publish-batch.ts, record-manual-payment.ts, void-charge.ts, list-debts.ts …
-    │   │                             # one class, one execute, per file; commands and queries alike
-    │   ├── queries/                  # finance-api-impl.ts: the contract implementation, no rule of its own
+    │   ├── use-cases/                # publish-batch.ts, record-manual-payment.ts, void-charge.ts …
+    │   │                             # commands only: one class, one execute, per file
+    │   ├── queries/                  # debt-queries.ts, report-queries.ts: the reads, a few classes with one method per read; finance-api-impl.ts: the contract implementation. No rule of its own
     │   ├── handlers/                 # one integration-event handler per file (inbox-guarded)
     │   ├── ports.ts                  # payment-gateway, receipt-renderer: ports to the outside only (a ports/ folder from the second file)
     │   └── settle.ts                 # the one settlement function (DOC-23)
@@ -230,9 +230,9 @@ The tree of §4.1 is the shape; these rules make it binding. `bun run check:layo
 
 | # | Rule | Check |
 | --- | --- | --- |
-| 1 | A use case is `application/use-cases/<verb>-<noun>.ts`: one exported class, ports in the constructor, one public method `execute`; the file name is the kebab case of the class | ✔ |
+| 1 | A command is a use case, `application/use-cases/<verb>-<noun>.ts`: one exported class, ports in the constructor, one public method `execute`; the file name is the kebab case of the class | ✔ |
 | 2 | A handler is `application/handlers/<name>.ts`: one class that implements `IntegrationEventHandler` | ✔ |
-| 3 | `application/queries/` holds only `<name>-api-impl.ts`, the implementation of the module's contract; it calls use cases or repositories and has no rule of its own | review |
+| 3 | A read is not a use case. Reads are methods of a query service, `application/queries/<name>-queries.ts` (`BuildingQueries`, `FileQueries`: one class per area, a few per module, a method per read, no `execute`, no transaction, no state change). `queries/` holds that and `<name>-api-impl.ts`, the implementation of the module's contract; both call repositories or helpers and have no rule of its own. A file of `use-cases/` named `get-`, `list-`, `view-`, `find-`, `search-` or `count-` is a read in the wrong place | ✔ (the names and the folder) |
 | 4 | No class named `*Service` or `*Manager` in `application/`; no `execute` outside `use-cases/` | ✔ |
 | 5 | A repository interface (`*Repository`) lives in `domain/<aggregate>-repository.ts`; `application/ports.ts` holds ports to the outside only | ✔ |
 | 6 | An entity with a status or an invariant is an aggregate in `domain/` with methods that change its state and throw a domain error; it may extend `AggregateRoot`. A rule without identity (magic bytes, purpose limits, settings validation) stays a function or a value object | review |
@@ -241,7 +241,7 @@ The tree of §4.1 is the shape; these rules make it binding. `bun run check:layo
 
 A module task is **done** when: the layout rules hold; every endpoint of the task's acceptance has a route in `presentation/` with its `audience` (§5.3), or the task names the routes still open and the task that closes them (the use cases already take the actor as their first argument, §8.3); the tests of the task pass; the documents of §14 item 16 are updated.
 
-*As built (P1-07, P1-08), revised by DR-254:* `building` was first delivered as four service classes (`FilesService`, `GatewayService`, `TermsService`, `BuildingSettingsService`), a handler file with two classes, the contract implementation as an object literal in `index.ts` and every repository interface in `application/ports.ts`; `audit` held the contract implementation in `audit-writer.ts`. Both were brought to the layout above in the same change, with the same tests. The routes of `building` stay open until the `staff` guard of P1-10; the demo reset stays with P1-21.
+*As built (P1-07, P1-08), revised by DR-254 and by its amendment of 2026-10-22 (reads are query services, not use cases):* `building` was first delivered as four service classes (`FilesService`, `GatewayService`, `TermsService`, `BuildingSettingsService`), a handler file with two classes, the contract implementation as an object literal in `index.ts` and every repository interface in `application/ports.ts`; `audit` held the contract implementation in `audit-writer.ts`. Both were brought to the layout above in the same change, with the same tests. `building` has two query services, `BuildingQueries` (settings, gateway view and configuration, missing terms) and `FileQueries` (usage, signed URL); `GetBuildingSettings`, `ViewGatewayConfig`, `GetGatewayConfig`, `ListMissingTerms`, `GetStorageUsage` and `SignFileUrl` were folded into them. The routes of `building` stay open until the `staff` guard of P1-10; the demo reset stays with P1-21.
 
 ## 5. The composition root
 
@@ -459,7 +459,7 @@ module.exports = {
 
 ### 6.4 `check:layout` (DR-254)
 
-Import rules cannot see the shape of a file, so `scripts/check-layout.ts` reads the sources of `modules/*/src` with the TypeScript compiler API (the TypeScript 6 of `tools/depcruise`, like `check:scope`) and fails on: a file of `application/use-cases/` that does not export exactly one class with one public `execute` and a matching file name; a file of `application/handlers/` that does not export exactly one class with `name`, `eventType` and `handle`; an interface named `*Repository` outside `domain/`; a class named `*Service` or `*Manager` in `application/`; an `execute` method outside `use-cases/`; a module without `<name>.module.ts` and `install.ts`. `tools/layout-lint/` holds one fixture per rule, like `check:arch:fixtures`. The check is part of `bun run check`.
+Import rules cannot see the shape of a file, so `scripts/check-layout.ts` reads the sources of `modules/*/src` with the TypeScript compiler API (the TypeScript 6 of `tools/depcruise`, like `check:scope`) and fails on: a file of `application/use-cases/` that does not export exactly one class with one public `execute` and a matching file name; a file of `application/handlers/` that does not export exactly one class with `name`, `eventType` and `handle`; a read as a use case (a `use-cases/` file named `get-`, `list-`, `view-`, `find-`, `search-` or `count-`) or a file of `application/queries/` that is neither `*-queries.ts` nor `*-api-impl.ts`; an interface named `*Repository` outside `domain/`; a class named `*Service` or `*Manager` in `application/`; an `execute` method outside `use-cases/`; a module without `<name>.module.ts` and `install.ts`. `tools/layout-lint/` holds one fixture per rule, like `check:arch:fixtures`. The check is part of `bun run check`.
 
 ## 7. `BuildingScope` repositories (DR-12)
 

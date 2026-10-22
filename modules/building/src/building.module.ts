@@ -16,25 +16,21 @@ import { DeleteFileObjectHandler } from './application/handlers/delete-file-obje
 import { MakeThumbnailHandler } from './application/handlers/make-thumbnail'
 import type { Thumbnailer, UsageReporter } from './application/ports'
 import { BuildingApiImpl } from './application/queries/building-api-impl'
+import { BuildingQueries } from './application/queries/building-queries'
+import { FileQueries } from './application/queries/file-queries'
 import { FilesApiImpl } from './application/queries/files-api-impl'
 import { AcceptTerms } from './application/use-cases/accept-terms'
 import { AttachFile } from './application/use-cases/attach-file'
 import { ExpireOrphanUploads } from './application/use-cases/expire-orphan-uploads'
-import { GetBuildingSettings } from './application/use-cases/get-building-settings'
-import { GetGatewayConfig } from './application/use-cases/get-gateway-config'
-import { GetStorageUsage } from './application/use-cases/get-storage-usage'
-import { ListMissingTerms } from './application/use-cases/list-missing-terms'
 import { PublishTerms } from './application/use-cases/publish-terms'
 import { PurgeDeletedFiles } from './application/use-cases/purge-deleted-files'
 import { RegisterFile } from './application/use-cases/register-file'
 import { RemoveFile } from './application/use-cases/remove-file'
 import { ReportStorageQuota } from './application/use-cases/report-storage-quota'
 import { SaveGatewayConfig } from './application/use-cases/save-gateway-config'
-import { SignFileUrl } from './application/use-cases/sign-file-url'
 import { StoreGeneratedFile } from './application/use-cases/store-generated-file'
 import { UpdateBuildingSettings } from './application/use-cases/update-building-settings'
 import { VerifyFile } from './application/use-cases/verify-file'
-import { ViewGatewayConfig } from './application/use-cases/view-gateway-config'
 import type {
   ActiveIntentProbe,
   BuildingApi,
@@ -85,12 +81,8 @@ export interface BuildingModuleDeps extends BuildingDeps {
 
 /** What the staff and resident routes call (the routes come with the `staff` guard, P1-10; DOC-12 §4.5). */
 export interface BuildingUseCases {
-  /** `GET /staff/settings` (DOC-36 §4). */
-  getBuildingSettings: GetBuildingSettings
   /** `PATCH /staff/settings`. */
   updateBuildingSettings: UpdateBuildingSettings
-  /** `GET /staff/gateway` (DOC-36 §7.1). */
-  viewGatewayConfig: ViewGatewayConfig
   /** `PUT /staff/gateway` (DOC-36 §7.3). */
   saveGatewayConfig: SaveGatewayConfig
   /** `POST /staff/terms` (DOC-35 §9). */
@@ -103,6 +95,8 @@ export interface BuildingModule extends AppModule<'building'> {
   readonly api: BuildingApi
   readonly features: FeatureApi
   readonly files: FilesApi
+  /** The reads behind `GET /staff/settings` and `GET /staff/gateway` (DOC-36 §4, §7.1). */
+  readonly queries: BuildingQueries
   readonly useCases: BuildingUseCases
 }
 
@@ -155,22 +149,23 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
     clock,
     config: deps.files,
   })
-  const files = new FilesApiImpl({
-    registerFile,
-    verifyFile,
-    attachFile: new AttachFile({ files: fileRows, clock, transaction: database }),
-    removeFile: new RemoveFile({ files: fileRows, outbox, clock, transaction: database }),
-    getStorageUsage: new GetStorageUsage({ files: fileRows, directory }),
-    signFileUrl: new SignFileUrl({ files: fileRows, store, config: deps.files }),
-    storeGeneratedFile: new StoreGeneratedFile({
-      files: fileRows,
-      store,
-      uow: database,
-      clock,
-      ids,
-      config: deps.files,
-    }),
-  })
+  const files = new FilesApiImpl(
+    {
+      registerFile,
+      verifyFile,
+      attachFile: new AttachFile({ files: fileRows, clock, transaction: database }),
+      removeFile: new RemoveFile({ files: fileRows, outbox, clock, transaction: database }),
+      storeGeneratedFile: new StoreGeneratedFile({
+        files: fileRows,
+        store,
+        uow: database,
+        clock,
+        ids,
+        config: deps.files,
+      }),
+    },
+    new FileQueries({ files: fileRows, directory, store, config: deps.files }),
+  )
 
   // Gateway configuration (DOC-36 §7)
   const reader = new GatewayConfigReader({
@@ -179,16 +174,13 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
     clock,
     cacheSeconds: deps.settingsCacheSeconds,
   })
-  const getGatewayConfig = new GetGatewayConfig(reader)
-
-  // Terms (DOC-35 §9)
-  const listMissingTerms = new ListMissingTerms(terms)
 
   // Settings (DOC-36 §4)
   const documents = new BuildingDocumentLoader({ buildings, settings, filesApi: files })
 
+  const queries = new BuildingQueries({ documents, gateways, terms, directory, reader })
+
   const useCases: BuildingUseCases = {
-    getBuildingSettings: new GetBuildingSettings(documents),
     updateBuildingSettings: new UpdateBuildingSettings({
       uow: database,
       buildings,
@@ -199,7 +191,6 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       documents,
       audited: deps.audited,
     }),
-    viewGatewayConfig: new ViewGatewayConfig({ gateways, directory, reader }),
     saveGatewayConfig: new SaveGatewayConfig({
       uow: database,
       gateways,
@@ -238,9 +229,10 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
 
   return {
     name: 'building',
-    api: new BuildingApiImpl({ directory, getGatewayConfig, listMissingTerms }),
+    api: new BuildingApiImpl({ directory, queries }),
     features: { get: async () => ({ ...deps.features }) },
     files,
+    queries,
     useCases,
     handlers,
     outbox: { name: 'building', table: buildingOutbox, inboxTable: buildingInbox },
