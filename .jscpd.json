@@ -16,6 +16,8 @@
     "**/package.json",
     "**/*.md",
     "**/app.json",
-    "**/tsconfig.json"
+    "**/tsconfig.json",
+    "**/packages/design-tokens/generated/**",
+    "**/*-OFL.txt"
   ]
 }

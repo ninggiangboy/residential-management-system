@@ -15,6 +15,7 @@
       "!**/apps/cms-web/src/components/ui",
       "!**/tools/arch-fixtures",
       "!**/.expo",
+      "!**/packages/design-tokens/generated",
       "!**/docs"
     ]
   },
@@ -122,6 +123,10 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**", "!packages/design-tokens/**"],
+      "plugins": ["./tools/biome/no-color-literal.grit"]
     }
   ]
 }

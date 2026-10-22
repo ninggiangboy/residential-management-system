@@ -1,0 +1,150 @@
+/* Generated from tokens.json (Hiên v1) by `bun run tokens:build`. Do not edit. */
+/* Only token utilities exist: the default palette, shadows, radii, type sizes and fonts are removed. */
+
+@theme inline {
+  --color-*: initial;
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-fill: var(--fill);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-teal: var(--teal);
+  --color-teal-pressed: var(--teal-pressed);
+  --color-on-teal: var(--on-teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-on-teal-soft: var(--on-teal-soft);
+  --color-lamp: var(--lamp);
+  --color-on-lamp: var(--on-lamp);
+  --color-lamp-soft: var(--lamp-soft);
+  --color-on-lamp-soft: var(--on-lamp-soft);
+  --color-plate: var(--plate);
+  --color-on-plate: var(--on-plate);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger-soft: var(--on-danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-on-info-soft: var(--on-info-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-on-success-soft: var(--on-success-soft);
+  --color-glow: var(--glow);
+  --color-hero-from: var(--hero-from);
+  --color-hero-to: var(--hero-to);
+  --color-on-hero: var(--on-hero);
+  --color-on-hero-muted: var(--on-hero-muted);
+  --color-gold-from: var(--gold-from);
+  --color-gold-to: var(--gold-to);
+  --color-on-gold: var(--on-gold);
+  --color-coral-soft: var(--coral-soft);
+  --color-on-coral-soft: var(--on-coral-soft);
+  --color-violet-soft: var(--violet-soft);
+  --color-on-violet-soft: var(--on-violet-soft);
+  --color-focus: var(--focus);
+  --color-scrim: var(--scrim);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+}
+
+@theme {
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --radius-*: initial;
+  --radius-plate: 8px;
+  --radius-control: 16px;
+  --radius-card: 24px;
+  --radius-sheet: 32px;
+  --radius-full: 999px;
+  --font-*: initial;
+  --font-sans: "Geologica", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-plate: "Big Shoulders", "Geologica", system-ui, sans-serif;
+  --text-*: initial;
+  --text-display: 34px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-title-1: 26px;
+  --text-title-1--line-height: 32px;
+  --text-title-1--font-weight: 600;
+  --text-title-1--letter-spacing: -0.015em;
+  --text-title-2: 20px;
+  --text-title-2--line-height: 28px;
+  --text-title-2--font-weight: 600;
+  --text-title-2--letter-spacing: -0.01em;
+  --text-title-3: 17px;
+  --text-title-3--line-height: 24px;
+  --text-title-3--font-weight: 600;
+  --text-title-3--letter-spacing: 0em;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-body--letter-spacing: 0em;
+  --text-body-strong: 16px;
+  --text-body-strong--line-height: 24px;
+  --text-body-strong--font-weight: 600;
+  --text-body-strong--letter-spacing: 0em;
+  --text-label: 15px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 600;
+  --text-label--letter-spacing: 0em;
+  --text-secondary: 14px;
+  --text-secondary--line-height: 20px;
+  --text-secondary--font-weight: 400;
+  --text-secondary--letter-spacing: 0em;
+  --text-caption: 13px;
+  --text-caption--line-height: 18px;
+  --text-caption--font-weight: 500;
+  --text-caption--letter-spacing: 0em;
+  --text-micro: 12px;
+  --text-micro--line-height: 16px;
+  --text-micro--font-weight: 600;
+  --text-micro--letter-spacing: 0em;
+  --text-plate-xl: 44px;
+  --text-plate-xl--line-height: 44px;
+  --text-plate-xl--font-weight: 800;
+  --text-plate-xl--letter-spacing: 0.01em;
+  --text-plate-lg: 28px;
+  --text-plate-lg--line-height: 28px;
+  --text-plate-lg--font-weight: 700;
+  --text-plate-lg--letter-spacing: 0.02em;
+  --text-plate-md: 20px;
+  --text-plate-md--line-height: 20px;
+  --text-plate-md--font-weight: 700;
+  --text-plate-md--letter-spacing: 0.03em;
+  --text-plate-sm: 15px;
+  --text-plate-sm--line-height: 16px;
+  --text-plate-sm--font-weight: 700;
+  --text-plate-sm--letter-spacing: 0.04em;
+  --spacing-tap-min: 48px;
+  --spacing-control-lg: 52px;
+  --spacing-control-md: 44px;
+  --spacing-control-sm: 36px;
+  --spacing-icon-sm: 20px;
+  --spacing-icon-md: 24px;
+  --spacing-icon-lg: 32px;
+  --spacing-gutter: 20px;
+  --spacing-topbar-height: 56px;
+  --spacing-tabbar-height: 64px;
+}
+
+/* Shadows change with the theme, so they read the variables of tokens.css directly. */
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+@utility shadow-bar {
+  box-shadow: var(--shadow-bar);
+}
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
+}
+@utility shadow-sheet {
+  box-shadow: var(--shadow-sheet);
+}

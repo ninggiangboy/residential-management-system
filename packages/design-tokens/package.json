@@ -1,0 +1,33 @@
+{
+  "name": "@rms/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./native": {
+      "bun": "./generated/native.ts",
+      "types": "./generated/native.ts",
+      "default": "./generated/native.ts"
+    },
+    "./tokens.css": "./generated/tokens.css",
+    "./theme.css": "./generated/theme.css",
+    "./fonts.css": "./generated/fonts.css",
+    "./tailwind-preset": "./generated/tailwind-preset.cjs",
+    "./status.json": "./status.json",
+    "./fonts/*": "./fonts/*"
+  },
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "devDependencies": {
+    "@rms/i18n-catalog": "workspace:*",
+    "@rms/shared-types": "workspace:*"
+  }
+}

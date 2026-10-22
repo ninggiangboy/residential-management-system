@@ -1,0 +1,583 @@
+{
+  "$comment": "Status presentation (DR-183, DOC-54 §6): tone and icon per domain value and audience; labels are keys of @rms/i18n-catalog (DOC-68 §5). `when` names the derived condition of a value shown in more than one way. Test DS-04.",
+  "version": 1,
+  "rows": [
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "due_later",
+      "audience": "resident",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.charge.upcoming"
+    },
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "due_soon",
+      "audience": "resident",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.charge.due",
+      "detail": "status.charge.due_in"
+    },
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "overdue",
+      "audience": "resident",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.charge.overdue"
+    },
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "due_later",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.charge-staff.unpaid"
+    },
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "due_soon",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.charge-staff.due_soon"
+    },
+    {
+      "entity": "charge",
+      "value": "open",
+      "when": "overdue",
+      "audience": "staff",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.charge-staff.overdue_days"
+    },
+    {
+      "entity": "charge",
+      "value": "paid",
+      "audience": "any",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.charge.paid"
+    },
+    {
+      "entity": "charge",
+      "value": "void",
+      "audience": "any",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.charge.void"
+    },
+    {
+      "entity": "charge",
+      "value": "draft",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.charge.draft"
+    },
+    {
+      "entity": "fee_batch",
+      "value": "draft",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.batch.draft"
+    },
+    {
+      "entity": "fee_batch",
+      "value": "published",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.batch.published"
+    },
+    {
+      "entity": "fee_batch",
+      "value": "recalled",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.batch.recalled"
+    },
+    {
+      "entity": "fee_batch",
+      "value": "closed",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.batch.closed"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "creating",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.payment-intent.creating"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "pending",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.payment-intent.pending"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "paid",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.payment-intent.paid"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "failed",
+      "audience": "staff",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.payment-intent.failed"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "expired",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.payment-intent.expired"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "cancelling",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.payment-intent.cancelling"
+    },
+    {
+      "entity": "payment_intent",
+      "value": "cancelled",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.payment-intent.cancelled"
+    },
+    {
+      "entity": "money_log",
+      "value": "to_review",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.money-log.to_review"
+    },
+    {
+      "entity": "money_log",
+      "value": "reviewed",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.money-log.reviewed"
+    },
+    {
+      "entity": "ticket",
+      "value": "submitted",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.ticket.submitted"
+    },
+    {
+      "entity": "ticket",
+      "value": "assigned",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.ticket.assigned"
+    },
+    {
+      "entity": "ticket",
+      "value": "accepted",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.ticket.accepted"
+    },
+    {
+      "entity": "ticket",
+      "value": "in_progress",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.ticket.in_progress"
+    },
+    {
+      "entity": "ticket",
+      "value": "on_hold",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.ticket.on_hold"
+    },
+    {
+      "entity": "ticket",
+      "value": "resolved",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.ticket.resolved"
+    },
+    {
+      "entity": "ticket",
+      "value": "closed",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.ticket.closed"
+    },
+    {
+      "entity": "ticket",
+      "value": "cancelled",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.ticket.cancelled"
+    },
+    {
+      "entity": "ticket",
+      "value": "submitted",
+      "audience": "resident",
+      "tone": "neutral",
+      "icon": "clock",
+      "label": "status.ticket-resident.sent"
+    },
+    {
+      "entity": "ticket",
+      "value": "assigned",
+      "audience": "resident",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.ticket-resident.received"
+    },
+    {
+      "entity": "ticket",
+      "value": "accepted",
+      "audience": "resident",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.ticket-resident.received"
+    },
+    {
+      "entity": "ticket",
+      "value": "in_progress",
+      "audience": "resident",
+      "tone": "info",
+      "icon": "wrench",
+      "label": "status.ticket-resident.processing"
+    },
+    {
+      "entity": "ticket",
+      "value": "on_hold",
+      "audience": "resident",
+      "tone": "info",
+      "icon": "wrench",
+      "label": "status.ticket-resident.processing"
+    },
+    {
+      "entity": "ticket",
+      "value": "resolved",
+      "audience": "resident",
+      "tone": "info",
+      "icon": "wrench",
+      "label": "status.ticket-resident.processing"
+    },
+    {
+      "entity": "ticket",
+      "value": "closed",
+      "audience": "resident",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.ticket-resident.done"
+    },
+    {
+      "entity": "ticket",
+      "value": "cancelled",
+      "audience": "resident",
+      "tone": "neutral",
+      "icon": "x-circle",
+      "label": "status.ticket-resident.cancelled"
+    },
+    {
+      "entity": "ticket_flag",
+      "value": "urgent",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.ticket.urgent"
+    },
+    {
+      "entity": "membership",
+      "value": "active",
+      "audience": "any",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.membership.active"
+    },
+    {
+      "entity": "membership",
+      "value": "locked",
+      "audience": "any",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.membership.locked"
+    },
+    {
+      "entity": "membership",
+      "value": "removed",
+      "audience": "any",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.membership.removed"
+    },
+    {
+      "entity": "resident_account",
+      "value": "active",
+      "when": "signed_in",
+      "audience": "any",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.resident-account.active"
+    },
+    {
+      "entity": "resident_account",
+      "value": "active",
+      "when": "never_signed_in",
+      "audience": "any",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.resident-account.never_signed_in"
+    },
+    {
+      "entity": "resident_account",
+      "value": "deletion_requested",
+      "audience": "any",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.resident-account.deletion_requested"
+    },
+    {
+      "entity": "resident_account",
+      "value": "deleted",
+      "audience": "any",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.resident-account.deleted"
+    },
+    {
+      "entity": "staff_account",
+      "value": "invited",
+      "audience": "any",
+      "tone": "warning",
+      "icon": "warning",
+      "label": "status.staff.invited"
+    },
+    {
+      "entity": "staff_account",
+      "value": "active",
+      "audience": "any",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.staff.active"
+    },
+    {
+      "entity": "staff_account",
+      "value": "locked",
+      "audience": "any",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.staff.locked"
+    },
+    {
+      "entity": "staff_account",
+      "value": "disabled",
+      "audience": "any",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.staff.disabled"
+    },
+    {
+      "entity": "vehicle",
+      "value": "pending",
+      "audience": "staff",
+      "tone": "warning",
+      "icon": "clock",
+      "label": "status.vehicle.pending"
+    },
+    {
+      "entity": "vehicle",
+      "value": "approved",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.vehicle.approved"
+    },
+    {
+      "entity": "vehicle",
+      "value": "rejected",
+      "audience": "staff",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.vehicle.rejected"
+    },
+    {
+      "entity": "vehicle",
+      "value": "retired",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.vehicle.retired"
+    },
+    {
+      "entity": "vehicle",
+      "value": "pending",
+      "audience": "resident",
+      "tone": "neutral",
+      "icon": "clock",
+      "label": "status.vehicle-resident.pending"
+    },
+    {
+      "entity": "vehicle",
+      "value": "approved",
+      "audience": "resident",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.vehicle-resident.approved"
+    },
+    {
+      "entity": "vehicle",
+      "value": "rejected",
+      "audience": "resident",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.vehicle-resident.rejected"
+    },
+    {
+      "entity": "vehicle",
+      "value": "retired",
+      "audience": "resident",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.vehicle-resident.retired"
+    },
+    {
+      "entity": "notice",
+      "value": "draft",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.notice.draft"
+    },
+    {
+      "entity": "notice",
+      "value": "scheduled",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.notice.scheduled"
+    },
+    {
+      "entity": "notice",
+      "value": "sending",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.notice.sending"
+    },
+    {
+      "entity": "notice",
+      "value": "sent",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.notice.sent"
+    },
+    {
+      "entity": "unit",
+      "value": "occupied",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.unit.occupied"
+    },
+    {
+      "entity": "unit",
+      "value": "rented",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.unit.rented"
+    },
+    {
+      "entity": "unit",
+      "value": "vacant",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.unit.vacant"
+    },
+    {
+      "entity": "import_job",
+      "value": "validated",
+      "audience": "staff",
+      "tone": "info",
+      "icon": "info",
+      "label": "status.import.validated"
+    },
+    {
+      "entity": "import_job",
+      "value": "committed",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.import.committed"
+    },
+    {
+      "entity": "import_job",
+      "value": "failed",
+      "audience": "staff",
+      "tone": "danger",
+      "icon": "x-circle",
+      "label": "status.import.failed"
+    },
+    {
+      "entity": "import_job",
+      "value": "expired",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.import.expired"
+    },
+    {
+      "entity": "import_preview",
+      "value": "errors",
+      "audience": "staff",
+      "tone": "danger",
+      "icon": null,
+      "label": "status.import.errors"
+    },
+    {
+      "entity": "setting",
+      "value": "in_effect",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.setting.in_effect"
+    }
+  ]
+}

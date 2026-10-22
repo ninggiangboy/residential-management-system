@@ -9,5 +9,5 @@ function Home() {
   useEffect(() => {
     api.api.v1.health.live.get().then(({ data }) => setStatus(data?.status ?? 'down'))
   }, [])
-  return <p className="p-4 text-lg font-medium">API: {status}</p>
+  return <p className="p-4 text-body-strong">API: {status}</p>
 }
