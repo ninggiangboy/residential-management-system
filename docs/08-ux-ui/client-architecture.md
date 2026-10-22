@@ -1,6 +1,6 @@
 # Client architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: catalog and design-tokens rows, DR-235, DR-236; DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
 > Depends on: original SDD §4.3, §18.2, [DR](../00-decision-register.md) (DR-04, 38, 52, 61, 63, 64, 69, 70, 71, 74, 75, 82, 94, 127, DR-226), [ADR-0004](../04-adr/0004-repository-layout-scopes-and-boundaries.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-12](../03-architecture/code-architecture.md) §2, §5.4, §6.1, §13, [DOC-11](../03-architecture/tech-stack-and-versions.md) §4, §6, [DOC-26](../06-design/identity-and-sessions.md) §3, [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-37](../06-design/files-and-uploads.md) §6, [DOC-42](../06-design/error-handling.md) §9–10, [DOC-50](../07-api/api-guidelines.md) §5, §8–11, [DOC-51](../07-api/api-endpoints.md), [DOC-73](../09-operations/mobile-release.md), [DOC-41](../06-design/configuration-reference.md) §15
 > Main readers: P1-09 (i18n, tokens), P1-16 (web shell), P1-17 (mobile shells), every later screen task, DOC-53, DOC-54, DOC-56…68, DOC-88
 
@@ -77,8 +77,8 @@ apps/resident-app/                                   # apps/staff-app/ has the s
 | --- | --- | --- | --- |
 | `@rms/shared-types` | `packages/shared-types` | Language codes, roles, member types, capability names, status literals, error codes, `Money`, time helpers, **`formatMoney`/`formatDate`** (DR-71) | everything |
 | `@rms/client-core` | `packages/client-core` | New (DR-188). Pure TypeScript, no DOM and no React Native: `createAuthenticatedFetch`, `parseApiError`, `classify`, `retryPlan`, `newIntent`, query-key helpers, `singleFlight`, the `TokenStore` and `Gates` interfaces | `@rms/mobile-core`, `@app/cms-web` |
-| `@rms/i18n-catalog` | `packages/i18n-catalog` | `vi` and `en` catalogs for UI, API error messages, notification templates, emails, PDFs (DR-71) | clients, API |
-| `@rms/design-tokens` | `packages/design-tokens` | Token JSON from the canvas; generates the Tailwind preset and the NativeWind theme (P1-09, DOC-54) | web, `ui-native` |
+| `@rms/i18n-catalog` | `packages/i18n-catalog` | `vi` and `en` catalogs for UI, API error messages, notification templates, emails, PDFs (DR-71): flat ICU maps, `createTranslator(lang)` with `t(key, params)` and `t.phrase()` (DR-235) | clients, API |
+| `@rms/design-tokens` | `packages/design-tokens` | Token JSON from the canvas; generates `tokens.css`, `theme.css` and `fonts.css` for the web, the NativeWind preset and `native.ts` for the apps; `status.json`, `ICON_NAMES` and the native font files (P1-09, DOC-54 §2.1, DR-236) | web, both apps, `ui-native` |
 | `@rms/ui-native` | `packages/ui-native` | The design-system components once for both Expo apps (DOC-54) | the two apps |
 | `@rms/mobile-core` | `packages/mobile-core` | Mobile adapters over `client-core`: secure-store token store, refresh transport, the Eden factory, unit context, push registration, netinfo and AppState wiring, upload helper, i18n setup, error reporter | the two apps |
 | `@core/i18n` | `packages/core-i18n` | ICU messages, typed catalogs, parity helpers (vendored, DR-02) | `i18n-catalog`, clients |
@@ -502,8 +502,8 @@ Deep link schemes are `rms-resident://` and `rms-staff://` (DR-69); the same rou
 
 | Point | Rule |
 | --- | --- |
-| Catalog | `@rms/i18n-catalog` (`vi`, `en`), typed through `@core/i18n`; ICU messages formatted by `intl-messageformat` 12.1.3 (DR-71). Both catalogs are bundled (small); no lazy load in phase 1 |
-| Parity | `bun run test` runs the catalog parity test: a key missing in one language or a different ICU placeholder fails the build (NFR-13, P1-09) |
+| Catalog | `@rms/i18n-catalog` (`vi`, `en`): one flat map of ICU messages per language, the key type taken from `en`, formatted by `intl-messageformat` 12.1.4 (DR-71, DR-235; the i18next-style catalog of `@core/i18n` is not used). Both catalogs are bundled (small); no lazy load in phase 1. `intl-messageformat` needs `Intl.PluralRules`: P1-17 checks it under Hermes on a device and adds `@formatjs/intl-pluralrules` only if it is missing |
+| Parity | `bun run test` runs the catalog parity test: a key missing in one language or a different ICU argument (name or kind) fails the build (NFR-13, P1-09, DOC-68 §1) |
 | Resolution on the client | signed in: `account.language` from E-13 / E-30. Before sign-in: the stored `rms.lang`, else the device language when it is `vi` or `en` (`expo-localization`, `navigator.language`), else `vi`. A change in `Account` calls E-14 / E-31 and switches the UI at once; the device language is only the first launch |
 | Server text | the fetcher sends `Accept-Language`; error text is rendered from the catalog by code (§6); content with `vi` and `en` versions falls back to `vi` when `en` is `null` |
 | Phone | `formatPhone(e164: string): string` in `@rms/shared-types` (DR-205): `+84912345678` → `0912 345 678` (spaces after the 4th and 7th digit), any other country code in international form. Display only: requests always carry E.164. A table test beside the money and date formatters |

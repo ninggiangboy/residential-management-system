@@ -1,6 +1,6 @@
 # UI states and copy
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-21 (DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
 > Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 
@@ -12,10 +12,10 @@ Quick pass (the Owner has the canvas): the Vietnamese text of the prototype is q
 
 | Point | Rule |
 | --- | --- |
-| Catalog | One package, `@rms/i18n-catalog`, with `vi` and `en` (DR-71). It feeds the three clients, the API (error messages, notification templates, emails) and the PDFs. A key exists in both languages or the build fails (NFR-13, P1-09) |
+| Catalog | One package, `@rms/i18n-catalog`, with `vi` and `en` (DR-71). It feeds the three clients, the API (error messages, notification templates, emails) and the PDFs. A key exists in both languages or the build fails (NFR-13, P1-09). Each language is one flat map of ICU messages by key (DR-235): the shared families of this document are in `src/shared/en.ts` (which defines the key type) and `src/shared/vi.ts`; a screen document's keys go in their own files. P1-09 generated the shared files from §3–§6; a change to a shared text changes both the catalog file and the row here |
 | Key shape | `<app>.<screen>.<element>` for a screen (DOC-56 §6.4). Shared keys have a fixed first segment: `error.`, `status.`, `common.`, `auth.`, `offline.`, `upgrade.`. This document owns exactly these six families; any other first segment belongs to a screen document. The last segment is lower case with `-` between words, **except** where it is a domain value (`status.ticket.in_progress`) or an existing DOC-56 name with `_` (`auth.signed_out`): a domain value is written as the enumeration writes it |
 | Placeholders | ICU: `{minutes}`, `{attemptsLeft}`, `{requestId}`. Amounts, dates, times and phone numbers are **never** interpolated as text: the caller passes the result of the formatter (§7) as a string argument, so the catalog only holds the sentence |
-| Plurals | Vietnamese has no plural form: write `{count} phút trước` or, where the same argument has an English plural, `{count, plural, other {# phút}}`. English uses `one` and `other`. The parity test compares the **set of argument names and their types** (`number`, `date`, plain, `select` options), not the branch structure of `plural` |
+| Plurals | Vietnamese has no plural form: write `{count} phút trước` or, where the same argument has an English plural, `{count, plural, other {# phút}}`. English uses `one` and `other`. The parity test compares the **set of argument names and their kinds** (`plain`, `number`, `date`, `time`, `select` with its options), not the branch structure of `plural`: a `plural` argument is a `number`, and a plain argument matches a `number`, so `Còn {count} ngày` matches `{count, plural, one {# day left} other {# days left}}` (DR-224, DR-235) |
 | Who renders what | The **server** renders `error.<code>` (and `details[].message` of `validation_failed`) in the caller's language and returns it in `message` (DOC-42 §3). The **client** renders `t('error.' + code, details)` itself when a screen needs the same text offline-safe, and falls back to `message` when the catalog has no key (DOC-55 §6). Both read the same catalog, so the two texts are identical; test UICP-11 pins it |
 | Screen aliases | A screen may define a key of its own for a code when it needs words the generic message lacks (`res.login-error.field.phone.error` for `phone_not_registered`). The alias never replaces the generic key: the generic key still exists (the API returns it) |
 | Terms | Residents say "Yêu cầu", staff and web say "Phiếu" or "Phiếu hỗ trợ" for a ticket (DR-197, UX-20); "Đợt phí" for a fee batch; "Biên lai thu tiền" for a receipt, which says it is not a tax invoice (DR-17); "Ban quản lý" (short "BQL") for the management office. A money mismatch says "The management office will check" (DR-84): "Ban quản lý sẽ kiểm tra" |
@@ -545,7 +545,7 @@ The texts are screen-owned and listed here only so that one place names them all
 
 ## 7. Formats (DR-71)
 
-One module, `@rms/shared-types`, owns the formatters; no component calls `Intl` for money or builds a date string by hand (DOC-55 §11). All take the language and, for instants, the building time zone (`building.timezone`, default `Asia/Ho_Chi_Minh`, ADR-0013). They are pure and are the only code under test in §7.2.
+One module, `@rms/shared-types`, owns the formatters; no component calls `Intl` for money or builds a date string by hand (DOC-55 §11). The two that end in words (`relativeTime`, `daysLeft`) return a phrase (`{key, params}` or a finished `{text}`) because `shared-types` holds no catalog; `createTranslator(lang).phrase()` of `@rms/i18n-catalog` turns it into text (DR-235). Amounts and areas end with a no-break space before `đ`, `m²`, `MB`; the table below writes a plain space. All take the language and, for instants, the building time zone (`building.timezone`, default `Asia/Ho_Chi_Minh`, ADR-0013). They are pure and are the only code under test in §7.2.
 
 ### 7.1 Rules
 
@@ -559,8 +559,8 @@ One module, `@rms/shared-types`, owns the formatters; no component calls `Intl` 
 | `formatPercent(ratio, lang)` | Up to one decimal, a trailing zero dropped; `vi` uses `,` and `en` uses `.`; always followed by `%` without a space |
 | `formatArea(m2, lang)` | Up to one decimal like `formatPercent`, a no-break space, `m²` |
 | `formatBytes(n, lang)` | Mebibytes and gibibytes written "MB" and "GB" (DOC-37 §2: 1 MB = 1,048,576 bytes), one decimal, decimal sign by language |
-| `formatRelative(instant, now, lang, tz)` | Under 1 minute `common.time.just-now`; under 1 hour `common.time.minutes-ago`; the same building day `common.time.hours-ago`; the previous building day `common.time.yesterday-at`; older: `formatDate`. Only used for "last seen", "sent" and inbox rows, never for a deadline |
-| `daysLeft(dueDay, today)` | Calendar days in the building zone (ADR-0013): the due day itself is `common.today`, the day before is `common.time.days-left` with 1, a day in the past is `common.time.days-overdue`. Never counts hours |
+| `relativeTime(instant, now, lang, tz)` (`formatRelative` of DR-223) | Returns a phrase, rendered by `t.phrase()` of the catalog (DR-235). Under 1 minute `common.time.just-now`; under 1 hour `common.time.minutes-ago`; the same building day `common.time.hours-ago`; the previous building day `common.time.yesterday-at`; older: `formatDate`. Only used for "last seen", "sent" and inbox rows, never for a deadline |
+| `daysLeft(dueDay, today)` | Returns a phrase, like `relativeTime`. Calendar days in the building zone (ADR-0013): the due day itself is `common.today`, the day before is `common.time.days-left` with 1, a day in the past is `common.time.days-overdue`. Never counts hours |
 
 ### 7.2 Table test (P1-09, UICP-07)
 

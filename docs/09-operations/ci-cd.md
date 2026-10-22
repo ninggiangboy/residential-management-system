@@ -1,6 +1,6 @@
 # CI/CD
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
 > Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
@@ -96,7 +96,7 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 | Stage | Runs | Commands (DOC-69 §5) | Fails when | Blocks merge |
 | --- | --- | --- | --- | --- |
 | `verify` | always | `bun run lint` (Biome), `bun run typecheck`, `bun run check:arch` (three dependency-cruiser configs, knip, jscpd), `bun run check:scope` (building-scope lint, DR-12), `bun run check:i18n` (catalog parity: a key or ICU placeholder missing in `vi` or `en`), the `@app/api` value-import check, `bun run check:commits` (§11.2), `bun run check:authz-metadata` (a route without audience metadata, AG-01) | Any command exits non-zero | **Yes** |
-| `unit` | always | `bun run test` (every workspace; no database) with `--coverage` | A test fails. A coverage figure below its target is a **warning** in the job summary and never fails (DR-77) | **Yes** |
+| `unit` | always | `bun run test` (every workspace; no database) with `--coverage`. The job installs `uv` (`astral-sh/setup-uv`, version pinned in DOC-11 §9 by P1-19) because DS-05 runs fontTools through it and fails without it in CI (DR-237) | A test fails. A coverage figure below its target is a **warning** in the job summary and never fails (DR-77) | **Yes** |
 | `integration` | always | Service container `postgres:18.6`; `0001-provision.sql` through `psql`; `bun run db:migrate`; `bun run test:integration`; `bun run test:authz` | A test fails; the authorization matrix has an unexpected 2xx or 3xx, an unexpected refusal, a 5xx, a leak, a route without metadata or a missing fixture (DR-151, DOC-39 §4.6) | **Yes** |
 | `security` | always | §5: Gitleaks, Trivy filesystem, CodeQL (`security-extended`), dependency review | A finding of the severities of DOC-39 §12 | **Yes** (DR-153) |
 | `build` | always (push only on `main`) | §6: the `rms-api` image; Trivy image scan; on `main` push `sha-<7>` to GHCR | The image does not build or the scan finds a fixed HIGH or CRITICAL vulnerability or a secret in a layer | **Yes** (so the Dockerfile cannot rot) |

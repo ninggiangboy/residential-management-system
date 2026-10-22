@@ -1,12 +1,12 @@
 # Design system
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-54
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
 > Depends on: original SDD §18.2, [DR](../00-decision-register.md) (DR-10, 17, 20, 44, 45, 47, 49, 56, 70, 71, 72, 82, 84), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-03](../01-product/requirements.md) (NFR-13), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §4–6, [DOC-12](../03-architecture/code-architecture.md) §2, [design screens catalog](../references/design-screens.md), the design canvas (design system `Hien`)
 > Main readers: P1-09 (design tokens), P1-16 (web CMS shell), P1-17 (mobile shells), DOC-53, DOC-55, DOC-56…68 (screen specifications), DOC-34 (PDF look)
 
 This document fixes the visual language the three clients share: the design tokens, the fonts and icons, the status colors, the component catalog for the web CMS (shadcn) and the two Expo apps (`@rms/ui-native`), the layout rules, the formats of money, dates and codes, chart conventions and the accessibility floor. It does not describe screens (DOC-57…67), navigation and responsive behavior per screen (DOC-53), data fetching and client structure (DOC-55), or microcopy (DOC-68). Where this document and a screen specification disagree, this document wins for tokens, tones and components.
 
-The visual source of truth is the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> and its design system **Hiên** (`tokens.json` version 1). This document does not redraw it: it records the values (§3–§5), fixes how they reach the code (§2), and settles the points the canvas leaves open (§15). Every new decision is recorded as DR-180…187 and summarized in §15.
+The visual source of truth is the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> and its design system **Hiên** <https://claude.ai/artifact/3EQA3jUWzDnLaUMgvJUekQ> (`tokens.json` version 1; how to read both is in [references](../references/README.md#design-artifacts)). This document does not redraw it: it records the values (§3–§5), fixes how they reach the code (§2), and settles the points the canvas leaves open (§15). Every new decision is recorded as DR-180…187 and summarized in §15.
 
 ## 1. Scope and reading guide
 
@@ -31,22 +31,28 @@ What was checked of the canvas: all 33 web artboards, `tokens.json`, `tokens.css
 flowchart LR
   J["packages/design-tokens/tokens.json (Hiên v1, source)"] --> G["generate script (bun run tokens:build)"]
   G --> C["tokens.css: CSS variables, light and dark"]
-  G --> T["tailwind.css: Tailwind 4 theme mapping to the variables"]
-  G --> N["native.ts: theme object for NativeWind and StyleSheet constants"]
-  G --> S["status.json check against shared-types (DS-04)"]
+  G --> T["theme.css: Tailwind 4 theme mapping to the variables"]
+  G --> F["fonts.css: @font-face of the self-hosted woff2"]
+  G --> P["tailwind-preset.cjs: Tailwind 3 preset for NativeWind"]
+  G --> N["native.ts: resolved values for ui-native and StyleSheet"]
+  S["status.json"] -.->|DS-04| X["shared-types enums, i18n-catalog keys"]
   C --> W["apps/cms-web (shadcn components)"]
   T --> W
-  N --> M["@rms/ui-native, both Expo apps"]
+  F --> W
+  P --> M["both Expo apps, @rms/ui-native"]
+  N --> M
 ```
 
 | Output | Consumer | Rule |
 | --- | --- | --- |
 | `tokens.css` | web CMS | `:root` and `[data-theme="light"]` hold the light values, `[data-theme="dark"]` the dark ones, in the same variable names as the canvas (`--ground`, `--surface`, `--teal`, `--space-4`, `--radius-card`…). The web also sets `data-theme` from `prefers-color-scheme` (§11) |
-| `tailwind.css` | web CMS | Maps utilities (`bg-surface`, `text-ink-muted`, `rounded-card`, `shadow-card`, `p-gutter`) to the variables, so a theme switch needs no class change. The exact form (Tailwind 4 CSS-first `@theme` or a JavaScript preset) is the one DOC-11 row 8 confirms in P1-01; the token names are the same either way |
-| `native.ts` | `@rms/ui-native`, both apps | A flat `{ light: {…}, dark: {…} }` object of resolved values for NativeWind and for the `StyleSheet` fallback (ADR-0019). Shadows are the same CSS strings, applied with the `boxShadow` style (New Architecture only; outset shadows need Android 9 or later), and gradients (hero, gold button, `Glow`) with the `backgroundImage: 'linear-gradient(…)'` style (reactnative.dev, verified 2026-10-20); P1-17 confirms both through NativeWind on the pinned SDK |
-| `status.json` | both | The status table of §6 as data (DR-183) |
+| `theme.css` | web CMS | Tailwind 4 `@theme`: utilities (`bg-surface`, `text-ink-muted`, `rounded-card`, `shadow-card`, `text-title-1`, `h-control-lg`, `p-gutter`) read the variables, so a theme switch needs no class change. Colors map to the canvas variables; type, radius, fonts and sizes are literal (equal in both themes); shadows are `@utility` rules. Tailwind's default palette, shadows, radii, type sizes and fonts are removed: `bg-red-500` does not exist (DR-236) |
+| `fonts.css` | web CMS | `@font-face` for the `woff2` files in `apps/cms-web/public/fonts`, `font-display: swap` |
+| `tailwind-preset.cjs` | both apps (`tailwind.config.js` after `nativewind/preset`) | Tailwind 3 preset (DR-229): colors are CSS variables the preset declares for light and for `prefers-color-scheme: dark`, which NativeWind compiles to light and dark root variables; type sizes in px with letter spacing in dp; Tailwind's spacing steps in px (`p-4` is 16, as on the web); one family per static font file (`font-sans-semibold`). No shadows: NativeWind 4.2 drops `box-shadow: var(…)` (DR-236) |
+| `native.ts` | `@rms/ui-native`, both apps | A flat `{ light: {…}, dark: {…} }` object of resolved values (`themes`), plus `space`, `radius`, `size`, `textStyles` (dp, with the font file of the weight) and `fontFiles`, for the `StyleSheet` fallback (ADR-0019). Shadows are the same CSS strings, applied with the `boxShadow` style (New Architecture only; outset shadows need Android 9 or later), and gradients (hero, gold button, `Glow`) with the `backgroundImage: 'linear-gradient(…)'` style (reactnative.dev, verified 2026-10-20); P1-17 confirms both on the pinned SDK |
+| `status.json` | both | The status table of §6 as data (DR-183): one row per `entity`, `value`, optional `when` (a derived condition, such as an open charge's due date) and `audience`, with `tone`, `icon`, `label` and an optional `detail` key; `statusRow()` of `@rms/design-tokens` picks the row (DR-236) |
 
-Only `packages/design-tokens` knows a hex value. A hex, a pixel size or a font name written inside a component is a review failure; the lint rule is "no color literal outside `design-tokens`" (Biome, P1-09). Tokens are per product, not per building: the building's name, logo and contact come from `building` settings (DOC-36), never from a token.
+`generated/` is committed (the apps have no build step) and a test fails when it differs from what `tokens.json` renders. Only `packages/design-tokens` knows a hex value. A hex, a pixel size or a font name written inside a component is a review failure; the lint rule is "no color literal outside `design-tokens`": the Biome GritQL plugin `tools/biome/no-color-literal.grit` flags a hex color, `rgb(`, `rgba(`, `hsl(` or `hsla(` in a string, a JSX string or a template outside that package (DR-237). Tokens are per product, not per building: the building's name, logo and contact come from `building` settings (DOC-36), never from a token.
 
 ### 2.2 Design rules the tokens express
 
@@ -171,7 +177,7 @@ Every pair the components use passes in both themes except the three marked rows
 | Role | Family | Weights used | Licence | Verified on |
 | --- | --- | --- | --- | --- |
 | Text (every screen) | **Geologica** (Google Fonts, variable: `wght` 100–900 plus `CRSV`, `SHRP`, `slnt`) | 400, 500, 600, 700 | SIL OFL 1.1 | 2026-10-20 |
-| Plates (`plate-*` styles) | **Big Shoulders** (Google Fonts, added 2025-02-06, variable: `wght`, `opsz`) | 700 (the canvas loads only 700; `plate-xl` is 800 in `tokens.json` and renders as 700 until a heavier file is added) | SIL OFL 1.1 | 2026-10-20 |
+| Plates (`plate-*` styles) | **Big Shoulders** (Google Fonts, added 2025-02-06, variable: `wght`, `opsz`) | 700, and 800 for `plate-xl` (the design system ships `BigShoulders-ExtraBold`; added in P1-09, DR-236) | SIL OFL 1.1 | 2026-10-20 |
 | PDF documents | Be Vietnam Pro (DR-56, unchanged) | Regular, Medium, SemiBold, Bold, Italic | SIL OFL 1.1 | 2026-10-19 (DOC-11 §5) |
 
 Sources: [google/fonts `ofl/geologica` METADATA.pb](https://github.com/google/fonts/blob/main/ofl/geologica/METADATA.pb) (subsets: cyrillic, cyrillic-ext, greek, latin, latin-ext, **vietnamese**), [`ofl/bigshoulders` METADATA.pb](https://github.com/google/fonts/blob/main/ofl/bigshoulders/METADATA.pb) (latin, latin-ext, **vietnamese**), both read 2026-10-20.
@@ -182,8 +188,8 @@ Hosting and format (DR-180):
 
 | Platform | Files | Why |
 | --- | --- | --- |
-| Web CMS | Self-hosted `woff2` in `apps/cms-web/public/fonts` (Geologica 400/500/600/700 and Big Shoulders 700), `font-display: swap`, `<link rel="preload">` for Geologica 400 and 600. The measured size of the static instances is about 41 KB per Geologica weight and 36 KB for Big Shoulders (≈ 200 KB in total, before subsetting) | The CSP has `font-src 'self'` (DOC-39 §5.1), so Google Fonts cannot be used; self-hosting also avoids a third-party call from the CMS |
-| Expo apps | Static `ttf` instances in `packages/design-tokens/fonts`, loaded with `expo-font` before the splash screen hides | React Native does not use variable fonts or `woff2`. The instances were produced and checked on 2026-10-20: `fonttools varLib.instancer Geologica[...].ttf wght=400 CRSV=0 SHRP=0 slnt=0 -o Geologica-400.ttf` (also 500, 600, 700) and `wght=700 opsz=72` for Big Shoulders; 139 KB per Geologica file, 94 KB for Big Shoulders; the weight class of each output matches |
+| Web CMS | Self-hosted `woff2` in `apps/cms-web/public/fonts` (Geologica 400/500/600/700 and Big Shoulders 700/800, copied from the design system), `font-display: swap`, `<link rel="preload">` for Geologica 400 and 600. The measured size of the static instances is about 41 KB per Geologica weight and 36 KB for Big Shoulders (≈ 200 KB in total, before subsetting) | The CSP has `font-src 'self'` (DOC-39 §5.1), so Google Fonts cannot be used; self-hosting also avoids a third-party call from the CMS |
+| Expo apps | Static `ttf` instances in `packages/design-tokens/fonts`, loaded with `expo-font` before the splash screen hides | React Native does not use variable fonts or `woff2`. The instances were produced and checked on 2026-10-20: `fonttools varLib.instancer Geologica[...].ttf wght=400 CRSV=0 SHRP=0 slnt=0 -o Geologica-400.ttf` (also 500, 600, 700) and `wght=700 opsz=72` (also `wght=800`) for Big Shoulders; 139 KB per Geologica file, 94 KB for Big Shoulders; the weight class of each output matches. P1-09 made the shipped files with fontTools 4.67.0 (2026-10-22); the PostScript name equals the file name (`Geologica-SemiBold`), which is the family name the apps use |
 
 `OFL.txt` of both families is copied beside the files. Be Vietnam Pro is no longer a UI font: DOC-11 §5 and §6 (the `expo-font` row) say "PDF and app typography" and need the word "app" removed (§16).
 
@@ -419,7 +425,7 @@ The canvas draws every icon from **Phosphor** (regular and `fill` weights, `chec
 | Native | `phosphor-react-native` | 3.0.6 | MIT | 2026-04-23 | Pure JavaScript over `react-native-svg` 15.16.0 (the version bundled by Expo SDK 58, no native module of its own); react-native-svg supports Fabric since 13.0.0, so the New Architecture requirement holds (sources: npm registry, Expo `bundledNativeModules.json` for SDK 58, react-native-svg README; 2026-10-20) |
 | shadcn | `components.json` → `"iconLibrary": "phosphor"` | CLI 4.22.1 | | | Generated components import Phosphor names |
 
-Both packages expose an `Icon` component fed by a **registry** (`icons.ts`): a typed list of the Phosphor names in use, the same names on both platforms (the canvas names: `house`, `receipt`, `bell`, `qr-code`, `chat-circle-dots`, `buildings`, `car`, `motorcycle`, `wallet`, `megaphone`, `warning`, `check-circle`, `x-circle`, `info`, `clock`, `wrench`, `sign-out`, …). A name outside the registry does not compile; a screen that needs a new icon adds it to the registry in both packages (test DS-06). Icons are 20 (`icon-sm`), 24 (`icon-md`) or 32 px (`icon-lg`). An icon that conveys meaning has an accessible name; a decorative one is hidden from assistive technology.
+Both packages expose an `Icon` component fed by a **registry**: `ICON_NAMES` of `@rms/design-tokens` (`src/icons.ts`, P1-09) is the typed list of the Phosphor names in use (the 50 of the canvas bundle without the three amenity icons of §7.4), and each platform maps exactly those names (the canvas names: `house`, `receipt`, `bell`, `qr-code`, `chat-circle-dots`, `buildings`, `car`, `motorcycle`, `wallet`, `megaphone`, `warning`, `check-circle`, `x-circle`, `info`, `clock`, `wrench`, `sign-out`, …). A name outside the registry does not compile; a screen that needs a new icon adds it to the registry in both packages (test DS-06). Icons are 20 (`icon-sm`), 24 (`icon-md`) or 32 px (`icon-lg`). An icon that conveys meaning has an accessible name; a decorative one is hidden from assistive technology.
 
 ### 7.4 Components not needed in the first release
 
@@ -600,5 +606,5 @@ Each is recorded in the decision register (DR-180…187), decided by Claude unde
 | DOC-88 | Prefix index row for `DS-` |
 | DOC-68 | The proposed labels of §6 and the `en` side; the `IconButton` label keys |
 | DOC-55 | Font loading, theme following the OS, the icon registry, `ui-native` dependencies |
-| P1-09 | Output list of §2.1 (`tokens.css`, `tailwind.css`, `native.ts`, `status.json`, fonts); tests DS-01…06 |
+| P1-09 | Done 2026-10-22: the outputs of §2.1, the fonts, DS-01…05; DS-06 compares the platform registries with `ICON_NAMES` in P1-16 and P1-17 |
 | Configuration reference, observability | None |
