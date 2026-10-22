@@ -1,7 +1,7 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07 and P1-08: the first two modules, `check:scope` and its parser, `audited` as built, `inBuilding`, DR-252, DR-253; P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
-> Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-254: the layout of a module, §3, §4.1, §4.5, §6.4, §14 item 17; P1-07 and P1-08: the first two modules, `check:scope` and its parser, `audited` as built, `inBuilding`, DR-252, DR-253; P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188, 254), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
 This document says how the code is laid out and which imports are allowed: the repository and its package scopes, the layers inside a module, the module template, the composition root, the three dependency-cruiser configurations, the `BuildingScope` repositories, the ambient transaction, DTOs, `UnitContext` and its policy function, the exception types, the rule for syncing the vendored `core-*` packages and the review checklist. It holds no table (DOC-14…17), no event schema (DOC-09), no endpoint (DOC-51) and no version number (DOC-11). Which modules exist and who owns which table is DOC-07 §5–§6; this document does not repeat it.
@@ -14,7 +14,7 @@ Code samples are TypeScript signatures that show the shape the tasks implement. 
 | --- | --- |
 | What is in the repository, which scope is which, who may import whom? | §2 |
 | What does each layer of a module contain and what may it import? | §3 |
-| How is a new module shaped? | §4 |
+| How is a new module shaped, and when is it done? | §4, §4.5 |
 | Who wires modules together and how do routes get their guards? | §5 |
 | How are the rules enforced in CI? | §6 |
 | How does a repository stay inside one building? | §7 |
@@ -101,17 +101,19 @@ flowchart LR
 
 | Layer | Contains | May import | Must not know |
 | --- | --- | --- | --- |
-| `domain` | Aggregates and entities, value objects, state transition rules, domain errors, repository **interfaces** | `@core/kernel`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
-| `application` | Use cases (one class or function per command or query), ports for everything outside (`Clock`, `OutboxWriter`, gateways), integration-event handlers, the audit and idempotency wrappers (§8), DTO mappers | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
+| `domain` | Aggregates with behavior (every entity that has a status or an invariant), value objects, state transition rules, domain errors, repository **interfaces** (`<aggregate>-repository.ts`, DR-254) | `@core/kernel`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
+| `application` | Use cases in `use-cases/` (one class and one `execute` per file; commands and queries alike), the contract implementation in `queries/<name>-api-impl.ts`, integration-event handlers in `handlers/` (one per file), ports for everything outside (`Clock`, `OutboxWriter`, `ObjectStore`, gateways) in `ports.ts`, the audit and idempotency wrappers (§8), DTO mappers (DR-254) | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
 | `infrastructure` | Drizzle repositories and row mappers, driver adapters (payOS, Expo, SMS, SMTP, R2), `DrizzleOutboxWriter`, `DrizzleInboxGuard` | `application`, `domain`, `@core/*`, the npm drivers | `presentation` |
 | `presentation` | Elysia route plugins, TypeBox request and response schemas, OpenAPI detail, the audience declaration of each route (§5.3) | `application`, `domain` types for mapping, `@core/http`, `@core/auth` | `infrastructure` (it receives use cases, never repositories) |
 | `contracts` | Interfaces with plain DTOs, event names and payload types, pure literals and pure functions without imports | Nothing from its own module, no `@core/*`; types only from `@rms/shared-types` | Everything else |
 
-Three habits keep the layers honest:
+Five habits keep the layers honest:
 
 1. A use case receives its ports in the constructor and never builds them. The module factory (§4.3) builds them once.
 2. A route handler is three lines: read the validated input, call one use case, map the result to a response DTO. A branch on a business rule in a route is a defect.
-3. The domain computes with values it is given. "Today" arrives as `LocalDate`, "now" as `Date` from the `Clock` port, ids from the `IdGenerator` port (UUIDv7, DR-10). A domain file that calls `new Date()` fails review.
+3. An aggregate carries its own rules. A use case loads it, calls a method (`file.verify(...)`, `terms.publish(...)`) and saves it; the transition rule is not copied into the use case. A class that owns many operations and edits rows (`FilesService`, `GatewayService`) is the mistake this prevents: each operation is a use case, each rule is on the aggregate (DR-254).
+4. The domain computes with values it is given. "Today" arrives as `LocalDate`, "now" as `Date` from the `Clock` port, ids from the `IdGenerator` port (UUIDv7, DR-10). A domain file that calls `new Date()` fails review.
+5. A name says what a class is for. `*Service` and `*Manager` are not allowed in `application/`; a helper shared by use cases is named by its role (`BuildingDirectory`, `FileLoader`) and is not a use case (it has no `execute`).
 
 ## 4. The module template
 
@@ -126,7 +128,9 @@ modules/finance/
 ├── migrations/                       # NNNN_<name>.sql, never edited after merge (expand/contract, DR-08)
 ├── test/                             # integration and race tests (real PostgreSQL), fixtures
 └── src/
-    ├── index.ts                      # createFinanceModule(deps), installFinance(host)
+    ├── index.ts                      # re-exports only: createFinanceModule, installFinance, the public types
+    ├── finance.module.ts             # createFinanceModule(deps): builds repositories, use cases, handlers, jobs, routes
+    ├── install.ts                    # installFinance(host) and the FinanceHost type (§4.2)
     ├── manifest.ts                   # ModuleManifest (§4.2)
     ├── config.ts                     # FinanceConfig slice (keys: DOC-41)
     ├── contracts/
@@ -134,14 +138,15 @@ modules/finance/
     │   ├── finance-api.ts            # FinanceApi: getOutstandingByUnit, reportQueries (DR-42)
     │   └── events.ts                 # FinanceEvents: finance.batch_published.v1 … payload types
     ├── domain/
-    │   ├── charge.ts  fee-batch.ts  payment.ts  payment-intent.ts
-    │   ├── errors.ts                 # ChargeChangedError … (§12)
-    │   └── repositories.ts           # interfaces only
+    │   ├── charge.ts  fee-batch.ts  payment.ts  payment-intent.ts      # aggregates with behavior
+    │   ├── charge-repository.ts  fee-batch-repository.ts  …            # repository interfaces, one per aggregate
+    │   └── errors.ts                 # ChargeChangedError … (§12)
     ├── application/
-    │   ├── commands/                 # publish-batch.ts, record-manual-payment.ts, void-charge.ts …
-    │   ├── queries/                  # list-debts.ts, finance-api-impl.ts (the contract implementation)
-    │   ├── ports/                    # payment-gateway.ts, receipt-renderer.ts
-    │   ├── handlers/                 # integration-event handlers (inbox-guarded)
+    │   ├── use-cases/                # publish-batch.ts, record-manual-payment.ts, void-charge.ts, list-debts.ts …
+    │   │                             # one class, one execute, per file; commands and queries alike
+    │   ├── queries/                  # finance-api-impl.ts: the contract implementation, no rule of its own
+    │   ├── handlers/                 # one integration-event handler per file (inbox-guarded)
+    │   ├── ports.ts                  # payment-gateway, receipt-renderer: ports to the outside only (a ports/ folder from the second file)
     │   └── settle.ts                 # the one settlement function (DOC-23)
     ├── infrastructure/
     │   ├── persistence/              # schema.ts, drizzle-*-repository.ts, mappers.ts
@@ -168,13 +173,14 @@ export const financeManifest = {
   config: financeConfigSlice,
 } as const satisfies ModuleManifest
 
-// index.ts
+// finance.module.ts
 export interface FinanceModule extends AppModule<'finance', FinanceRoutes> {
   api: FinanceApi                          // the contract implementation (read-only or joins the caller's transaction)
 }
 
 export function createFinanceModule(deps: FinanceDeps): FinanceModule { /* builds repositories, use cases, handlers, jobs */ }
 
+// install.ts
 export function installFinance(
   host: ModuleHost<{ finance: FinanceConfig }> & {
     modules: { residency: ResidencyApi; building: BuildingApi; audit: AuditApi; files: FilesApi },
@@ -203,7 +209,7 @@ export interface AppModule<N extends string, R> {
 1. Repositories (`Drizzle…Repository`) over `host.database`; each method takes a `BuildingScope` (§7).
 2. `DrizzleOutboxWriter(database, manifest.outboxTable, ids.next)` and `DrizzleInboxGuard(database, manifest.inboxTable)`.
 3. Use cases with their ports; `host.database` is passed as the `UnitOfWork` (§8.1).
-4. The contract implementation (`finance-api-impl.ts`) over the same repositories.
+4. The contract implementation (`application/queries/finance-api-impl.ts`) over the same repositories and use cases.
 5. Handlers (inbox-guarded), job definitions, and the route plugins.
 
 No dependency-injection container is used: the wiring is plain code that reads top to bottom (as the reference does).
@@ -217,6 +223,25 @@ No dependency-injection container is used: the wiring is plain code that reads t
 - Only `apps/api` imports `integrations/*`, and passes them to `installNotification` and `installRealtime`. A missing integration means that event produces nothing; a duplicate template key is a start-up error; a template without `vi` and `en` text is a start-up error and a catalog-parity failure (NFR-13).
 - The same mechanism lets a module ask another without importing it: `building` declares the port `ActiveIntentProbe` in its contracts and `finance` ships its implementation in `integrations/building`, so the change of a gateway configuration can ask whether an intent is active while the module graph stays acyclic (DOC-36 §7.3, DR-126).
 - Unlike the reference, `notification` here also calls contracts of `residency` and `identity` (recipients, device ownership; DOC-07 §5.2). That is an ordinary contract call and is allowed; only `realtime` is a strict leaf (§6.2).
+
+### 4.5 Layout rules and when a module is done (DR-254)
+
+The tree of §4.1 is the shape; these rules make it binding. `bun run check:layout` (§6.4) enforces the ones marked ✔.
+
+| # | Rule | Check |
+| --- | --- | --- |
+| 1 | A use case is `application/use-cases/<verb>-<noun>.ts`: one exported class, ports in the constructor, one public method `execute`; the file name is the kebab case of the class | ✔ |
+| 2 | A handler is `application/handlers/<name>.ts`: one class that implements `IntegrationEventHandler` | ✔ |
+| 3 | `application/queries/` holds only `<name>-api-impl.ts`, the implementation of the module's contract; it calls use cases or repositories and has no rule of its own | review |
+| 4 | No class named `*Service` or `*Manager` in `application/`; no `execute` outside `use-cases/` | ✔ |
+| 5 | A repository interface (`*Repository`) lives in `domain/<aggregate>-repository.ts`; `application/ports.ts` holds ports to the outside only | ✔ |
+| 6 | An entity with a status or an invariant is an aggregate in `domain/` with methods that change its state and throw a domain error; it may extend `AggregateRoot`. A rule without identity (magic bytes, purpose limits, settings validation) stays a function or a value object | review |
+| 7 | `<name>.module.ts` exports `create<Name>Module`, `install.ts` exports `install<Name>` and the host type, `index.ts` only re-exports, `config.ts` exists when the module has a configuration slice | ✔ (the two files) |
+| 8 | A helper shared by use cases is named by its role and has no `execute` | review |
+
+A module task is **done** when: the layout rules hold; every endpoint of the task's acceptance has a route in `presentation/` with its `audience` (§5.3), or the task names the routes still open and the task that closes them (the use cases already take the actor as their first argument, §8.3); the tests of the task pass; the documents of §14 item 16 are updated.
+
+*As built (P1-07, P1-08), revised by DR-254:* `building` was first delivered as four service classes (`FilesService`, `GatewayService`, `TermsService`, `BuildingSettingsService`), a handler file with two classes, the contract implementation as an object literal in `index.ts` and every repository interface in `application/ports.ts`; `audit` held the contract implementation in `audit-writer.ts`. Both were brought to the layout above in the same change, with the same tests. The routes of `building` stay open until the `staff` guard of P1-10; the demo reset stays with P1-21.
 
 ## 5. The composition root
 
@@ -431,6 +456,10 @@ module.exports = {
 ```
 
 `ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. The exclusion of test files covers `*.test.ts` and, since P1-04, the folders `apps/*/tests/` and `modules/*/test/` (integration tests build the container) and `apps/*/dist/` (a build output). Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
+
+### 6.4 `check:layout` (DR-254)
+
+Import rules cannot see the shape of a file, so `scripts/check-layout.ts` reads the sources of `modules/*/src` with the TypeScript compiler API (the TypeScript 6 of `tools/depcruise`, like `check:scope`) and fails on: a file of `application/use-cases/` that does not export exactly one class with one public `execute` and a matching file name; a file of `application/handlers/` that does not export exactly one class with `name`, `eventType` and `handle`; an interface named `*Repository` outside `domain/`; a class named `*Service` or `*Manager` in `application/`; an `execute` method outside `use-cases/`; a module without `<name>.module.ts` and `install.ts`. `tools/layout-lint/` holds one fixture per rule, like `check:arch:fixtures`. The check is part of `bun run check`.
 
 ## 7. `BuildingScope` repositories (DR-12)
 
@@ -837,12 +866,13 @@ Applied to every pull request; the pull-request template repeats it (master plan
 | 14 | **Migrations.** Backward compatible for one release (expand, then contract); never edited after merge | Any schema change | Migration file; `rms_app` grants in DOC-19 |
 | 15 | **Dependencies.** A new dependency or version is the latest stable, verified on the web, with the source in DOC-11; a change to a core package is listed in `CORE_VERSION` | Any dependency | DOC-11 row; `CORE_VERSION` diff |
 | 16 | **Docs.** The document that describes the behavior is updated in the same change; a decision that changes an Approved document gets a DR | Any behavior change | Docs diff |
+| 17 | **Layout.** One use case per file in `use-cases/`, one handler per file, repository interfaces in `domain/`, rules on the aggregate and not in a service, `presentation/` present or its absence named in the task (§4.5) | Any new use case, handler or module | `check:layout` green |
 
 ## 15. Traceability
 
 | Item | Where it is implemented or checked |
 | --- | --- |
-| Layers, module template, exports | §3, §4; P1-03 and every module task |
+| Layers, module template, exports, layout rules and done condition | §3, §4, §4.5, §6.4; P1-03, DR-254 and every module task |
 | Dependency-cruiser configs | §6; P1-01, P1-02, DR-08 `verify` stage |
 | `BuildingScope` and the scope lint | §7; P1-01 decides the form, DR-12; EXP-10 |
 | Ambient transaction, outbox, audit, idempotency | §8; DR-42, DR-57, DR-62, DR-74; FR-37, FR-08.8 |
