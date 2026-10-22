@@ -109,6 +109,8 @@ jobs:
     env:
       APP_ENV: test
       PGPASSWORD: ci-superuser
+      # `@rms/test-support` clones the template database as this superuser (DOC-88 §6).
+      TEST_ADMIN_DATABASE_URL: postgres://postgres:ci-superuser@localhost:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -124,6 +126,7 @@ jobs:
       - run: bun run db:provision-ci # ops/postgres/0001-provision.sql as postgres
       - run: bun scripts/run-if-defined.ts db:migrate P1-06
       - run: bun scripts/run-if-defined.ts test:integration P1-04
+      - run: bun scripts/run-if-defined.ts test:grants P1-06
       - run: bun scripts/run-if-defined.ts test:authz P1-15
       # The suite that skips without a database (`@core/db`) until P1-04 moves it to `test:integration`.
       - env:
@@ -248,16 +251,24 @@ jobs:
             image --scanners vuln,secret --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 --no-progress rms-api:ci
       - if: always()
         run: sudo chown -R "$(id -u):$(id -g)" ~/.cache/trivy
-      # The process starts and answers. P1-04 replaces the URL with the ops port's /health/ready (CF-16, CF-17).
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      # The process boots with a valid configuration and no database: the ops port answers `live` and `ready` is 503
+      # `degraded` (DOC-38 §5.1, DR-161, CF-03). The throw-away keys come from `keys:generate`.
       - name: Boot smoke
         run: |
-          docker run -d --name api -p 127.0.0.1:3000:3000 -e APP_ENV=test rms-api:ci
+          bun scripts/keys-generate.ts
+          bun --env-file=.env.local -e 'for (const k of ["JWT_KEYS","QR_KEYS","OTP_HMAC_KEY","SETTINGS_ENCRYPTION_KEYS","PII_ENCRYPTION_KEYS","S3_ENDPOINT","S3_ACCESS_KEY_ID","S3_SECRET_ACCESS_KEY"]) console.log(`${k}=${process.env[k]}`)' > smoke.env
+          docker run -d --name api --env-file smoke.env -e APP_ENV=test -e DATABASE_URL=postgres://rms_app:smoke@127.0.0.1:1/rms \
+            -p 127.0.0.1:3001:3001 rms-api:ci
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:3000/api/v1/health/live; then echo; echo "up after ${i}s"; exit 0; fi
+            if curl -fsS http://127.0.0.1:3001/health/live; then echo; echo "up after ${i}s"; break; fi
+            if [ "$i" = 30 ]; then docker logs api; exit 1; fi
             sleep 1
           done
-          docker logs api
-          exit 1
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/health/ready)
+          test "$code" = 503 || { echo "ready answered $code, expected 503 without a database"; docker logs api; exit 1; }
       # On `dev` the image that was scanned is handed to `publish`, which pushes it only when `gate` is green.
       - if: github.event_name == 'push'
         run: docker save rms-api:ci | gzip -1 > rms-api.tar.gz

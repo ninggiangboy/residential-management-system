@@ -613,5 +613,5 @@ Every new decision in this document is recorded as DR-169 (decided, Claude deleg
 
 - None of the decisions of §17 is open. Decisions made while writing: DR-169; DR-171 and DR-173 (in DOC-98 and DOC-99) were decided by the Owner on 2026-10-20.
 - **`bun test` parallelism.** Whether Bun 1.4.3 runs test files in parallel, and how many databases a run clones at once, is checked in P1-01; the design needs none (a file owns its database), so any scheduler is safe.
-- **`apps/api/tests/grants/`.** DOC-19 §9 named `packages/testing/grants.test.ts`; the vendored testing package is `packages/core-testing` (DOC-12 §13) and the tests need the catalog and the migration script of `apps/api`, so P1-06 wrote them there (DR-237).
+- **`apps/api/tests/grants/`.** DOC-19 §9 named `packages/testing/grants.test.ts`; the vendored testing package is `packages/core-testing` (DOC-12 §13) and the tests need the catalog and the migration script of `apps/api`, so P1-06 wrote them there (DR-250).
 - **`FI-` numbers 31 and 32.** Struck on 2026-10-21: the block of FL-19 is `FI-21…30` and the two numbers stay unused.

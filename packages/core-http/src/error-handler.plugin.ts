@@ -4,7 +4,7 @@ import {
   RuleViolationError,
   UnavailableError,
   type ValidationDetail,
-} from '@core/core'
+} from '@core/kernel'
 import type { Logger } from '@core/telemetry'
 import { ValueErrorType } from '@sinclair/typebox/errors'
 import { Elysia, type ValidationError as ElysiaValidationError } from 'elysia'

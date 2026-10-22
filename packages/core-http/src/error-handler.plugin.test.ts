@@ -16,7 +16,7 @@ import {
   UpgradeRequiredError,
   ValidationError,
   VersionConflictError,
-} from '@core/core'
+} from '@core/kernel'
 import { createLogger, serializeError } from '@core/telemetry'
 import { Elysia, t } from 'elysia'
 import { errorHandlerPlugin } from './error-handler.plugin'

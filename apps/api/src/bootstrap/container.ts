@@ -1,5 +1,5 @@
-import { type Clock, type IdGenerator, SystemClock, UuidV7Generator } from '@core/core'
 import { Database } from '@core/db'
+import { type Clock, type IdGenerator, SystemClock, UuidV7Generator } from '@core/kernel'
 import { type AppModule, createRuntime, type MaintenanceStore, SqlJobRunStore } from '@core/runtime'
 import type { Logger } from '@core/telemetry'
 import type { Config } from './config'

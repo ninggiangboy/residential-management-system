@@ -13,7 +13,8 @@
         "tests/**/*.test.ts",
         "tests/integration/relay-worker.ts"
       ],
-      "project": ["src/**/*.ts", "scripts/*.ts", "tests/**/*.ts"]
+      "project": ["src/**/*.ts", "scripts/*.ts", "tests/**/*.ts"],
+      "ignoreDependencies": ["drizzle-orm", "postgres"]
     },
     "packages/shared-types": {
       "entry": ["src/**/*.test.ts"],
