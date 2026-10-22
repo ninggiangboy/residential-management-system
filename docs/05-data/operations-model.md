@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
+> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -805,6 +805,8 @@ The decision on database roles, the grants step and the denied tables is DOC-19'
 
 ### 13.1 Method
 
+**As run in P1-07 and P1-08 (2026-10-22):** the constraint and statement tests below are `modules/building/test/opm.integration.test.ts` (OPM-01…99 and S01, S02, S03, S04, S05, S09…S12, each as `rms_migrator` in a rolled-back transaction, against the tables that the migrations create); OPM-44 is a test of its own because the purge flag lives as long as the transaction that sets it. OPM-S06, S07 and S08 (the idempotency insert, the audit pages, the outbox claim) belong to the tasks that own those statements. The method below is the one of 2026-10-19.
+
 DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container removed afterwards) on 2026-10-19. The files of DOC-14 §2.2, DOC-16 §3.1, §4–§5 and the blocks of §1–§3 above were applied in this order, as the role `rms_migrator`, with `psql -v ON_ERROR_STOP=1` on a fresh database; then each test below inserted or updated rows and compared the SQLSTATE: `23505` unique violation, `23514` check violation, `23503` foreign-key violation, `23000` raised by a trigger, `428C9` generated column, `22023` bad argument, or success. Result: **78 of 78 constraint tests and 12 of 12 statement tests passed.** The prefix `OPM-` (operations model) is new; DOC-88 indexes it. The business tests of the flows keep their own prefixes (`AD-` in DOC-35, `BD-` in DOC-36, `FS-` in DOC-37, `JB-` in DOC-38).
 
 ### 13.2 Constraint tests
@@ -913,9 +915,9 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 
 | Item | Why | Done in |
 | --- | --- | --- |
-| The Drizzle schema files and the migration folders for these tables | No repository exists yet | P1-06, P1-07, P1-08 |
-| The core helper's own DDL for `outbox_messages` and `inbox` | The block copies the reference's table definition; the vendored helper is not in this repository yet | P1-02 (compare the generated SQL with this block) |
-| Behaviour under concurrent writers (two Admins saving settings, two `register` calls at the quota edge) | Needs the application code | P1-07 (`BD-`, `FS-`) |
+| The Drizzle schema files and the migration folders for these tables | **Done in P1-07 and P1-08** (2026-10-22): `modules/building/migrations` and `modules/audit/migrations` are what `drizzle-kit generate` made from the schemas plus one hand-written file each (the covering index, the write-once trigger; the append-only triggers and `audit.purge`); the generated `CREATE SCHEMA` is removed because the bootstrap creates the schemas. `DESC` keys are `DESC NULLS FIRST`, which is what `ORDER BY … DESC` asks for | P1-06, P1-07, P1-08 |
+| The core helper's own DDL for `outbox_messages` and `inbox` | **Done in P1-07**: the SQL that drizzle-kit makes from `outboxTable` and `inboxTable` has the columns, the defaults and the partial index `outbox_pending_idx` of this block; the inbox primary key is named `inbox_message_id_handler_pk` by the helper (OPM-80…83) | P1-02 (compare the generated SQL with this block) |
+| Behaviour under concurrent writers (two Admins saving settings, two `register` calls at the quota edge) | **Done in P1-07**: two Admins saving at the same version (BD-09), two Admins publishing the same version (BD-45), a change of the receiving account against an intent that holds the share lock (BD-25). Two `register` calls at the quota edge are the accepted overshoot of DOC-37 §11 and are not tested | P1-07 (`BD-`, `FS-`) |
 | Grants and the role that runs each statement | Written in DOC-19 and tested there with the same DDL | P1-06 |
 
 ## 14. Not in this document

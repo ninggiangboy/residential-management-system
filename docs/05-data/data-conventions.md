@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07 and P1-08: the first `schema.ts` files, `drizzle.config.ts` and migrations, §14.1, §16.1) · 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 
@@ -615,7 +615,7 @@ The checks ran on 2026-10-19 on PostgreSQL 18.6 after the DDL of §2.2, §10 and
 
 | Item | Why | Done in |
 | --- | --- | --- |
-| The Drizzle schema and config of §14.1 | Illustrative; the first module (P1-07) writes the first `schema.ts` and `drizzle.config.ts`. `db:migrate` ran in P1-06 through Drizzle's migrator on a fixture module (two migrations, history in `drizzle_probe`) | P1-07 (`db:generate` on a real schema) |
+| The Drizzle schema and config of §14.1 | **Done in P1-07 and P1-08** (2026-10-22): `modules/audit` and `modules/building` have their `drizzle.config.ts`, `schema.ts` and migrations; `bun run db:generate` made `0000_init.sql` of each, and a custom file holds what drizzle-kit cannot say. drizzle-kit writes `CREATE SCHEMA` (removed: the bootstrap owns the schemas) and `DESC NULLS LAST` for `.desc()` (use `.desc().nullsFirst()`, which is the order `ORDER BY … DESC` asks for and the index can serve). `CHECK`s with a function and partial indexes with `WHERE` come out as written; `INCLUDE` and triggers do not | P1-07 (`db:generate` on a real schema) |
 | Checks 2 to 8, 10 to 12, 14 and 15 of the table above | They need the tables of `finance` and `residency`, which DOC-15 and DOC-16 define and P1-12 and P2-01 create. Checks 1, 9 and 13 and the unaccent and trigram behaviour ran in P1-06 (`apps/api/tests/grants/grants.test.ts`) | P1-12, P2-01 |
 | Unaccent and trigram behaviour with the real `unaccent` rules on the VPS packages | The container image carries the same contrib modules; the VPS packages are not checked | P1-20 |
 | The full set of constraints of `finance` | Defined in DOC-15 | DOC-15 and P2-01 |
