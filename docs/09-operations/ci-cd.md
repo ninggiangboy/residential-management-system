@@ -366,7 +366,7 @@ Trunk-based (DR-08): short-lived branches, rebase-merged pull requests (DR-251),
 Conventional Commits in English, with the module as the scope: `feat(finance): …`, `fix(identity): …` (DR-08). Because merges are rebased, **each commit subject** of the branch lands on `dev` unchanged (the pull request title is not a commit, but is still checked), and `bun run check:commits` (`scripts/check-commits.ts`, P1-19) validates it and the subject of each non-merge commit of the branch (from the base of the pull request; locally from the merge base with `origin/dev`):
 
 ```
-^(feat|fix|perf|refactor|docs|test|chore|ci|build|revert)(\((identity|building|residency|finance|tickets|access|vehicles|notices|notification|wiki|audit|reporting|realtime|api|web|resident-app|staff-app|core|shared|ops|docs|deps)\))?!?: .{1,100}$
+^(feat|fix|perf|refactor|docs|test|chore|ci|build|revert)(\((identity|building|residency|finance|tickets|access|vehicles|notices|notification|wiki|audit|reporting|realtime|api|web|resident-app|staff-app|core|db|runtime|shared|ops|docs|deps)\))?!?: .{1,100}$
 ```
 
 The vendored-package sync uses the title `chore(core): sync <sha>` (DR-02). A breaking API change carries `!`.

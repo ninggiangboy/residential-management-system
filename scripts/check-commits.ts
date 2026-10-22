@@ -30,6 +30,8 @@ const scopes = [
   'resident-app',
   'staff-app',
   'core',
+  'db',
+  'runtime',
   'shared',
   'ops',
   'docs',
