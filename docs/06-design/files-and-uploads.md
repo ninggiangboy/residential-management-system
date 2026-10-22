@@ -1,6 +1,6 @@
 # Files and uploads
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-19 · DOC-37
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07: §12 results, the signer, `FileActor.role`, DR-252) · 2026-10-19 · DOC-37
 > Depends on: original SDD §12, §16, §19.1, [DR](../00-decision-register.md) (DR-07, 21, 22, 55, 56, 61, 64, 74, 83, 86, 111, 112, 115, 119, 122, 123), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.4, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-17](../05-data/operations-model.md) §3.1, [DOC-20](../05-data/data-lifecycle.md) §3, [DOC-38](jobs-and-outbox-runtime.md)
 > Main readers: P1-07 (`building` module and files), every task that uploads or serves a file (tickets, vehicles, notices, library, imports, statements, PDFs, exports), DOC-34, DOC-39, DOC-51, DOC-70, RB-12
 
@@ -45,6 +45,7 @@ interface FileActor {                          // who is acting; built from Staf
   accountId: Uuid                              // SYSTEM_ACCOUNT_ID (the nil UUID) for 'system'
   buildingId: Uuid
   scope: BuildingScope
+  role?: StaffRole                             // a staff account's role: §4 allows some purposes to some roles only (DR-252)
 }
 type Purpose =
   | 'avatar' | 'logo' | 'import' | 'statement' | 'ticket_media' | 'vehicle_plate_photo' | 'vehicle_paper'
@@ -156,7 +157,7 @@ sequenceDiagram
 2. Validate: `mime` is in the purpose's list; `1 ≤ size ≤ maximum` (400 `validation_failed` with `file_type_not_allowed` or `file_too_large`). A request for a CCCD image fails the same way: there is no such purpose.
 3. Rate: take one token from `upload:account:<id>` (60 per hour); 429 with `Retry-After` when empty.
 4. Quota: `usedBytes + size > quotaBytes` gives 413 `quota_exceeded` (§11).
-5. Insert the row (`status = 'pending'`, `account_kind`, `account_id`, the declared `size`, the key of §5) and presign: method `PUT`, expiry `FILES_UPLOAD_URL_TTL_SECONDS` (900), signed header `Content-Type` = the registered mime. Whether `Content-Length` and `If-None-Match` can also be signed is checked in P1-07 (§12); the design does not depend on it.
+5. Insert the row (`status = 'pending'`, `account_kind`, `account_id`, the declared `size`, the key of §5) and presign: method `PUT`, expiry `FILES_UPLOAD_URL_TTL_SECONDS` (900), signed header `Content-Type` = the registered mime. `Content-Length` can be signed too (SeaweedFS enforces it, U3) but is not, because a client that sets another length would fail with an opaque 403; `If-None-Match` is not signed (U6). The design does not depend on either (§12).
 
 The response example (`headers` must be sent exactly):
 
@@ -183,7 +184,7 @@ Called by the client after the `PUT` (`POST /me|staff/uploads/{id}/verify`, DR-1
 2. `HEAD` the object. Missing: 422 `file_not_verified` with `details[0].code = "missing"`; the row stays `pending` so the client can retry within the window.
 3. Size: `ContentLength` must be between 1 and the maximum of the purpose; `ContentType` must equal the registered mime. A failure goes to step 6.
 4. Magic bytes: `GET` with `Range: bytes=0-4095` and apply the rule of §7 for the mime. A failure goes to step 6.
-5. One short transaction: `status = 'verified'`, `verified_at = now()`, `size` = the real `ContentLength`, `updated_at`; for an image purpose that has a thumbnail, write `building.thumbnail_requested.v1`. Answer 200.
+5. One short transaction: `status = 'verified'`, `verified_at = now()`, `size` = the real `ContentLength`, `updated_at`; for an image of a purpose that has a thumbnail (a video of `ticket_media` has none), write `building.thumbnail_requested.v1`. Answer 200.
 6. On failure, one short transaction: `status = 'deleted'`, `deleted_at = now()`, write `building.file_delete_requested.v1`; answer 422 `file_not_verified` with `details[0].code` one of `too_large`, `empty`, `wrong_type`, `bad_content`. The object is deleted by the worker, not by this request.
 
 Planned cost: one `HEAD` and one ranged `GET` to R2 and one short transaction, about 150 to 250 ms from the VPS (planned, not measured; P1-07 measures). Verifying right after each `PUT`, not at submit, spreads that cost over the time the user spends choosing the next photo.
@@ -258,7 +259,7 @@ A URL is regenerated on every response, so a client never stores one; a list of 
 `storeGenerated` is called by the worker (receipt and fee-notice PDFs, bulk ZIPs, exports) as account kind `system` with `account_id` = the nil UUID `00000000-0000-0000-0000-000000000000`.
 
 1. Insert a `pending` row (quota is **not** checked: DR-123), key of §5, `owner_ref` = the logical key (DR-86), for example `batch/0192…/unit/0192….pdf`.
-2. Upload the body: a `Uint8Array` with `PutObject`; a stream (a ZIP, a large export) with the S3 multipart helper, parts of 8 MB, aborted on error. The SHA-256 is computed while streaming.
+2. Upload the body: a `Uint8Array` with `PutObject`; a stream (a ZIP, a large export) with the multipart writer of `ObjectStorage.writeStream`, parts of 8 MB with a flush after each (that bounds memory, U9); on an error the parts already sent are left to the lifecycle rule of §5, which aborts them within a day. The SHA-256 is computed while streaming.
 3. One transaction: `status = 'attached'` with `verified_at` and `attached_at` both set (the `CHECK` of the table allows it), real `size`, `checksum`.
 4. A failure leaves the row `pending`; the orphan job removes it after 24 hours and the lifecycle rule aborts the multipart parts after 1 day.
 
@@ -309,27 +310,29 @@ DOC-41 lists them. Defaults:
 
 ## 12. Upload checks of P1-07
 
-DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07. They run against the staging bucket with `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1152.0 and `sharp` 0.35.5 (DOC-11); the results are written here and in the compatibility table of DOC-11.
+DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07. They are the test file `tools/compat/uploads.test.ts` (`bun run check:compat`), which runs against whichever store `S3_ENDPOINT`, `S3_BUCKET` and the keys name and prints one line per check (`UPLOAD-CHECK U2: …`). With `sharp` 0.35.5 and, in the first version of this section, `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1152.0 (DOC-11); the AWS packages were not adopted (DR-252). **Run on 2026-10-22 against SeaweedFS 4.48; the staging bucket of Cloudflare R2 has no credentials yet and is not run**: it is the same command with its keys and `UPLOAD_CHECK_ORIGIN` set to the CMS origin. The results are here and in the compatibility table of DOC-11.
 
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
-| U1 | A browser (CORS) and an app (`fetch`) `PUT` to a presigned URL with the signed `Content-Type` | 200 | Not run |
-| U2 | The same `PUT` with another `Content-Type` | 403 `SignatureDoesNotMatch` | Not run |
-| U3 | A `PUT` whose body is larger than a signed `Content-Length` | Refused; if accepted, the design is unchanged and §6.3 is the only size control | Not run |
-| U4 | `HEAD` returns `ContentLength`, `ContentType`, `ETag`; `GET` with `Range: bytes=0-4095` returns 206 and 4,096 bytes | As stated | Not run |
-| U5 | A client that lies: registers 5 MB, `PUT`s 11 MB; verify | 422 `file_not_verified` (`too_large`); the object is gone after the delete command | Not run |
-| U6 | A second `PUT` to the same key with a signed `If-None-Match: *` | 412; if it works it is adopted as hardening against replacing a verified file inside the URL's 15 minutes | Not run |
-| U7 | `DeleteObject` on a missing key | Success | Not run |
-| U8 | `sharp` on Bun: a 1,920 px JPEG to a 480 px WebP; timing and RSS for 100 images | Under 150 ms each; RSS growth under 200 MB | Not run |
-| U9 | A 200 MB stream through the multipart helper from the worker; kill it midway | Parts aborted by the lifecycle rule within a day | Not run |
-| U10 | A presigned `GET` with `response-content-disposition` | The header is honoured | Not run |
-| U11 | A CORS preflight from `https://admin-staging.<domain>` | Allowed for `PUT`/`GET`, `content-type`; refused from another origin | Not run |
+| U1 | A browser (CORS) and an app (`fetch`) `PUT` to a presigned URL with the signed `Content-Type` | 200 | **Pass** (SeaweedFS 4.48, 2026-10-22; the URL signs `content-type;host`). A real browser's CORS is not run |
+| U2 | The same `PUT` with another `Content-Type` | 403 `SignatureDoesNotMatch` | **Pass** on SeaweedFS: 403 `SignatureDoesNotMatch`. **Bun's `S3File.presign({ type })` does not sign the header**: with it the same `PUT` returned 200 and the object was stored under `image/png`. `@core/storage` signs the `PUT` itself (DR-252) |
+| U3 | A `PUT` whose body is larger than a signed `Content-Length` | Refused; if accepted, the design is unchanged and §6.3 is the only size control | **SeaweedFS honors it**: a body of 5,000 bytes against a signed length of 100 was refused with 403, an exact body passed. R2 not run. The design is unchanged and §6.3 stays the size control; the register does not sign the length |
+| U4 | `HEAD` returns `ContentLength`, `ContentType`, `ETag`; `GET` with `Range: bytes=0-4095` returns 206 and 4,096 bytes | As stated | **Pass**: size and `Content-Type` from `HEAD` (the storage `stat`), `Range: bytes=0-4095` returns 206 and 4,096 bytes |
+| U5 | A client that lies: registers 5 MB, `PUT`s 11 MB; verify | 422 `file_not_verified` (`too_large`); the object is gone after the delete command | **Pass** (FS-04): the store takes the 11 MB body (200), verify answers 422 `file_not_verified` (`too_large`), the row is `deleted` and the worker's command removes the object |
+| U6 | A second `PUT` to the same key with a signed `If-None-Match: *` | 412; if it works it is adopted as hardening against replacing a verified file inside the URL's 15 minutes | **Not run**: the presigner signs `content-type` (and optionally `content-length`) only; the residual risk below stays accepted |
+| U7 | `DeleteObject` on a missing key | Success | **Pass**: `DeleteObject` of a missing key, twice |
+| U8 | `sharp` on Bun: a 1,920 px JPEG to a 480 px WebP; timing and RSS for 100 images | Under 150 ms each; RSS growth under 200 MB | **Pass**: a 1,109,229-byte 1,920 px JPEG becomes a 3,454-byte 480 px WebP; the first image 22 ms, the mean of 100 images 20 ms, resident memory did not grow (`sharp` 0.35.5, Bun 1.4.3, Apple silicon) |
+| U9 | A 200 MB stream through the multipart helper from the worker; kill it midway | Parts aborted by the lifecycle rule within a day | **Pass for 64 MB** (the local store has 4 GB of volumes; `UPLOAD_CHECK_STREAM_MB=200` runs the size of the table): 0.4 s and 1 MB of resident memory with a flush per 8 MB part, 132 MB without it. The lifecycle rule that aborts parts is a bucket setting that the local compose does not carry: not tested |
+| U10 | A presigned `GET` with `response-content-disposition` | The header is honoured | **Pass**: `Content-Disposition: attachment; filename*=UTF-8''Bi%C3%AAn%20lai%2010-2026.pdf` |
+| U11 | A CORS preflight from `https://admin-staging.<domain>` | Allowed for `PUT`/`GET`, `content-type`; refused from another origin | **Pass** on the rule of P1-03: `http://localhost:5173` allowed (`GET, PUT, HEAD`), `https://evil.example` refused (403, no allow-origin header) |
 
 **Residual risk, stated.** A presigned URL is a bearer token and can be used again until it expires. After a file is verified, the holder of its `PUT` URL could write different bytes to the same key until the URL's 15 minutes pass. The file is then not what was verified. The holder is the authenticated account that registered it, so it can only change its own upload; the object is served with the registered `Content-Type` from a private bucket by signed URL; staff open photos as images. The risk is accepted for phase 1 and reduced to zero if U6 passes.
 
 ## 13. Required tests
 
 Prefix `FS-` (files). They run against a local S3-compatible store and the real PostgreSQL, with a fake clock. DOC-88 indexes the prefix.
+
+**Run in P1-07 (2026-10-22, `modules/building/test/files.integration.test.ts`):** FS-01…16, FS-18, FS-20, FS-21 and FS-22, against SeaweedFS 4.48 and, when no store answers (CI has none yet), against `FakeStorage` of `@core/testing`, which refuses a `PUT` whose `Content-Type` is not the signed one. FS-17 (an import is consumed) waits for P1-13 and FS-19 (`finance_purge`) for P2. FS-11 asserts the lifetimes and the host of the URL; that no log line holds its query string is the logger's redaction (DOC-42 §8.3), not tested here.
 
 | ID | Given | When | Then |
 | --- | --- | --- | --- |

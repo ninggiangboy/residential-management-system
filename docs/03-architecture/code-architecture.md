@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07 and P1-08: the first two modules, `check:scope` and its parser, `audited` as built, `inBuilding`, DR-252, DR-253; P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -230,7 +230,7 @@ apps/api/src/
 │   ├── config/                # the slices of DOC-41 (slices.ts), the loader and the boot rules (load.ts), key rings (rings.ts)
 │   ├── container.ts           # createContainer(config, logger, overrides): the only place that knows concrete adapters
 │   ├── boot.ts                # waitForDatabase: 30 s of retries, then exit 1 (DR-161)
-│   ├── module-catalog.ts      # manifests of the installed modules, in migration order (empty until P1-07)
+│   ├── module-catalog.ts      # manifests of the installed modules, in migration order (audit, building; identity and residency follow in P1-10 and P1-12)
 │   └── guards.ts              # resident, staff and unit guards (§5.3); written with the first guard in P1-10
 └── scripts/                   # config-example, healthcheck; db:migrate, outbox:list, seed:demo, payos:sim follow (no business logic)
 ```
@@ -490,7 +490,7 @@ Rules that follow from the shape:
 
 ### 7.3 The scope lint
 
-The lint is a merge gate from P1 (DR-12). **P1-01 decided: a Bun script that walks the AST** (DOC-11 §2, row 5). A Biome GritQL plugin can flag a `.where(…)` without `inBuilding`, but it cannot know which tables are scoped, cannot flag a query with no `.where`, and cannot compare the `schema.ts` files with the scoped list. TypeScript 7 has no stable JavaScript API yet, so P1-07, which writes the script, chooses and pins the parser.
+The lint is a merge gate from P1 (DR-12). **P1-01 decided: a Bun script that walks the AST** (DOC-11 §2, row 5). A Biome GritQL plugin can flag a `.where(…)` without `inBuilding`, but it cannot know which tables are scoped, cannot flag a query with no `.where`, and cannot compare the `schema.ts` files with the scoped list. TypeScript 7 has no stable JavaScript API yet, so P1-07 wrote the script with the TypeScript 6.0.3 that `tools/depcruise` carries for dependency-cruiser (no new dependency; its types are not available to the TypeScript 7 of the product, so `scripts/lib/typescript-api.ts` is the one file that types the nodes as `any`).
 
 | Check | Fails when |
 | --- | --- |
@@ -498,7 +498,7 @@ The lint is a merge gate from P1 (DR-12). **P1-01 decided: a Bun script that wal
 | Scope argument | A public repository method on a scoped table has no `scope: BuildingScope` first parameter |
 | Registry | A table in a module `schema.ts` with a `building_id` column that is not in the scoped list, or a table without `building_id` that is not on the allow-list |
 
-The scoped list is generated from the schemas (`@mod/*/schema`). The explicit allow-list holds tables that are global by nature: `platform.*` (DR-85), `identity.rate_bucket`, `identity.otp_challenge`, `identity.refresh_family`, `identity.refresh_token`, `identity.resident_account` (a resident account has no building), `identity.password_token`, `identity.staff_account`, `building.building`, `outbox_messages` and `inbox`; the reasons are in DOC-14 §5.3 (DR-104). `realtime.events` is scoped and not on the list. Adding to the allow-list is a change reviewed by CODEOWNERS (`modules/identity`, `modules/finance`). EXP-10 is the runtime check: it tries cross-building and cross-unit access on every endpoint.
+*As built (`scripts/check-scope.ts`, `scripts/lib/scope-lint.ts`, fixtures in `tools/scope-lint`):* the checks are the three above; an `insert` must set `buildingId` in its `values`; a line `// scope-ok: <reason>` on the line of a query or method, or the two before it, exempts that one and is the review (the single use is `FilesApi.signedUrl(fileId)`, which has no building argument because the calling module has authorised the file, DOC-37 §8); the helper is `inBuilding` of `@core/db`, typed structurally because a core package may not import `@rms/shared-types`. The scoped list is generated from the schemas (`@mod/*/schema`). The explicit allow-list holds tables that are global by nature: `platform.*` (DR-85), `identity.rate_bucket`, `identity.otp_challenge`, `identity.refresh_family`, `identity.refresh_token`, `identity.resident_account` (a resident account has no building), `identity.password_token`, `identity.staff_account`, `building.building`, `outbox_messages` and `inbox`; the reasons are in DOC-14 §5.3 (DR-104). `realtime.events` is scoped and not on the list. Adding to the allow-list is a change reviewed by CODEOWNERS (`modules/identity`, `modules/finance`). EXP-10 is the runtime check: it tries cross-building and cross-unit access on every endpoint.
 
 ## 8. Transactions, events, audit and counters
 
@@ -566,7 +566,7 @@ export class VoidCharge {
 }
 ```
 
-The audit row is in the same transaction as the mutation (DR-57): a failed audit insert fails the mutation, a rolled-back mutation leaves no audit row (FR-37.1). `AuditApi.record` is called through a small application wrapper so that actor, role, IP, request id and the `system` actor of webhook settlement (`actor_kind = 'system'`, FR-37.3) are filled from the request context, not from each use case:
+The audit row is in the same transaction as the mutation (DR-57): a failed audit insert fails the mutation, a rolled-back mutation leaves no audit row (FR-37.1). `AuditApi.record` is called through a small application wrapper so that actor, role, IP, request id and the `system` actor of webhook settlement (`actor_kind = 'system'`, FR-37.3) are filled from the request context, not from each use case. *As built (P1-08, DR-253):* `installAudit` returns the wrapper next to `AuditApi`, the modules receive it in their host (`audited`), the first argument of the use case is the actor, and the spec's `object` and `details` take the result only:
 
 ```ts
 export function audited<A extends unknown[], R>(

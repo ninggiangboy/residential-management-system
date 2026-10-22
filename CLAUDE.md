@@ -21,10 +21,12 @@ bun run keys:generate      # writes .env.local (throw-away local passwords); ide
 bun run infra:up           # docker compose: postgres 18.6 :5432, SeaweedFS S3 :9000, Mailpit :1025/:8025
 bun run infra:down | infra:reset   # reset DELETES the local database and object store
 
-bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, i18n, dependabot, test-ids)
+bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, test-ids)
 bun run lint               # Biome; `bun run format` applies the fixes
 bun run typecheck          # tsc in every workspace + scripts/
 bun run check:arch         # dependency-cruiser, three configs (apps, modules, packages)
+bun run check:scope        # every query on a table with building_id carries the scope (AST, TypeScript 6 of tools/depcruise)
+bun run check:audit        # every audit action written in code is declared in its manifest and listed in DOC-35 §4
 bun run test               # unit tests of every workspace (bun test, no database)
 bun run test:coverage      # the same with lcov (CI `unit` job)
 bun run dev:web            # Vite for apps/cms-web on :5173
@@ -37,9 +39,10 @@ Running tests:
 - One file: `bun test packages/core-i18n/src/merge.test.ts`. One test by name: add `-t '<pattern>'`. One workspace: `bun run --filter @core/i18n test`.
 - The `@core/db` tests skip themselves unless `TEST_ADMIN_DATABASE_URL=postgres://postgres:$RMS_POSTGRES_PASSWORD@localhost:$RMS_PG_PORT/postgres` is set and the stack is up.
 - The design-tokens font test (DS-05) calls `uv run --with fontTools`, so it needs `uv` installed.
+- Integration tests (`bun run test:integration`, `bun run test:grants`) need the stack and `.env.local`; each file clones a migrated template database. The files tests of `@mod/building` use SeaweedFS when `S3_ENDPOINT` answers and an in-memory store otherwise; `bun --env-file=.env.local test tools/compat/uploads.test.ts` runs the upload checks (U1…U11) against the store that `S3_*` names.
 - `bun run check:arch:fixtures` tests the cruiser rules against the deliberately broken trees in `tools/arch-fixtures/cases/`.
 
-Several targets named in the docs (`dev`, `db:migrate`, `seed:demo`, `test:integration`, `check:scope`, `test:authz`, `test:e2e`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
+Several targets named in the docs (`dev`, `seed:demo`, `test:authz`, `test:e2e`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
 
 ## Architecture
 
@@ -49,7 +52,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
 
 - `@app/api` (`apps/api`) is the composition root: it holds the HTTP server and the worker role. It imports modules only through their exports map (`.`, `./contracts`, `./config`, `./manifest`, `./schema`, `./integrations/<consumer>`) and never imports a driver directly. Only `main.ts` and `app.ts` may import the container.
 - `@app/cms-web` (Vite, React 19, TanStack Router, Tailwind 4), `@app/resident-app` and `@app/staff-app` (Expo Router, NativeWind on Tailwind 3) are the clients. They import `@app/api` **only as `import type { App }`** for the Eden treaty client, and never import server code (`modules/*` or the server-side `@core/*`).
-- `@mod/<name>` (`modules/`, still empty) is a business module that owns one PostgreSQL schema. Modules talk to each other **only through `./contracts`**. Inside a module the layers are `domain` → `application` → `infrastructure`/`presentation`:
+- `@mod/<name>` (`modules/`: `audit` and `building` so far) is a business module that owns one PostgreSQL schema. Modules talk to each other **only through `./contracts`**. Inside a module the layers are `domain` → `application` → `infrastructure`/`presentation`:
   - `domain` is pure. It imports only `@core/kernel` and `@rms/shared-types`; no `new Date()` and no I/O. Time comes from the `Clock` port and ids from `IdGenerator`.
   - `application` holds the use cases and ports. It must not touch Elysia, Drizzle or `process.env`.
   - `presentation` holds Elysia routes. A route handler is about three lines and receives use cases, never repositories.

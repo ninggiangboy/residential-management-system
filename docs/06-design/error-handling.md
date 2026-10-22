@@ -243,7 +243,7 @@ A new rule code is added to this table in the change that throws it, with its st
 
 | Code | HTTP | Class | When | `details` | English message |
 | --- | --- | --- | --- | --- | --- |
-| `file_not_verified` | 422 | `RuleViolationError` | Verify finds the object missing, oversize, of the wrong type or unreadable; attach of an unverified, foreign or attached file (FR-40.2) | `[{code}]`, `code` ∈ `missing`, `too_large`, `empty`, `wrong_type`, `bad_content` | The file could not be used. Choose it again. |
+| `file_not_verified` | 422 | `RuleViolationError` | Verify finds the object missing, oversize, of the wrong type or unreadable; attach of an unverified, foreign or attached file (FR-40.2) | `[{code}]`, `code` ∈ `missing`, `too_large`, `empty`, `wrong_type`, `bad_content`, and `not_verified` for an attach of a file that is not `verified`, not the caller's or attached already (DR-252). The class takes the answer code (`RuleViolationError(rule, message, path, code)`) | The file could not be used. Choose it again. |
 | `quota_exceeded` | 413 | `PayloadTooLargeError` | A register at 100% of the quota (FR-40.1) | `{usedBytes, quotaBytes}` | Storage is full. Contact the administrator. |
 | `demo_reset_running` | 409 | `ConflictError` | A demo reset while another runs (DOC-36 §10.4) | — | A reset is already running. |
 
