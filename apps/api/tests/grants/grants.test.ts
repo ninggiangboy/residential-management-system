@@ -88,12 +88,13 @@ const ROWS: Row[] = [
   [
     'GRT-14',
     'rms_app',
-    `INSERT INTO audit.audit_log (id, action) VALUES (gen_random_uuid(), 'x')`,
+    `INSERT INTO audit.audit_log (id, building_id, actor_kind, action, object_type, object_id)
+     VALUES (gen_random_uuid(), gen_random_uuid(), 'system', 'x.y.z', 'x', gen_random_uuid())`,
     'ok',
   ],
   ['GRT-15', 'rms_app', 'SELECT * FROM audit.audit_log', 'ok'],
   // the audit log is append-only; the maintenance flag is read-only for rms_app
-  ['GRT-16', 'rms_app', `UPDATE audit.audit_log SET action = 'y'`, '42501'],
+  ['GRT-16', 'rms_app', `UPDATE audit.audit_log SET action = 'x.y.z'`, '42501'],
   ['GRT-17', 'rms_app', 'DELETE FROM audit.audit_log', '42501'],
   ['GRT-18', 'rms_app', 'TRUNCATE audit.audit_log', '42501'],
   ['GRT-19', 'rms_app', `SELECT audit.purge(now() - interval '1000 years', 'standard')`, 'ok'],
@@ -140,10 +141,10 @@ const ROWS: Row[] = [
   [
     'GRT-44',
     'rms_readonly',
-    `INSERT INTO building.building_setting (id, building_id) VALUES (gen_random_uuid(), gen_random_uuid())`,
+    `INSERT INTO building.building_setting (building_id) VALUES (gen_random_uuid())`,
     '42501',
   ],
-  ['GRT-45', 'rms_readonly', `UPDATE building.building SET name = 'x'`, '42501'],
+  ['GRT-45', 'rms_readonly', `UPDATE building.building SET address = 'x'`, '42501'],
   ['GRT-46', 'rms_readonly', 'DELETE FROM finance.inbox', '42501'],
   ['GRT-47', 'rms_readonly', 'TRUNCATE finance.inbox', '42501'],
   ['GRT-48', 'rms_readonly', `SELECT audit.purge(now(), 'standard')`, '42501'],
@@ -180,7 +181,7 @@ const ROWS: Row[] = [
     'CREATE TABLE finance.t (id int); ALTER TABLE finance.t ADD COLUMN n int; DROP TABLE finance.t',
     'ok',
   ],
-  ['GRT-60', 'rms_migrator', `UPDATE audit.audit_log SET action = 'y'`, '23000'],
+  ['GRT-60', 'rms_migrator', `UPDATE audit.audit_log SET action = 'x.y.z'`, '23000'],
   ['GRT-61', 'rms_migrator', 'DELETE FROM audit.audit_log', '23000'],
   ['GRT-62', 'rms_migrator', 'CREATE ROLE evil', '42501'],
   [
