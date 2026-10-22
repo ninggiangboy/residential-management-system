@@ -1,0 +1,70 @@
+# Project rules of the Semgrep step of the `security` stage (DOC-71 §5, DOC-39 §12). Semgrep CE runs these together with
+# the registry set `p/default`; every rule here is ERROR, so a finding fails the build. Test files are excluded: they may
+# build SQL or run commands from constants.
+rules:
+  - id: rms-dynamic-code
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: eval() and new Function() run strings as code; never use them (CWE-95).
+    metadata: { cwe: 'CWE-95', category: security }
+    paths: { exclude: ['*.test.ts', '*.spec.ts'] }
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+      - pattern: Function(...)
+
+  - id: rms-sql-raw-dynamic
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      sql.raw() inserts text into SQL without parameters. Use the sql`` template (values become parameters) or
+      sql.identifier(); sql.raw() takes string literals only (CWE-89).
+    metadata: { cwe: 'CWE-89', category: security }
+    paths: { exclude: ['*.test.ts'] }
+    patterns:
+      - pattern: sql.raw($X)
+      - pattern-not: sql.raw("...")
+
+  - id: rms-shell-command-dynamic
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      A shell command built from a value can be injected. Use Bun.spawn or execFile with an argument array (CWE-78).
+    metadata: { cwe: 'CWE-78', category: security }
+    paths: { exclude: ['*.test.ts'] }
+    patterns:
+      - pattern-either:
+          - pattern: $CP.exec($CMD, ...)
+          - pattern: $CP.execSync($CMD, ...)
+          - pattern: exec($CMD, ...)
+          - pattern: execSync($CMD, ...)
+      - pattern-not: $F("...", ...)
+
+  - id: rms-weak-hash
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: MD5 and SHA-1 are broken for security use; use SHA-256 or better (CWE-328).
+    metadata: { cwe: 'CWE-328', category: security }
+    pattern-either:
+      - pattern: createHash("md5")
+      - pattern: createHash("sha1")
+      - pattern: new Bun.CryptoHasher("md5")
+      - pattern: new Bun.CryptoHasher("sha1")
+
+  - id: rms-tls-verification-off
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: TLS certificate checks must stay on (CWE-295).
+    metadata: { cwe: 'CWE-295', category: security }
+    pattern-either:
+      - pattern: '{..., rejectUnauthorized: false, ...}'
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+  - id: rms-jwt-alg-none
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: A JWT check that accepts "none" accepts unsigned tokens; the API signs ES256 only (ADR-0010, CWE-347).
+    metadata: { cwe: 'CWE-347', category: security }
+    pattern-either:
+      - pattern: '{..., algorithms: [..., "none", ...], ...}'
+      - pattern: '{..., alg: "none", ...}'

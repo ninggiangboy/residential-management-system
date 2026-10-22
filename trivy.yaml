@@ -1,0 +1,16 @@
+# Trivy settings of the `security` and `build` stages (DOC-71 §5, DOC-39 §12).
+# Licences the product may not link (DR-153, formerly the dependency-review rule): a package with one of these is
+# `forbidden` and reported CRITICAL, which fails the licence step. Development dependencies are not scanned (Trivy's
+# default), so a build tool under such a licence is not "linked". Grafana, Loki and k6 run as separate programs (DOC-11 §0).
+license:
+  forbidden:
+    - GPL-2.0
+    - GPL-2.0-only
+    - GPL-2.0-or-later
+    - GPL-3.0
+    - GPL-3.0-only
+    - GPL-3.0-or-later
+    - AGPL-1.0
+    - AGPL-3.0
+    - AGPL-3.0-only
+    - AGPL-3.0-or-later

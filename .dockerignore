@@ -1,0 +1,15 @@
+# Build context of docker/Dockerfile.api (DOC-71 §6.1). The workspace manifests under apps/ stay in: bun.lock needs them.
+**/node_modules
+**/dist
+**/coverage
+**/.expo
+**/*.test.ts
+**/*.tsbuildinfo
+.git
+.github
+.env
+.env.*
+docs
+tools
+ops
+residential-management-sdd.md

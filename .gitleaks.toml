@@ -1,0 +1,19 @@
+# Gitleaks configuration (DOC-71 §5, DOC-39 §12). The default rules apply; every allow-list entry says why it is safe.
+title = "rms gitleaks"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+# An `Idempotency-Key` header is a client-made UUID v4 that identifies a request, not a credential (DOC-50 §9);
+# the documents show examples of it.
+description = "Idempotency-Key example values"
+regexTarget = "match"
+regexes = ['''Idempotency-Key: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}''']
+
+[[allowlists]]
+# The example request body of the gateway configuration in DOC-51 (a made-up UUID, never a payOS key).
+description = "Example gateway apiKey in the API endpoint document"
+paths = ['''^docs/07-api/api-endpoints\.md$''']
+regexTarget = "match"
+regexes = ['''apiKey": "7d3f9a1c-4b2e-4a8d-9c11-5e6f7a8b9c0d"''']

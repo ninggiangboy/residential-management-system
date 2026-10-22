@@ -1,0 +1,8 @@
+# DOC-71 §11.4 (DR-08). A review by a code owner is required only once the repository has a second contributor (DR-166).
+# The scope-lint allow-list is reviewed by the owners of modules/identity and modules/finance (DOC-12 §7.3).
+/modules/finance/   @ninggiangboy
+/modules/identity/  @ninggiangboy
+/docs/04-adr/       @ninggiangboy
+/ops/               @ninggiangboy
+/docker/            @ninggiangboy
+/.github/           @ninggiangboy
