@@ -45,3 +45,13 @@ local-changes:
   - core-runtime: `db-cli.ts` (the reference's db:generate/db:migrate), `cluster.ts` (process supervisor) and `maintenance-config.ts` (a zod slice)
     are removed: `scripts/migrate.ts` and `scripts/db.ts` run the migrations of this project (DOC-19 §3.1), the scaling unit is the
     container (DOC-41 `APP_PROCESSES`) and the key is in `apps/api/src/bootstrap/config` (P1-06)
+  - core-kernel: `SecretBox` (`seal`, `open`, `newestKeyId`, `createSecretBox`, `keyRingFromBase64`): AES-256-GCM envelope
+    `v1:<keyId>:<iv>:<ciphertext+tag>` with the AAD bound to the row (DOC-36 §6, DR-126); `RuleViolationError` takes an optional
+    answer `code` (default `validation_failed`) for the rules the catalog names (`file_not_verified`) (P1-07)
+  - core-context: `RequestContext.ip` and `userAgent`, set by the new core-http `clientInfoPlugin` and read by `AuditApi.record`
+    (DOC-35 §3.2); core-runtime: `ModuleManifest.auditActions`, the actions a module may write (DOC-35 §3.3) (P1-08)
+  - core-storage: `ObjectStorage.readRange` (a ranged GET for the first 4 KB of an upload), `writeStream` (a multipart upload from a
+    stream) and `presignGet(key, ttl, { downloadName })` (`response-content-disposition`), in the S3 and local adapters, the fake
+    and the contract test (DOC-37 §6.3, §8, §9) (P1-07)
+  - core-db: `inBuilding(table, scope)`, the typed predicate of the building scope (DOC-12 §7.2); the scope type is structural
+    because a core package may not import `@rms/shared-types` (P1-07)

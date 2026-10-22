@@ -58,7 +58,15 @@ export function localStoragePlugin(
       const [stat, bytes] = [await store.stat(key), await store.read(key)]
       if (!stat || !bytes) throw new NotFoundError('not_found', 'File not found')
       return new Response(bytes as unknown as ConstructorParameters<typeof Response>[0], {
-        headers: { 'content-type': stat.contentType, 'cache-control': 'private, max-age=60' },
+        headers: {
+          'content-type': stat.contentType,
+          'cache-control': 'private, max-age=60',
+          ...(query.name
+            ? {
+                'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(query.name)}`,
+              }
+            : {}),
+        },
       })
     })
 }

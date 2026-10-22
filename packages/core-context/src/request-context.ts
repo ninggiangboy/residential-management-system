@@ -11,6 +11,10 @@ export interface RequestContext {
   role?: string
   buildingId?: string
   unitId?: string
+  /** The client address by the rule of DOC-39 §5.3, `null` when it is absent or not an address; read by `AuditApi.record` (DOC-35 §3.2). */
+  ip?: string | null
+  /** `User-Agent`, cut at 500 characters. */
+  userAgent?: string | null
   /** OTel context holding the request's span (set by the tracing plugin; new spans and outbox writes hang under it). */
   otel?: Context
 }

@@ -1,4 +1,5 @@
 export * from './client-info'
+export * from './client-info.plugin'
 export * from './constants'
 export * from './cors.plugin'
 export * from './error-codes'

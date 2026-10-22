@@ -1,5 +1,6 @@
 import {
   API_PREFIX,
+  clientInfoPlugin,
   corsPlugin,
   createClientIp,
   errorHandlerPlugin,
@@ -57,6 +58,7 @@ export function buildApp(container: Container) {
   return (
     routePlugin({ prefix: API_PREFIX })
       .use(requestContextPlugin)
+      .use(clientInfoPlugin(clientIpOf(container)))
       .use(requestLogPlugin({ logger, clientIp: clientIpOf(container) }))
       .use(errorHandlerPlugin({ logger }))
       .use(

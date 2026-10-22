@@ -48,4 +48,9 @@ export interface ModuleManifest {
    * a key here cannot be written (JB-23).
    */
   readonly outboxPolicies?: Readonly<Record<string, RetryClass>>
+  /**
+   * The audit actions the module may write, `<module>.<object>.<verb>` (DOC-35 §3.3): `AuditApi.record` throws for an action that
+   * the module of its first segment did not declare.
+   */
+  readonly auditActions?: readonly string[]
 }

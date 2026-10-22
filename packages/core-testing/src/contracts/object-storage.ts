@@ -93,6 +93,36 @@ export function describeObjectStorage(
       expect(await sut.storage.stat(key('many/0'))).toBeNull()
     })
 
+    test('a ranged read returns just those bytes, and null for an object that is not there', async () => {
+      const data = Uint8Array.from({ length: 10_000 }, (_, i) => i % 251)
+      await sut.storage.write(key('big.bin'), data, 'application/octet-stream')
+      expect(await sut.storage.readRange(key('big.bin'), 0, 4096)).toEqual(data.slice(0, 4096))
+      expect(await sut.storage.readRange(key('big.bin'), 9_990, 10_000)).toEqual(data.slice(9_990))
+      // asking for more than there is returns what there is
+      expect((await sut.storage.readRange(key('big.bin'), 0, 20_000))?.byteLength).toBe(10_000)
+      expect(await sut.storage.readRange(key('missing'), 0, 10)).toBeNull()
+    })
+
+    test('a stream is stored byte for byte with its content type, and replaces what was there', async () => {
+      await sut.storage.write(key('s.bin'), bytes(9, 9), 'text/plain')
+      const parts = [bytes(1, 2, 3), bytes(4, 5), bytes(6)]
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (const part of parts) controller.enqueue(part)
+          controller.close()
+        },
+      })
+      await sut.storage.writeStream(key('s.bin'), stream, 'application/zip')
+      expect(await sut.storage.read(key('s.bin'))).toEqual(bytes(1, 2, 3, 4, 5, 6))
+      expect(mediaType((await sut.storage.stat(key('s.bin')))?.contentType)).toBe('application/zip')
+    })
+
+    test('a download name goes into the signed link', () => {
+      const link = sut.storage.presignGet(key('d.pdf'), 60, { downloadName: 'Biên lai.pdf' })
+      expect(new URL(link).pathname).toContain('d.pdf')
+      expect(decodeURIComponent(link)).toContain('Biên lai.pdf')
+    })
+
     test('presigned links are absolute URLs that name the object', () => {
       const put = sut.storage.presignPut(key('up.png'), {
         contentType: 'image/png',
