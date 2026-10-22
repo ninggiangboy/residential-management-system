@@ -17,3 +17,10 @@ description = "Example gateway apiKey in the API endpoint document"
 paths = ['''^docs/07-api/api-endpoints\.md$''']
 regexTarget = "match"
 regexes = ['''apiKey": "7d3f9a1c-4b2e-4a8d-9c11-5e6f7a8b9c0d"''']
+
+[[allowlists]]
+# The made-up gateway secrets of the integration test (BD-18 masks them); they open nothing.
+description = "Fake gateway secrets in the building integration test"
+paths = ['''^modules/building/test/gateway-terms\.integration\.test\.ts$''']
+regexTarget = "match"
+regexes = ['''(apiKey|checksumKey): '(api-key-abcdef123456|chk-key-9z8y7x6w5v)\'''']
