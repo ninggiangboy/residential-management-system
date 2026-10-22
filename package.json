@@ -22,6 +22,7 @@
     "check:arch:fixtures": "bun test tools/arch-fixtures",
     "check:scope": "bun scripts/check-scope.ts && bun test tools/scope-lint",
     "check:audit": "bun scripts/check-audit.ts && bun test tools/audit-lint",
+    "check:layout": "bun scripts/check-layout.ts && bun test tools/layout-lint",
     "quality:unused": "knip",
     "quality:dup": "jscpd",
     "check:i18n": "bun test packages/i18n-catalog",

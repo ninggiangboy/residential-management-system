@@ -7,14 +7,16 @@
         "tools/arch-fixtures/*.test.ts",
         "tools/compat/*.test.ts",
         "tools/scope-lint/*.test.ts",
-        "tools/audit-lint/*.test.ts"
+        "tools/audit-lint/*.test.ts",
+        "tools/layout-lint/*.test.ts"
       ],
       "project": [
         "scripts/*.ts",
         "tools/arch-fixtures/*.ts",
         "tools/compat/*.ts",
         "tools/scope-lint/*.ts",
-        "tools/audit-lint/*.ts"
+        "tools/audit-lint/*.ts",
+        "tools/layout-lint/*.ts"
       ],
       "ignoreDependencies": ["drizzle-kit"]
     },
