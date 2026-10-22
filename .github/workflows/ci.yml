@@ -289,7 +289,8 @@ jobs:
       # P1-16 adds the database, `seed:demo`, the Playwright cache and the trace upload with its flows.
       - run: bun scripts/run-if-defined.ts test:e2e P1-16
 
-  # The one required check (DR-163). `e2e-web` is not in it: it gates the staging deploy, not a merge.
+  # The one required check (DR-163). `e2e-web` is not in it: it gates the staging deploy, not a merge. GitHub Free has
+  # no branch protection for a private repository, so `bun run pr:merge <n>` is what refuses a merge without it (DR-241).
   gate:
     if: always()
     needs: [changes, verify, unit, integration, security, build]
@@ -301,6 +302,11 @@ jobs:
         run: |
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
           echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' > /dev/null
+      - if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "gate is green; merge with \`bun run pr:merge $PR_NUMBER\` (DR-241)" >> "$GITHUB_STEP_SUMMARY"
 
   # `sha-<7>` reaches GHCR only for a commit of `dev` whose `gate` is green (DOC-71 §7.5).
   publish:

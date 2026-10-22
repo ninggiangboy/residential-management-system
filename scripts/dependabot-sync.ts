@@ -2,7 +2,8 @@
  * `bun run dependabot:sync` writes `.github/dependabot.yml` (DOC-71 §11.5); `--check` fails when the file differs from
  * what it would write (stage `verify`). The `bun` entry ignores every module the Expo SDK bundles
  * (`expo/bundledNativeModules.json`, plus `expo` itself): those follow the SDK through `expo install --fix`, not npm
- * `latest` (DR-94). Run it again after an SDK upgrade.
+ * `latest` (DR-94). Run it again after an SDK upgrade. Every entry waits 7 days after a release
+ * (`cooldown`, DR-242); security updates do not wait.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -25,6 +26,7 @@ updates:
   - package-ecosystem: bun
     directory: /
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 10
     commit-message: { prefix: chore, include: scope }
     groups:
@@ -36,6 +38,7 @@ ${ignored.map((name) => `      - dependency-name: "${name}"`).join('\n')}
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: ci }
     groups:
       actions:
@@ -43,6 +46,7 @@ ${ignored.map((name) => `      - dependency-name: "${name}"`).join('\n')}
   - package-ecosystem: docker
     directory: /docker
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: build, include: scope }
     groups:
       images:
@@ -50,6 +54,7 @@ ${ignored.map((name) => `      - dependency-name: "${name}"`).join('\n')}
   - package-ecosystem: docker-compose
     directory: /docker
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: build, include: scope }
     groups:
       images:

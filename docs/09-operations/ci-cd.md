@@ -1,7 +1,7 @@
 # CI/CD
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; P1-19: `ci.yml` and `weekly.yml` written and run, acceptance in §15; DR-238 Semgrep CE and Trivy licences in place of CodeQL and dependency review, DR-239 trunk `dev`, DR-240 pipeline mechanics; earlier: DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
-> Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166, DR-238…240), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; P1-19: `ci.yml` and `weekly.yml` written and run, acceptance in §15; DR-238 Semgrep CE and Trivy licences in place of CodeQL and dependency review, DR-239 trunk `dev`, DR-240 pipeline mechanics, DR-241 `pr:merge` instead of branch protection, DR-242 release age; earlier: DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
+> Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166, DR-238…242), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
 This document says what runs when code is pushed: the stages and which of them block a merge, how the image, the web CMS and the mobile apps are built and deployed, how a deploy reaches a VPS that has no inbound port, the smoke test, the gates, the schedules and the rollback. It does not hold what the host does with a deploy command (the script, the compose files: DOC-70 §6, §7), the test method (DOC-88), what each scanner must catch (DOC-39 §12) or the mobile build profiles (DOC-73).
@@ -105,7 +105,7 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 | `publish` | `push` to `dev`, after `gate` | Loads `rms-api-image`, tags it `sha-<7>` and pushes it to GHCR (§6.2); `packages: write` only here | The push fails | Not a merge check; it gates `deploy-staging` |
 | `gate` | always, `if: always()` | Fails unless `changes`, `verify`, `unit`, `integration`, `security` and `build` finished `success` or `skipped`. `e2e-web` is **not** in its `needs` (DR-240): it gates the deploy, not the merge | | It **is** the required check |
 
-Merge is blocked by `verify`, `unit`, `integration`, `security` and `build` (DR-08 named the first three; DOC-39 §12 and DR-153 make the scans fail the build, which is why `security` and `build` join, DR-163). The branch rule requires one status, `gate`, so that a path-gated job that was skipped does not leave a required check pending. **On the current plan the rule cannot be set**: GitHub Free has no branch protection or rulesets for a private repository (the API answers 403 "Upgrade to GitHub Pro or make this repository public", checked 2026-10-22), so until the Owner decides (open question) a red `gate` blocks a merge by convention only.
+Merge is blocked by `verify`, `unit`, `integration`, `security` and `build` (DR-08 named the first three; DOC-39 §12 and DR-153 make the scans fail the build, which is why `security` and `build` join, DR-163). The branch rule requires one status, `gate`, so that a path-gated job that was skipped does not leave a required check pending. **The rule cannot be set on GitHub Free** for a private repository (the API answers 403 "Upgrade to GitHub Pro or make this repository public", checked 2026-10-22), and the Owner keeps the Free plan (DR-241). `gate` is enforced instead by **`bun run pr:merge <number>`** (`scripts/merge-pr.ts`), the one way a pull request is merged: it squash-merges only when the pull request is open, not a draft, targets `dev`, contains the tip of `dev`, and `gate` is `success` on its head commit, and it passes `--match-head-commit` so a later push makes GitHub refuse the merge. A red commit that reaches `dev` anyway (a direct push, or the GitHub button) is not published: `publish` needs `gate` (§7.5).
 
 ### 4.2 `.github/workflows/ci.yml`
 
@@ -270,7 +270,7 @@ A release is announced to the Owner by the GitHub notification of the deployment
 
 | Gate | Before | Condition |
 | --- | --- | --- |
-| Merge to `dev` | A pull request | `gate` is green (§4.1); by convention only while the plan has no branch protection (open question) |
+| Merge to `dev` | A pull request | `gate` is green on the head commit and the branch contains the tip of `dev`, checked by `bun run pr:merge` (DR-241) |
 | Image on `dev` | `publish` | `gate` is green for the commit; `publish` pushes the image `build` scanned (artifact `rms-api-image`, one day) |
 | `deploy-staging` | Push to `dev` | `gate` green; `e2e-web` not failed |
 | `promote` | Tag `v*` | Commit on `main` (DR-239); image exists; staging deployment `success` for the SHA |
@@ -350,16 +350,16 @@ DR-08 said "nightly on staging". The concurrency harness needs to create databas
 
 ### 11.1 Branches
 
-Trunk-based (DR-08): short-lived branches, squash-merged pull requests, protected `dev` (DR-239). The settings below are the target; **GitHub Free cannot apply them to a private repository** (branch protection and rulesets answer 403, 2026-10-22), so they wait for the Owner's decision (open question) and hold by convention meanwhile.
+Trunk-based (DR-08): short-lived branches, squash-merged pull requests, trunk `dev` (DR-239). The Owner keeps GitHub Free (DR-241), which has no branch protection or rulesets for a private repository, so each rule is held by what the plan does offer:
 
-| Setting (branch protection of `dev`) | Value |
+| Rule | How it holds on GitHub Free |
 | --- | --- |
-| Require a pull request | Yes |
-| Required status checks | `gate` only; branch must be up to date |
-| Allowed merge method | Squash only; linear history |
-| Force push and deletion | Denied, also for administrators |
+| Require a pull request | `bun run pr:merge` merges pull requests only; nobody pushes to `dev` directly (convention; a red direct push is not published) |
+| Required status checks | `bun run pr:merge` requires `gate` = `success` on the head commit and a branch that contains the tip of `dev` (else: `gh pr update-branch <n>` and wait for CI) |
+| Allowed merge method | Repository setting (set 2026-10-22): squash merges only, merge commits and rebase merges off; the squash commit title is the pull-request title; merged branches are deleted |
+| Force push and deletion | Convention (not enforceable on Free) |
 | Reviews | One approval from the code owners of the touched paths **when the repository has more than one contributor**; none while the Owner is alone (DR-166, confirmed by the Owner on 2026-10-21) |
-| Tag protection | `v*` creatable by the Owner only |
+| Tag protection | `v*` created by the Owner only: convention on Free; `promote` refuses a tag on a commit that did not pass staging anyway (§7.4) |
 
 ### 11.2 Commits and titles
 
@@ -396,6 +396,7 @@ The vendored-package sync uses the title `chore(core): sync <sha>` (DR-02). A br
 | Ecosystem | Directory | Interval | Grouping |
 | --- | --- | --- | --- |
 | `bun` | `/` | weekly | minor and patch grouped; a major is its own pull request and needs a DR (DR-01, DR-82) |
+| every entry | | | `cooldown: { default-days: 7 }`: a version update is proposed only 7 days after its release (DR-242); security updates are not delayed (GitHub documentation, read 2026-10-22) |
 | `github-actions` | `/` | weekly | grouped; updates the SHA and the tag comment |
 | `docker` | `/docker` | weekly | grouped; the base image of `Dockerfile.api` (DR-95) |
 | `docker-compose` | `/docker` | weekly | grouped; the exact image tags of the compose files (DR-95); `/ops` gets an entry when it holds a compose file (P1-20) |
@@ -476,6 +477,8 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 | DR-166 | Code-owner review is required only when the repository has more than one contributor; `bun run check:commits` validates the PR title and the commit messages with the module names as scopes | Decided | §11.1, §11.2 |
 | DR-238 | Semgrep CE and Trivy licences replace CodeQL and dependency review, which need GitHub Code Security on a private repository (Owner) | Decided | §3, §4.1, §5 |
 | DR-239 | The trunk is `dev`; `main` is created as the production branch at the first release (Owner) | Decided | §2, §4, §6.2, §7, §10, §11 |
+| DR-241 | No GitHub Pro: `bun run pr:merge` enforces `gate` and the up-to-date rule; squash only by repository setting (Owner) | Decided | §4.1, §7.5, §11.1 |
+| DR-242 | npm versions resolve only 7 days after release (`minimumReleaseAge`); Dependabot waits 7 days (`cooldown`) | Decided | §11.5 |
 | DR-240 | Pipeline mechanics of P1-19: scanners from pinned images, `bun run check` with skipped targets and `run-if-defined`, `gate` without `e2e-web`, `--omit=peer` and `COPY --parents` in the image, line coverage only, cleanup and running-image scan deferred to P1-20 | Decided (confirm) | §3 to §6, §10, §13, §15 |
 
 ## 17. Not in this document
@@ -503,9 +506,9 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 ## Open questions
 
-- **Branch protection on GitHub Free (Owner decision).** A private repository on the Free plan cannot have branch protection or rulesets (403, checked 2026-10-22), so `gate` cannot be made a required check and the settings of §11.1 cannot be applied; a red `gate` blocks a merge by convention only. Options: GitHub Pro for the account (about 4 USD a month, enables both for private repositories), a public repository (not wanted: DR-08), or keep the convention until a second contributor joins (DR-166). Until then the Owner merges only green pull requests.
+- ~~**Branch protection on GitHub Free.**~~ Decided by DR-241 (Owner, 2026-10-22: no GitHub Pro): `bun run pr:merge` enforces `gate`, the repository settings enforce squash merges (§11.1).
 - ~~**Commit SHAs of the actions**~~: resolved by P1-19 on 2026-10-22 (§3 rule 2).
 - **The `cloudflared access ssh` flag names** (`--service-token-id`, `--service-token-secret`) and **the GHCR read token type** (a classic personal access token with `read:packages`, or a fine-grained token) are checked by P1-20 against the pinned `cloudflared` and the GitHub documentation.
 - **Review rule of §11.1** (it depends on whether a second contributor joins): decided by DR-166 and confirmed by the Owner on 2026-10-21 ("up to you, other people may join the repository later"). The rule does not change: no required review while the Owner is alone, one code-owner approval once a second contributor joins.
 - **EAS flags of §9.2** (`--environment`, `eas update:republish`, `eas update:rollback`) are checked against `eas-cli` 25.2.0 by P6-10.
-- Decisions made while writing: DR-163…166; while running P1-19: DR-238…240.
+- Decisions made while writing: DR-163…166; while running P1-19: DR-238…242.
