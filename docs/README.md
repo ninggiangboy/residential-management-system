@@ -30,7 +30,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-12 | [Code architecture](03-architecture/code-architecture.md) | Approved |
 | DOC-13 | [ADR index](04-adr/README.md) | Approved |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Approved |
-| DOC-15 | Finance model (`05-data/finance-model.md`) | Not written |
+| DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; intent and statement tables follow proposed DR-27, 28, 30, 34, 35) | Draft |
 | DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Approved |
 | DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written, §4–9 owed) | Approved |
 | DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Approved |

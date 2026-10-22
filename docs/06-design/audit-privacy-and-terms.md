@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 (DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -273,6 +273,7 @@ Classes are those of DR-58 and ADR-0022: **sensitive** (CCCD number), **personal
 | Display name, avatar | personal | `resident_account.display_name`, `avatar_key` | Avatar is a private file | The unit's members, staff | No | Nulled at deletion; the avatar object is removed |
 | Staff name, email | personal | `identity.staff_account.full_name`, `email` | | Admin, Manager (own scope) | No | Never deleted; a former staff member is `disabled` |
 | Payer name on a payment or receipt | personal | `finance.payment.payer_name` and the receipt snapshot (DOC-15) | Snapshot of the name at payment time | Staff; the unit's members from the start of their membership (DR-40) | No | Never: an accounting record (SDD §19.5) |
+| Payer's bank account name and number, transfer text | personal | `finance.gateway_event.payload` (as the gateway sends it), `finance.statement_line.content` (what the bank printed) (DOC-15 §2, *added 2026-10-22*) | Stored as received; shown only in the money-log drawer as an excerpt (DR-16) | Manager, Admin; residents never see the log (DR-84) | No | Never: part of the money log (DR-84) |
 | Vehicle papers, plate photos | personal | Files, purposes `vehicle_paper`, `vehicle_plate_photo` | Private bucket, signed URL of 5 minutes (papers) or 15 (photos), no thumbnail for papers (DOC-37) | The unit's members, Manager, Admin; Guards: the plate photo only | No | Never deleted (DR-115) |
 | Ticket text and media | operational | `tickets.*`, files | | The unit's members and the ticket's staff | No | Never deleted (DR-115) |
 | IP address, user agent | personal | `audit.audit_log.ip`, `user_agent`; `building.terms_acceptance.ip`; `identity.otp_challenge.ip`; `refresh_family.user_agent` | | Admin (audit); nobody else through the API | No | With the row (§8); `terms_acceptance.ip` nulled at account deletion |

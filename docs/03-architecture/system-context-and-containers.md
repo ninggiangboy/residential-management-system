@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-245: `fee_notice_job`; DOC-15 names `debt_reminder` and `fake_gateway_link`; DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -385,8 +385,9 @@ Consumers are read from DR-42, DR-52, DR-53 and DR-75; DOC-09 §5 is the source 
 | `statement_import`, `statement_line` | finance | own |
 | `import_job` (fee batches) | finance | own |
 | `document_counter` (series `receipt`, `batch`, `intent`), sequence `order_code_seq` | finance | own |
-| `debt_reminder` (one row per unit per building day; name proposed, DR-87) | finance | own |
-| `fake_gateway_link` (links of the `fake` driver, local, staging and demo only; name proposed, DR-87) | finance | own |
+| `debt_reminder` (one row per unit per building day, DR-87; DDL in DOC-15 §10.3) | finance | own |
+| `fake_gateway_link` (links of the `fake` driver, local, staging and demo only, DR-87; DDL in DOC-15 §10.4) | finance | own |
+| `fee_notice_job` (bulk fee-notice requests, *added 2026-10-22, DR-245*) | finance | own; claimed by `fee_notice_run` in the worker |
 | `outbox_messages`, `inbox` | finance | relay |
 
 #### Other module schemas

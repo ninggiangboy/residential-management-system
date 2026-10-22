@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-20 (DR-154: label `job_name`; earlier: DR-120, DR-123) · DOC-20
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -63,7 +63,7 @@ Rules that hold everywhere:
 | `resident_profile` | Name, email, CCCD (encrypted), date of birth of a person in a building | Cleared at deletion execution: all personal fields null, `cleared_at` set | Row kept | `account_deletion` (§8), residency handler | DR-59, DR-108 |
 | `import_job` | The validated preview of an import | Rows and files deleted by age; the units-and-owners file is deleted at commit or expiry (it holds CCCD numbers) | 30 days after `created_at`; the file immediately (below) | `import_purge`, weekly Sunday 04:00; `import_expire`, hourly | DR-21, DR-22, DR-114 |
 
-### 2.4 `finance` (DDL pending in DOC-15)
+### 2.4 `finance` (DDL in DOC-15; guards refuse ledger deletes, DOC-15 §11)
 
 | Table | What is kept | Removal | Period | Job | Source |
 | --- | --- | --- | --- | --- | --- |
@@ -75,6 +75,7 @@ Rules that hold everywhere:
 | `import_job` (fee batches) | The preview | Deleted by age | 30 days | `finance_purge` | DR-21, DR-120 |
 | `document_counter` | The counters | Never deleted | — | — | DR-10 |
 | `debt_reminder` | One row per unit per building day | Deleted by age | 30 days (default) | `finance_purge` | DR-87, DR-115, DR-120 |
+| `fee_notice_job` | One bulk fee-notice request per row (*added 2026-10-22, DR-245*) | Rows kept (about 15 a year); the ZIP file is deleted by age | ZIP 7 days | `finance_purge` | DR-56, DR-123, DR-245 |
 | `fake_gateway_link` | Links of the `fake` driver | Reset with the demo building; on `local` and `staging` kept until the database is rebuilt | — | `demo_reset` | DR-26, DR-60 |
 
 ### 2.5 Other schemas (DDL pending in DOC-17 §4–§9)

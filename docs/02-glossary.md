@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -121,11 +121,13 @@ This document defines the words of the project, as the project uses them. Every 
 | fee item | — | The name of a charge line (for example Management fee, Parking); the unit of the report "collection per fee item". | FR-35 |
 | fee notice | — | The PDF and in-app view of a published charge, in Vietnamese, English or both. | FR-36, DR-56 |
 | fee notice language | — | The building setting `feeNoticeLanguage`: `vi`, `en` or `both`. | DR-60 |
+| bulk fee-notice request | — | A row of `finance.fee_notice_job`: the Manager's request for the fee notices of a whole batch, rendered by the worker as one PDF per unit and a ZIP; one active request per batch. | DR-56, DR-245, DOC-15 §10.2 |
 | batch code | — | `PH-YYMM-NN`, from the fee month; not gapless. | DR-10 |
 | receipt number | — | `BL-YYMM-NNNN`, from the issue month in building time; gapless; a void receipt keeps its number. | DR-10 |
 | intent code | — | `TT-YYMMDD-NNNN`, the display code of a payment intent. Not the transfer content. | DR-10 |
 | ticket code | — | `YC-YYMMDD-NNN`. | DR-10 |
 | gapless counter | — | The `GaplessCounter` helper: one `document_counter` row per series and period, incremented in the same transaction as the document, so a rollback leaves no gap. | DR-10 |
+| ledger guard | — | A trigger on a `finance` table that freezes money columns, allows only the transitions of the state machine and refuses deletes of ledger rows; the only delete it allows is the demo reset of the building named by the transaction setting `rms.demo_reset`. | DR-243, DOC-15 §11 |
 | reminder | — | A push sent to selected units with debt, at most one per unit per 24 hours. | FR-12, DR-18 |
 
 ## 3. Money log and money to check
@@ -142,7 +144,7 @@ This document defines the words of the project, as the project uses them. Every 
 | `charge_already_paid` | — | Outcome of an exact amount when a charge of the intent is no longer `open` (paid by cash or another link). | DR-16 |
 | `charge_recalled` | — | Outcome of an exact amount when a charge of the intent is `void`. | DR-16 |
 | `unknown_order` | — | Outcome when no intent has the order code in this building. | DR-16 |
-| match status | — | The value of `statement_line.match_status`: `matched`, `proposed`, `already_recorded` (no review needed) and `unmatched`, `statement_only` (reviewable). | DR-16, DR-35 |
+| match status | — | The value of `statement_line.match_status`: `matched`, `proposed` (no review needed) and `unmatched`, `statement_only` (reviewable). *Revised 2026-10-22 (DR-244):* `already_recorded` is the count of repeated lines of an upload, not a stored status, because `dedup_key` is unique. | DR-16, DR-35, DR-244 |
 | open (log row) | — | A reviewable row that is neither posted nor reviewed. | DR-16 |
 | reviewed | — | State of a log row after the Manager marks it with a note of at least 5 characters, once. Handled outside the system; the ledger does not change. | FR-46, DR-16 |
 | money to check | — | The dashboard counter of open log rows; a new open row alerts every active Manager and Admin (`finance.money_unposted.v1`). | FR-47, DR-16 |
