@@ -7,6 +7,13 @@
     "packages/*"
   ],
   "scripts": {
+    "api": "bun run --cwd apps/api dev",
+    "web": "bun run --cwd apps/cms-web dev",
+    "rapp": "bun run --cwd apps/resident-app start",
+    "sapp": "bun run --cwd apps/staff-app start",
+    "dev": "bun scripts/dev.ts start",
+    "dev:api": "bun run api",
+    "stop": "bun scripts/dev.ts stop",
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "bun run --filter './apps/*' --filter './modules/*' --filter './packages/*' typecheck && tsc --project scripts",
@@ -41,7 +48,6 @@
     "db:generate": "bun --env-file=.env.local scripts/db.ts generate",
     "db:reset": "bun --env-file=.env.local scripts/db.ts reset",
     "test:grants": "bun run --cwd apps/api test:grants",
-    "dev:api": "bun run --cwd apps/api dev",
     "config:example": "bun run --cwd apps/api config:example",
     "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
     "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"

@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start --dev-client",
+    "start": "expo start --dev-client --port 8082",
     "typecheck": "tsc --noEmit",
     "test": "bun test --pass-with-no-tests",
     "check:expo": "expo install --check"
