@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { Database, migrateModule } from '@core/db'
 import { adminUrl, cloneTemplate, migratorUrl, type TestDb, withDatabase } from '@rms/test-support'
 import postgres from 'postgres'
+import { MODULE_CATALOG } from '../../src/bootstrap/module-catalog'
 
 /** `bun run db:migrate` (DOC-19 §3.1, DOC-14 §14): the bootstrap, the migrations of a module, then the grants. */
 
@@ -96,6 +99,14 @@ describe('the db:migrate command on a database that holds nothing', () => {
     return { out, err, code }
   }
 
+  const migrationsInCatalog = () =>
+    MODULE_CATALOG.reduce((total, { migrations }) => {
+      const journal = JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')) as {
+        entries: unknown[]
+      }
+      return total + journal.entries.length
+    }, 0)
+
   const aclHash = async () => {
     const conn = postgres(withDatabase(adminUrl(), name), { max: 1, prepare: false })
     const rows =
@@ -109,7 +120,8 @@ describe('the db:migrate command on a database that holds nothing', () => {
     const first = await migrate()
     expect(first.code).toBe(0)
     expect(first.out).toContain('bootstrap applied')
-    expect(first.out).toContain('migrated: 0 pending applied, 14 schemas')
+    // every migration of every module of the catalog is pending on a database that holds nothing
+    expect(first.out).toContain(`migrated: ${migrationsInCatalog()} pending applied, 14 schemas`)
     expect(first.out).toContain('grants applied')
     const hash = await aclHash()
     expect(hash).toBeTruthy()

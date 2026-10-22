@@ -13,7 +13,7 @@ import type { Sql } from 'postgres'
 
 /**
  * A stand-in for a publishing module until the real ones exist: the schema `probe` with the outbox and inbox of DOC-17 §3.3
- * and a table that records every effect a handler had, so a test can count them. `building.job_run` is DOC-17 §3.2.
+ * and a table that records every effect a handler had, so a test can count them.
  * Created through the `rms_migrator` connection of the cloned database, then granted to `rms_app` as DOC-19 does.
  */
 
@@ -38,23 +38,6 @@ export async function createProbeModule(admin: Sql, schema = 'probe') {
     GRANT USAGE ON SCHEMA ${schema} TO rms_app;
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${schema} TO rms_app;
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schema} TO rms_app;`)
-}
-
-export async function createJobRunTable(admin: Sql) {
-  await admin.unsafe(`
-    CREATE SCHEMA IF NOT EXISTS building;
-    CREATE TABLE building.job_run (
-      id uuid NOT NULL, name text NOT NULL, started_at timestamptz NOT NULL, finished_at timestamptz NOT NULL,
-      status text NOT NULL, details jsonb NOT NULL DEFAULT '{}',
-      CONSTRAINT pk_job_run PRIMARY KEY (id),
-      CONSTRAINT ck_job_run_name CHECK (name ~ '^[a-z][a-z0-9_]{2,40}$'),
-      CONSTRAINT ck_job_run_status CHECK (status IN ('succeeded', 'failed')),
-      CONSTRAINT ck_job_run_times CHECK (finished_at >= started_at),
-      CONSTRAINT ck_job_run_details CHECK (jsonb_typeof(details) = 'object'));
-    CREATE INDEX ix_job_run_started ON building.job_run (started_at);
-    CREATE INDEX ix_job_run_name_success ON building.job_run (name, finished_at DESC) WHERE status = 'succeeded';
-    GRANT USAGE ON SCHEMA building TO rms_app;
-    GRANT SELECT, INSERT, DELETE ON building.job_run TO rms_app;`)
 }
 
 /** A handler whose effect is one row of `probe.effects`, written once thanks to the inbox. */

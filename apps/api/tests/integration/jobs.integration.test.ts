@@ -19,7 +19,7 @@ import { sql } from 'drizzle-orm'
 import postgres from 'postgres'
 import { CLOCK_JOB_GRACE_MINUTES } from '../../src/bootstrap/config'
 import { JOB_CATALOG, OUTBOX_CLEANUP_SOURCES } from '../../src/bootstrap/job-catalog'
-import { createJobRunTable, createProbeModule, probeInbox, probeOutbox } from './probe'
+import { createProbeModule, probeInbox, probeOutbox } from './probe'
 
 const VN = 'Asia/Ho_Chi_Minh'
 const logger = createLogger('silent')
@@ -45,7 +45,6 @@ beforeAll(async () => {
   db = await cloneTemplate('empty')
   const admin = db.admin()
   await createProbeModule(admin)
-  await createJobRunTable(admin)
   await admin.end()
   database = new Database({ url: db.url, poolMax: 10, prepare: false })
 })
