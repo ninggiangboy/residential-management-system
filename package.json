@@ -34,6 +34,7 @@
     "infra:down": "bun scripts/infra.ts down",
     "infra:reset": "bun scripts/infra.ts reset",
     "setup": "bun scripts/setup.ts",
+    "prepare": "husky || true",
     "dev:web": "bun run --filter @app/cms-web dev",
     "build": "bun run --filter @app/cms-web build && bun run --filter @app/resident-app --filter @app/staff-app typecheck"
   },
@@ -42,6 +43,7 @@
     "@tailwindcss/node": "4.3.3",
     "@types/bun": "1.4.3",
     "exceljs": "4.4.0",
+    "husky": "9.1.7",
     "jscpd": "5.4.2",
     "knip": "6.42.1",
     "nativewind": "4.2.7",

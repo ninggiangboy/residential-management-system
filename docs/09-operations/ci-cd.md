@@ -1,6 +1,6 @@
 # CI/CD
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; P1-19: `ci.yml` and `weekly.yml` written and run, acceptance in §15; DR-238 Semgrep CE and Trivy licences in place of CodeQL and dependency review, DR-239 trunk `dev`, DR-240 pipeline mechanics, DR-241 `pr:merge` instead of branch protection, DR-242 release age; earlier: DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-246: the `commit-msg` hook in §11.2; P1-09: `uv` in the unit job, DR-237; P1-19: `ci.yml` and `weekly.yml` written and run, acceptance in §15; DR-238 Semgrep CE and Trivy licences in place of CodeQL and dependency review, DR-239 trunk `dev`, DR-240 pipeline mechanics, DR-241 `pr:merge` instead of branch protection, DR-242 release age; earlier: DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
 > Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166, DR-238…242), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
@@ -370,6 +370,8 @@ Conventional Commits in English, with the module as the scope: `feat(finance): �
 ```
 
 The vendored-package sync uses the title `chore(core): sync <sha>` (DR-02). A breaking API change carries `!`.
+
+The `commit-msg` hook runs the same script on each new commit (`--message-file`, DR-246, DOC-69 §4), so a bad subject is refused before it is pushed; the pull-request title is checked only in CI.
 
 ### 11.3 Pull request template (`.github/pull_request_template.md`)
 

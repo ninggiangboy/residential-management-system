@@ -1,0 +1,2 @@
+# Gitleaks over the commits being pushed (DOC-69 §3, DR-246).
+bun scripts/pre-push.ts

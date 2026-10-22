@@ -1,0 +1,2 @@
+# The subject pattern of DOC-71 §11.2, the same check CI runs on the pull request (DR-246).
+bun scripts/check-commits.ts --message-file "$1"
