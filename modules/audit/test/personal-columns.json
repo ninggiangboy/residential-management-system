@@ -1,0 +1,59 @@
+{
+  "$comment": "DOC-35 §7.1: every column that holds personal or sensitive data, by schema, table and column. The same file is the deny-list of §3.4. A new column is added here in the change that creates it (§7.3, AD-30). Entries of a module that is not migrated yet wait (AD-31).",
+  "columns": [
+    {
+      "schema": "residency",
+      "table": "resident_profile",
+      "column": "cccd_enc",
+      "class": "sensitive"
+    },
+    {
+      "schema": "residency",
+      "table": "resident_profile",
+      "column": "cccd_last4",
+      "class": "personal"
+    },
+    {
+      "schema": "residency",
+      "table": "resident_profile",
+      "column": "date_of_birth",
+      "class": "personal"
+    },
+    {
+      "schema": "residency",
+      "table": "resident_profile",
+      "column": "full_name",
+      "class": "personal"
+    },
+    { "schema": "residency", "table": "resident_profile", "column": "email", "class": "personal" },
+    { "schema": "residency", "table": "resident_profile", "column": "note", "class": "personal" },
+    { "schema": "identity", "table": "resident_account", "column": "phone", "class": "personal" },
+    {
+      "schema": "identity",
+      "table": "resident_account",
+      "column": "display_name",
+      "class": "personal"
+    },
+    {
+      "schema": "identity",
+      "table": "resident_account",
+      "column": "avatar_key",
+      "class": "personal"
+    },
+    { "schema": "identity", "table": "staff_account", "column": "full_name", "class": "personal" },
+    { "schema": "identity", "table": "staff_account", "column": "email", "class": "personal" },
+    { "schema": "identity", "table": "otp_challenge", "column": "ip", "class": "personal" },
+    {
+      "schema": "identity",
+      "table": "refresh_family",
+      "column": "user_agent",
+      "class": "personal"
+    },
+    { "schema": "finance", "table": "payment", "column": "payer_name", "class": "personal" },
+    { "schema": "notification", "table": "device_token", "column": "token", "class": "personal" },
+    { "schema": "audit", "table": "audit_log", "column": "ip", "class": "personal" },
+    { "schema": "audit", "table": "audit_log", "column": "user_agent", "class": "personal" },
+    { "schema": "building", "table": "terms_acceptance", "column": "ip", "class": "personal" },
+    { "schema": "building", "table": "building", "column": "email", "class": "operational" }
+  ]
+}
