@@ -1,16 +1,17 @@
 import { describe, expect, test } from 'bun:test'
 import { RuleViolationError } from '@core/kernel'
 import type { BuildingId, StaffContext, StaffId } from '@rms/shared-types'
-import type { SystemActor } from '../contracts'
+import type { SystemActor } from '../../contracts'
+import type { AuditRow } from '../../domain/audit-log-repository'
 import {
   NoTransactionError,
   UndeclaredAuditActionError,
   UnmaskedAuditFieldError,
-} from '../domain/errors'
-import { auditActionCatalogOf } from './action-catalog'
-import { AuditWriter } from './audit-writer'
-import { createAudited } from './audited'
-import type { AuditRow } from './ports'
+} from '../../domain/errors'
+import { auditActionCatalogOf } from '../action-catalog'
+import { createAudited } from '../audited'
+import { RecordAuditEntry } from '../use-cases/record-audit-entry'
+import { AuditApiImpl } from './audit-api-impl'
 
 const building = '018f0000-0000-7000-8000-000000000001' as BuildingId
 const staff: StaffContext = {
@@ -29,25 +30,27 @@ function harness(options: { inTransaction?: boolean; failInsert?: boolean } = {}
   let failures = 0
   const log = (level: string) => (fields: object, message: string) =>
     lines.push({ fields: { level, ...fields }, message })
-  const writer = new AuditWriter({
-    repository: {
-      async insert(scope, row) {
-        if (options.failInsert) throw new Error('insert failed')
-        rows.push({ ...row, buildingId: scope.buildingId })
+  const writer = new AuditApiImpl(
+    new RecordAuditEntry({
+      repository: {
+        async insert(scope, row) {
+          if (options.failInsert) throw new Error('insert failed')
+          rows.push({ ...row, buildingId: scope.buildingId })
+        },
       },
-    },
-    transaction,
-    ids: {
-      next: () => `018f0000-0000-7000-8000-00000000${String(rows.length + 1).padStart(4, '0')}`,
-    },
-    actions: auditActionCatalogOf([
-      { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
-      { name: 'residency', auditActions: ['residency.unit.update'] },
-    ]),
-    requestInfo: () => ({ requestId: 'req-1', ip: '203.0.113.9', userAgent: 'RmsApp/1.0' }),
-    logger: { info: log('info'), warn: log('warn'), error: log('error') },
-    metrics: { writeFailed: () => failures++ },
-  })
+      transaction,
+      ids: {
+        next: () => `018f0000-0000-7000-8000-00000000${String(rows.length + 1).padStart(4, '0')}`,
+      },
+      actions: auditActionCatalogOf([
+        { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
+        { name: 'residency', auditActions: ['residency.unit.update'] },
+      ]),
+      requestInfo: () => ({ requestId: 'req-1', ip: '203.0.113.9', userAgent: 'RmsApp/1.0' }),
+      logger: { info: log('info'), warn: log('warn'), error: log('error') },
+      metrics: { writeFailed: () => failures++ },
+    }),
+  )
   return { writer, rows, lines, transaction, failures: () => failures }
 }
 
