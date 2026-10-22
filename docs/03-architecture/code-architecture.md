@@ -102,7 +102,7 @@ flowchart LR
 | Layer | Contains | May import | Must not know |
 | --- | --- | --- | --- |
 | `domain` | Aggregates with behavior (every entity that has a status or an invariant), value objects, state transition rules, domain errors, repository **interfaces** (`<aggregate>-repository.ts`, DR-254) | `@core/kernel`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
-| `application` | Commands as use cases in `use-cases/` (one class and one `execute` per file), reads in one or a few query services in `queries/<name>-queries.ts` (one class, one method per read), the contract implementation in `queries/<name>-api-impl.ts`, integration-event handlers in `handlers/` (one per file), ports for everything outside (`Clock`, `OutboxWriter`, `ObjectStore`, gateways) in `ports.ts`, the audit and idempotency wrappers (§8), DTO mappers (DR-254) | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
+| `application` | Commands as use cases in `use-cases/` (one class and one `execute` per file), reads in one or a few query services in `queries/<name>-queries.ts` (one class, one method per read), the contract implementation in `api/<name>-api-impl.ts`, integration-event handlers in `handlers/` (one per file), ports for everything outside (`Clock`, `OutboxWriter`, `ObjectStore`, gateways) in `ports.ts`, the audit and idempotency wrappers (§8), DTO mappers (DR-254) | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
 | `infrastructure` | Drizzle repositories and row mappers, driver adapters (payOS, Expo, SMS, SMTP, R2), `DrizzleOutboxWriter`, `DrizzleInboxGuard` | `application`, `domain`, `@core/*`, the npm drivers | `presentation` |
 | `presentation` | Elysia route plugins, TypeBox request and response schemas, OpenAPI detail, the audience declaration of each route (§5.3) | `application`, `domain` types for mapping, `@core/http`, `@core/auth` | `infrastructure` (it receives use cases, never repositories) |
 | `contracts` | Interfaces with plain DTOs, event names and payload types, pure literals and pure functions without imports | Nothing from its own module, no `@core/*`; types only from `@rms/shared-types` | Everything else |
@@ -144,7 +144,8 @@ modules/finance/
     ├── application/
     │   ├── use-cases/                # publish-batch.ts, record-manual-payment.ts, void-charge.ts …
     │   │                             # commands only: one class, one execute, per file
-    │   ├── queries/                  # debt-queries.ts, report-queries.ts: the reads, a few classes with one method per read; finance-api-impl.ts: the contract implementation. No rule of its own
+    │   ├── queries/                  # debt-queries.ts, report-queries.ts: the reads, a few classes with one method per read
+    │   ├── api/                      # finance-api-impl.ts: the contract implementation (reads to queries, writes to use cases). No rule of its own
     │   ├── handlers/                 # one integration-event handler per file (inbox-guarded)
     │   ├── ports.ts                  # payment-gateway, receipt-renderer: ports to the outside only (a ports/ folder from the second file)
     │   └── settle.ts                 # the one settlement function (DOC-23)
@@ -209,7 +210,7 @@ export interface AppModule<N extends string, R> {
 1. Repositories (`Drizzle…Repository`) over `host.database`; each method takes a `BuildingScope` (§7).
 2. `DrizzleOutboxWriter(database, manifest.outboxTable, ids.next)` and `DrizzleInboxGuard(database, manifest.inboxTable)`.
 3. Use cases with their ports; `host.database` is passed as the `UnitOfWork` (§8.1).
-4. The contract implementation (`application/queries/finance-api-impl.ts`) over the same repositories and use cases.
+4. The contract implementation (`application/api/finance-api-impl.ts`) over the same repositories and use cases.
 5. Handlers (inbox-guarded), job definitions, and the route plugins.
 
 No dependency-injection container is used: the wiring is plain code that reads top to bottom (as the reference does).
@@ -232,7 +233,7 @@ The tree of §4.1 is the shape; these rules make it binding. `bun run check:layo
 | --- | --- | --- |
 | 1 | A command is a use case, `application/use-cases/<verb>-<noun>.ts`: one exported class, ports in the constructor, one public method `execute`; the file name is the kebab case of the class | ✔ |
 | 2 | A handler is `application/handlers/<name>.ts`: one class that implements `IntegrationEventHandler` | ✔ |
-| 3 | A read is not a use case. Reads are methods of a query service, `application/queries/<name>-queries.ts` (`BuildingQueries`, `FileQueries`: one class per area, a few per module, a method per read, no `execute`, no transaction, no state change). `queries/` holds that and `<name>-api-impl.ts`, the implementation of the module's contract; both call repositories or helpers and have no rule of its own. A file of `use-cases/` named `get-`, `list-`, `view-`, `find-`, `search-` or `count-` is a read in the wrong place | ✔ (the names and the folder) |
+| 3 | A read is not a use case. Reads are methods of a query service, `application/queries/<name>-queries.ts` (`BuildingQueries`, `FileQueries`: one class per area, a few per module, a method per read, no `execute`, no transaction, no state change). `queries/` holds that. `api/<name>-api-impl.ts` is the implementation of the module's contract: it delegates its reads to the query services and its writes to the use cases, and has no rule of its own. A file of `use-cases/` named `get-`, `list-`, `view-`, `find-`, `search-` or `count-` is a read in the wrong place | ✔ (the names and the folder) |
 | 4 | No class named `*Service` or `*Manager` in `application/`; no `execute` outside `use-cases/` | ✔ |
 | 5 | A repository interface (`*Repository`) lives in `domain/<aggregate>-repository.ts`; `application/ports.ts` holds ports to the outside only | ✔ |
 | 6 | An entity with a status or an invariant is an aggregate in `domain/` with methods that change its state and throw a domain error; it may extend `AggregateRoot`. A rule without identity (magic bytes, purpose limits, settings validation) stays a function or a value object | review |
@@ -459,7 +460,7 @@ module.exports = {
 
 ### 6.4 `check:layout` (DR-254)
 
-Import rules cannot see the shape of a file, so `scripts/check-layout.ts` reads the sources of `modules/*/src` with the TypeScript compiler API (the TypeScript 6 of `tools/depcruise`, like `check:scope`) and fails on: a file of `application/use-cases/` that does not export exactly one class with one public `execute` and a matching file name; a file of `application/handlers/` that does not export exactly one class with `name`, `eventType` and `handle`; a read as a use case (a `use-cases/` file named `get-`, `list-`, `view-`, `find-`, `search-` or `count-`) or a file of `application/queries/` that is neither `*-queries.ts` nor `*-api-impl.ts`; an interface named `*Repository` outside `domain/`; a class named `*Service` or `*Manager` in `application/`; an `execute` method outside `use-cases/`; a module without `<name>.module.ts` and `install.ts`; an `execute` of a use case, or a public method of a `*-queries.ts` service, that takes a `StaffContext` first and never calls `requireRole` of `@core/kernel` (`role-gate`). `tools/layout-lint/` holds one fixture per rule, like `check:arch:fixtures`. The check is part of `bun run check`.
+Import rules cannot see the shape of a file, so `scripts/check-layout.ts` reads the sources of `modules/*/src` with the TypeScript compiler API (the TypeScript 6 of `tools/depcruise`, like `check:scope`) and fails on: a file of `application/use-cases/` that does not export exactly one class with one public `execute` and a matching file name; a file of `application/handlers/` that does not export exactly one class with `name`, `eventType` and `handle`; a read as a use case (a `use-cases/` file named `get-`, `list-`, `view-`, `find-`, `search-` or `count-`) or a file of `application/queries/` that is not `*-queries.ts`, or a file of `application/api/` that is not `*-api-impl.ts`; an interface named `*Repository` outside `domain/`; a class named `*Service` or `*Manager` in `application/`; an `execute` method outside `use-cases/`; a module without `<name>.module.ts` and `install.ts`; an `execute` of a use case, or a public method of a `*-queries.ts` service, that takes a `StaffContext` first and never calls `requireRole` of `@core/kernel` (`role-gate`). `tools/layout-lint/` holds one fixture per rule, like `check:arch:fixtures`. The check is part of `bun run check`.
 
 ## 7. `BuildingScope` repositories (DR-12)
 

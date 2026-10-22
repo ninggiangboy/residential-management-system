@@ -6,7 +6,7 @@ import type {
   MissingTerm,
 } from '../../contracts'
 import type { BuildingDirectory } from '../directory'
-import type { BuildingQueries } from './building-queries'
+import type { BuildingQueries } from '../queries/building-queries'
 
 export interface BuildingApiDeps {
   directory: BuildingDirectory

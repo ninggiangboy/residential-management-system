@@ -6,12 +6,12 @@ import type {
   StoreGeneratedInput,
   UploadTicket,
 } from '../../contracts'
+import type { FileQueries } from '../queries/file-queries'
 import type { AttachFile } from '../use-cases/attach-file'
 import type { RegisterFile } from '../use-cases/register-file'
 import type { RemoveFile } from '../use-cases/remove-file'
 import type { StoreGeneratedFile } from '../use-cases/store-generated-file'
 import type { VerifyFile } from '../use-cases/verify-file'
-import type { FileQueries } from './file-queries'
 
 export interface FilesApiUseCases {
   registerFile: RegisterFile

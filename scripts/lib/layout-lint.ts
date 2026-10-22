@@ -15,9 +15,9 @@ import type { Node, Ts } from './typescript-api'
  *   no-service-class     A class named `*Service` or `*Manager` in `application/`.
  *   execute-location     A class in `application/` outside `use-cases/` has a method named `execute`.
  *   query-placement      A read is a use case: a file of `application/use-cases/` named `get-`, `list-`, `view-`, `find-`,
- *                        `search-` or `count-`, or a file of `application/queries/` that is neither `<name>-api-impl.ts` nor
- *                        `<name>-queries.ts`. Reads go in a query service (`<Name>Queries`, several methods); only commands
- *                        are use cases.
+ *                        `search-` or `count-`, or a file of `application/queries/` that is not `<name>-queries.ts`, or a file
+ *                        of `application/api/` that is not `<name>-api-impl.ts`. Reads go in a query service
+ *                        (`<Name>Queries`, several methods); only commands are use cases.
  *   module-files         A module has no `<name>.module.ts` or no `install.ts`.
  *   role-gate            `execute` of a use case, or a public method of a query service, takes a `StaffContext` first and
  *                        never calls `requireRole` (DOC-12 §5.3, §14 item 3). A method open to every role says so with
@@ -194,13 +194,20 @@ export function lintLayout(ts: Ts, root: string): LayoutViolation[] {
           })
       }
 
-      if (inside.startsWith('application/queries/') && !/-(api-impl|queries)\.ts$/.test(inside))
+      if (inside.startsWith('application/queries/') && !/-queries\.ts$/.test(inside))
         violations.push({
           file: rel(path),
           line: 1,
           rule: 'query-placement',
-          message:
-            'application/queries/ holds <name>-api-impl.ts and <name>-queries.ts only (DOC-12 §4.5 rule 3)',
+          message: 'application/queries/ holds <name>-queries.ts only (DOC-12 §4.5 rule 3)',
+        })
+
+      if (inside.startsWith('application/api/') && !/-api-impl(\.test)?\.ts$/.test(inside))
+        violations.push({
+          file: rel(path),
+          line: 1,
+          rule: 'query-placement',
+          message: 'application/api/ holds <name>-api-impl.ts only (DOC-12 §4.5 rule 3)',
         })
 
       if (inside.startsWith('application/handlers/')) {
