@@ -27,7 +27,7 @@ bun run typecheck          # tsc in every workspace + scripts/
 bun run check:arch         # dependency-cruiser, three configs (apps, modules, packages)
 bun run check:scope        # every query on a table with building_id carries the scope (AST, TypeScript 6 of tools/depcruise)
 bun run check:audit        # every audit action written in code is declared in its manifest and listed in DOC-35 §4
-bun run check:layout       # module layout (DR-254): one command per file with one `execute`, reads in query services, one handler per file, repository interfaces in domain/
+bun run check:layout       # module layout (DR-254): one command per file with one `execute`, reads in query services, one handler per file, repository interfaces in domain/, a staff use case calls requireRole
 bun run test               # unit tests of every workspace (bun test, no database)
 bun run test:coverage      # the same with lcov (CI `unit` job)
 bun run dev:web            # Vite for apps/cms-web on :5173
@@ -57,7 +57,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
   - `domain` is pure. It imports only `@core/kernel` and `@rms/shared-types`; no `new Date()` and no I/O. Time comes from the `Clock` port and ids from `IdGenerator`.
   - `application` holds the use cases and ports. It must not touch Elysia, Drizzle or `process.env`.
   - `presentation` holds Elysia routes. A route handler is about three lines and receives use cases, never repositories.
-  - The layout to follow is the module template in DOC-12 §4 and its rules in §4.5 (DR-254): `application/use-cases/<verb>-<noun>.ts` for commands only, with one class and one `execute`; reads are methods of a few query services in `queries/<name>-queries.ts` (no `get-`/`list-`/`view-` use case files); one handler per file in `handlers/`; `queries/<name>-api-impl.ts` for the contract; repository interfaces and aggregates in `domain/`, `<name>.module.ts` apart from `install.ts`. No `*Service` class. `bun run check:layout` enforces it.
+  - The layout to follow is the module template in DOC-12 §4 and its rules in §4.5 (DR-254): `application/use-cases/<verb>-<noun>.ts` for commands only, with one class and one `execute`; reads are methods of a few query services in `queries/<name>-queries.ts` (no `get-`/`list-`/`view-` use case files); one handler per file in `handlers/`; `queries/<name>-api-impl.ts` for the contract; repository interfaces and aggregates in `domain/`, `<name>.module.ts` apart from `install.ts`. No `*Service` class. A staff operation exports its `<OPERATION>_ROLES` and calls `requireRole(staff, <OPERATION>_ROLES)` (`@core/kernel`); the route reads the same constant for its guard and `audience`. `bun run check:layout` enforces it.
 - `@core/*` (`packages/core-*`) is infrastructure vendored from an upstream reference repository (`packages/CORE_VERSION`). It is this project's code now: fix bugs here, in a normal PR. Any change that is not a rename gets a line under `local-changes` in `CORE_VERSION`. A package may import only the other packages listed for it in the `ALLOWED` map of `.dependency-cruiser.packages.cjs`.
 - `@rms/*` holds project packages shared with the clients. `@rms/shared-types` is a leaf with no dependencies (ids, statuses, error codes, `Money`, time helpers). The other packages are `@rms/i18n-catalog` and `@rms/design-tokens`. `client-core`, `mobile-core`, `ui-native` and `pdf-assets` are planned and not created yet.
 

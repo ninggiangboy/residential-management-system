@@ -1,13 +1,17 @@
-import type { StaffContext } from '@rms/shared-types'
+import { requireRole } from '@core/kernel'
+import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type { GatewayConfigDto, GatewayDriver, GatewayProvider, MissingTerm } from '../../contracts'
 import { GATEWAY_DRIVERS } from '../../domain/gateway-config'
 import type { GatewayConfigRepository } from '../../domain/gateway-config-repository'
 import type { TermsRepository } from '../../domain/terms-repository'
-import { assertAdmin } from '../assert-admin'
 import type { BuildingDocument, BuildingDocumentLoader } from '../building-document'
 import type { BuildingDirectory } from '../directory'
 import type { GatewayConfigReader, GatewayView } from '../gateway-config-reader'
 import { scopeOf } from '../scope-of'
+
+/** `GET /staff/settings` and `GET /staff/gateway` are the Admin's alone (DOC-36 §4, §7.1). The routes read these lists for their `audience`. */
+export const READ_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+export const READ_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 export interface BuildingQueriesDeps {
   documents: BuildingDocumentLoader
@@ -23,13 +27,13 @@ export class BuildingQueries {
 
   /** `GET /staff/settings` (DOC-36 §4): the building row and the settings in one document, with its `ETag`. */
   async settings(staff: StaffContext): Promise<BuildingDocument> {
-    assertAdmin(staff)
+    requireRole(staff, READ_SETTINGS_ROLES)
     return this.deps.documents.load(staff.buildingId)
   }
 
   /** `GET /staff/gateway`: the active configurations with masked secrets and the drivers this building may use (DOC-36 §7.1). */
   async gatewayView(staff: StaffContext) {
-    assertAdmin(staff)
+    requireRole(staff, READ_GATEWAY_ROLES)
     const { gateways, directory, reader } = this.deps
     const isDemo = await directory.isDemo(staff.buildingId)
     const configs: GatewayView[] = []

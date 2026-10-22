@@ -55,3 +55,5 @@ local-changes:
     and the contract test (DOC-37 §6.3, §8, §9) (P1-07)
   - core-db: `inBuilding(table, scope)`, the typed predicate of the building scope (DOC-12 §7.2); the scope type is structural
     because a core package may not import `@rms/shared-types` (P1-07)
+  - core-kernel: `requireRole(actor, allowed)`, the role gate of a use case: 403 `forbidden` unless `actor.role` is listed (DOC-12 §5.3, §14
+    item 3); test in `src/require-role.test.ts`

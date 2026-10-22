@@ -134,4 +134,35 @@ describe('the layout lint (DOC-12 §4.5)', () => {
       expect.stringContaining('install.ts'),
     ])
   })
+  test('role-gate: a use case with a StaffContext and no requireRole', () => {
+    const root = tree({
+      'application/use-cases/close-ticket.ts': `
+        export class CloseTicket { async execute(staff: StaffContext) { return staff.role } }`,
+    })
+    expect(rules(root)).toContain('role-gate')
+  })
+
+  test('role-gate: a query service method with a StaffContext and no requireRole', () => {
+    const root = tree({
+      'application/queries/ticket-queries.ts': `
+        export class TicketQueries { async mine(staff: StaffContext) { return staff.staffId } }`,
+    })
+    expect(rules(root)).toContain('role-gate')
+  })
+
+  test('role-gate: requireRole, a private helper and a call without staff pass', () => {
+    const root = tree({
+      'application/use-cases/close-ticket.ts': `
+        export class CloseTicket {
+          async execute(staff: StaffContext) { requireRole(staff, CLOSE_ROLES) }
+          private async log(staff: StaffContext) { return staff.role }
+        }`,
+      'application/queries/ticket-queries.ts': `
+        export class TicketQueries {
+          async all(staff: StaffContext) { requireRole(staff, STAFF_ROLES) }
+          async byAccount(accountId: string) { return accountId }
+        }`,
+    })
+    expect(lintLayout(ts, root)).toEqual([])
+  })
 })

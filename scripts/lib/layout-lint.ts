@@ -19,6 +19,9 @@ import type { Node, Ts } from './typescript-api'
  *                        `<name>-queries.ts`. Reads go in a query service (`<Name>Queries`, several methods); only commands
  *                        are use cases.
  *   module-files         A module has no `<name>.module.ts` or no `install.ts`.
+ *   role-gate            `execute` of a use case, or a public method of a query service, takes a `StaffContext` first and
+ *                        never calls `requireRole` (DOC-12 §5.3, §14 item 3). A method open to every role says so with
+ *                        `requireRole(staff, STAFF_ROLES)`.
  */
 
 export interface LayoutViolation {
@@ -32,6 +35,7 @@ export interface LayoutViolation {
     | 'execute-location'
     | 'query-placement'
     | 'module-files'
+    | 'role-gate'
   message: string
 }
 
@@ -89,6 +93,21 @@ const implementsInterface = (ts: Ts, cls: Node, name: string) =>
       clause.types.some((t: Node) => t.expression.getText().split('.').at(-1) === name),
   )
 
+/** The method takes a `StaffContext` as its first parameter. */
+const takesStaff = (method: Node) => {
+  const type = method.parameters[0]?.type
+  return type !== undefined && type.getText() === 'StaffContext'
+}
+
+const callsRequireRole = (ts: Ts, method: Node) => {
+  let found = false
+  if (method.body)
+    visit(ts, method.body, (node) => {
+      if (ts.isCallExpression(node) && node.expression.getText() === 'requireRole') found = true
+    })
+  return found
+}
+
 export function lintLayout(ts: Ts, root: string): LayoutViolation[] {
   const violations: LayoutViolation[] = []
   const modulesDir = join(root, 'modules')
@@ -139,6 +158,28 @@ export function lintLayout(ts: Ts, root: string): LayoutViolation[] {
           const base = inside.split('/').at(-1)?.replace(/\.ts$/, '')
           if (base !== kebab(cls.name.text))
             add(cls, 'use-case-shape', `the file name must be ${kebab(cls.name.text)}.ts`)
+        }
+      }
+
+      // `null`: every public method (a query service); a list: those methods only (`execute` of a use case); `[]`: none.
+      const gated = inside.startsWith('application/use-cases/')
+        ? ['execute']
+        : /^application\/queries\/[^/]+-queries\.ts$/.test(inside)
+          ? null
+          : []
+      for (const cls of classes) {
+        for (const member of cls.members) {
+          if (!ts.isMethodDeclaration(member) || !ts.isIdentifier(member.name)) continue
+          const hidden =
+            ts.ModifierFlags.Private | ts.ModifierFlags.Protected | ts.ModifierFlags.Static
+          if ((ts.getCombinedModifierFlags(member) & hidden) !== 0) continue
+          if (gated !== null && !gated.includes(member.name.text)) continue
+          if (takesStaff(member) && !callsRequireRole(ts, member))
+            add(
+              member,
+              'role-gate',
+              `${cls.name.text}.${member.name.text} takes a StaffContext and never calls requireRole (DOC-12 §14 item 3)`,
+            )
         }
       }
 
