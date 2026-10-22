@@ -26,6 +26,10 @@ const checks: Check[] = [
   { target: 'quality:dup', what: 'jscpd' },
   { target: 'check:scope', what: 'building-scope lint (DR-12)', task: 'P1-07' },
   { target: 'check:audit', what: 'audit actions declared and catalogued (AD-06)', task: 'P1-08' },
+  {
+    target: 'check:layout',
+    what: 'module layout: one use case per file, handlers, repositories in domain (DR-254)',
+  },
   { target: 'check:i18n', what: 'catalog parity (NFR-13)', task: 'P1-09' },
   { target: 'check:authz-metadata', what: 'route audience metadata (AG-01)', task: 'P1-15' },
   { target: 'check:dependabot', what: 'Expo-managed modules ignored by Dependabot (DR-94)' },
