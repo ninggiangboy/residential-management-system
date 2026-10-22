@@ -1,0 +1,1063 @@
+{
+  "id": "203af1b0-2792-4241-916e-9c53117dcdea",
+  "prevId": "8b0bd0a8-7587-4a84-8438-ee833fb1b99c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "building.inbox": {
+      "name": "inbox",
+      "schema": "building",
+      "columns": {
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handler": {
+          "name": "handler",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "inbox_message_id_handler_pk": {
+          "name": "inbox_message_id_handler_pk",
+          "columns": [
+            "message_id",
+            "handler"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "building.outbox_messages": {
+      "name": "outbox_messages",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "headers": {
+          "name": "headers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dead_at": {
+          "name": "dead_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outbox_pending_idx": {
+          "name": "outbox_pending_idx",
+          "columns": [
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"outbox_messages\".\"published_at\" is null and \"building\".\"outbox_messages\".\"dead_at\" is null",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "building.building_setting": {
+      "name": "building_setting",
+      "schema": "building",
+      "columns": {
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_building_setting": {
+          "name": "pk_building_setting",
+          "columns": [
+            "building_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_building_setting_data": {
+          "name": "ck_building_setting_data",
+          "value": "jsonb_typeof(\"building\".\"building_setting\".\"data\") = 'object'"
+        },
+        "ck_building_setting_version": {
+          "name": "ck_building_setting_version",
+          "value": "\"building\".\"building_setting\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "building.building": {
+      "name": "building",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company": {
+          "name": "company",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hotline": {
+          "name": "hotline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "working_hours": {
+          "name": "working_hours",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "citext",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo_file": {
+          "name": "logo_file",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Asia/Ho_Chi_Minh'"
+        },
+        "is_demo": {
+          "name": "is_demo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fk_building_logo_file": {
+          "name": "fk_building_logo_file",
+          "tableFrom": "building",
+          "columnsFrom": [
+            "logo_file"
+          ],
+          "tableTo": "file_object",
+          "schemaTo": "building",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pk_building": {
+          "name": "pk_building",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_building_code": {
+          "name": "uq_building_code",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_building_code": {
+          "name": "ck_building_code",
+          "value": "\"building\".\"building\".\"code\" ~ '^[A-Z0-9][A-Z0-9-]{1,31}$'"
+        },
+        "ck_building_name": {
+          "name": "ck_building_name",
+          "value": "platform.is_bilingual(\"building\".\"building\".\"name\")"
+        },
+        "ck_building_company": {
+          "name": "ck_building_company",
+          "value": "jsonb_typeof(\"building\".\"building\".\"company\") = 'object'"
+        },
+        "ck_building_working_hours": {
+          "name": "ck_building_working_hours",
+          "value": "\"building\".\"building\".\"working_hours\" IS NULL OR platform.is_bilingual(\"building\".\"building\".\"working_hours\")"
+        },
+        "ck_building_time_zone": {
+          "name": "ck_building_time_zone",
+          "value": "btrim(\"building\".\"building\".\"time_zone\") <> ''"
+        },
+        "ck_building_version": {
+          "name": "ck_building_version",
+          "value": "\"building\".\"building\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "building.file_object": {
+      "name": "file_object",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "module": {
+          "name": "module",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime": {
+          "name": "mime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checksum": {
+          "name": "checksum",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "owner_ref": {
+          "name": "owner_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_kind": {
+          "name": "account_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attached_at": {
+          "name": "attached_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ix_file_object_building_unattached": {
+          "name": "ix_file_object_building_unattached",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"file_object\".\"status\" IN ('pending', 'verified')",
+          "concurrently": false
+        },
+        "ix_file_object_building_owner": {
+          "name": "ix_file_object_building_owner",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "owner_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"file_object\".\"owner_ref\" IS NOT NULL",
+          "concurrently": false
+        },
+        "ix_file_object_building_deleted": {
+          "name": "ix_file_object_building_deleted",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "deleted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"file_object\".\"status\" = 'deleted'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_file_object": {
+          "name": "pk_file_object",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_file_object_building_key": {
+          "name": "uq_file_object_building_key",
+          "columns": [
+            "building_id",
+            "object_key"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_file_object_module": {
+          "name": "ck_file_object_module",
+          "value": "\"building\".\"file_object\".\"module\" IN ('identity', 'building', 'residency', 'finance', 'tickets', 'vehicles', 'notices', 'wiki', 'reporting')"
+        },
+        "ck_file_object_purpose": {
+          "name": "ck_file_object_purpose",
+          "value": "\"building\".\"file_object\".\"purpose\" IN ('avatar', 'logo', 'import', 'statement', 'fee_notice_pdf', 'receipt_pdf', 'bulk_zip', 'ticket_media', 'vehicle_plate_photo', 'vehicle_paper', 'notice_attachment', 'notice_image', 'wiki_attachment', 'wiki_image', 'export', 'thumbnail')"
+        },
+        "ck_file_object_key": {
+          "name": "ck_file_object_key",
+          "value": "\"building\".\"file_object\".\"object_key\" ~ '^[a-z]+/[0-9a-f-]{36}/[a-z]+/[0-9]{4}/(0[1-9]|1[0-2])/[0-9a-f-]{36}\\.[a-z0-9]{1,8}$'"
+        },
+        "ck_file_object_size": {
+          "name": "ck_file_object_size",
+          "value": "\"building\".\"file_object\".\"size\" >= 0"
+        },
+        "ck_file_object_status": {
+          "name": "ck_file_object_status",
+          "value": "\"building\".\"file_object\".\"status\" IN ('pending', 'verified', 'attached', 'deleted')"
+        },
+        "ck_file_object_account": {
+          "name": "ck_file_object_account",
+          "value": "\"building\".\"file_object\".\"account_kind\" IN ('staff', 'resident', 'system')"
+        },
+        "ck_file_object_stamps": {
+          "name": "ck_file_object_stamps",
+          "value": "(\"building\".\"file_object\".\"status\" = 'pending' AND \"building\".\"file_object\".\"verified_at\" IS NULL AND \"building\".\"file_object\".\"attached_at\" IS NULL AND \"building\".\"file_object\".\"deleted_at\" IS NULL)\n        OR (\"building\".\"file_object\".\"status\" = 'verified' AND \"building\".\"file_object\".\"verified_at\" IS NOT NULL AND \"building\".\"file_object\".\"attached_at\" IS NULL AND \"building\".\"file_object\".\"deleted_at\" IS NULL)\n        OR (\"building\".\"file_object\".\"status\" = 'attached' AND \"building\".\"file_object\".\"verified_at\" IS NOT NULL AND \"building\".\"file_object\".\"attached_at\" IS NOT NULL AND \"building\".\"file_object\".\"deleted_at\" IS NULL)\n        OR (\"building\".\"file_object\".\"status\" = 'deleted' AND \"building\".\"file_object\".\"deleted_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "building.gateway_config": {
+      "name": "gateway_config",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "driver": {
+          "name": "driver",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "secrets_enc": {
+          "name": "secrets_enc",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiving_account": {
+          "name": "receiving_account",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "last_check_at": {
+          "name": "last_check_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_check_ok": {
+          "name": "last_check_ok",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "uq_gateway_config_building_provider_active": {
+          "name": "uq_gateway_config_building_provider_active",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"gateway_config\".\"status\" = 'active'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_gateway_config": {
+          "name": "pk_gateway_config",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_gateway_config_provider": {
+          "name": "ck_gateway_config_provider",
+          "value": "\"building\".\"gateway_config\".\"provider\" IN ('payos', 'vietqr')"
+        },
+        "ck_gateway_config_driver": {
+          "name": "ck_gateway_config_driver",
+          "value": "\"building\".\"gateway_config\".\"driver\" IN ('payos', 'vietqr', 'fake')"
+        },
+        "ck_gateway_config_status": {
+          "name": "ck_gateway_config_status",
+          "value": "\"building\".\"gateway_config\".\"status\" IN ('active', 'disabled')"
+        },
+        "ck_gateway_config_secrets": {
+          "name": "ck_gateway_config_secrets",
+          "value": "\"building\".\"gateway_config\".\"secrets_enc\" ~ '^v1:[A-Za-z0-9_-]{1,32}:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$'"
+        },
+        "ck_gateway_config_account": {
+          "name": "ck_gateway_config_account",
+          "value": "jsonb_typeof(\"building\".\"gateway_config\".\"receiving_account\") = 'object'"
+        },
+        "ck_gateway_config_check": {
+          "name": "ck_gateway_config_check",
+          "value": "(\"building\".\"gateway_config\".\"last_check_at\" IS NULL) = (\"building\".\"gateway_config\".\"last_check_ok\" IS NULL)"
+        },
+        "ck_gateway_config_version": {
+          "name": "ck_gateway_config_version",
+          "value": "\"building\".\"gateway_config\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "building.job_run": {
+      "name": "job_run",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "ix_job_run_started": {
+          "name": "ix_job_run_started",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "ix_job_run_name_success": {
+          "name": "ix_job_run_name_success",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "finished_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"building\".\"job_run\".\"status\" = 'succeeded'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_job_run": {
+          "name": "pk_job_run",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_job_run_name": {
+          "name": "ck_job_run_name",
+          "value": "\"building\".\"job_run\".\"name\" ~ '^[a-z][a-z0-9_]{2,40}$'"
+        },
+        "ck_job_run_status": {
+          "name": "ck_job_run_status",
+          "value": "\"building\".\"job_run\".\"status\" IN ('succeeded', 'failed')"
+        },
+        "ck_job_run_times": {
+          "name": "ck_job_run_times",
+          "value": "\"building\".\"job_run\".\"finished_at\" >= \"building\".\"job_run\".\"started_at\""
+        },
+        "ck_job_run_details": {
+          "name": "ck_job_run_details",
+          "value": "jsonb_typeof(\"building\".\"job_run\".\"details\") = 'object'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "building.terms_acceptance": {
+      "name": "terms_acceptance",
+      "schema": "building",
+      "columns": {
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_id": {
+          "name": "version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "app_version": {
+          "name": "app_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ix_terms_acceptance_building_version": {
+          "name": "ix_terms_acceptance_building_version",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "fk_terms_acceptance_version": {
+          "name": "fk_terms_acceptance_version",
+          "tableFrom": "terms_acceptance",
+          "columnsFrom": [
+            "version_id"
+          ],
+          "tableTo": "terms_version",
+          "schemaTo": "building",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pk_terms_acceptance": {
+          "name": "pk_terms_acceptance",
+          "columns": [
+            "account_id",
+            "version_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "building.terms_version": {
+      "name": "terms_version",
+      "schema": "building",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_by": {
+          "name": "published_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_terms_version": {
+          "name": "pk_terms_version",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_terms_version_building_kind_version": {
+          "name": "uq_terms_version_building_kind_version",
+          "columns": [
+            "building_id",
+            "kind",
+            "version"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_terms_version_kind": {
+          "name": "ck_terms_version_kind",
+          "value": "\"building\".\"terms_version\".\"kind\" IN ('terms', 'privacy')"
+        },
+        "ck_terms_version_version": {
+          "name": "ck_terms_version_version",
+          "value": "\"building\".\"terms_version\".\"version\" >= 1"
+        },
+        "ck_terms_version_text": {
+          "name": "ck_terms_version_text",
+          "value": "platform.is_bilingual(\"building\".\"terms_version\".\"text\")"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "building": "building"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
