@@ -1,6 +1,6 @@
 /**
- * `bun run check:commits` (DOC-71 §11.2, DR-166): the pull-request title, which a squash merge turns into the commit, and
- * the subject of every commit of the branch follow Conventional Commits with a module as the scope.
+ * `bun run check:commits` (DOC-71 §11.2, DR-166): the subject of every commit of the branch, which a rebase merge lands on `dev` one by one, and
+ * the pull-request title follow Conventional Commits with a module as the scope.
  *
  *   PR_TITLE   the pull-request title (set by the workflow; absent locally)
  *   BASE_REF   the commit the branch starts from (default: the merge base with origin/dev)

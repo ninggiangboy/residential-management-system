@@ -838,7 +838,7 @@ A task starts when: the documents in its *Documents* column are `Approved`; no D
 
 ### 7.3 Git and code
 
-- Trunk-based on `dev` (DR-239); short branches; squash merge; protected `dev` (once the plan allows it, DOC-71 §11.1); `CODEOWNERS` for `modules/finance`, `modules/identity`, `docs/04-adr`.
+- Trunk-based on `dev` (DR-239); short branches; rebase merge (DR-251); protected `dev` (once the plan allows it, DOC-71 §11.1); `CODEOWNERS` for `modules/finance`, `modules/identity`, `docs/04-adr`.
 - Conventional Commits in English with the module as scope: `feat(finance): post only exact online payments`.
 - Language: documents, code, commits, PR titles, logs and API errors in English (§0.1); product copy through the vi/en catalog.
 - PR template: link to the task ID and DOC, checklist for §7.2, screenshots for UI.

@@ -1,6 +1,6 @@
 /**
  * `bun run pr:merge <number>` (DOC-71 §11.1, DR-241): the merge of a pull request into `dev`. GitHub Free has no branch
- * protection for a private repository, so this script is what makes `gate` the required check: it squash-merges only
+ * protection for a private repository, so this script is what makes `gate` the required check: it rebase-merges only
  * when the pull request is open, not a draft, targets `dev`, contains the tip of `dev` (the "up to date" rule), and the
  * check `gate` of its head commit is `success`. `--match-head-commit` makes GitHub refuse the merge if a commit was
  * pushed after the check was read; the repository deletes the merged branch (`delete_branch_on_merge`). Needs `gh` signed in.
@@ -70,14 +70,5 @@ if (conclusion !== 'success') refuse(`gate is ${conclusion} on ${pr.headRefOid.s
 console.log(
   `gate is green on ${pr.headRefOid.slice(0, 7)} and ${pr.headRefName} is up to date with ${trunk}`,
 )
-gh(
-  'pr',
-  'merge',
-  number,
-  '--squash',
-  '--match-head-commit',
-  pr.headRefOid,
-  '--subject',
-  `${pr.title} (#${pr.number})`,
-)
+gh('pr', 'merge', number, '--rebase', '--match-head-commit', pr.headRefOid)
 console.log(`merged #${pr.number} into ${trunk}: ${pr.title}`)
