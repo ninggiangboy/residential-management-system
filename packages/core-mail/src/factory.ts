@@ -1,4 +1,4 @@
-import type { Log } from '@core/core'
+import type { Log } from '@core/kernel'
 import type { MailConfig } from './config'
 import { ConsoleMailer } from './console-mailer'
 import type { Mailer } from './ports'

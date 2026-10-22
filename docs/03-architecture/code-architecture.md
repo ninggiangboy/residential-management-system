@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-02: `core-core` → `core-kernel`, `core-web-core` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -65,9 +65,9 @@ Bun workspaces are `apps/*`, `modules/*` and `packages/*`. There are no changese
 | --- | --- | --- | --- |
 | `@core/*` | Vendored infrastructure: one package per concern (§13) | Other `@core/*` along the acyclic graph of §6.3; npm packages only in its adapter files | `@mod/*`, `@rms/*`, `@app/*` |
 | `@mod/<m>` | A business module (§4) | `@core/*` (by layer, §3); `@rms/shared-types`; **only the `contracts` export** of another `@mod/<n>` | Another module's `domain`, `application`, `infrastructure`, `presentation`; `@app/*`; `@rms/ui-native`, `@rms/mobile-core` |
-| `@rms/*` | Project packages shared by apps and clients (`client-core` and `shared-types` are pure TypeScript with no DOM and no React Native, DR-188) | Other `@rms/*`; `@core/i18n`; `@core/web-core` (web only) | `@mod/*`, `@app/*`, server-only `@core/*` |
+| `@rms/*` | Project packages shared by apps and clients (`client-core` and `shared-types` are pure TypeScript with no DOM and no React Native, DR-188) | Other `@rms/*`; `@core/i18n`; `@core/web` (web only) | `@mod/*`, `@app/*`, server-only `@core/*` |
 | `@app/api` | The composition root | Every module through its exports map: `.`, `./manifest`, `./config`, `./schema`, `./integrations/<consumer>` | A module's internals; a driver package directly (§6.2) |
-| `@app/cms-web`, `@app/resident-app`, `@app/staff-app` | Clients | `@rms/*`, `@core/i18n`, `@core/web-core`; **`import type { App } from '@app/api'` only** | `@mod/*`, any value import from `@app/api` (DR-04) |
+| `@app/cms-web`, `@app/resident-app`, `@app/staff-app` | Clients | `@rms/*`, `@core/i18n`, `@core/web`; **`import type { App } from '@app/api'` only** | `@mod/*`, any value import from `@app/api` (DR-04) |
 
 `@rms/shared-types` is a leaf: no workspace dependency, no framework, no I/O. It holds the language codes, roles, member types, capability names, status literals, error codes, the `Money` brand and its helpers (§9.3) and the time helpers (§9.4). Both server domain code and clients may import it (DR-100).
 
@@ -101,8 +101,8 @@ flowchart LR
 
 | Layer | Contains | May import | Must not know |
 | --- | --- | --- | --- |
-| `domain` | Aggregates and entities, value objects, state transition rules, domain errors, repository **interfaces** | `@core/core`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
-| `application` | Use cases (one class or function per command or query), ports for everything outside (`Clock`, `OutboxWriter`, gateways), integration-event handlers, the audit and idempotency wrappers (§8), DTO mappers | `domain`, `@core/core`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
+| `domain` | Aggregates and entities, value objects, state transition rules, domain errors, repository **interfaces** | `@core/kernel`, `@rms/shared-types` | Any other layer, Elysia, Drizzle, `Date.now()`, any I/O |
+| `application` | Use cases (one class or function per command or query), ports for everything outside (`Clock`, `OutboxWriter`, gateways), integration-event handlers, the audit and idempotency wrappers (§8), DTO mappers | `domain`, `@core/kernel`, `@core/context`, `@rms/shared-types`, other modules' `contracts` | `infrastructure`, `presentation`, Elysia, Drizzle, `pino`, `process.env` |
 | `infrastructure` | Drizzle repositories and row mappers, driver adapters (payOS, Expo, SMS, SMTP, R2), `DrizzleOutboxWriter`, `DrizzleInboxGuard` | `application`, `domain`, `@core/*`, the npm drivers | `presentation` |
 | `presentation` | Elysia route plugins, TypeBox request and response schemas, OpenAPI detail, the audience declaration of each route (§5.3) | `application`, `domain` types for mapping, `@core/http`, `@core/auth` | `infrastructure` (it receives use cases, never repositories) |
 | `contracts` | Interfaces with plain DTOs, event names and payload types, pure literals and pure functions without imports | Nothing from its own module, no `@core/*`; types only from `@rms/shared-types` | Everything else |
@@ -314,7 +314,7 @@ Paths are relative to the repository root. The `$1` back-reference makes one rul
 ```js
 const FRAMEWORKS =
   'node_modules/(elysia|@elysiajs|drizzle-orm|drizzle-kit|postgres|nodemailer|jose|pino|exceljs|@react-pdf|@aws-sdk|expo-server-sdk|libphonenumber-js)/'
-const INNER_CORE_OK = '^packages/(core-core|shared-types)/'          // the only workspace packages the domain may import
+const INNER_CORE_OK = '^packages/(core-kernel|shared-types)/'          // the only workspace packages the domain may import
 const LAYERS = '(domain|application|infrastructure|presentation)'
 
 module.exports = {
@@ -369,7 +369,7 @@ module.exports = {
 }
 ```
 
-`@core/*` packages resolve to `packages/core-*` files; the rules therefore name directories. The `package.json#exports` map is the second net (§2.3). A negative fixture directory (`tools/arch-fixtures/cases/<config>__<rule>/`, one tree per rule that must fail, plus a clean `<config>__ok` tree per configuration) is copied to a temporary directory and cruised by `bun run check:arch:fixtures`, so a rule that silently stops matching is noticed. P1-01 wrote the cases for `clients-import-the-api-type-only`, `modules-talk-only-through-contracts`, `domain-is-pure` and `core-core-imports-only-its-allowed-packages`; each later rule adds its case with the code that first needs it.
+`@core/*` packages resolve to `packages/core-*` files; the rules therefore name directories. The `package.json#exports` map is the second net (§2.3). A negative fixture directory (`tools/arch-fixtures/cases/<config>__<rule>/`, one tree per rule that must fail, plus a clean `<config>__ok` tree per configuration) is copied to a temporary directory and cruised by `bun run check:arch:fixtures`, so a rule that silently stops matching is noticed. P1-01 wrote the cases for `clients-import-the-api-type-only`, `modules-talk-only-through-contracts`, `domain-is-pure` and `core-kernel-imports-only-its-allowed-packages`; each later rule adds its case with the code that first needs it.
 
 ### 6.3 `.dependency-cruiser.packages.cjs`
 
@@ -377,7 +377,7 @@ One rule per package lists which other workspace packages it may import. The gra
 
 ```mermaid
 flowchart LR
-  core["core-core"] --> db["core-db"] & messaging["core-messaging"] & mail["core-mail"] & storage["core-storage"] & auth["core-auth"] & http["core-http"] & runtime["core-runtime"]
+  core["core-kernel"] --> db["core-db"] & messaging["core-messaging"] & mail["core-mail"] & storage["core-storage"] & auth["core-auth"] & http["core-http"] & runtime["core-runtime"]
   config["core-config"] --> db & messaging & telemetry["core-telemetry"] & mail & storage & runtime
   context["core-context"] --> telemetry & http & messaging & auth
   telemetry --> http & messaging & runtime
@@ -390,17 +390,17 @@ flowchart LR
 
 ```js
 const ALLOWED = {                       // package → workspace packages it may import
-  'core-core': [],  'core-config': ['core-core'],  'core-context': ['core-core'],
+  'core-kernel': [],  'core-config': ['core-kernel'],  'core-context': ['core-kernel'],
   'core-telemetry': ['core-config', 'core-context'],
-  'core-db': ['core-core', 'core-config'],
-  'core-messaging': ['core-core', 'core-db', 'core-config', 'core-context', 'core-telemetry'],
-  'core-http': ['core-core', 'core-context', 'core-telemetry'],
-  'core-auth': ['core-core', 'core-context', 'core-http'],
-  'core-mail': ['core-core', 'core-config', 'core-messaging'],
-  'core-storage': ['core-core', 'core-config'],
-  'core-runtime': ['core-core', 'core-config', 'core-db', 'core-messaging', 'core-telemetry', 'core-http', 'core-mail', 'core-storage'],
-  'core-i18n': [],  'core-testing': ['core-core', 'core-messaging', 'core-db'],
-  'core-web-core': ['core-i18n'],
+  'core-db': ['core-kernel', 'core-config'],
+  'core-messaging': ['core-kernel', 'core-db', 'core-config', 'core-context', 'core-telemetry'],
+  'core-http': ['core-kernel', 'core-context', 'core-telemetry'],
+  'core-auth': ['core-kernel', 'core-context', 'core-http'],
+  'core-mail': ['core-kernel', 'core-config', 'core-messaging'],
+  'core-storage': ['core-kernel', 'core-config'],
+  'core-runtime': ['core-kernel', 'core-config', 'core-db', 'core-messaging', 'core-telemetry', 'core-http', 'core-mail', 'core-storage'],
+  'core-i18n': [],  'core-testing': ['core-kernel', 'core-messaging', 'core-db'],
+  'core-web': ['core-i18n'],
   'shared-types': [], 'design-tokens': [], 'i18n-catalog': ['shared-types'],
   'ui-native': ['design-tokens', 'shared-types', 'core-i18n'],
   'client-core': ['shared-types'],
@@ -418,7 +418,7 @@ module.exports = {
     { name: 'packages-do-not-import-modules-or-apps', severity: 'error',
       from: { path: '^packages/' }, to: { path: '^(modules|apps)/' } },
     { name: 'only-adapters-import-frameworks', severity: 'error',
-      from: { path: '^packages/core-(core|context|config|i18n)/' },
+      from: { path: '^packages/core-(kernel|context|config|i18n)/' },
       to: { path: 'node_modules/(elysia|@elysiajs|drizzle-orm|postgres|nodemailer|pino|jose)/' } },
     { name: 'packages-import-only-what-they-can-resolve', severity: 'error',
       from: { path: '^packages/' }, to: { couldNotResolve: true } },
@@ -428,7 +428,7 @@ module.exports = {
 }
 ```
 
-`ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web-core` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
+`ALLOWED` started as the table copied from the reference graph; P1-02 recomputed it from the vendored `package.json` files (2026-10-21). Differences found: `core-config` and `core-web` import no workspace package, `core-runtime` does not import `core-http`, `core-testing` imports `core-mail` and `core-storage` but not `core-db`; each was a finding and the table now lists production imports only. Two options were added to all three configurations when the first real workspace imports appeared: `doNotFollow: { path: 'node_modules' }` (otherwise a circular dependency inside `@sinclair/typebox` fails the run) and `enhancedResolveOptions.conditionNames` with `bun`, `import` and `default` (otherwise `@core/*` cannot be resolved through the `exports` map). A package is liftable into its own repository exactly when none of its rules needs bending.
 
 ## 7. `BuildingScope` repositories (DR-12)
 
@@ -721,7 +721,7 @@ export function assertCan(c: UnitContext, cap: Capability): void   // throws For
 
 ## 12. Exception types and their answers
 
-The domain and application layers throw typed errors; they never build an HTTP response. The error handler plugin of `@core/http` maps every error to `{ "error": { "code", "message", "details" } }` (DR-74). The classes come from the reference `@core/core` (`DomainError(code, message, kind)` and subclasses); the kinds and the codes below are this project's. The complete catalog of codes, retry classes and message keys is DOC-42.
+The domain and application layers throw typed errors; they never build an HTTP response. The error handler plugin of `@core/http` maps every error to `{ "error": { "code", "message", "details" } }` (DR-74). The classes come from the reference `@core/kernel` (`DomainError(code, message, kind)` and subclasses); the kinds and the codes below are this project's. The complete catalog of codes, retry classes and message keys is DOC-42.
 
 | Class (kind) | HTTP | Thrown when | Example codes (DR-74, DOC-03) |
 | --- | --- | --- | --- |
@@ -757,7 +757,7 @@ Upstream names appear only in this table, in `packages/CORE_VERSION` and in the 
 
 | Reference package | Here | Directory | Copied | Role |
 | --- | --- | --- | --- | --- |
-| `kit-core` | `core-core` | `packages/core-core` | Yes | Domain events, aggregate root, errors, `Clock`, `IdGenerator`, `UnitOfWork`, `Log`; gets `SecretBox` (AES-256-GCM key ring with a row-bound AAD, DOC-36 §6, DR-126) |
+| `kit-core` | `core-kernel` | `packages/core-kernel` | Yes | Domain events, aggregate root, errors, `Clock`, `IdGenerator`, `UnitOfWork`, `Log`; gets `SecretBox` (AES-256-GCM key ring with a row-bound AAD, DOC-36 §6, DR-126) |
 | `kit-config` | `core-config` | `packages/core-config` | Yes | Config slices, `loadConfig`, generated `.env.example` |
 | `kit-context` | `core-context` | `packages/core-context` | Yes | Request context in `AsyncLocalStorage` |
 | `kit-db` | `core-db` | `packages/core-db` | Yes | Pool, ambient transaction, advisory locks, per-module migrations; gets `GaplessCounter` (§9.5) |
@@ -770,18 +770,18 @@ Upstream names appear only in this table, in `packages/CORE_VERSION` and in the 
 | `kit-runtime` | `core-runtime` | `packages/core-runtime` | Yes | `AppModule`, `ModuleHost`, `createRuntime`, health, jobs |
 | `kit-i18n` | `core-i18n` | `packages/core-i18n` | Yes | ICU messages, typed catalogs, parity helpers |
 | `kit-testing` | `core-testing` | `packages/core-testing` | Yes | Fakes (`FakeClock`, `SequentialIds`, `InMemoryOutbox`, `PassthroughUnitOfWork`, `FakeStorage`, `InMemoryInbox`); `devDependency` only |
-| `kit-web-core` | `core-web-core` | `packages/core-web-core` | Yes | SSE client over `fetch`, `authFetch` |
+| `kit-web-core` | `core-web` | `packages/core-web` | Yes | SSE client over `fetch`, `authFetch` |
 | `shared-types` conventions | `@rms/shared-types` | `packages/shared-types` | Conventions only | Not a copy: this project's own package (§2.2) |
 | `kit-ui` | — | — | No | The design system here is shadcn (web) and `@rms/ui-native` (DR-03, DR-70) |
 | `kit-privacy-participant` | — | — | No | The privacy module is skipped (DR-03); see DR-98 |
 
-**Closure (P1-02).** `core-messaging` needs `core-core`, `core-config`, `core-context`, `core-db` and `core-telemetry`; `core-runtime` adds `core-mail` and `core-storage`; `core-mail` needs `core-messaging`, so the graph is acyclic and the allowed imports of each package are exactly the `ALLOWED` map of `.dependency-cruiser.packages.cjs` (§6.3). Fourteen reference packages are copied; the reference's `kit-privacy-participant` was a dependency of `kit-runtime`, not of `kit-messaging` as the original SDD and DR-98 assumed, so the edit for DR-98 is in `core-runtime` (`AppModule.privacy` removed). Not yet in the copies, added by the task that first needs each (and then listed in `local-changes`): `SecretBox` in `core-core`, `GaplessCounter` in `core-db` (P2-02), `idempotent()` and `audience` metadata in `core-http`, the `policy(type)` hook of the relay (DR-118).
+**Closure (P1-02).** `core-messaging` needs `core-kernel`, `core-config`, `core-context`, `core-db` and `core-telemetry`; `core-runtime` adds `core-mail` and `core-storage`; `core-mail` needs `core-messaging`, so the graph is acyclic and the allowed imports of each package are exactly the `ALLOWED` map of `.dependency-cruiser.packages.cjs` (§6.3). Fourteen reference packages are copied; the reference's `kit-privacy-participant` was a dependency of `kit-runtime`, not of `kit-messaging` as the original SDD and DR-98 assumed, so the edit for DR-98 is in `core-runtime` (`AppModule.privacy` removed). Not yet in the copies, added by the task that first needs each (and then listed in `local-changes`): `SecretBox` in `core-kernel`, `GaplessCounter` in `core-db` (P2-02), `idempotent()` and `audience` metadata in `core-http`, the `policy(type)` hook of the relay (DR-118).
 
 Reference modules: `identity` and `notification` are **forked** into `modules/identity` and `modules/notification` and never synced again; `realtime` is copied as is into `modules/realtime`; `privacy`, `profile` and `billing` are skipped, and only the patterns of `billing` (idempotent webhooks, gapless numbering) are reused (DR-03). The reference scripts `gen:module`, `kit:add` and `kit:remove` are not part of the DR-02 list; modules are created by hand from §4 (P1-02 did not copy the reference's `templates/module`).
 
 ### 13.2 Renaming rules
 
-1. Every reference `kit-x` becomes `core-x` with no exception (`kit-core` → `core-core`, `kit-web-core` → `core-web-core`); `@kit/*` becomes `@core/*`.
+1. Every reference `kit-x` becomes `core-x`; `@kit/*` becomes `@core/*`. Two exceptions avoid a repeated word: `kit-core` → `core-kernel` (`@core/kernel`) and `kit-web-core` → `core-web` (`@core/web`) (DR-02, changed 2026-10-22).
 2. The reference's dependency-cruiser patterns for `kit-*`/`@kit/*` are renamed the same way (the configurations of §6 are already renamed).
 3. The sync commit scope is `chore(core): sync <sha>`.
 
@@ -793,7 +793,7 @@ A plain text file next to the packages. The file as of P1-02:
 upstream:   git@github.com:ninggiangboy/elysia-architecture.git (a sibling checkout at ../elysia-architecture when copied)
 commit:     66bcc10435044415ff2e6dc55139614dd66f2888
 synced-on:  2026-10-21
-mapping:    kit-core→core-core, kit-config→core-config, … (the table of §13.1)
+mapping:    kit-core→core-kernel, kit-config→core-config, … (the table of §13.1)
 omitted:    kit-ui, kit-privacy-participant (+ the edit to core-runtime because of it, below); the reference `shared-types`
 local-changes:
   - all packages: dependency versions pinned to the DOC-11 versions (exact, no `^`)

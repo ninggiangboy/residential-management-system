@@ -14,7 +14,7 @@ Inside this repository it is a workspace package; outside, a build in `dist/` is
 
 ## Ports
 
-Implements `UnitOfWork` (from `@core/core`) with `Database`.
+Implements `UnitOfWork` (from `@core/kernel`) with `Database`.
 
 ## Configuration
 

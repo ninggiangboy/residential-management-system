@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import type { DomainEvent } from '@core/core'
+import type { DomainEvent } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 
 export interface OutboxWriterUnderTest {

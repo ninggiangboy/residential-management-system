@@ -1,4 +1,4 @@
-import { ForbiddenError, NotFoundError } from '@core/core'
+import { ForbiddenError, NotFoundError } from '@core/kernel'
 import { Elysia } from 'elysia'
 import { LocalFsObjectStorage } from './local-fs-object-storage'
 import type { ObjectStorage } from './ports'

@@ -3,7 +3,7 @@
  */
 const FRAMEWORKS =
   'node_modules/(elysia|@elysiajs|drizzle-orm|drizzle-kit|postgres|nodemailer|jose|pino|exceljs|@react-pdf|@aws-sdk|expo-server-sdk|libphonenumber-js)/'
-const INNER_CORE_OK = '^packages/(core-core|shared-types)/'
+const INNER_CORE_OK = '^packages/(core-kernel|shared-types)/'
 const LAYERS = '(domain|application|infrastructure|presentation)'
 
 module.exports = {

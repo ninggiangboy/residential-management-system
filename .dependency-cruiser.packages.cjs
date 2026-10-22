@@ -4,18 +4,18 @@
  * A package is liftable into its own repository exactly when none of these rules needs bending.
  */
 const ALLOWED = {
-  'core-core': [],
+  'core-kernel': [],
   'core-config': [],
   'core-context': [],
   'core-telemetry': ['core-config', 'core-context'],
-  'core-db': ['core-core', 'core-config'],
-  'core-messaging': ['core-core', 'core-db', 'core-config', 'core-context', 'core-telemetry'],
-  'core-http': ['core-core', 'core-context', 'core-telemetry'],
-  'core-auth': ['core-core', 'core-context', 'core-http'],
-  'core-mail': ['core-core', 'core-config', 'core-messaging'],
-  'core-storage': ['core-core', 'core-config'],
+  'core-db': ['core-kernel', 'core-config'],
+  'core-messaging': ['core-kernel', 'core-db', 'core-config', 'core-context', 'core-telemetry'],
+  'core-http': ['core-kernel', 'core-context', 'core-telemetry'],
+  'core-auth': ['core-kernel', 'core-context', 'core-http'],
+  'core-mail': ['core-kernel', 'core-config', 'core-messaging'],
+  'core-storage': ['core-kernel', 'core-config'],
   'core-runtime': [
-    'core-core',
+    'core-kernel',
     'core-config',
     'core-db',
     'core-messaging',
@@ -24,8 +24,8 @@ const ALLOWED = {
     'core-storage',
   ],
   'core-i18n': [],
-  'core-testing': ['core-core', 'core-messaging', 'core-mail', 'core-storage'],
-  'core-web-core': [],
+  'core-testing': ['core-kernel', 'core-messaging', 'core-mail', 'core-storage'],
+  'core-web': [],
   'shared-types': [],
   'design-tokens': [],
   'i18n-catalog': ['shared-types'],
@@ -57,7 +57,7 @@ module.exports = {
     {
       name: 'only-adapters-import-frameworks',
       severity: 'error',
-      from: { path: '^packages/core-(core|context|config|i18n)/' },
+      from: { path: '^packages/core-(kernel|context|config|i18n)/' },
       to: { path: 'node_modules/(elysia|@elysiajs|drizzle-orm|postgres|nodemailer|pino|jose)/' },
     },
     {

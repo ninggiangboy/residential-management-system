@@ -45,7 +45,7 @@ A staff member who is also a resident has two accounts, one per app (DR-36). A r
 
 ### 2.1 Ports
 
-The module depends on these ports; adapters are bound in the composition root (DOC-12 §5.1). `Clock`, `IdGenerator` and `UnitOfWork` are `@core/core`'s.
+The module depends on these ports; adapters are bound in the composition root (DOC-12 §5.1). `Clock`, `IdGenerator` and `UnitOfWork` are `@core/kernel`'s.
 
 ```ts
 // modules/identity/src/application/ports.ts

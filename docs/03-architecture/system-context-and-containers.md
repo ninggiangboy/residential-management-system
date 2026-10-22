@@ -246,7 +246,7 @@ The code is one modular monolith: `apps/api` is the composition root that instal
 
 `notification` and `realtime` are generic leaf modules: they never import a producer. What they know about a producer lives in the producer's `integrations/<consumer>` entry point (reference `generic-modules-are-leaves`, DR-04). The reference modules `privacy`, `profile` and `billing` are not used (DR-03).
 
-Below the modules sit the vendored `@core/*` packages (config, db, messaging, http, auth, runtime, storage, mail, i18n, telemetry, testing, `core-web-core`), mapped in DOC-12. The `platform` schema belongs to those packages, not to a module (§6.2).
+Below the modules sit the vendored `@core/*` packages (config, db, messaging, http, auth, runtime, storage, mail, i18n, telemetry, testing, `core-web`), mapped in DOC-12. The `platform` schema belongs to those packages, not to a module (§6.2).
 
 ### 5.2 Synchronous contracts
 

@@ -93,8 +93,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@core/context": "workspace:*",
-        "@core/core": "workspace:*",
         "@core/http": "workspace:*",
+        "@core/kernel": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.4.3",
@@ -126,19 +126,12 @@
         "@opentelemetry/api": "1.9.1",
       },
     },
-    "packages/core-core": {
-      "name": "@core/core",
-      "version": "0.0.0",
-      "devDependencies": {
-        "@types/bun": "1.4.3",
-      },
-    },
     "packages/core-db": {
       "name": "@core/db",
       "version": "0.0.0",
       "dependencies": {
         "@core/config": "workspace:*",
-        "@core/core": "workspace:*",
+        "@core/kernel": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.4.3",
@@ -157,7 +150,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@core/context": "workspace:*",
-        "@core/core": "workspace:*",
+        "@core/kernel": "workspace:*",
         "@core/telemetry": "workspace:*",
       },
       "devDependencies": {
@@ -177,12 +170,19 @@
         "@types/bun": "1.4.3",
       },
     },
+    "packages/core-kernel": {
+      "name": "@core/kernel",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "1.4.3",
+      },
+    },
     "packages/core-mail": {
       "name": "@core/mail",
       "version": "0.0.0",
       "dependencies": {
         "@core/config": "workspace:*",
-        "@core/core": "workspace:*",
+        "@core/kernel": "workspace:*",
         "@core/messaging": "workspace:*",
         "nodemailer": "10.1.7",
       },
@@ -200,8 +200,8 @@
       "dependencies": {
         "@core/config": "workspace:*",
         "@core/context": "workspace:*",
-        "@core/core": "workspace:*",
         "@core/db": "workspace:*",
+        "@core/kernel": "workspace:*",
         "@core/telemetry": "workspace:*",
       },
       "devDependencies": {
@@ -219,8 +219,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@core/config": "workspace:*",
-        "@core/core": "workspace:*",
         "@core/db": "workspace:*",
+        "@core/kernel": "workspace:*",
         "@core/mail": "workspace:*",
         "@core/messaging": "workspace:*",
         "@core/storage": "workspace:*",
@@ -243,7 +243,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@core/config": "workspace:*",
-        "@core/core": "workspace:*",
+        "@core/kernel": "workspace:*",
       },
       "devDependencies": {
         "@core/http": "workspace:*",
@@ -281,7 +281,7 @@
       "name": "@core/testing",
       "version": "0.0.0",
       "dependencies": {
-        "@core/core": "workspace:*",
+        "@core/kernel": "workspace:*",
         "@core/mail": "workspace:*",
         "@core/messaging": "workspace:*",
         "@core/storage": "workspace:*",
@@ -290,8 +290,8 @@
         "@types/bun": "1.4.3",
       },
     },
-    "packages/core-web-core": {
-      "name": "@core/web-core",
+    "packages/core-web": {
+      "name": "@core/web",
       "version": "0.0.0",
       "devDependencies": {
         "@tanstack/react-query": "5.104.4",
@@ -492,13 +492,13 @@
 
     "@core/context": ["@core/context@workspace:packages/core-context"],
 
-    "@core/core": ["@core/core@workspace:packages/core-core"],
-
     "@core/db": ["@core/db@workspace:packages/core-db"],
 
     "@core/http": ["@core/http@workspace:packages/core-http"],
 
     "@core/i18n": ["@core/i18n@workspace:packages/core-i18n"],
+
+    "@core/kernel": ["@core/kernel@workspace:packages/core-kernel"],
 
     "@core/mail": ["@core/mail@workspace:packages/core-mail"],
 
@@ -512,7 +512,7 @@
 
     "@core/testing": ["@core/testing@workspace:packages/core-testing"],
 
-    "@core/web-core": ["@core/web-core@workspace:packages/core-web-core"],
+    "@core/web": ["@core/web@workspace:packages/core-web"],
 
     "@elysiajs/eden": ["@elysiajs/eden@1.4.9", "", { "peerDependencies": { "elysia": ">=1.4.19" } }, "sha512-3CKVD4ycVjB8nCNssfmhnUuq3SzSHkUES3v5PNCFr9LxIrx39/HVRAZ8z2sLxrFqzUs48dCBZaxoZzJ5UUVHDA=="],
 

@@ -1,6 +1,6 @@
 import { requestContext } from '@core/context'
-import type { DomainEvent } from '@core/core'
 import type { Database } from '@core/db'
+import type { DomainEvent } from '@core/kernel'
 import { currentTraceparent } from '@core/telemetry'
 import type { OutboxWriter } from '../ports'
 import type { OutboxTable } from './tables'

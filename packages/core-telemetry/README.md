@@ -14,7 +14,7 @@ Inside this repository it is a workspace package; outside, a build in `dist/` is
 
 ## Ports
 
-Defines `Logger`. Implements the `Log` port of `@core/core` with pino.
+Defines `Logger`. Implements the `Log` port of `@core/kernel` with pino.
 
 ## Configuration
 

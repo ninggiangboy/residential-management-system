@@ -82,9 +82,9 @@ apps/resident-app/                                   # apps/staff-app/ has the s
 | `@rms/ui-native` | `packages/ui-native` | The design-system components once for both Expo apps (DOC-54) | the two apps |
 | `@rms/mobile-core` | `packages/mobile-core` | Mobile adapters over `client-core`: secure-store token store, refresh transport, the Eden factory, unit context, push registration, netinfo and AppState wiring, upload helper, i18n setup, error reporter | the two apps |
 | `@core/i18n` | `packages/core-i18n` | ICU messages, typed catalogs, parity helpers (vendored, DR-02) | `i18n-catalog`, clients |
-| `@core/web-core` | `packages/core-web-core` | The SSE client over `fetch` (web only, §13) | `@app/cms-web` |
+| `@core/web` | `packages/core-web` | The SSE client over `fetch` (web only, §13) | `@app/cms-web` |
 
-Rules (DOC-12 §2.2, §6): clients import `import type { App } from '@app/api'` and nothing else from the API; a value import fails `check:arch` (DR-04). `@rms/client-core` and `@rms/shared-types` import neither React Native nor the DOM, so they run under Vitest on Bun. `apps/cms-web` does not import `@rms/mobile-core` or `@rms/ui-native`; the apps do not import `@core/web-core`. The shadcn component source lives in `apps/cms-web/src/components/ui`, not in a package (DR-188; DOC-11 §4 says `packages/ui-web` and is owed a correction).
+Rules (DOC-12 §2.2, §6): clients import `import type { App } from '@app/api'` and nothing else from the API; a value import fails `check:arch` (DR-04). `@rms/client-core` and `@rms/shared-types` import neither React Native nor the DOM, so they run under Vitest on Bun. `apps/cms-web` does not import `@rms/mobile-core` or `@rms/ui-native`; the apps do not import `@core/web`. The shadcn component source lives in `apps/cms-web/src/components/ui`, not in a package (DR-188; DOC-11 §4 says `packages/ui-web` and is owed a correction).
 
 **Visual layer (DOC-54).** Fonts: the web serves self-hosted `woff2` (Geologica, Big Shoulders); the apps load the static `ttf` instances with `expo-font` before the splash screen hides (DR-180). Theme: each client follows the operating system, `prefers-color-scheme` on the web and `useColorScheme()` on native, with `data-theme` set on the root; there is no stored preference and no toggle in phase 1 (DR-182). Icons: one typed registry of Phosphor names per platform, so an unknown name does not compile (DR-181, DOC-54 §7.3).
 
@@ -540,7 +540,7 @@ Contract only; the event schema and the endpoint belong to DOC-52 (not written) 
 
 | Point | Rule |
 | --- | --- |
-| Client | the fetch-based SSE client of `@core/web-core` to `GET /staff/events` with the bearer token (an `EventSource` cannot send the header) |
+| Client | the fetch-based SSE client of `@core/web` to `GET /staff/events` with the bearer token (an `EventSource` cannot send the header) |
 | Auth | opens after sign-in; a token refresh does not close the stream (the next reconnect uses the new token); `session.revoked` closes it and signs the tab out |
 | Reconnect | on close or error, backoff 1 s, 2 s, 5 s, 10 s (cap 30 s) with `Last-Event-ID`; a 401 goes through the refresh rule of §5.2; 429 (a fourth stream) stops and shows a banner |
 | Streams | at most 3 per account (DR-75): one stream per tab would exceed it, so a tab holds the stream only while it is visible: `visibilitychange` hidden for 60 s closes it, visible reopens it and invalidates everything the events cover |
@@ -648,7 +648,7 @@ Delegated design details (the Owner delegated documentation decisions that touch
 
 | ID | Decision | Used in |
 | --- | --- | --- |
-| DR-188 | A new package `packages/client-core` (`@rms/client-core`, pure TypeScript) holds the fetcher, error classification, retry plan, intent keys, query-key helpers and single-flight, so the web and the two apps do not triple the logic. The shadcn component source lives in `apps/cms-web/src/components/ui` (no `packages/ui-web`). `@core/web-core` supplies only the SSE client; its `authFetch` is not used because the refresh rules here are project-specific | §2.2, §4 |
+| DR-188 | A new package `packages/client-core` (`@rms/client-core`, pure TypeScript) holds the fetcher, error classification, retry plan, intent keys, query-key helpers and single-flight, so the web and the two apps do not triple the logic. The shadcn component source lives in `apps/cms-web/src/components/ui` (no `packages/ui-web`). `@core/web` supplies only the SSE client; its `authFetch` is not used because the refresh rules here are project-specific | §2.2, §4 |
 | DR-189 | Access token in memory only on every platform; mobile refresh token in secure-store with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, written before replay; a refresh with no answer is never a sign-out (retry inside the grace window, then state `unknown`); web tabs share the refresh through Web Locks and `BroadcastChannel` | §5 |
 | DR-190 | Server-state defaults of §8.1; offline is read-only with no write queue; the persisted cache is opt-in per query (`meta.persist`), per account, with the allow-list of §9.2 that excludes money, QR, members, vehicles and access-control lookups | §8, §9 |
 | DR-191 | Unit context rules: stored unit id, automatic selection with one membership, `removeQueries(['unit', previous])` on switch, lost membership returns to `Unit-Pick` | §7 |

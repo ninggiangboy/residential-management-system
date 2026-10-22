@@ -211,7 +211,7 @@ Three kinds of secret use one format and one helper: gateway secrets (`SETTINGS_
 
 ### 6.1 `SecretBox`
 
-`SecretBox` lives in `@core/core` as a local change recorded in `packages/CORE_VERSION` (like `GaplessCounter`, DOC-12 §13.1): every module and package may import `@core/core`, and WebCrypto is a global of Bun, so the file has no dependency (DR-126). The composition root reads a key ring from the environment and hands a `SecretBox` to the modules that need one.
+`SecretBox` lives in `@core/kernel` as a local change recorded in `packages/CORE_VERSION` (like `GaplessCounter`, DOC-12 §13.1): every module and package may import `@core/kernel`, and WebCrypto is a global of Bun, so the file has no dependency (DR-126). The composition root reads a key ring from the environment and hands a `SecretBox` to the modules that need one.
 
 ```ts
 type KeyRing = Readonly<Record<string, Uint8Array>>         // keyId → 32 bytes; ids match ^k[0-9]+$
@@ -557,7 +557,7 @@ Prefix `BD-` (building and demo; unused before this document; DOC-88 indexes it)
 
 | ID | Decision | Where used |
 | --- | --- | --- |
-| DR-126 | `GET/PATCH /staff/settings` is one document with a composite ETag; `code`, `timeZone` and `isDemo` are not editable; `null` removes a saved key; step-up action names are the stored ones (DOC-09 corrected); `SecretBox` in `@core/core` with the newest key the highest `k<n>` and an AAD bound to the row; the active-intent check is a port that `finance` implements, closed against the intent race by a row lock; feature flags are environment variables; terms text is a Markdown subset parsed by one pure function; the demo's accounts use fictional numbers, its staff password is a secret, its reset is one transaction guarded in every module and runnable through `POST /staff/demo/reset`; the boot guard has six checks; `BuildingApi` gains `getBuilding`, `listBuildings`, `isDemo`, `missingTerms` and the `lock` option | §3…§10 |
+| DR-126 | `GET/PATCH /staff/settings` is one document with a composite ETag; `code`, `timeZone` and `isDemo` are not editable; `null` removes a saved key; step-up action names are the stored ones (DOC-09 corrected); `SecretBox` in `@core/kernel` with the newest key the highest `k<n>` and an AAD bound to the row; the active-intent check is a port that `finance` implements, closed against the intent race by a row lock; feature flags are environment variables; terms text is a Markdown subset parsed by one pure function; the demo's accounts use fictional numbers, its staff password is a secret, its reset is one transaction guarded in every module and runnable through `POST /staff/demo/reset`; the boot guard has six checks; `BuildingApi` gains `getBuilding`, `listBuildings`, `isDemo`, `missingTerms` and the `lock` option | §3…§10 |
 
 ## 15. Not in this document
 

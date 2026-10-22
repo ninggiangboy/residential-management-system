@@ -1,4 +1,4 @@
-# @core/web-core
+# @core/web
 
 ## Purpose
 
@@ -7,14 +7,14 @@ The browser-side plumbing every client of this API needs: an observable store, t
 ## Install
 
 ```bash
-bun add @core/web-core
+bun add @core/web
 ```
 
 Inside this repository it is a workspace package; outside, a build in `dist/` is what you get (`bun run build`).
 
 ## Ports
 
-No ports. `@core/web-core/react` adds `useStore`.
+No ports. `@core/web/react` adds `useStore`.
 
 ## Configuration
 
@@ -29,7 +29,7 @@ None.
 ## Wiring
 
 ```ts
-import { createAuthFetch, createAuthStore, createSession, createOutageDetector } from '@core/web-core'
+import { createAuthFetch, createAuthStore, createSession, createOutageDetector } from '@core/web'
 
 const store = createAuthStore<{ id: string; email: string }>()
 const session = createSession({ store, refreshUrl: () => `${origin}/api/auth/refresh` })

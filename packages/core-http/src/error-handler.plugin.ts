@@ -1,6 +1,6 @@
 import { requestContext } from '@core/context'
-import type { ErrorKind } from '@core/core'
-import { DomainError, TooManyRequestsError } from '@core/core'
+import type { ErrorKind } from '@core/kernel'
+import { DomainError, TooManyRequestsError } from '@core/kernel'
 import type { Logger } from '@core/telemetry'
 import { Elysia } from 'elysia'
 

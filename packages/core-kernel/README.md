@@ -1,4 +1,4 @@
-# @core/core
+# @core/kernel
 
 ## Purpose
 
@@ -7,7 +7,7 @@ The vocabulary every other package shares: domain events, the aggregate root, do
 ## Install
 
 ```bash
-bun add @core/core
+bun add @core/kernel
 ```
 
 Inside this repository it is a workspace package; outside, a build in `dist/` is what you get (`bun run build`).
@@ -29,7 +29,7 @@ None.
 ## Wiring
 
 ```ts
-import { SystemClock, UuidV7Generator } from '@core/core'
+import { SystemClock, UuidV7Generator } from '@core/kernel'
 
 const clock = new SystemClock()
 const ids = new UuidV7Generator()

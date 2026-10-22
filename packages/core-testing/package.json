@@ -20,7 +20,7 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@core/core": "workspace:*",
+    "@core/kernel": "workspace:*",
     "@core/mail": "workspace:*",
     "@core/messaging": "workspace:*",
     "@core/storage": "workspace:*"

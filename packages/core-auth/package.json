@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@core/context": "workspace:*",
-    "@core/core": "workspace:*",
+    "@core/kernel": "workspace:*",
     "@core/http": "workspace:*"
   },
   "peerDependencies": {

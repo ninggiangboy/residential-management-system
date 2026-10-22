@@ -348,7 +348,7 @@ This document defines the words of the project, as the project uses them. Every 
 | audit action | — | The name of an audited mutation, `<module>.<object>.<verb>` (or `pii.read`), declared in the module's manifest and listed in DOC-35 §4; `AuditApi.record` refuses an undeclared one. | DR-124 |
 | bulk form (audit) | — | One audit row for an action over many rows: it names the parent object, `changes` is empty and the counts are in `details`. | DR-124 |
 | terms gate | — | The check, on every resident request, that the latest `terms` and `privacy` versions are accepted; if not, 403 `terms_required`. Not cached; `/auth/*`, `/me`, `/me/terms*` and `/me/account/deletion` are exempt. | DR-59, DR-125 |
-| `SecretBox` | — | The AES-256-GCM helper of `@core/core`: blob `v1:<keyId>:<iv>:<ciphertext+tag>`, newest key = highest `k<n>`, additional data bound to the row so a blob cannot be moved. | DR-33, DR-126 |
+| `SecretBox` | — | The AES-256-GCM helper of `@core/kernel`: blob `v1:<keyId>:<iv>:<ciphertext+tag>`, newest key = highest `k<n>`, additional data bound to the row so a blob cannot be moved. | DR-33, DR-126 |
 | boot guard | — | The checks run at start by `api` and `worker` that refuse to boot (exit 78) when the demo and real data are mixed: a flagged account in a real building, a `fake` driver in a real building, a stored secret whose key is gone. | DR-60, DR-126 |
 | demo reset | — | The deletion and reseeding of the demo building in one transaction, run nightly at 04:00 and through `POST /staff/demo/reset`; every module asserts `is_demo` first. | DR-60, DR-126 |
 | rule violation | — | A request that is well-formed but breaks a business rule: 422 `validation_failed` (a schema violation is 400). The status belongs to the rule code. | DR-127 |

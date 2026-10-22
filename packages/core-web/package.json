@@ -1,5 +1,5 @@
 {
-  "name": "@core/web-core",
+  "name": "@core/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",

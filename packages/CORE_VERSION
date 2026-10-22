@@ -1,13 +1,15 @@
 upstream:   git@github.com:ninggiangboy/elysia-architecture.git (a sibling checkout at ../elysia-architecture when copied)
 commit:     66bcc10435044415ff2e6dc55139614dd66f2888
 synced-on:  2026-10-21
-mapping:    kit-core→core-core, kit-config→core-config, kit-context→core-context, kit-db→core-db, kit-telemetry→core-telemetry,
+mapping:    kit-core→core-kernel, kit-config→core-config, kit-context→core-context, kit-db→core-db, kit-telemetry→core-telemetry,
             kit-http→core-http, kit-auth→core-auth, kit-messaging→core-messaging, kit-mail→core-mail, kit-storage→core-storage,
-            kit-runtime→core-runtime, kit-i18n→core-i18n, kit-testing→core-testing, kit-web-core→core-web-core
+            kit-runtime→core-runtime, kit-i18n→core-i18n, kit-testing→core-testing, kit-web-core→core-web
             (scope @kit/* → @core/*; the table is DOC-12 §13.1)
 omitted:    kit-ui, kit-privacy-participant (+ the edit to core-runtime because of it, below); the reference `shared-types`
             package (this project has @rms/shared-types, DOC-12 §2.2)
 local-changes:
+  - renamed (DR-02, 2026-10-22): kit-core is core-kernel (@core/kernel), kit-web-core is core-web (@core/web), not core-core
+    and core-web-core
   - all packages: dependency versions pinned to the DOC-11 versions (exact, no `^`; `@types/bun` and the others that were `latest`)
   - all packages: `exports` point at `src/*.ts` for the `bun`, `types` and `default` conditions (nothing is built or published, and
     Metro has no `bun` condition); `build` script, `files` and `tsconfig.build.json` removed; `test` script is

@@ -1,5 +1,5 @@
-import type { Clock, IdGenerator, Log } from '@core/core'
 import type { Database } from '@core/db'
+import type { Clock, IdGenerator, Log } from '@core/kernel'
 import type { Mailer } from '@core/mail'
 import type { ObjectStorage } from '@core/storage'
 

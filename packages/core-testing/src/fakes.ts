@@ -1,4 +1,4 @@
-import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '@core/core'
+import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '@core/kernel'
 import { type Mailer, MailPermanentError, MailRateLimitedError } from '@core/mail'
 import type { InboxGuard, OutboxWriter } from '@core/messaging'
 import type { ObjectStat, ObjectStorage } from '@core/storage'

@@ -1,2 +1,2 @@
-import { core } from '../../core-core/src'
+import { core } from '../../core-kernel/src'
 export const x = core
