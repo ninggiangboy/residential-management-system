@@ -6,3 +6,7 @@ test('GET /api/v1/health/live answers ok', async () => {
   expect(res.status).toBe(200)
   expect(await res.json()).toEqual({ status: 'ok' })
 })
+
+test('acceptance: a failing unit test fails the unit job', () => {
+  expect(1).toBe(2)
+})
