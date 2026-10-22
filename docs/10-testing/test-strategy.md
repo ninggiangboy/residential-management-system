@@ -558,7 +558,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…42` | Review | P1-16 |
 | `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
-| `UICP-` | UI states and copy (catalog parity cases) | DOC-68 | reserved | planned (P1) | P1-09 |
+| `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |
 | `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-09 (DOC-98), EXP-10 (DOC-99) | Draft | per EXP row of master plan §3.2 |
 
 Three notes. (1) The statement-test infix `S` is a numbering convention inside the prefix, not a prefix. (2) `DQ-` is the catalog of data-quality **rules** (DOC-18), not tests; its tests are `IM-`. (3) `RM-` also holds the residency side of the import commit (DOC-27 §17); the validator and the file rows are `IM-`.

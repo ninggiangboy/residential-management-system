@@ -64,7 +64,11 @@ for (const { prefix, doc } of index) {
   rows.push([`\`${prefix}\``, ids.size, covered, ids.size - covered, doc.slice(root.length + 1)])
 }
 
-const unknown = [...tested].filter(([id]) => !known.has(id))
+// Only IDs of an indexed prefix: a title may also start with a DR or an E-number, which is no test ID.
+const prefixes = new Set(index.map((row) => row.prefix))
+const unknown = [...tested].filter(
+  ([id]) => prefixes.has(id.slice(0, id.indexOf('-') + 1)) && !known.has(id),
+)
 for (const [id, file] of unknown)
   annotate('warning', 'check:test-ids', `${file}: test ID ${id} is in no document of DOC-88 §15`)
 
