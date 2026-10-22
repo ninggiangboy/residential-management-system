@@ -113,16 +113,26 @@ describe('the layout lint (DOC-12 §4.5)', () => {
     expect(rules(root)).toEqual(['query-placement'])
   })
 
-  test('query-placement: a file in queries/ that is not a contract implementation or a query service', () => {
+  test('query-placement: a file in queries/ that is not a query service', () => {
     const root = tree({ 'application/queries/storage.ts': 'export class Storage {}' })
     expect(rules(root)).toEqual(['query-placement'])
   })
 
-  test('a query service in queries/ passes', () => {
+  test('query-placement: a contract implementation left in queries/', () => {
+    const root = tree({ 'application/queries/files-api-impl.ts': 'export class FilesApiImpl {}' })
+    expect(rules(root)).toEqual(['query-placement'])
+  })
+
+  test('query-placement: a file in api/ that is not a contract implementation', () => {
+    const root = tree({ 'application/api/storage.ts': 'export class Storage {}' })
+    expect(rules(root)).toEqual(['query-placement'])
+  })
+
+  test('a query service in queries/ and a contract implementation in api/ pass', () => {
     const root = tree({
       'application/queries/file-queries.ts':
         'export class FileQueries { usage() {} signedUrl() {} }',
-      'application/queries/files-api-impl.ts': 'export class FilesApiImpl {}',
+      'application/api/files-api-impl.ts': 'export class FilesApiImpl {}',
     })
     expect(lintLayout(ts, root)).toEqual([])
   })
