@@ -641,7 +641,7 @@ These are DR-06, DR-102 and DOC-10 §6.1 as numbers: the `cloudflared` limit is 
 | 6 | `worker` | `healthy` (relay finished a pass, DOC-38 §5.2) | |
 | any | Monitoring | Prometheus targets up | |
 
-**After a host reboot** Docker restarts every container (`restart: unless-stopped`) at the same moment, and PostgreSQL starts after Docker (it needs the bridge). `api` and `worker` therefore start before the database answers. The requirement on the application is: **the first connection is retried for 30 seconds, then the process exits with code 1** and Docker restarts it; `/health/ready` is 503 until the database answers (E-02). P1-04 implements and tests that (DOC-38 §5.1, DR-235: the ops port answers 503 during the wait); §14 check 9 proves the whole reboot.
+**After a host reboot** Docker restarts every container (`restart: unless-stopped`) at the same moment, and PostgreSQL starts after Docker (it needs the bridge). `api` and `worker` therefore start before the database answers. The requirement on the application is: **the first connection is retried for 30 seconds, then the process exits with code 1** and Docker restarts it; `/health/ready` is 503 until the database answers (E-02). P1-04 implements and tests that (DOC-38 §5.1, DR-248: the ops port answers 503 during the wait); §14 check 9 proves the whole reboot.
 
 Health, at three levels:
 

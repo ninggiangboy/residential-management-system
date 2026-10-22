@@ -18,8 +18,9 @@ COPY package.json bunfig.toml ./
 COPY apps/api ./apps/api
 COPY modules ./modules
 COPY packages ./packages
-# `scripts/migrate.ts` (P1-06) and `scripts/keys-generate.ts --out` (P1-04) join this line when they exist.
-COPY scripts/healthcheck.ts ./scripts/
+# `scripts/keys-generate.ts --out` joins this line with P1-20. `migrate.ts` reads the bootstrap and grants SQL (DOC-19 §3.1).
+COPY scripts/healthcheck.ts scripts/migrate.ts ./scripts/
+COPY ops/postgres ./ops/postgres
 ARG GIT_SHA=unknown
 # The repository URL comes from CI (`github.server_url`/`github.repository`): no Owner value in the repository (DR-228).
 ARG SOURCE_URL=unknown

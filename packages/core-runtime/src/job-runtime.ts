@@ -1,5 +1,5 @@
-import type { Clock, IdGenerator } from '@core/core'
 import type { Database } from '@core/db'
+import type { Clock, IdGenerator } from '@core/kernel'
 import type { Logger } from '@core/telemetry'
 import { sql } from 'drizzle-orm'
 import {

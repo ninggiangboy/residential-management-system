@@ -1,4 +1,4 @@
-import type { Clock } from '@core/core'
+import type { Clock } from '@core/kernel'
 import type { Logger } from '@core/telemetry'
 import type { Schedule } from './schedule'
 

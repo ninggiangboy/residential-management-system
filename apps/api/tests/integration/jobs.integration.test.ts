@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { type Clock, UuidV7Generator } from '@core/core'
 import { Database } from '@core/db'
+import { type Clock, UuidV7Generator } from '@core/kernel'
 import {
   type AppModule,
   createRuntime,
