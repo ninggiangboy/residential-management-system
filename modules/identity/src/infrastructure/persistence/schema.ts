@@ -1,0 +1,187 @@
+import { inboxTable, outboxTable } from '@core/messaging'
+import { sql } from 'drizzle-orm'
+import {
+  boolean,
+  check,
+  customType,
+  doublePrecision,
+  foreignKey,
+  index,
+  integer,
+  pgSchema,
+  primaryKey,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
+
+/**
+ * DOC-16 §4.1, §4.4, §4.5, §4.6: the staff side of `identity` (P1-10), plus the outbox and inbox of the module
+ * (`identity.mail_requested.v1`, `identity.session_revoked.v1`). The resident tables (`resident_account`, `otp_challenge`)
+ * come with P1-11, in a migration of their own. Names follow DOC-14 §11. What drizzle-kit cannot express (the deferrable
+ * foreign key of `replaced_by_id`) is in the second migration.
+ */
+export const identity = pgSchema('identity')
+
+const citext = customType<{ data: string }>({ dataType: () => 'citext' })
+
+export const staffAccount = identity.table(
+  'staff_account',
+  {
+    id: uuid('id').notNull(),
+    buildingId: uuid('building_id').notNull(),
+    email: citext('email').notNull(),
+    fullName: text('full_name').notNull(),
+    role: text('role').notNull(),
+    status: text('status').notNull().default('invited'),
+    passwordHash: text('password_hash'),
+    failedAttempts: smallint('failed_attempts').notNull().default(0),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    language: text('language').notNull().default('vi'),
+    pushEnabled: boolean('push_enabled').notNull().default(true),
+    avatarKey: text('avatar_key'),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    version: integer('version').notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_staff_account', columns: [t.id] }),
+    uniqueIndex('uq_staff_account_email').on(t.email),
+    index('ix_staff_account_building_role').on(t.buildingId, t.role, t.status),
+    check('ck_staff_account_role', sql`${t.role} IN ('admin', 'manager', 'technician', 'guard')`),
+    check(
+      'ck_staff_account_status',
+      sql`${t.status} IN ('invited', 'active', 'locked', 'disabled')`,
+    ),
+    check('ck_staff_account_attempts', sql`${t.failedAttempts} >= 0`),
+    check('ck_staff_account_language', sql`${t.language} IN ('vi', 'en')`),
+    check(
+      'ck_staff_account_password',
+      sql`${t.status} = 'invited' OR ${t.passwordHash} IS NOT NULL`,
+    ),
+  ],
+)
+
+export const passwordToken = identity.table(
+  'password_token',
+  {
+    id: uuid('id').notNull(),
+    buildingId: uuid('building_id').notNull(),
+    staffId: uuid('staff_id').notNull(),
+    kind: text('kind').notNull(),
+    action: text('action'),
+    attempts: smallint('attempts').notNull().default(0),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_password_token', columns: [t.id] }),
+    foreignKey({
+      name: 'fk_password_token_staff_account',
+      columns: [t.staffId],
+      foreignColumns: [staffAccount.id],
+    }),
+    // A link is found by its hash; a step-up code is not unique across staff (six digits), so it is found by staff and action.
+    uniqueIndex('uq_password_token_link_hash')
+      .on(t.tokenHash)
+      .where(sql`${t.kind} IN ('reset', 'invite')`),
+    // One live token per staff member, kind and action: issuing a new one consumes the older first (DR-39, FR-50.1).
+    uniqueIndex('uq_password_token_one_live')
+      .on(t.staffId, t.kind, sql`(COALESCE(${t.action}, ''))`)
+      .where(sql`${t.consumedAt} IS NULL`),
+    index('ix_password_token_created').on(t.createdAt),
+    check('ck_password_token_kind', sql`${t.kind} IN ('reset', 'invite', 'step_up')`),
+    check(
+      'ck_password_token_action',
+      sql`${t.action} IS NULL OR ${t.action} IN ('gateway_config', 'admin_change', 'staff_email')`,
+    ),
+    check(
+      'ck_password_token_action_kind',
+      sql`(${t.kind} = 'step_up') = (${t.action} IS NOT NULL)`,
+    ),
+    check('ck_password_token_attempts', sql`${t.attempts} BETWEEN 0 AND 5`),
+    check('ck_password_token_expiry', sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+)
+
+export const refreshFamily = identity.table(
+  'refresh_family',
+  {
+    id: uuid('id').notNull(),
+    kind: text('kind').notNull(),
+    accountId: uuid('account_id').notNull(),
+    buildingId: uuid('building_id'),
+    userAgent: text('user_agent'),
+    client: text('client').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+    absoluteExpiresAt: timestamp('absolute_expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedReason: text('revoked_reason'),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_refresh_family', columns: [t.id] }),
+    index('ix_refresh_family_account').on(t.kind, t.accountId).where(sql`${t.revokedAt} IS NULL`),
+    index('ix_refresh_family_expiry').on(t.absoluteExpiresAt),
+    check('ck_refresh_family_kind', sql`${t.kind} IN ('staff', 'resident')`),
+    check('ck_refresh_family_client', sql`${t.client} IN ('web', 'app')`),
+    check(
+      'ck_refresh_family_reason',
+      sql`${t.revokedReason} IN ('sign_out', 'user_revoked', 'token_reuse', 'cap_exceeded', 'account_locked', 'account_disabled', 'role_changed', 'phone_changed', 'password_changed', 'deleted')`,
+    ),
+    check('ck_refresh_family_building', sql`(${t.kind} = 'staff') = (${t.buildingId} IS NOT NULL)`),
+    check(
+      'ck_refresh_family_revocation',
+      sql`(${t.revokedAt} IS NULL) = (${t.revokedReason} IS NULL)`,
+    ),
+  ],
+)
+
+export const refreshToken = identity.table(
+  'refresh_token',
+  {
+    id: uuid('id').notNull(),
+    familyId: uuid('family_id').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    // The foreign key is DEFERRABLE INITIALLY DEFERRED (second migration): the successor is inserted after the consume.
+    replacedById: uuid('replaced_by_id'),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_refresh_token', columns: [t.id] }),
+    foreignKey({
+      name: 'fk_refresh_token_refresh_family',
+      columns: [t.familyId],
+      foreignColumns: [refreshFamily.id],
+    }).onDelete('cascade'),
+    uniqueIndex('uq_refresh_token_hash').on(t.tokenHash),
+    index('ix_refresh_token_family').on(t.familyId),
+    check(
+      'ck_refresh_token_replaced',
+      sql`${t.replacedById} IS NULL OR ${t.revokedAt} IS NOT NULL`,
+    ),
+  ],
+)
+
+export const rateBucket = identity.table(
+  'rate_bucket',
+  {
+    key: text('key').notNull(),
+    tokens: doublePrecision('tokens').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_rate_bucket', columns: [t.key] }),
+    index('ix_rate_bucket_updated').on(t.updatedAt),
+  ],
+)
+
+export const identityOutbox = outboxTable(identity)
+export const identityInbox = inboxTable(identity)

@@ -5,16 +5,19 @@ import {
   type IdGenerator,
   keyRingFromBase64,
   SystemClock,
-  UnavailableError,
   UuidV7Generator,
 } from '@core/kernel'
+import type { Mailer } from '@core/mail'
 import { type AppModule, createRuntime, type MaintenanceStore, SqlJobRunStore } from '@core/runtime'
 import { createObjectStorage, type ObjectStorage } from '@core/storage'
 import type { Logger } from '@core/telemetry'
 import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
+import { installIdentity } from '@mod/identity'
 import type { Config } from './config'
+import { createGuards } from './guards'
+import { createMailerFor } from './mailer'
 import { MODULE_CATALOG } from './module-catalog'
 
 /**
@@ -28,17 +31,12 @@ export interface ContainerOverrides {
   maintenanceStore?: Pick<MaintenanceStore, 'read'>
   /** The object storage (tests: a fake). */
   storage?: ObjectStorage
-  /** `IdentityApi.verifyStepUp`; the real one comes with P1-10. */
+  /** The mailer (tests: one that records). */
+  mailer?: Mailer
+  /** `IdentityApi.verifyStepUp` for `building` (tests: a stand-in); by default `identity`'s own. */
   stepUp?: StepUpVerifier
   /** `finance`'s answer to "is an intent active?"; the real one comes with the finance module (DOC-36 §7.3). */
   probe?: ActiveIntentProbe
-}
-
-/** Until `identity` (P1-10) installs, no proof can be checked, so a change that asks for one is refused. */
-const noStepUp: StepUpVerifier = {
-  verifyStepUp: async () => {
-    throw new UnavailableError('step_up_unavailable', 'Step-up is not available yet')
-  },
 }
 
 /** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
@@ -99,14 +97,16 @@ export function createContainer(
       STORAGE_LOCAL_PUBLIC_URL: 'http://localhost',
     })
   if (!secrets.SETTINGS_ENCRYPTION_KEYS) throw new Error('SETTINGS_ENCRYPTION_KEYS is required')
+  const secretBox = createSecretBox(keyRingFromBase64(secrets.SETTINGS_ENCRYPTION_KEYS))
   const building = installBuilding({
     logger,
     clock,
     ids,
     database,
     storage,
-    secretBox: createSecretBox(keyRingFromBase64(secrets.SETTINGS_ENCRYPTION_KEYS)),
-    stepUp: overrides.stepUp ?? noStepUp,
+    secretBox,
+    // `identity` is installed after `building` (it reads the lockout settings), so the proof is forwarded to it (DOC-12 §4.4).
+    stepUp: overrides.stepUp ?? { verifyStepUp: (...args) => identity.api.verifyStepUp(...args) },
     probe: overrides.probe ?? noIntents,
     audited: audit.audited,
     files: {
@@ -133,6 +133,50 @@ export function createContainer(
     features: { ticketDeadlines: http.FEATURE_TICKET_DEADLINES },
   })
   installed.push(building)
+
+  // The guards are built from the contracts of `identity`, which is installed with the routes that use them: forwarders close the loop.
+  const guards = createGuards({
+    verifier: { verify: (token) => identity.verifier.verify(token) },
+    identity: { getStaff: (ids) => identity.api.getStaff(ids) },
+  })
+  const { identity: identityConfig } = config
+  const identity = installIdentity({
+    logger,
+    clock,
+    ids,
+    database,
+    mailer: overrides.mailer ?? createMailerFor(config, logger),
+    secretBox,
+    building: building.api,
+    audited: audit.audited,
+    guards,
+    config: {
+      accessTtlSeconds: identityConfig.ACCESS_TOKEN_TTL_SECONDS,
+      refreshTtlDaysStaff: identityConfig.REFRESH_TTL_DAYS_STAFF,
+      familyMaxDaysStaff: identityConfig.FAMILY_MAX_DAYS_STAFF,
+      maxFamilies: identityConfig.MAX_FAMILIES_PER_ACCOUNT,
+      refreshGraceSeconds: identityConfig.REFRESH_GRACE_SECONDS,
+      inviteTtlHours: identityConfig.INVITE_TTL_HOURS,
+      resetTtlMinutes: identityConfig.RESET_TTL_MINUTES,
+      stepUpTtlMinutes: identityConfig.STEPUP_TTL_MINUTES,
+      stepUpMaxAttempts: identityConfig.STEPUP_MAX_ATTEMPTS,
+      stepUpRequestsPerHour: identityConfig.STEPUP_REQUESTS_PER_HOUR,
+      staffLoginPerIp: identityConfig.STAFF_LOGIN_PER_IP,
+      resetPerEmailPerHour: identityConfig.RESET_PER_EMAIL_PER_HOUR,
+      resetPerIpPerHour: identityConfig.RESET_PER_IP_PER_HOUR,
+      resetMinResponseMs: identityConfig.RESET_MIN_RESPONSE_MS,
+      adminBaseUrl: http.ADMIN_BASE_URL,
+    },
+    argon2: {
+      memoryKib: identityConfig.ARGON2_MEMORY_KIB,
+      timeCost: identityConfig.ARGON2_TIME_COST,
+    },
+    // A `worker` process holds neither: it only sends mail, and the ring is read on first use.
+    jwtKeys: secrets.JWT_KEYS ?? {},
+    otpHmacKey: secrets.OTP_HMAC_KEY ?? '',
+    outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+  })
+  installed.push(identity)
 
   const runtime = createRuntime({
     modules: installed,
@@ -179,6 +223,7 @@ export function createContainer(
     clock,
     ids,
     database,
+    identity,
     /** The installed modules, in install order. */
     modules: installed as readonly AppModule[],
     runtime,

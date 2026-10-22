@@ -35,6 +35,7 @@
         "@elysiajs/openapi": "1.4.16",
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
+        "@mod/identity": "workspace:*",
         "@sinclair/typebox": "0.34.52",
         "drizzle-orm": "0.45.4",
         "elysia": "1.4.30",
@@ -150,6 +151,32 @@
         "@sinclair/typebox": "0.34.52",
         "drizzle-orm": "0.45.4",
         "sharp": "0.35.5",
+      },
+      "devDependencies": {
+        "@core/testing": "workspace:*",
+        "@rms/test-support": "workspace:*",
+        "@types/bun": "1.4.3",
+        "drizzle-kit": "0.31.11",
+      },
+    },
+    "modules/identity": {
+      "name": "@mod/identity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@core/auth": "workspace:*",
+        "@core/context": "workspace:*",
+        "@core/db": "workspace:*",
+        "@core/http": "workspace:*",
+        "@core/kernel": "workspace:*",
+        "@core/mail": "workspace:*",
+        "@core/messaging": "workspace:*",
+        "@core/runtime": "workspace:*",
+        "@mod/building": "workspace:*",
+        "@rms/shared-types": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
+        "drizzle-orm": "0.45.4",
+        "elysia": "1.4.30",
+        "jose": "6.2.12",
       },
       "devDependencies": {
         "@core/testing": "workspace:*",
@@ -839,6 +866,8 @@
     "@mod/audit": ["@mod/audit@workspace:modules/audit"],
 
     "@mod/building": ["@mod/building@workspace:modules/building"],
+
+    "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA=="],
 
@@ -1713,6 +1742,8 @@
     "jimp-compact": ["jimp-compact@0.16.1", "", {}, "sha512-dZ6Ra7u1G8c4Letq/B5EzAxj4tLFHL+cGtdpR+PVm4yzPDj+lCk+AbivWt1eOM+ikzkowtyV7qSqX6qr3t71Ww=="],
 
     "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
+
+    "jose": ["jose@6.2.12", "", {}, "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw=="],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
