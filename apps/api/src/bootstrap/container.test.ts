@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createLogger } from '@core/telemetry'
 import { buildingManifest } from '@mod/building/manifest'
+import { identityManifest } from '@mod/identity/manifest'
 import { loadAppConfig } from './config'
 import { localEnv } from './config/support'
 import { createContainer } from './container'
@@ -41,9 +42,20 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
 })
 
 describe('the module catalog (DOC-12 §5.2)', () => {
-  test('audit comes before building, and a module is installed for every manifest', () => {
-    expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(['audit', 'building'])
-    expect(container.modules.map((module) => module.name)).toEqual(['audit', 'building'])
+  test('audit comes before building and identity, and a module is installed for every manifest', () => {
+    const order = ['audit', 'building', 'identity']
+    expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(order)
+    expect(container.modules.map((module) => module.name)).toEqual(order)
+  })
+
+  test('identity writes the mail command and the session event, both of the default retry class', () => {
+    expect(identityManifest.outboxPolicies).toEqual({
+      'identity.mail_requested.v1': 'default',
+      'identity.session_revoked.v1': 'default',
+    })
+    expect(container.modules.find((module) => module.name === 'identity')?.outbox?.name).toBe(
+      'identity',
+    )
   })
 
   test('the commands that building writes are the ones its manifest lists, with the default retry class', () => {

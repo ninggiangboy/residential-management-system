@@ -5,13 +5,8 @@
  * checks (GRT-89…97) already run over every real table.
  */
 export const STAND_INS = `
-  CREATE TABLE identity.staff_account (id uuid PRIMARY KEY, email text NOT NULL, role text NOT NULL, status text NOT NULL, password_hash text NOT NULL);
   CREATE TABLE identity.resident_account (id uuid PRIMARY KEY, phone text NOT NULL, language text NOT NULL);
   CREATE TABLE identity.otp_challenge (id uuid PRIMARY KEY, code_hash text NOT NULL);
-  CREATE TABLE identity.password_token (id uuid PRIMARY KEY, token_hash text NOT NULL);
-  CREATE TABLE identity.refresh_family (id uuid PRIMARY KEY);
-  CREATE TABLE identity.refresh_token (id uuid PRIMARY KEY, token_hash text NOT NULL);
-  CREATE TABLE identity.rate_bucket (key text PRIMARY KEY, tokens double precision NOT NULL);
   CREATE TABLE residency.resident_profile (id uuid PRIMARY KEY, full_name text NOT NULL, cccd_last4 text, cccd_enc text, date_of_birth date);
   CREATE INDEX ix_resident_profile_name_trgm ON residency.resident_profile USING gin (platform.immutable_unaccent(lower(full_name)) gin_trgm_ops);
   CREATE TABLE notification.device_token (id uuid PRIMARY KEY, token text NOT NULL);
@@ -23,7 +18,8 @@ export const STAND_INS = `
 
 /** The rows the statements touch, inserted by the superuser first (DOC-19 §9.1). */
 export const SEED = `
-  INSERT INTO identity.staff_account VALUES ('00000000-0000-7000-8000-000000000001', 'admin@example.invalid', 'admin', 'active', 'argon2id$x');
+  INSERT INTO identity.staff_account (id, building_id, email, full_name, role, status, password_hash)
+    VALUES ('00000000-0000-7000-8000-000000000001', '00000000-0000-7000-8000-000000000002', 'admin@example.invalid', 'Admin', 'admin', 'active', 'argon2id$x');
   INSERT INTO building.building (id, code, name, company, address) VALUES ('00000000-0000-7000-8000-000000000002', 'DEMO-A', '{"vi":"Demo"}', '{"name":{"vi":"Demo"}}', '1 Demo Street');
   INSERT INTO building.gateway_config (id, building_id, provider, driver, secrets_enc, receiving_account, status)
     VALUES ('00000000-0000-7000-8000-000000000003', '00000000-0000-7000-8000-000000000002', 'payos', 'fake', 'v1:k1:aa:bb', '{"accountNumber":"123"}', 'active');
