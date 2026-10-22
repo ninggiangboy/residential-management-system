@@ -32,13 +32,40 @@ rules:
       A shell command built from a value can be injected. Use Bun.spawn or execFile with an argument array (CWE-78).
     metadata: { cwe: 'CWE-78', category: security }
     paths: { exclude: ['*.test.ts'] }
+    # Only the `child_process` functions; `RegExp.prototype.exec` has the same name.
     patterns:
       - pattern-either:
-          - pattern: $CP.exec($CMD, ...)
-          - pattern: $CP.execSync($CMD, ...)
-          - pattern: exec($CMD, ...)
-          - pattern: execSync($CMD, ...)
-      - pattern-not: $F("...", ...)
+          - patterns:
+              - pattern-inside: |
+                  import { ..., $FN, ... } from "$MOD"
+                  ...
+              - pattern: $FN($CMD, ...)
+              - metavariable-regex:
+                  metavariable: $FN
+                  regex: ^(exec|execSync)$
+          - patterns:
+              - pattern-inside: |
+                  import { ..., $NAME as $FN, ... } from "$MOD"
+                  ...
+              - pattern: $FN($CMD, ...)
+              - metavariable-regex:
+                  metavariable: $NAME
+                  regex: ^(exec|execSync)$
+          - patterns:
+              - pattern-inside: |
+                  import * as $CP from "$MOD"
+                  ...
+              - pattern: $CP.$FN($CMD, ...)
+              - metavariable-regex:
+                  metavariable: $FN
+                  regex: ^(exec|execSync)$
+      - metavariable-regex:
+          metavariable: $MOD
+          regex: ^(node:)?child_process$
+      - metavariable-pattern:
+          metavariable: $CMD
+          patterns:
+            - pattern-not: '"..."'
 
   - id: rms-weak-hash
     languages: [typescript, javascript]

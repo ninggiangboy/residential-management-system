@@ -56,6 +56,11 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bun run check:commits
+      # A breaking OpenAPI change against the base needs /api/v2 (DR-144, AG-26); the document exists from P1-04.
+      - if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bun scripts/run-if-defined.ts check:openapi P1-04
 
   unit:
     runs-on: ubuntu-24.04
@@ -130,15 +135,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Gitleaks (the commits of this change)
-        env:
-          RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
-        run: |
-          # A push that creates the branch has no `before`: scan that one commit.
-          case "$RANGE" in 0000000000000000000000000000000000000000..*) RANGE="-1 ${RANGE#*..}";; esac
-          docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
-            -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" \
-            git /repo --config /repo/.gitleaks.toml --redact --no-banner --log-opts="--no-merges $RANGE"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .tool-versions
@@ -156,17 +152,20 @@ jobs:
           path: ~/.cache/trivy
           key: trivy-db-${{ steps.day.outputs.date }}
           restore-keys: trivy-db-
+      # Each scanner runs even when one before it failed, so a pull request sees every finding.
       - name: Trivy vulnerabilities (bun.lock; HIGH and CRITICAL with a fix)
         run: |
           mkdir -p ~/.cache/trivy
           docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
             fs --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 \
             --skip-dirs '**/node_modules' --no-progress /src
-      - name: Trivy licences (forbidden for linked packages, trivy.yaml)
+      - if: ${{ !cancelled() }}
+        name: Trivy licences (forbidden for linked packages, trivy.yaml)
         run: |
           docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
             fs --config /src/trivy.yaml --scanners license --severity CRITICAL --exit-code 1 --no-progress /src
-      - name: Semgrep (p/default and .semgrep/rules.yml; ERROR, HIGH and CRITICAL fail)
+      - if: ${{ !cancelled() }}
+        name: Semgrep (p/default and .semgrep/rules.yml; ERROR, HIGH and CRITICAL fail)
         run: |
           docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             -v "$PWD:/src" -w /src "$SEMGREP_IMAGE" \
@@ -182,6 +181,16 @@ jobs:
             cat semgrep.md
           } >> "$GITHUB_STEP_SUMMARY"
           test "$blocking" -eq 0
+      - if: ${{ !cancelled() }}
+        name: Gitleaks (the commits of this change)
+        env:
+          RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: |
+          # A push that creates the branch has no `before`: scan that one commit.
+          case "$RANGE" in 0000000000000000000000000000000000000000..*) RANGE="-1 ${RANGE#*..}";; esac
+          docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner --log-opts="--no-merges $RANGE"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
