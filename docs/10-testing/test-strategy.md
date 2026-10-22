@@ -110,7 +110,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `bun run test:e2e` | Playwright against `bun run dev` | `bun run infra:up` |
 | `bun run test:mobile` | Maestro flows against a development build | a simulator |
 | `bun run test:load` | k6 profile named by `--profile` | the staging host |
-| `bun run check` | the `verify` checks in one go: `lint`, `typecheck`, `check:arch`, `check:scope`, `check:audit`, `check:i18n` (DOC-69 §5) | nothing |
+| `bun run check` | the `verify` checks in one go: `lint`, `typecheck`, `check:arch`, `check:scope`, `check:audit`, `check:layout`, `check:i18n` (DOC-69 §5) | nothing |
 | `bun run check:test-ids` | compares the IDs of every "Required tests" table with the test titles (§5, DR-169) | nothing |
 | `bun run exp:01` … `bun run exp:12` | the script of the experiment (§12) | per experiment |
 
@@ -430,7 +430,7 @@ The stage names are those of DOC-71. A pull request must pass `verify`, `unit`, 
 
 | Stage | Trigger | Runs | Blocks merge |
 | --- | --- | --- | --- |
-| `verify` | every pull request | `bun run check` (`lint`, `typecheck`, `check:arch` and its fixtures (the `@app/api` value-import rule is one of them), knip, jscpd, `check:scope`, `check:audit`, `check:i18n`, the route-metadata check (SC-01), `check:dependabot`, `check:test-ids` (warning only)); `check:commits`; `check:openapi` (from P1-04) | yes |
+| `verify` | every pull request | `bun run check` (`lint`, `typecheck`, `check:arch` and its fixtures (the `@app/api` value-import rule is one of them), knip, jscpd, `check:scope`, `check:audit`, `check:layout`, `check:i18n`, the route-metadata check (SC-01), `check:dependabot`, `check:test-ids` (warning only)); `check:commits`; `check:openapi` (from P1-04) | yes |
 | `unit` | every pull request | `bun run test` with coverage | yes |
 | `integration` | every pull request; `db-grants` also on changes to a migration, a `schema.ts` or `0900-grants.sql` | `test:integration` on the `postgres:18.6` service container: use cases, repositories, DDL and statement tests (`IDM-`, `OPM-`, `GRT-`, `DLC-`), contract tests with real adapters, `AG-`, `ER-`, `CF-`, `JB-`, `MC-`, `OB-`, `AU-`, `RM-`, `AD-`, `BD-`, `FS-`, the race tests in the `ci` profile, **the authorization matrix** (`test:authz`, §13), coverage | yes |
 | `build` | every pull request (no push) and `dev` (push `sha-<7>`, DR-239) | image `rms-api`; boot smoke (the process starts with the generated `.env.example` profile `test`, `/health/ready` answers 200; CF-16, CF-17) | yes (DR-163) |
