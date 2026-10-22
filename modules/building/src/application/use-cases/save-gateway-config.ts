@@ -3,10 +3,11 @@ import {
   ForbiddenError,
   PreconditionRequiredError,
   RuleViolationError,
+  requireRole,
   VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
-import type { StaffContext } from '@rms/shared-types'
+import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type {
   ActiveIntentProbe,
   GatewayDriver,
@@ -20,7 +21,6 @@ import type {
   GatewayConfigRecord,
   GatewayConfigRepository,
 } from '../../domain/gateway-config-repository'
-import { assertAdmin } from '../assert-admin'
 import type { BuildingDirectory } from '../directory'
 import { type GatewayConfigReader, type GatewayView, gatewayAad } from '../gateway-config-reader'
 import { isUniqueViolation } from '../unique-violation'
@@ -52,6 +52,9 @@ export interface SaveGatewayConfigDeps {
 
 type Saved = { created: boolean; config: GatewayView }
 
+/** The gateway is the Admin's alone (DOC-36 §7). The route reads this list for its `audience` (DOC-12 §5.3). */
+export const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+
 /**
  * The Admin's save of the payment-gateway configuration (DOC-36 §7, DR-33): a step-up proof, the version the form read, the
  * lock, the intent probe, the merge of the secrets, and an audit row that says a secret changed and never what it was.
@@ -64,7 +67,7 @@ export class SaveGatewayConfig {
   }
 
   async execute(staff: StaffContext, input: SaveGatewayInput): Promise<Saved> {
-    assertAdmin(staff)
+    requireRole(staff, SAVE_GATEWAY_CONFIG_ROLES)
     GatewayConfig.assertAccount(input.receivingAccount)
     const result = await this.deps.uow.run(() => this.auditedSave(staff, input))
     this.deps.reader.invalidate(staff.buildingId, input.provider)

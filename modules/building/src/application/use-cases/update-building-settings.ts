@@ -2,11 +2,12 @@ import {
   NotFoundError,
   PreconditionRequiredError,
   RuleViolationError,
+  requireRole,
   type UnitOfWork,
   VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
-import type { StaffContext } from '@rms/shared-types'
+import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type { FilesApi, SettingsPatch } from '../../contracts'
 import {
   assertBuildingPatch,
@@ -19,7 +20,6 @@ import type { BuildingRecord, BuildingRepository } from '../../domain/building-r
 import type { FileRepository } from '../../domain/file-repository'
 import { assertPatchInRange, mergeSettings } from '../../domain/settings'
 import type { SettingsRepository } from '../../domain/settings-repository'
-import { assertAdmin } from '../assert-admin'
 import { type BuildingDocument, type BuildingDocumentLoader, parseEtag } from '../building-document'
 import type { BuildingDirectory } from '../directory'
 
@@ -58,6 +58,9 @@ const BUILDING_MASKS = {
   'company.phone': 'phone',
 } as const
 
+/** The settings are the Admin's alone (DOC-36 §4). The route reads this list for its `audience` (DOC-12 §5.3). */
+export const UPDATE_BUILDING_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+
 /**
  * `PATCH /staff/settings` (DOC-36 §4): the Admin edits the building row and the settings in one transaction, each guarded by
  * the version the form read, each with its own audit row; a request that changes one part leaves the other alone.
@@ -72,7 +75,7 @@ export class UpdateBuildingSettings {
   }
 
   async execute(staff: StaffContext, input: UpdateSettingsInput): Promise<BuildingDocument> {
-    assertAdmin(staff)
+    requireRole(staff, UPDATE_BUILDING_SETTINGS_ROLES)
     if (input.etag === undefined) throw new PreconditionRequiredError()
     const versions = parseEtag(input.etag)
     if (input.settings) assertPatchInRange(input.settings)

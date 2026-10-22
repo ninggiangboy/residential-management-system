@@ -1,11 +1,10 @@
 import type { IdGenerator, UnitOfWork } from '@core/kernel'
-import { VersionConflictError } from '@core/kernel'
+import { requireRole, VersionConflictError } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
-import type { StaffContext } from '@rms/shared-types'
+import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type { Bilingual, TermsKind } from '../../contracts'
 import type { TermsRepository } from '../../domain/terms-repository'
 import { TermsVersion } from '../../domain/terms-version'
-import { assertAdmin } from '../assert-admin'
 import type { BuildingDirectory } from '../directory'
 import { isUniqueViolation } from '../unique-violation'
 
@@ -22,6 +21,9 @@ export interface PublishTermsDeps {
   ids: IdGenerator
 }
 
+/** The terms are the Admin's alone (DOC-35 §9). The route reads this list for its `audience` (DOC-12 §5.3). */
+export const PUBLISH_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+
 /**
  * An Admin publishes a version of the terms of use or the privacy notice (DOC-35 §9, DOC-36 §8). A version is write-once; the
  * next request of every resident is refused with `terms_required` until it is accepted.
@@ -34,7 +36,7 @@ export class PublishTerms {
   }
 
   async execute(staff: StaffContext, input: PublishTermsInput) {
-    assertAdmin(staff)
+    requireRole(staff, PUBLISH_TERMS_ROLES)
     const isDemo = await this.deps.directory.isDemo(staff.buildingId)
     const draft = TermsVersion.draft(input, { isDemo })
     return this.deps.uow.run(() => this.auditedPublish(staff, draft))
