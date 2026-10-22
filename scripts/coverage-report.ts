@@ -25,6 +25,7 @@ const targets: Record<string, number> = {
   'apps/cms-web': 60,
   'packages/mobile-core': 70,
   'packages/client-core': 70,
+  'packages/core-db': 50,
 }
 const targetOf = (ws: string) =>
   targets[ws] ?? (ws.startsWith('modules/') ? targets['modules/*'] : undefined)
