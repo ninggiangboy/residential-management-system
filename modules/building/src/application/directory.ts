@@ -1,8 +1,9 @@
 import type { Clock, Log } from '@core/kernel'
 import type { BuildingId } from '@rms/shared-types'
 import type { BuildingDto, BuildingSettings } from '../contracts'
+import type { BuildingRecord, BuildingRepository } from '../domain/building-repository'
 import { resolveSettings } from '../domain/settings'
-import type { BuildingRecord, BuildingRepository, SettingsRepository } from './ports'
+import type { SettingsRepository } from '../domain/settings-repository'
 import { TtlCache } from './ttl-cache'
 
 const toBuildingDto = (record: BuildingRecord): BuildingDto => ({

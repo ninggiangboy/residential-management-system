@@ -1,7 +1,7 @@
 import { type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, eq, sql } from 'drizzle-orm'
-import type { SettingsRecord, SettingsRepository } from '../../application/ports'
+import type { SettingsRecord, SettingsRepository } from '../../domain/settings-repository'
 import { buildingSetting } from './schema'
 
 export class DrizzleSettingsRepository implements SettingsRepository {

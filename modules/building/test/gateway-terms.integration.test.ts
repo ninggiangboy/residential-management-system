@@ -48,7 +48,7 @@ const auditText = async () =>
 
 describe('gateway configuration (DOC-36 §7)', () => {
   test('BD-18 the first save creates the row; the blob is encrypted, the view is masked and a short secret shows only dots', async () => {
-    const saved = await h.building.gateway.save(
+    const saved = await h.building.useCases.saveGatewayConfig.execute(
       admin,
       input({ secrets: { ...SECRETS, clientId: 'short' } }),
     )
@@ -69,7 +69,7 @@ describe('gateway configuration (DOC-36 §7)', () => {
       ...SECRETS,
       clientId: 'short',
     })
-    const view = await h.building.gateway.view(admin)
+    const view = await h.building.useCases.viewGatewayConfig.execute(admin)
     expect(view.configs).toHaveLength(1)
     expect(JSON.stringify(view)).not.toContain('api-key-abcdef')
     expect(view.drivers.fake).toEqual({ fields: [], allowed: false })
@@ -107,13 +107,16 @@ describe('gateway configuration (DOC-36 §7)', () => {
   test('BD-20 without a step-up proof it is 403 step_up_required; a failed proof stops the save; nothing changes', async () => {
     const before = await rowOf()
     await expect(
-      h.building.gateway.save(admin, input({ stepUp: undefined, version: 1 })),
+      h.building.useCases.saveGatewayConfig.execute(
+        admin,
+        input({ stepUp: undefined, version: 1 }),
+      ),
     ).rejects.toMatchObject({
       code: 'step_up_required',
     })
     h.stepUpState.failWith = new ForbiddenError('step_up_failed', 'The proof does not match')
-    const failure = await h.building.gateway
-      .save(admin, input({ version: 1, status: 'disabled' }))
+    const failure = await h.building.useCases.saveGatewayConfig
+      .execute(admin, input({ version: 1, status: 'disabled' }))
       .then(
         () => null,
         (e) => e,
@@ -127,7 +130,7 @@ describe('gateway configuration (DOC-36 §7)', () => {
 
   test('BD-23 a save that sends only apiKey keeps the other two secrets; the step-up proof is checked in the same transaction', async () => {
     const before = h.stepUpState.calls.length
-    const saved = await h.building.gateway.save(
+    const saved = await h.building.useCases.saveGatewayConfig.execute(
       admin,
       input({ version: 1, secrets: { apiKey: 'new-api-key-value' } }),
     )
@@ -151,13 +154,13 @@ describe('gateway configuration (DOC-36 §7)', () => {
   })
 
   test('BD-24 a stale version is 409 and a missing one is 428; the row lock and the guarded update', async () => {
-    await expect(h.building.gateway.save(admin, input({ version: 1 }))).rejects.toBeInstanceOf(
-      VersionConflictError,
-    )
-    await expect(h.building.gateway.save(admin, input())).rejects.toBeInstanceOf(
-      PreconditionRequiredError,
-    )
-    const ok = await h.building.gateway.save(admin, input({ version: 2 }))
+    await expect(
+      h.building.useCases.saveGatewayConfig.execute(admin, input({ version: 1 })),
+    ).rejects.toBeInstanceOf(VersionConflictError)
+    await expect(
+      h.building.useCases.saveGatewayConfig.execute(admin, input()),
+    ).rejects.toBeInstanceOf(PreconditionRequiredError)
+    const ok = await h.building.useCases.saveGatewayConfig.execute(admin, input({ version: 2 }))
     expect(ok.config.version).toBe(3)
   })
 
@@ -165,22 +168,25 @@ describe('gateway configuration (DOC-36 §7)', () => {
     h.probeState.active = true
     const before = await rowOf()
     await expect(
-      h.building.gateway.save(
+      h.building.useCases.saveGatewayConfig.execute(
         admin,
         input({ version: 3, receivingAccount: { ...ACCOUNT, accountNumber: '0011009999999' } }),
       ),
     ).rejects.toBeInstanceOf(GatewayInUseError)
     await expect(
-      h.building.gateway.save(admin, input({ version: 3, status: 'disabled' })),
+      h.building.useCases.saveGatewayConfig.execute(
+        admin,
+        input({ version: 3, status: 'disabled' }),
+      ),
     ).rejects.toBeInstanceOf(GatewayInUseError)
     expect(await rowOf()).toEqual(before)
-    const secretsOnly = await h.building.gateway.save(
+    const secretsOnly = await h.building.useCases.saveGatewayConfig.execute(
       admin,
       input({ version: 3, secrets: { checksumKey: 'rotated-checksum-key' } }),
     )
     expect(secretsOnly.config.version).toBe(4)
     h.probeState.active = false
-    const changed = await h.building.gateway.save(
+    const changed = await h.building.useCases.saveGatewayConfig.execute(
       admin,
       input({
         version: 4,
@@ -215,7 +221,7 @@ describe('gateway configuration (DOC-36 §7)', () => {
       h.probeState.active = true
     })
     await held
-    const change = h.building.gateway.save(
+    const change = h.building.useCases.saveGatewayConfig.execute(
       admin,
       input({ version, receivingAccount: { ...ACCOUNT, accountNumber: '0011555555555' } }),
     )
@@ -228,36 +234,43 @@ describe('gateway configuration (DOC-36 §7)', () => {
 
   test('BD-27 fake is for the demo building only', async () => {
     await expect(
-      h.building.gateway.save(
+      h.building.useCases.saveGatewayConfig.execute(
         admin,
         input({ provider: 'vietqr', driver: 'fake', secrets: {}, version: undefined }),
       ),
     ).rejects.toMatchObject({ details: [{ code: 'driver_not_allowed' }] })
     const demoAdmin = h.staff('admin', DEMO_BUILDING)
-    const saved = await h.building.gateway.save(demoAdmin, input({ driver: 'fake', secrets: {} }))
+    const saved = await h.building.useCases.saveGatewayConfig.execute(
+      demoAdmin,
+      input({ driver: 'fake', secrets: {} }),
+    )
     expect(saved.config).toMatchObject({ driver: 'fake', secrets: {} })
-    expect((await h.building.gateway.view(demoAdmin)).drivers.fake.allowed).toBe(true)
+    expect(
+      (await h.building.useCases.viewGatewayConfig.execute(demoAdmin)).drivers.fake.allowed,
+    ).toBe(true)
   })
 
   test('a Manager, Technician or Guard cannot read or change the gateway', async () => {
     for (const role of ['manager', 'technician', 'guard'] as const) {
-      await expect(h.building.gateway.view(h.staff(role))).rejects.toBeInstanceOf(ForbiddenError)
-      await expect(h.building.gateway.save(h.staff(role), input())).rejects.toBeInstanceOf(
-        ForbiddenError,
-      )
+      await expect(
+        h.building.useCases.viewGatewayConfig.execute(h.staff(role)),
+      ).rejects.toBeInstanceOf(ForbiddenError)
+      await expect(
+        h.building.useCases.saveGatewayConfig.execute(h.staff(role), input()),
+      ).rejects.toBeInstanceOf(ForbiddenError)
     }
   })
 
   test('a new configuration needs every field of the driver, and a field of another driver is refused', async () => {
     const demoAdmin = h.staff('admin', DEMO_BUILDING)
     await expect(
-      h.building.gateway.save(
+      h.building.useCases.saveGatewayConfig.execute(
         demoAdmin,
         input({ provider: 'vietqr', driver: 'vietqr', secrets: { clientId: 'only-one' } }),
       ),
     ).rejects.toMatchObject({ details: [{ path: 'secrets.apiKey', code: 'required' }] })
     await expect(
-      h.building.gateway.save(
+      h.building.useCases.saveGatewayConfig.execute(
         demoAdmin,
         input({
           provider: 'vietqr',
@@ -267,7 +280,7 @@ describe('gateway configuration (DOC-36 §7)', () => {
       ),
     ).rejects.toMatchObject({ details: [{ path: 'secrets.extra', code: 'unknown_key' }] })
     await expect(
-      h.building.gateway.save(
+      h.building.useCases.saveGatewayConfig.execute(
         demoAdmin,
         input({ receivingAccount: { ...ACCOUNT, accountNumber: '12' } }),
       ),
@@ -290,10 +303,13 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
 
   test('publish writes the next number of its kind and an audit row; the two kinds are numbered separately (AD-34)', async () => {
     const [t1, t2, t3, p1] = [
-      await h.building.terms.publish(admin, { kind: 'terms', text: text('one') }),
-      await h.building.terms.publish(admin, { kind: 'terms', text: text('two') }),
-      await h.building.terms.publish(admin, { kind: 'terms', text: text('three') }),
-      await h.building.terms.publish(admin, { kind: 'privacy', text: text('privacy') }),
+      await h.building.useCases.publishTerms.execute(admin, { kind: 'terms', text: text('one') }),
+      await h.building.useCases.publishTerms.execute(admin, { kind: 'terms', text: text('two') }),
+      await h.building.useCases.publishTerms.execute(admin, { kind: 'terms', text: text('three') }),
+      await h.building.useCases.publishTerms.execute(admin, {
+        kind: 'privacy',
+        text: text('privacy'),
+      }),
     ]
     expect([t1.version, t2.version, t3.version, p1.version]).toEqual([1, 2, 3, 1])
     const rows = await h.db
@@ -313,7 +329,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
       ['privacy', 1],
       ['terms', 3],
     ])
-    await h.building.terms.accept({
+    await h.building.useCases.acceptTerms.execute({
       accountId: account,
       buildingId: BUILDING,
       versionIds: [first[1]?.versionId as string],
@@ -330,7 +346,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
     const account = resident()
     const [privacy, terms] = await h.building.api.missingTerms(account, BUILDING)
     const accept = (versionIds: string[]) =>
-      h.building.terms.accept({
+      h.building.useCases.acceptTerms.execute({
         accountId: account,
         buildingId: BUILDING,
         versionIds,
@@ -354,7 +370,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
     await expect(accept([crypto.randomUUID()])).rejects.toMatchObject({ code: 'not_found' })
     // a version of another building is not found either
     await expect(
-      h.building.terms.accept({
+      h.building.useCases.acceptTerms.execute({
         accountId: account,
         buildingId: DEMO_BUILDING,
         versionIds: [terms?.versionId as string],
@@ -367,7 +383,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
   test('AD-36 an acceptance row keeps the account, version, time, IP and app version', async () => {
     const account = resident()
     const [, terms] = await h.building.api.missingTerms(account, BUILDING)
-    await h.building.terms.accept({
+    await h.building.useCases.acceptTerms.execute({
       accountId: account,
       buildingId: BUILDING,
       versionIds: [terms?.versionId as string],
@@ -389,7 +405,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
     const accounts = Array.from({ length: 5 }, resident)
     for (const account of accounts) {
       const missing = await h.building.api.missingTerms(account, BUILDING)
-      await h.building.terms.accept({
+      await h.building.useCases.acceptTerms.execute({
         accountId: account,
         buildingId: BUILDING,
         versionIds: missing.map((m) => m.versionId),
@@ -398,11 +414,14 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
       })
       expect(await h.building.api.hasAcceptedLatestTerms(account, BUILDING)).toBe(true)
     }
-    const v4 = await h.building.terms.publish(admin, { kind: 'terms', text: text('four') })
+    const v4 = await h.building.useCases.publishTerms.execute(admin, {
+      kind: 'terms',
+      text: text('four'),
+    })
     for (const account of accounts) {
       const missing = await h.building.api.missingTerms(account, BUILDING)
       expect(missing).toEqual([{ kind: 'terms', version: 4, versionId: v4.id }])
-      await h.building.terms.accept({
+      await h.building.useCases.acceptTerms.execute({
         accountId: account,
         buildingId: BUILDING,
         versionIds: [v4.id],
@@ -418,10 +437,12 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
       (await h.db.sql`SELECT count(*)::int AS n FROM building.terms_version`)[0]?.n,
     )
     const bad = (vi: string) =>
-      h.building.terms.publish(admin, { kind: 'terms', text: { vi, en: 'ok' } }).then(
-        () => null,
-        (e) => e,
-      )
+      h.building.useCases.publishTerms
+        .execute(admin, { kind: 'terms', text: { vi, en: 'ok' } })
+        .then(
+          () => null,
+          (e) => e,
+        )
     expect((await bad('## ok\n\nA <b>bold</b> word')).details).toEqual([
       { path: 'text.vi:3', code: 'terms_text', message: 'html' },
     ])
@@ -430,8 +451,8 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
       message: 'heading_level',
     })
     expect((await bad('[x](http://example.com)'))?.details?.[0]).toMatchObject({ message: 'link' })
-    const english = await h.building.terms
-      .publish(admin, { kind: 'terms', text: { vi: 'tốt', en: '<script>' } })
+    const english = await h.building.useCases.publishTerms
+      .execute(admin, { kind: 'terms', text: { vi: 'tốt', en: '<script>' } })
       .then(
         () => null,
         (e) => e,
@@ -444,8 +465,14 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
 
   test('BD-45 two Admins publishing the next version at the same time: one wins, the other gets 409', async () => {
     const results = await Promise.allSettled([
-      h.building.terms.publish(h.staff('admin'), { kind: 'privacy', text: text('a') }),
-      h.building.terms.publish(h.staff('admin'), { kind: 'privacy', text: text('b') }),
+      h.building.useCases.publishTerms.execute(h.staff('admin'), {
+        kind: 'privacy',
+        text: text('a'),
+      }),
+      h.building.useCases.publishTerms.execute(h.staff('admin'), {
+        kind: 'privacy',
+        text: text('b'),
+      }),
     ])
     expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
     expect(
@@ -458,11 +485,14 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
 
   test('BD-46 both languages are required for a real building; the demo building may publish vi only', async () => {
     await expect(
-      h.building.terms.publish(admin, { kind: 'terms', text: { vi: '## Chỉ tiếng Việt' } }),
+      h.building.useCases.publishTerms.execute(admin, {
+        kind: 'terms',
+        text: { vi: '## Chỉ tiếng Việt' },
+      }),
     ).rejects.toMatchObject({
       details: [{ path: 'text.en', code: 'required' }],
     })
-    const demo = await h.building.terms.publish(h.staff('admin', DEMO_BUILDING), {
+    const demo = await h.building.useCases.publishTerms.execute(h.staff('admin', DEMO_BUILDING), {
       kind: 'terms',
       text: { vi: '## Chỉ tiếng Việt' },
     })
@@ -472,7 +502,7 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
   test('only the Admin publishes terms', async () => {
     for (const role of ['manager', 'technician', 'guard'] as const)
       await expect(
-        h.building.terms.publish(h.staff(role), { kind: 'terms', text: text() }),
+        h.building.useCases.publishTerms.execute(h.staff(role), { kind: 'terms', text: text() }),
       ).rejects.toBeInstanceOf(ForbiddenError)
   })
 })

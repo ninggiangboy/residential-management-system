@@ -1,32 +1,34 @@
 import { type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, asc, eq, inArray, lt, ne, sql } from 'drizzle-orm'
-import type { FileRecord, FileRepository, NewFile } from '../../application/ports'
+import { FileObject, type FileRecord, type NewFile } from '../../domain/file-object'
+import type { FileRepository } from '../../domain/file-repository'
 import { fileObject } from './schema'
 
 type Row = typeof fileObject.$inferSelect
 
-const toRecord = (row: Row): FileRecord => ({
-  id: row.id,
-  buildingId: row.buildingId,
-  module: row.module as FileRecord['module'],
-  purpose: row.purpose as FileRecord['purpose'],
-  objectKey: row.objectKey,
-  mime: row.mime,
-  size: row.size,
-  checksum: row.checksum,
-  status: row.status as FileRecord['status'],
-  ownerRef: row.ownerRef,
-  accountKind: row.accountKind as FileRecord['accountKind'],
-  accountId: row.accountId,
-  createdAt: row.createdAt,
-})
+const toRecord = (row: Row): FileObject =>
+  new FileObject({
+    id: row.id,
+    buildingId: row.buildingId,
+    module: row.module as FileRecord['module'],
+    purpose: row.purpose as FileRecord['purpose'],
+    objectKey: row.objectKey,
+    mime: row.mime,
+    size: row.size,
+    checksum: row.checksum,
+    status: row.status as FileRecord['status'],
+    ownerRef: row.ownerRef,
+    accountKind: row.accountKind as FileRecord['accountKind'],
+    accountId: row.accountId,
+    createdAt: row.createdAt,
+  })
 
 /** Every timestamp comes from the `Clock` the use case was given, so a test with a fake clock moves them all (FS-10). */
 export class DrizzleFileRepository implements FileRepository {
   constructor(private readonly database: Database) {}
 
-  async insert(scope: BuildingScope, file: NewFile, now: Date): Promise<FileRecord> {
+  async insert(scope: BuildingScope, file: NewFile, now: Date): Promise<FileObject> {
     const [row] = await this.database.executor
       .insert(fileObject)
       .values({
@@ -48,7 +50,7 @@ export class DrizzleFileRepository implements FileRepository {
     return toRecord(row as Row)
   }
 
-  async find(scope: BuildingScope, id: string): Promise<FileRecord | null> {
+  async find(scope: BuildingScope, id: string): Promise<FileObject | null> {
     const [row] = await this.database.executor
       .select()
       .from(fileObject)
@@ -57,7 +59,7 @@ export class DrizzleFileRepository implements FileRepository {
   }
 
   // scope-ok: FilesApi.signedUrl(fileId) has no building argument; the calling module authorised the file (DOC-37 §8)
-  async findAnyBuilding(id: string): Promise<FileRecord | null> {
+  async findAnyBuilding(id: string): Promise<FileObject | null> {
     // scope-ok: the same lookup by primary key
     const [row] = await this.database.executor
       .select()
@@ -66,7 +68,7 @@ export class DrizzleFileRepository implements FileRepository {
     return row ? toRecord(row) : null
   }
 
-  async findThumbnail(scope: BuildingScope, originalId: string): Promise<FileRecord | null> {
+  async findThumbnail(scope: BuildingScope, originalId: string): Promise<FileObject | null> {
     const [row] = await this.database.executor
       .select()
       .from(fileObject)
@@ -86,7 +88,7 @@ export class DrizzleFileRepository implements FileRepository {
     id: string,
     size: number,
     now: Date,
-  ): Promise<FileRecord | null> {
+  ): Promise<FileObject | null> {
     const [row] = await this.database.executor
       .update(fileObject)
       .set({ status: 'verified', verifiedAt: now, size, updatedAt: now })
@@ -97,7 +99,7 @@ export class DrizzleFileRepository implements FileRepository {
     return row ? toRecord(row) : null
   }
 
-  async markDeleted(scope: BuildingScope, id: string, now: Date): Promise<FileRecord | null> {
+  async markDeleted(scope: BuildingScope, id: string, now: Date): Promise<FileObject | null> {
     const [row] = await this.database.executor
       .update(fileObject)
       .set({ status: 'deleted', deletedAt: now, updatedAt: now })
@@ -140,7 +142,7 @@ export class DrizzleFileRepository implements FileRepository {
     id: string,
     result: { size: number; checksum: string },
     now: Date,
-  ): Promise<FileRecord | null> {
+  ): Promise<FileObject | null> {
     const [row] = await this.database.executor
       .update(fileObject)
       .set({
@@ -167,7 +169,7 @@ export class DrizzleFileRepository implements FileRepository {
     return Number(row?.used ?? 0)
   }
 
-  async unattachedBefore(scope: BuildingScope, cutoff: Date, limit: number): Promise<FileRecord[]> {
+  async unattachedBefore(scope: BuildingScope, cutoff: Date, limit: number): Promise<FileObject[]> {
     const rows = await this.database.executor
       .select()
       .from(fileObject)

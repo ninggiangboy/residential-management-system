@@ -1,11 +1,14 @@
 import type { JobContext, JobDefinition } from '@core/runtime'
-import { BATCH_SIZE, type FileJobs } from '../../application/file-jobs'
+import { BATCH_SIZE } from '../../application/batch'
+import type { ExpireOrphanUploads } from '../../application/use-cases/expire-orphan-uploads'
+import type { PurgeDeletedFiles } from '../../application/use-cases/purge-deleted-files'
+import type { ReportStorageQuota } from '../../application/use-cases/report-storage-quota'
 
 /**
  * `storage_quota`, hourly at :05 (DOC-38 §4.1): the usage of every building against its quota. The gauge it feeds
  * (`storage_usage_ratio`) and the alerts at 0.8 and 1.0 are DOC-40's, wired with the metrics endpoint (P1-18).
  */
-export function storageQuotaJob(jobs: FileJobs): JobDefinition {
+export function storageQuotaJob(reportStorageQuota: ReportStorageQuota): JobDefinition {
   return {
     name: 'storage_quota',
     schedule: { kind: 'hourly', minute: 5 },
@@ -15,7 +18,7 @@ export function storageQuotaJob(jobs: FileJobs): JobDefinition {
       ctx.withLock(async () => {
         const buildings: Record<string, number> = {}
         for (const { buildingId } of await ctx.buildings())
-          buildings[buildingId] = (await jobs.storageQuota(buildingId)).ratio
+          buildings[buildingId] = (await reportStorageQuota.execute(buildingId)).ratio
         return { did: Object.keys(buildings).length, details: { buildings } }
       }),
   }
@@ -37,7 +40,10 @@ async function drain(ctx: JobContext, batch: () => Promise<number>) {
  * become `deleted` with a delete command each, in batches of 1,000, then `deleted` rows older than the retention are removed.
  * One transaction per batch: the lock goes with it (DR-121).
  */
-export function orphanUploadsJob(jobs: FileJobs): JobDefinition {
+export function orphanUploadsJob(
+  expireOrphanUploads: ExpireOrphanUploads,
+  purgeDeletedFiles: PurgeDeletedFiles,
+): JobDefinition {
   return {
     name: 'orphan_uploads',
     schedule: { kind: 'hourly', minute: 15 },
@@ -47,10 +53,10 @@ export function orphanUploadsJob(jobs: FileJobs): JobDefinition {
       let orphaned = 0
       let purged = 0
       for (const { buildingId } of await ctx.buildings()) {
-        const marked = await drain(ctx, () => jobs.orphanBatch(buildingId))
+        const marked = await drain(ctx, () => expireOrphanUploads.execute(buildingId))
         orphaned += marked.total
         if (marked.stopped) break
-        const removed = await drain(ctx, () => jobs.purgeDeletedBatch(buildingId))
+        const removed = await drain(ctx, () => purgeDeletedFiles.execute(buildingId))
         purged += removed.total
         if (removed.stopped) break
       }

@@ -4,7 +4,7 @@ import type {
   BuildingFieldsUpdate,
   BuildingRecord,
   BuildingRepository,
-} from '../../application/ports'
+} from '../../domain/building-repository'
 import { buildingTable } from './schema'
 
 const toRecord = (row: typeof buildingTable.$inferSelect): BuildingRecord => ({
