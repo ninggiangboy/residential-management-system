@@ -37,13 +37,13 @@ const buildingRow = async () =>
 const auditRows = async (action: string) =>
   h.db
     .sql`SELECT action, actor_role, object_type, object_id, changes, details FROM audit.audit_log WHERE action = ${action} ORDER BY id`
-const etag = async () => (await h.building.settings.get(admin())).etag
+const etag = async () => (await h.building.useCases.getBuildingSettings.execute(admin())).etag
 
 describe('settings (DOC-36 §4, §5)', () => {
   test('BD-04 getSettings gives the defaults for {} and the saved keys over them', async () => {
     expect(await h.building.api.getSettings(BUILDING)).toEqual(DEFAULT_SETTINGS)
     const current = await etag()
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: current,
       settings: { defaultDueDays: 12, lockout: { maxAttempts: 7, minutes: 30 } },
     })
@@ -58,7 +58,7 @@ describe('settings (DOC-36 §4, §5)', () => {
 
   test('BD-01 the Admin saves and the change is audited with the keys that changed; a Manager gets 403', async () => {
     const current = await etag()
-    const document = await h.building.settings.update(admin(), {
+    const document = await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: current,
       settings: { feeNoticeLanguage: 'both' },
     })
@@ -72,9 +72,11 @@ describe('settings (DOC-36 §4, §5)', () => {
       changes: [{ field: 'feeNoticeLanguage', before: 'vi', after: 'both' }],
     })
     for (const role of ['manager', 'technician', 'guard'] as const) {
-      await expect(h.building.settings.get(h.staff(role))).rejects.toBeInstanceOf(ForbiddenError)
       await expect(
-        h.building.settings.update(h.staff(role), {
+        h.building.useCases.getBuildingSettings.execute(h.staff(role)),
+      ).rejects.toBeInstanceOf(ForbiddenError)
+      await expect(
+        h.building.useCases.updateBuildingSettings.execute(h.staff(role), {
           etag: document.etag,
           settings: { defaultDueDays: 5 },
         }),
@@ -93,8 +95,8 @@ describe('settings (DOC-36 §4, §5)', () => {
     ]
     const before = await settingsRow()
     for (const [settings, path] of cases) {
-      const error = await h.building.settings
-        .update(admin(), { etag: current, settings: settings as never })
+      const error = await h.building.useCases.updateBuildingSettings
+        .execute(admin(), { etag: current, settings: settings as never })
         .then(
           () => null,
           (e) => e,
@@ -112,12 +114,12 @@ describe('settings (DOC-36 §4, §5)', () => {
   })
 
   test('BD-05 a patch sets two keys and removes one: the removed key answers its default and the version moves by one', async () => {
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { maxCarsPerUnit: 3 },
     })
     const before = await settingsRow()
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { defaultDueDays: 15, feeNoticeLanguage: 'both', maxCarsPerUnit: null },
     })
@@ -139,9 +141,12 @@ describe('settings (DOC-36 §4, §5)', () => {
 
   test('BD-06 a stale If-Match is 409 with the fresh document; a missing one is 428', async () => {
     const stale = await etag()
-    await h.building.settings.update(admin(), { etag: stale, settings: { defaultDueDays: 20 } })
-    const error = await h.building.settings
-      .update(admin(), { etag: stale, settings: { defaultDueDays: 30 } })
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
+      etag: stale,
+      settings: { defaultDueDays: 20 },
+    })
+    const error = await h.building.useCases.updateBuildingSettings
+      .execute(admin(), { etag: stale, settings: { defaultDueDays: 30 } })
       .then(
         () => null,
         (e) => e,
@@ -150,14 +155,17 @@ describe('settings (DOC-36 §4, §5)', () => {
     expect(error.details.current.settings.defaultDueDays).toBe(20)
     expect(error.details.current.etag).not.toBe(stale)
     await expect(
-      h.building.settings.update(admin(), { etag: undefined, settings: { defaultDueDays: 30 } }),
+      h.building.useCases.updateBuildingSettings.execute(admin(), {
+        etag: undefined,
+        settings: { defaultDueDays: 30 },
+      }),
     ).rejects.toBeInstanceOf(PreconditionRequiredError)
     expect((await h.building.api.getSettings(BUILDING)).defaultDueDays).toBe(20)
   })
 
   test('BD-07 a patch that changes only the hotline moves the building version and leaves the settings alone', async () => {
     const [building0, settings0] = [await buildingRow(), await settingsRow()]
-    const document = await h.building.settings.update(admin(), {
+    const document = await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       building: { hotline: '1900 5678' },
     })
@@ -199,8 +207,8 @@ describe('settings (DOC-36 §4, §5)', () => {
       [{ workingHours: { vi: '' } }, 'building.workingHours.vi'],
     ]
     for (const [building, path] of cases) {
-      const error = await h.building.settings
-        .update(admin(), { etag: await etag(), building: building as never })
+      const error = await h.building.useCases.updateBuildingSettings
+        .execute(admin(), { etag: await etag(), building: building as never })
         .then(
           () => null,
           (e) => e,
@@ -212,7 +220,7 @@ describe('settings (DOC-36 §4, §5)', () => {
   })
 
   test('the building email and company contact are masked in the audit row', async () => {
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       building: {
         email: 'bql@sunrise.example',
@@ -237,11 +245,11 @@ describe('settings (DOC-36 §4, §5)', () => {
   test('BD-09 two Admins saving at the same version: one succeeds, the other gets 409', async () => {
     const current = await etag()
     const results = await Promise.allSettled([
-      h.building.settings.update(h.staff('admin'), {
+      h.building.useCases.updateBuildingSettings.execute(h.staff('admin'), {
         etag: current,
         settings: { defaultDueDays: 31 },
       }),
-      h.building.settings.update(h.staff('admin'), {
+      h.building.useCases.updateBuildingSettings.execute(h.staff('admin'), {
         etag: current,
         settings: { defaultDueDays: 32 },
       }),
@@ -261,7 +269,7 @@ describe('settings (DOC-36 §4, §5)', () => {
     expect((await h.building.api.getSettings(BUILDING)).defaultDueDays).not.toBe(44)
     h.clock.advance(61_000)
     expect((await h.building.api.getSettings(BUILDING)).defaultDueDays).toBe(44)
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { defaultDueDays: 9 },
     })
@@ -279,7 +287,7 @@ describe('settings (DOC-36 §4, §5)', () => {
       size: body.byteLength,
     })
     expect(first.fileId).toBeDefined()
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { storageQuotaBytes: 1_073_741_824 },
     })
@@ -299,14 +307,14 @@ describe('settings (DOC-36 §4, §5)', () => {
     expect((await h.building.files.usage(BUILDING)).ratio).toBeGreaterThan(1)
     // put things back for the tests after this one
     await h.admin.unsafe(`DELETE FROM building.file_object WHERE id = '${filler}'`)
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { storageQuotaBytes: null },
     })
   })
 
   test('BD-13 accountDeletionDays can be read after a change', async () => {
-    await h.building.settings.update(admin(), {
+    await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       settings: { accountDeletionDays: 7 },
     })
@@ -340,7 +348,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
   test('BD-10 a replaced logo: the new file is attached and the old one goes through remove in the same transaction', async () => {
     const [first, second] = [await logoFile(), await logoFile()]
     const staff = admin()
-    const withFirst = await h.building.settings.update(staff, {
+    const withFirst = await h.building.useCases.updateBuildingSettings.execute(staff, {
       etag: await etag(),
       building: { logoFileId: first },
     })
@@ -351,7 +359,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
       owner_ref: `building:${BUILDING}`,
     })
 
-    await h.building.settings.update(staff, {
+    await h.building.useCases.updateBuildingSettings.execute(staff, {
       etag: await etag(),
       building: { logoFileId: second },
     })
@@ -365,7 +373,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
     await h.admin.unsafe('ALTER TABLE audit.audit_log RENAME TO audit_log_away')
     try {
       await expect(
-        h.building.settings.update(admin(), {
+        h.building.useCases.updateBuildingSettings.execute(admin(), {
           etag: await etag(),
           building: { logoFileId: replacement },
         }),
@@ -387,13 +395,13 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
       size: 100,
     })
     await expect(
-      h.building.settings.update(admin(), {
+      h.building.useCases.updateBuildingSettings.execute(admin(), {
         etag: await etag(),
         building: { logoFileId: ticket.fileId },
       }),
     ).rejects.toMatchObject({ details: [{ code: 'not_a_logo' }] })
     const logo = (await buildingRow())?.logo_file as string
-    const document = await h.building.settings.update(admin(), {
+    const document = await h.building.useCases.updateBuildingSettings.execute(admin(), {
       etag: await etag(),
       building: { logoFileId: null },
     })

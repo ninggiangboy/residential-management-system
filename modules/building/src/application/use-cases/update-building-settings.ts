@@ -1,5 +1,4 @@
 import {
-  ForbiddenError,
   NotFoundError,
   PreconditionRequiredError,
   RuleViolationError,
@@ -7,46 +6,22 @@ import {
   VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
-import type { BuildingId, StaffContext } from '@rms/shared-types'
-import type { Bilingual, BuildingSettings, FilesApi, SettingsPatch } from '../contracts'
+import type { StaffContext } from '@rms/shared-types'
+import type { FilesApi, SettingsPatch } from '../../contracts'
 import {
   assertBuildingPatch,
   type BuildingFields,
   type BuildingPatch,
   diffBuilding,
   patchedFields,
-} from '../domain/building-fields'
-import { assertPatchInRange, mergeSettings, resolveSettings } from '../domain/settings'
-import type { BuildingDirectory } from './directory'
-import type {
-  BuildingRecord,
-  BuildingRepository,
-  FileRepository,
-  SettingsRepository,
-} from './ports'
-
-/** `GET /staff/settings`: the building row and the settings in one document (DOC-36 §4). */
-export interface BuildingDocument {
-  building: {
-    id: string
-    code: string
-    name: Bilingual
-    company: BuildingRecord['company']
-    address: string
-    hotline: string | null
-    workingHours: Bilingual | null
-    email: string | null
-    logoFileId: string | null
-    logoUrl: string | null
-    timeZone: string
-    isDemo: boolean
-  }
-  settings: BuildingSettings
-  /** The keys an Admin saved; the others are defaults. */
-  saved: string[]
-  /** `"<building.version>.<building_setting.version>"`, the `ETag` of the document. */
-  etag: string
-}
+} from '../../domain/building-fields'
+import type { BuildingRecord, BuildingRepository } from '../../domain/building-repository'
+import type { FileRepository } from '../../domain/file-repository'
+import { assertPatchInRange, mergeSettings } from '../../domain/settings'
+import type { SettingsRepository } from '../../domain/settings-repository'
+import { assertAdmin } from '../assert-admin'
+import { type BuildingDocument, type BuildingDocumentLoader, parseEtag } from '../building-document'
+import type { BuildingDirectory } from '../directory'
 
 export interface UpdateSettingsInput {
   building?: BuildingPatch
@@ -55,12 +30,15 @@ export interface UpdateSettingsInput {
   etag: string | undefined
 }
 
-const etagOf = (building: number, settings: number) => `${building}.${settings}`
-
-/** `3.8` → `[3, 8]`; quotes are the route's, but are tolerated here. */
-function parseEtag(etag: string): { building: number; settings: number } | null {
-  const match = /^"?(\d+)\.(\d+)"?$/.exec(etag.trim())
-  return match ? { building: Number(match[1]), settings: Number(match[2]) } : null
+export interface UpdateBuildingSettingsDeps {
+  uow: UnitOfWork
+  buildings: BuildingRepository
+  settings: SettingsRepository
+  files: FileRepository
+  filesApi: FilesApi
+  directory: BuildingDirectory
+  documents: BuildingDocumentLoader
+  audited: Audited
 }
 
 const fieldsOf = (record: BuildingRecord): BuildingFields => ({
@@ -80,42 +58,27 @@ const BUILDING_MASKS = {
   'company.phone': 'phone',
 } as const
 
-export interface BuildingSettingsDeps {
-  uow: UnitOfWork
-  buildings: BuildingRepository
-  settings: SettingsRepository
-  files: FileRepository
-  filesApi: FilesApi
-  directory: BuildingDirectory
-  audited: Audited
-}
-
 /**
- * `GET` and `PATCH /staff/settings` (DOC-36 §4): the Admin edits the building row and the settings in one transaction, each
- * guarded by the version the form read, each with its own audit row; a request that changes one part leaves the other alone.
+ * `PATCH /staff/settings` (DOC-36 §4): the Admin edits the building row and the settings in one transaction, each guarded by
+ * the version the form read, each with its own audit row; a request that changes one part leaves the other alone.
  */
-export class BuildingSettingsService {
-  private readonly auditedBuilding: ReturnType<BuildingSettingsService['buildAuditedBuilding']>
-  private readonly auditedSettings: ReturnType<BuildingSettingsService['buildAuditedSettings']>
+export class UpdateBuildingSettings {
+  private readonly auditedBuilding: ReturnType<UpdateBuildingSettings['buildAuditedBuilding']>
+  private readonly auditedSettings: ReturnType<UpdateBuildingSettings['buildAuditedSettings']>
 
-  constructor(private readonly deps: BuildingSettingsDeps) {
+  constructor(private readonly deps: UpdateBuildingSettingsDeps) {
     this.auditedBuilding = this.buildAuditedBuilding()
     this.auditedSettings = this.buildAuditedSettings()
   }
 
-  async get(staff: StaffContext): Promise<BuildingDocument> {
-    assertAdmin(staff)
-    return this.document(staff.buildingId)
-  }
-
-  async update(staff: StaffContext, input: UpdateSettingsInput): Promise<BuildingDocument> {
+  async execute(staff: StaffContext, input: UpdateSettingsInput): Promise<BuildingDocument> {
     assertAdmin(staff)
     if (input.etag === undefined) throw new PreconditionRequiredError()
     const versions = parseEtag(input.etag)
     if (input.settings) assertPatchInRange(input.settings)
     if (input.building) assertBuildingPatch(input.building)
 
-    const { uow, directory } = this.deps
+    const { uow, directory, documents } = this.deps
     await uow.run(async () => {
       const current = await this.deps.buildings.find(staff.buildingId)
       if (!current) throw new NotFoundError()
@@ -125,7 +88,7 @@ export class BuildingSettingsService {
         !versions ||
         (input.building && versions.building !== current.version) ||
         (input.settings && versions.settings !== (saved?.version ?? 0))
-      if (stale) throw new VersionConflictError(await this.document(staff.buildingId))
+      if (stale) throw new VersionConflictError(await documents.load(staff.buildingId))
 
       if (input.building)
         await this.auditedBuilding(staff, {
@@ -138,34 +101,7 @@ export class BuildingSettingsService {
       else if (input.settings) throw new NotFoundError()
     })
     directory.invalidate(staff.buildingId)
-    return this.document(staff.buildingId)
-  }
-
-  private async document(buildingId: string): Promise<BuildingDocument> {
-    const { buildings, settings, filesApi } = this.deps
-    const record = await buildings.find(buildingId)
-    if (!record) throw new NotFoundError()
-    const saved = await settings.find({ buildingId: buildingId as BuildingId })
-    const data = saved?.data ?? {}
-    return {
-      building: {
-        id: record.id,
-        code: record.code,
-        name: record.name,
-        company: record.company,
-        address: record.address,
-        hotline: record.hotline,
-        workingHours: record.workingHours,
-        email: record.email,
-        logoFileId: record.logoFile,
-        logoUrl: record.logoFile ? await filesApi.signedUrl(record.logoFile) : null,
-        timeZone: record.timeZone,
-        isDemo: record.isDemo,
-      },
-      settings: resolveSettings(data),
-      saved: Object.keys(data),
-      etag: etagOf(record.version, saved?.version ?? 0),
-    }
+    return documents.load(staff.buildingId)
   }
 
   private buildAuditedBuilding() {
@@ -245,8 +181,4 @@ export class BuildingSettingsService {
       },
     )
   }
-}
-
-function assertAdmin(staff: StaffContext): void {
-  if (staff.role !== 'admin') throw new ForbiddenError()
 }

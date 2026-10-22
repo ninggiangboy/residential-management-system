@@ -1,7 +1,7 @@
 import type { Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { sql } from 'drizzle-orm'
-import type { TermsRepository, TermsVersionRecord } from '../../application/ports'
+import type { TermsRepository, TermsVersionRecord } from '../../domain/terms-repository'
 
 type Row = { id: string; kind: TermsVersionRecord['kind']; version: number }
 

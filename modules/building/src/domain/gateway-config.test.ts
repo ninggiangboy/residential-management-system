@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { maskAccountNumber, maskSecret } from './gateway-service'
+import { maskAccountNumber, maskSecret } from './gateway-config'
 
 describe('what the gateway view and its audit row show (DOC-36 §7.1, DOC-35 §3.4)', () => {
   test('BD-18 a secret is dots plus its last 4 characters; one shorter than 8 characters shows only dots', () => {

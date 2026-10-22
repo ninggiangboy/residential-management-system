@@ -1,7 +1,10 @@
 import { type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, eq, sql } from 'drizzle-orm'
-import type { GatewayConfigRecord, GatewayConfigRepository } from '../../application/ports'
+import type {
+  GatewayConfigRecord,
+  GatewayConfigRepository,
+} from '../../domain/gateway-config-repository'
 import { gatewayConfig } from './schema'
 
 const toRecord = (row: typeof gatewayConfig.$inferSelect): GatewayConfigRecord => ({
