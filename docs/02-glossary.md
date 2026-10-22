@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -420,7 +420,7 @@ This document defines the words of the project, as the project uses them. Every 
 | degraded mode | — | What a unit does at its limit instead of failing: refuse new uploads, queue exports, answer 429, keep the settlement path alive. | DOC-10 §8 |
 | stalled archive | — | PostgreSQL cannot hand WAL segments to pgBackRest, so `pg_wal` grows until the disk fills. Alert on `pg_stat_archiver.failed_count`. | DR-66, DOC-10 §6 |
 | release (on the host) | — | One unpacked tarball of `docker/` and `ops/` at `/opt/rms/releases/<tag>`; `/opt/rms/current` points at the running one and the last five are kept. | DR-158, DOC-70 §3.2 |
-| `gate` | — | The one required status check of `main`: it fails unless every CI job that ran finished `success` or `skipped`. | DR-163, DOC-71 §4 |
+| `gate` | — | The one required status check of the trunk `dev` (DR-239): it fails unless every CI job that ran finished `success` or `skipped`. | DR-163, DOC-71 §4 |
 | smoke test | — | The short set of public requests run after a deploy (ready, public config, the ops route is 404, the admin headers, and on staging a demo staff sign-in); `ops/deploy/smoke.sh`. | DR-163, DOC-71 §7.3 |
 | promote (a release) | — | Adding the tag `vX.Y.Z` to the `sha-<7>` image that passed staging, instead of building again. | DR-164, DOC-71 §7.4 |
 | compose profile | — | A Compose switch that starts optional services: `api2` (second API), `logs` (Loki, Alloy), `deploy` (the one-shot `migrate`). | DR-161, DOC-70 §6.1 |

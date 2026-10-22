@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -422,7 +422,7 @@ CI reports line and branch coverage per module. **No target fails the build** (O
 | `apps/cms-web` | 60 | — |
 | Mobile logic packages (`@rms/mobile-core` and similar) | 70 | — |
 
-Mechanism: `bun test --coverage` with an `lcov` reporter in the stages `unit` and `integration`; `scripts/coverage-report.ts` merges the reports, prints a table per scope and writes a `::warning` annotation for each scope below its target. **`bunfig.toml` sets no `coverageThreshold`**, because a threshold makes the test command exit non-zero. P1-19 verifies this on Bun 1.4.3. The report is uploaded as a CI artifact and the table is in the job summary.
+Mechanism (P1-19, DR-240): `bun run test:coverage` (`scripts/coverage-report.ts`) runs the tests of every workspace with `--coverage --coverage-reporter=lcov`, sums the lcov of each workspace, prints a table and writes a `::warning` annotation for each workspace below its line target. **`bunfig.toml` sets no `coverageThreshold`**, because a threshold makes the test command exit non-zero; the exit code is that of the tests (checked on Bun 1.4.3, 2026-10-22). Bun 1.4.3 writes no branch counters to lcov, so the **branch column is reported as n/a** until Bun writes them, and a file that no test imports is not in the report. The report runs in the stage `unit`; the coverage of `integration` is added by P1-04 with `test:integration`. The lcov files are a CI artifact and the table is in the job summary.
 
 ## 11. Stage → test mapping
 
@@ -430,15 +430,15 @@ The stage names are those of DOC-71. A pull request must pass `verify`, `unit`, 
 
 | Stage | Trigger | Runs | Blocks merge |
 | --- | --- | --- | --- |
-| `verify` | every pull request | `bun run check` (`lint`, `typecheck`, `check:arch` with knip and jscpd, `check:scope`, `check:i18n`), the `@app/api` value-import check, the route-metadata check (SC-01), `check:test-ids` (warning only) | yes |
+| `verify` | every pull request | `bun run check` (`lint`, `typecheck`, `check:arch` and its fixtures (the `@app/api` value-import rule is one of them), knip, jscpd, `check:scope`, `check:i18n`, the route-metadata check (SC-01), `check:dependabot`, `check:test-ids` (warning only)); `check:commits`; `check:openapi` (from P1-04) | yes |
 | `unit` | every pull request | `bun run test` with coverage | yes |
 | `integration` | every pull request; `db-grants` also on changes to a migration, a `schema.ts` or `0900-grants.sql` | `test:integration` on the `postgres:18.6` service container: use cases, repositories, DDL and statement tests (`IDM-`, `OPM-`, `GRT-`, `DLC-`), contract tests with real adapters, `AG-`, `ER-`, `CF-`, `JB-`, `MC-`, `OB-`, `AU-`, `RM-`, `AD-`, `BD-`, `FS-`, the race tests in the `ci` profile, **the authorization matrix** (`test:authz`, §13), coverage | yes |
-| `build` | every pull request (no push) and `main` (push `sha-<7>`) | image `rms-api`; boot smoke (the process starts with the generated `.env.example` profile `test`, `/health/ready` answers 200; CF-16, CF-17) | yes (DR-163) |
-| `e2e-web` | path-gated: `apps/cms-web/**`, `apps/api/**`, `packages/**` | Playwright against `bun run dev`, Mailpit, the local store; SC-15 | no on a pull request; it gates the staging deploy (DR-163) |
-| `security` | pull requests; weekly | gitleaks, Trivy (filesystem; image on `main`), CodeQL, dependency review: SC-20, SC-21, SC-31 | yes (DR-153) |
-| `deploy-staging` | `main` | migration, rolling restart, smoke test: SC-16 and SC-22 once after the first deploy, `GET /api/v1/health/ready` | blocks the deploy |
+| `build` | every pull request (no push) and `dev` (push `sha-<7>`, DR-239) | image `rms-api`; boot smoke (the process starts with the generated `.env.example` profile `test`, `/health/ready` answers 200; CF-16, CF-17) | yes (DR-163) |
+| `e2e-web` | path-gated: the `web` and `api` outputs of `.github/paths-filter.yml` (DOC-71 §4.1) | `bun run check:bundle` (DOC-53 §8 budgets); Playwright against `bun run dev`, Mailpit, the local store (from P1-16); SC-15 | no on a pull request; it gates the staging deploy (DR-163) |
+| `security` | pull requests and `dev`; Gitleaks also weekly | Gitleaks, Trivy (filesystem vulnerabilities and licences; the image is scanned in `build`), Semgrep CE (DR-238): SC-20, SC-21, SC-31 | yes (DR-153) |
+| `deploy-staging` | `dev` | migration, rolling restart, smoke test: SC-16 and SC-22 once after the first deploy, `GET /api/v1/health/ready` | blocks the deploy |
 | `deploy-production` | `v*` tag with approval | the same smoke test | blocks the deploy |
-| `nightly` (schedule) | 01:00 `Asia/Ho_Chi_Minh` on `main` against a fresh database | race tests in the `nightly` profile; the database-only subsets of EXP-03, EXP-04 and EXP-11 (they need no staging host, DR-78); `bun run test:grants`; the full authorization matrix | no; a failure emails the Owner |
+| `nightly` (schedule) | 01:00 `Asia/Ho_Chi_Minh` on `dev` against a fresh database | race tests in the `nightly` profile; the database-only subsets of EXP-03, EXP-04 and EXP-11 (they need no staging host, DR-78); `bun run test:grants`; the full authorization matrix | no; a failure emails the Owner |
 | `load` (on demand) | a person, on the staging host | `bun run test:load` (k6, EXP-07), EXP-08 | no |
 | `mobile` (on demand) | a person, before a store release (DR-08) | Maestro flows on simulators against a development build | no |
 | Staging experiments | a person, on the staging host (DR-78) | `exp:01`, `02`, `05`, `06`, `09`, `10`, `12` and the full EXP-03, 04, 11 when a milestone asks | a failing experiment blocks its milestone (DOC-89) |
@@ -558,7 +558,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…42` | Review | P1-16 |
 | `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
-| `UICP-` | UI states and copy (catalog parity cases) | DOC-68 | reserved | planned (P1) | P1-09 |
+| `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |
 | `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-09 (DOC-98), EXP-10 (DOC-99) | Draft | per EXP row of master plan §3.2 |
 
 Three notes. (1) The statement-test infix `S` is a numbering convention inside the prefix, not a prefix. (2) `DQ-` is the catalog of data-quality **rules** (DOC-18), not tests; its tests are `IM-`. (3) `RM-` also holds the residency side of the import commit (DOC-27 §17); the validator and the file rows are `IM-`.

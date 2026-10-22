@@ -1,6 +1,6 @@
 # Deploy: staging and production
 
-> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-21 (DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
+> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
 > Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
 > Main readers: P0-03, P1-18, P1-20, P1-22, P6-05, P6-13; the Owner and the operator who builds a host; [DOC-72](backup-restore.md) (backup, restore), [DOC-71](ci-cd.md) (calls the deploy command)
 
@@ -1237,7 +1237,7 @@ The whole sequence for staging. Production is the same with its values. Time: ab
 | 6 | §9.1: generate the secrets; paste the Tunnel token, the R2 files credentials, the pgBackRest values | 17 files, modes as listed |
 | 7 | §9.2: write `app.env` and `compose.env` | `config` check below passes |
 | 8 | §5.2: create the Tunnel and its three routes, the Access applications and the service token | The Tunnel is created |
-| 9 | CI step: a merge to `main` builds `sha-<7>`; or by hand: `docker pull` the image and upload `docker/` and `ops/` as `/opt/rms/incoming/sha-<7>.tgz` | The image and the tarball exist |
+| 9 | CI step: a merge to `dev` builds and publishes `sha-<7>` (DR-239); or by hand: `docker pull` the image and upload `docker/` and `ops/` as `/opt/rms/incoming/sha-<7>.tgz` | The image and the tarball exist |
 | 10 | **First deploy only**, while SSH on the VPS's public address still works (§4.9 step 1; the Tunnel is not up before this deploy starts `cloudflared`): from a checkout of the commit, `tar -czf - docker ops \| ssh deploy@<VPS IP> 'cat > /opt/rms/incoming/sha-<7>.tgz'`, then `ssh deploy@<VPS IP> "bash -s -- sha-<7>" < ops/deploy/deploy.sh`. Every later deploy goes through the Tunnel (DOC-71 §7.1) | `deploy ok sha-<7> in <n> s`; all containers `healthy` |
 | 11 | The Tunnel shows **Healthy**; from a laptop: `curl -s https://api-staging.<domain>/api/v1/health/ready` | `{"status":"ok","maintenance":false}` |
 | 12 | §4.9 steps 3 to 5: SSH through the Tunnel, then `ufw --force enable` | A session through `ssh-staging.<domain>`; `ufw status` active |
@@ -1263,7 +1263,7 @@ The config check of step 7, before the first deploy: `docker compose --env-file 
 | OpenAPI | on | off (boot guard) |
 | Demo building | present | present (store review) |
 | Access allow-list | operators and web staff of staging | operators and the building's web staff |
-| Deploy trigger | merge to `main` | a `v*` tag with the Owner's approval |
+| Deploy trigger | merge to `dev` (DR-239) | a `v*` tag with the Owner's approval |
 | R2, Tunnel, Pages, tokens, keys | own | own: nothing is shared across environments except the Cloudflare account, the zone and its one rate rule |
 
 ## 13. Teardown

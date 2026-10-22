@@ -1,0 +1,335 @@
+# The pull-request and trunk pipeline (DOC-71 §2, §4). `gate` is the one required check (DR-163). The trunk is `dev`
+# (DR-239). The deploy jobs (`deploy-staging`, `deploy-web-staging`, `mobile-staging`) are added by P1-20 and P6-10.
+# Actions are pinned by commit SHA with the tag in a comment (DR-95); the scanner images are pinned in `env` below and
+# refreshed by hand with DOC-11 §9 (Dependabot does not read `docker run` lines).
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [dev]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  POSTGRES_IMAGE: postgres:18.6
+  TRIVY_IMAGE: aquasec/trivy:0.76.1
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
+  SEMGREP_IMAGE: semgrep/semgrep:1.182.1
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists the files of a pull request through the API
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: .github/paths-filter.yml
+
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: git diff --exit-code bun.lock
+      - run: bun run check
+      # The commit and OpenAPI checks run even when `check` failed, so a pull request sees every broken rule.
+      - if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bun run check:commits
+      # A breaking OpenAPI change against the base needs /api/v2 (DR-144, AG-26); the document exists from P1-04.
+      - if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: bun scripts/run-if-defined.ts check:openapi P1-04
+
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      # DS-05 reads the fonts with fontTools through `uv run --with` (DR-237); the test fails in CI without uv.
+      - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+        with:
+          version: 0.13.5
+          enable-cache: false
+      # Every workspace's tests with lcov; a figure below its target is a warning, never a failure (DR-77).
+      - run: bun run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-unit
+          path: coverage/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_PASSWORD: ci-superuser
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      APP_ENV: test
+      PGPASSWORD: ci-superuser
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run keys:generate # throw-away passwords, written to .env.local
+      - run: bun run db:provision-ci # ops/postgres/0001-provision.sql as postgres
+      - run: bun scripts/run-if-defined.ts db:migrate P1-06
+      - run: bun scripts/run-if-defined.ts test:integration P1-04
+      - run: bun scripts/run-if-defined.ts test:authz P1-15
+      # The suite that skips without a database (`@core/db`) until P1-04 moves it to `test:integration`.
+      - env:
+          TEST_ADMIN_DATABASE_URL: postgres://postgres:ci-superuser@localhost:5432/postgres
+        run: bun run --filter @core/db test
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: authz-matrix
+          path: authz-matrix.*
+          retention-days: 14
+          if-no-files-found: ignore
+
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      # Trivy reads the licences from node_modules.
+      - run: bun install --frozen-lockfile
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.day.outputs.date }}
+          restore-keys: trivy-db-
+      # Each scanner runs even when one before it failed, so a pull request sees every finding.
+      - name: Trivy vulnerabilities (bun.lock; HIGH and CRITICAL with a fix)
+        run: |
+          mkdir -p ~/.cache/trivy
+          docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            fs --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 \
+            --skip-dirs '**/node_modules' --no-progress /src
+      - if: ${{ !cancelled() }}
+        name: Trivy licences (forbidden for linked packages, trivy.yaml)
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            fs --config /src/trivy.yaml --scanners license --severity CRITICAL --exit-code 1 --no-progress /src
+      # Trivy runs as root in its container; the cache step saves the database as the runner user.
+      - if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" ~/.cache/trivy
+      - if: ${{ !cancelled() }}
+        name: Semgrep (p/default and .semgrep/rules.yml; ERROR, HIGH and CRITICAL fail)
+        run: |
+          docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            -v "$PWD:/src" -w /src "$SEMGREP_IMAGE" \
+            semgrep scan --config p/default --config .semgrep/rules.yml --metrics=off \
+            --json-output=semgrep.json --text .
+          blocking=$(jq '[.results[] | select(.extra.severity | IN("ERROR","HIGH","CRITICAL"))] | length' semgrep.json)
+          jq -r '.results[] | "| \(.extra.severity) | `\(.check_id | split(".") | last)` | \(.path):\(.start.line) |"' semgrep.json > semgrep.md
+          {
+            echo "### Semgrep: $blocking blocking, $(jq '.results | length' semgrep.json) in all"
+            echo
+            echo "| Severity | Rule | Where |"
+            echo "| --- | --- | --- |"
+            cat semgrep.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$blocking" -eq 0
+      - if: ${{ !cancelled() }}
+        name: Gitleaks (the commits of this change)
+        env:
+          RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: |
+          # A push that creates the branch has no `before`: scan that one commit.
+          case "$RANGE" in 0000000000000000000000000000000000000000..*) RANGE="-1 ${RANGE#*..}";; esac
+          docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner --log-opts="--no-merges $RANGE"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: semgrep
+          path: semgrep.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          platforms: linux/amd64
+          load: true
+          provenance: false
+          tags: rms-api:ci
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=rms-api
+          cache-to: type=gha,mode=max,scope=rms-api
+      - name: Image size
+        run: |
+          size=$(docker image inspect rms-api:ci --format '{{.Size}}')
+          echo "### rms-api image: $((size / 1024 / 1024)) MB (planned ≤ 400 MB)" >> "$GITHUB_STEP_SUMMARY"
+      - id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.day.outputs.date }}
+          restore-keys: trivy-db-
+      - name: Trivy image (HIGH and CRITICAL with a fix; secrets in a layer)
+        run: |
+          mkdir -p ~/.cache/trivy
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
+            image --scanners vuln,secret --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 --no-progress rms-api:ci
+      - if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" ~/.cache/trivy
+      # The process starts and answers. P1-04 replaces the URL with the ops port's /health/ready (CF-16, CF-17).
+      - name: Boot smoke
+        run: |
+          docker run -d --name api -p 127.0.0.1:3000:3000 -e APP_ENV=test rms-api:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/v1/health/live; then echo; echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          docker logs api
+          exit 1
+      # On `dev` the image that was scanned is handed to `publish`, which pushes it only when `gate` is green.
+      - if: github.event_name == 'push'
+        run: docker save rms-api:ci | gzip -1 > rms-api.tar.gz
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rms-api-image
+          path: rms-api.tar.gz
+          retention-days: 1
+          compression-level: 0
+
+  e2e-web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run check:bundle # DOC-53 §8 budgets (DR-179)
+      # P1-16 adds the database, `seed:demo`, the Playwright cache and the trace upload with its flows.
+      - run: bun scripts/run-if-defined.ts test:e2e P1-16
+
+  # The one required check (DR-163). `e2e-web` is not in it: it gates the staging deploy, not a merge. GitHub Free has
+  # no branch protection for a private repository, so `bun run pr:merge <n>` is what refuses a merge without it (DR-241).
+  gate:
+    if: always()
+    needs: [changes, verify, unit, integration, security, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' > /dev/null
+      - if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "gate is green; merge with \`bun run pr:merge $PR_NUMBER\` (DR-241)" >> "$GITHUB_STEP_SUMMARY"
+
+  # `sha-<7>` reaches GHCR only for a commit of `dev` whose `gate` is green (DOC-71 §7.5).
+  publish:
+    if: github.event_name == 'push'
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rms-api-image
+      - run: gunzip -c rms-api.tar.gz | docker load
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push sha-<7> to GHCR
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rms-api:sha-${GITHUB_SHA::7}"
+          docker tag rms-api:ci "$image"
+          docker push "$image"
+          echo "pushed \`$image\`" >> "$GITHUB_STEP_SUMMARY"

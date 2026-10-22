@@ -1,6 +1,6 @@
 # Local development
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-237; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-237; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 
@@ -141,8 +141,9 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `payos:sim` | Signs and POSTs a gateway webhook to the local API (§9.3) | P3-03 |
 | `lint`, `typecheck`, `check:arch`, `check:scope`, `check:i18n` | Biome (with the color-literal plugin, DR-237); TypeScript; the three dependency-cruiser configs plus knip and jscpd; the building-scope lint; catalog parity and content tests (`bun test packages/i18n-catalog`, DOC-68 §9; run by `verify` too) (DOC-71 §4.1, stage `verify`) | P1-01, P1-12, P1-09 (`check:i18n`) |
 | `tokens:build` | Writes `packages/design-tokens/generated/` from `tokens.json` (DOC-54 §2.1); `--check` only reports. A test fails when the committed files differ | P1-09 |
-| `check` | Runs the five `verify` checks in one go (`lint`, `typecheck`, `check:arch`, `check:scope`, `check:i18n`, DOC-88 §4) | P1-01 |
+| `check` | Every check of the `verify` stage in one go (`lint`, `typecheck`, `check:arch`, `check:arch:fixtures`, `quality:unused`, `quality:dup`, `check:scope`, `check:i18n`, `check:authz-metadata`, `check:dependabot`, `check:test-ids`); it runs all of them, prints a table and reports a target that does not exist yet as skipped with its task (DR-240). It replaces P1-01's `verify` script | P1-19 |
 | `test` | Unit tests of every workspace (`bun test`, no database); `bun run test:unit` does not exist | P1-01 |
+| `test:coverage` | The same tests with lcov per workspace and the table of DOC-88 §10 (warnings only, DR-77) | P1-19 |
 | `test:integration` | Integration tests against the local PostgreSQL; each file clones the template database (DOC-88 §6) | P1-04 |
 | `test:race` | The race harness (`apps/api/test/race`) | P2-03 |
 | `test:authz` | The authorization matrix generator and run (EXP-10, DOC-39 §4) | P1-15 |
@@ -153,11 +154,15 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `test:db-clean` | Drops the leftover test databases `rms_test_*` and stale sample templates (DOC-88 §6) | P1-04 |
 | `check:test-ids` | Compares the IDs of every "Required tests" table with the test titles; **warns, never fails** (DOC-88 §5, DR-169) | P1-19 |
 | `check:commits` | Validates the pull-request title and the commit messages against the pattern of DOC-71 §11.2 | P1-19 |
+| `pr:merge <n>` | Squash-merges pull request `<n>` into `dev` only when `gate` is green on its head and the branch is up to date (DOC-71 §11.1, DR-241); needs `gh` signed in | P1-19 |
 | `check:authz-metadata` | Fails when a route has no audience metadata (AG-01, SC-01) | P1-15 |
 | `db:provision-ci` | Runs `0001-provision.sql` as `postgres` with the generated passwords: the CI twin of the `initdb.d` script of §6 (DOC-71 §4.2) | P1-19 |
 | `exp:<nn>` | One experiment run, for example `exp:09` (DOC-98) | per experiment |
 | `build` | `apps/cms-web` production bundle and the type check of the apps | P1-09 (done) |
 | `docker:build` | Builds the `rms-api` image locally as `rms-api:local` (DOC-71 §6) | P1-19 |
+| `check:bundle` | Builds the web CMS with a Vite manifest and checks the gzip budgets of DOC-53 §8 (DR-179) | P1-19 |
+| `dependabot:sync`, `check:dependabot` | Writes `.github/dependabot.yml` from the Expo SDK's bundled modules; the check fails when the file is stale (DOC-71 §11.5) | P1-19 |
+| `check:openapi` | Fails on a breaking OpenAPI change against the base of the pull request without `/api/v2` (DR-144, AG-26) | P1-04 |
 
 The reference repository's `kit:add`, `kit:remove`, `gen:module` and `check:add-matrix` targets are **not** carried over unless a task adds them (DR-02); `gen:module` may be added by P1-02 if a module template script is wanted.
 

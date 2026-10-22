@@ -1,6 +1,6 @@
 # Security
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-21 (DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-22 (DR-238, DR-239: Semgrep CE replaces CodeQL in §12, the trunk is `dev`; earlier: DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
 > Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 147, 151, 152, 153, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
 > Main readers: P1-04, P1-10, P1-14, P1-15 (route metadata and the matrix), P1-16 (the web CMS headers), P1-20 (Caddy), P3-03, P5-09, P6-08 (the review), DOC-70, DOC-71, DOC-99 (EXP-10), DOC-98 (EXP-09)
 
@@ -415,10 +415,11 @@ The pipeline is DOC-71; this section sets what each scanner must catch and what 
 
 | Scanner | Scope | Fails the build on |
 | --- | --- | --- |
-| Gitleaks | The pull request's commits; the full history once a week on `main` | Any finding. An allow-listed fixture needs a comment saying why |
+| Gitleaks | The pull request's commits; the full history once a week on `dev` (DR-239) | Any finding. An allow-listed fixture needs a comment saying why (`.gitleaks.toml`) |
 | Trivy, filesystem | The repository's lockfile on every pull request | A vulnerability of severity HIGH or CRITICAL that has a fixed version (`--ignore-unfixed`) |
-| Trivy, image | The `rms-api` image on every build of `main`, and weekly on the image that runs | The same, plus any secret found in a layer |
-| CodeQL | JavaScript and TypeScript, query suite `security-extended`, on pull requests | Any alert of severity error |
+| Trivy, licences | The production dependencies on every pull request (DR-238, in place of the dependency review) | A licence of the forbidden list of `trivy.yaml` (GPL-2.0, GPL-3.0, AGPL) |
+| Trivy, image | The `rms-api` image on every build (pull request and `dev`), and weekly on the image that runs (from P1-20) | The same, plus any secret found in a layer |
+| Semgrep CE | TypeScript, JavaScript, YAML and Dockerfiles: the registry set `p/default` and the project rules `.semgrep/rules.yml`, on every pull request (DR-238: CodeQL needs GitHub Code Security on a private repository) | A finding of severity ERROR, HIGH or CRITICAL; every project rule is ERROR |
 | Dependabot | Weekly version updates; security updates at once (DR-01) | Opens pull requests; does not fail the build |
 
 A weekly failure of the scheduled image scan is an email from GitHub Actions to the Owner; it is the only scanner that can find a new vulnerability in a build nobody touched.
@@ -439,7 +440,7 @@ Filled and signed in P6-08 (task acceptance: checklist for webhook, upload, QR a
 | 8 | The demo gauges and the demo OTP cannot touch a real building | BD-30, BD-36, OB-09 |
 | 9 | No secret in any image layer, log line, `/metrics` page or `docker inspect` | SC-21…23 |
 | 10 | RB-12: rotate the JWT and QR keys without logging anyone out unexpectedly | RB-12 drill |
-| 11 | Trivy and CodeQL clean on `main` | §12 |
+| 11 | Trivy and Semgrep clean on `dev` | §12 |
 | 12 | The headers of §5.1 on a production response, and no CSP violation in the web CMS console on a full walkthrough | SC-14…16 |
 
 ## 14. Configuration

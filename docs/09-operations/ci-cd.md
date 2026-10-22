@@ -1,12 +1,12 @@
 # CI/CD
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
-> Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: `uv` in the unit job, DR-237; P1-19: `ci.yml` and `weekly.yml` written and run, acceptance in §15; DR-238 Semgrep CE and Trivy licences in place of CodeQL and dependency review, DR-239 trunk `dev`, DR-240 pipeline mechanics, DR-241 `pr:merge` instead of branch protection, DR-242 release age; earlier: DR-166 confirmed by the Owner, open question closed; earlier: DR-179, DR-184, DR-188: bundle budgets, axe audits, `client-core` path; earlier P0-31) · DOC-71
+> Depends on: original SDD §4.3, §19.3, §19.5, [DR](../00-decision-register.md) (DR-01, 02, 04, 08, 69, 77, 82, 83, 88, 95, 152, 153, DR-163…166, DR-238…242), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §8, §9, [DOC-12](../03-architecture/code-architecture.md) §6, [DOC-39](../06-design/security.md) §12, [DOC-69](local-dev.md) §5, [DOC-70](deploy-staging-and-production.md) §3.3, §5.2, §6, §9, [DOC-88](../10-testing/test-strategy.md)
 > Main readers: P1-01, P1-19, P1-20, P2-14, P6-10, P6-13; every contributor (what a pull request must pass); the Owner (approval of a production deploy)
 
 This document says what runs when code is pushed: the stages and which of them block a merge, how the image, the web CMS and the mobile apps are built and deployed, how a deploy reaches a VPS that has no inbound port, the smoke test, the gates, the schedules and the rollback. It does not hold what the host does with a deploy command (the script, the compose files: DOC-70 §6, §7), the test method (DOC-88), what each scanner must catch (DOC-39 §12) or the mobile build profiles (DOC-73).
 
-**State of this document.** There is no repository yet: the workflows are written by P1-19 (pipeline), P1-20 (staging deploy), P6-10 (mobile) and P6-13 (production). The YAML below is the specification they implement; none of it has been run. Action versions are the DOC-11 §9 tags; the commit SHAs that DR-95 requires are resolved by P1-19 on the day it pins them.
+**State of this document.** P1-19 wrote and ran `.github/workflows/ci.yml` (the pull-request and trunk pipeline) and `.github/workflows/weekly.yml` (Gitleaks over the history) on 2026-10-22; those files are now the source and this document says what they do and why. The deploy jobs and `release.yml`, `rollback.yml`, `nightly.yml`, `load.yml`, `mobile-build.yml` are still specifications here, written by P1-20 (staging deploy), P2-14 (nightly), P6-10 (mobile) and P6-13 (production). **The trunk is `dev`** (DR-239): every `main` of the original text reads `dev`; a `main` branch is created as the production branch at the first release (P6-13).
 
 ## 1. Purpose and scope
 
@@ -37,8 +37,8 @@ flowchart LR
   PR --> B0["build (no push)"]
   PR -. "path-gated" .-> E["e2e-web"]
   V & U & I & S & B0 --> G["gate (required check)"]
-  MAIN["Push to main"] --> V2["verify, unit, integration, security"]
-  V2 --> B1["build + push sha-xxxxxxx to GHCR"]
+  MAIN["Push to dev"] --> V2["verify, unit, integration, security"]
+  V2 --> B1["build, gate, publish sha-xxxxxxx to GHCR"]
   B1 --> DS["deploy-staging: migrate, rolling restart, smoke"]
   B1 --> PW["web: Pages staging"]
   B1 -. "path-gated" .-> OTA["mobile: EAS Update, channel staging"]
@@ -47,44 +47,45 @@ flowchart LR
 
 | Workflow file | Trigger | Jobs |
 | --- | --- | --- |
-| `.github/workflows/ci.yml` | `pull_request`, `push` to `main` | `changes`, `verify`, `unit`, `integration`, `security`, `build`, `e2e-web`, `gate`; on `main` also `deploy-staging`, `deploy-web-staging`, `mobile-staging` |
+| `.github/workflows/ci.yml` | `pull_request`, `push` to `dev` | `changes`, `verify`, `unit`, `integration`, `security`, `build`, `e2e-web`, `gate` (**written, P1-19**); on `dev` also `publish` (written, P1-19), `deploy-staging`, `deploy-web-staging` (P1-20), `mobile-staging` (P6-10) |
 | `.github/workflows/release.yml` | `push` of a tag `v*` | `promote`, `deploy-production`, `deploy-web-production`, `mobile-production`; the environment `production` needs the Owner's approval |
 | `.github/workflows/nightly.yml` | `schedule` (01:00 in Ho Chi Minh City), `workflow_dispatch` | `race` (§10) |
-| `.github/workflows/weekly.yml` | `schedule` (Monday 02:00), `workflow_dispatch` | `gitleaks-history`, `image-scan-running` (§5) |
+| `.github/workflows/weekly.yml` | `schedule` (Monday 02:00), `workflow_dispatch` | `gitleaks-history` (**written, P1-19**); `image-scan-running` and the GHCR cleanup (§6.2) are added by P1-20, when an environment runs an image (DR-240) |
 | `.github/workflows/load.yml` | `workflow_dispatch` only | `k6` against staging (EXP-07, `bun run test:load`, DOC-88 §11) |
 | `.github/workflows/rollback.yml` | `workflow_dispatch` | `rollback` of the API, the web CMS or the mobile channel (§7.6) |
 | `.github/workflows/mobile-build.yml` | `workflow_dispatch` | EAS Build of a binary (DOC-73 §4) |
-| `.github/dependabot.yml` | weekly | `bun`, `github-actions`, `docker` (§11.5) |
+| `.github/dependabot.yml` | weekly | `bun`, `github-actions`, `docker`, `docker-compose` (§11.5; generated by `bun run dependabot:sync`) |
 
 The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of the day before; Monday 02:00 is `0 19 * * 0`.
 
 ## 3. Rules every job follows
 
-1. **One toolchain, read from `.tool-versions`.** `oven-sh/setup-bun` with `bun-version-file: .tool-versions` (DOC-69 §3); `actions/setup-node` with `node-version-file: .tool-versions` only in the jobs that run Expo or EAS. A job never installs a tool by name and version of its own.
-2. **Actions are pinned by commit SHA with the tag in a comment** (DR-95): `uses: actions/checkout@<40-hex> # v7.0.1`. The tags are DOC-11 §9. Dependabot (`github-actions`) updates them weekly.
-3. **Least privilege.** The workflow default is `permissions: contents: read`. A job that needs more states it: `packages: write` (build), `security-events: write` (CodeQL), `deployments: write` (deploy jobs), `id-token` is never granted.
-4. **Concurrency.** `ci.yml`: `group: ci-${{ github.ref }}`, `cancel-in-progress: true` for pull requests and **false** on `main` (a deploy in progress is never cancelled). Deploy jobs: `group: deploy-${{ matrix.env }}`, `cancel-in-progress: false`, so two deploys to one environment queue.
-5. **Timeouts.** `timeout-minutes` on every job: verify 10, unit 8, integration 15, security 15, build 15, e2e-web 20, deploy 15, race 30.
+1. **One toolchain, read from `.tool-versions`.** `oven-sh/setup-bun` with `bun-version-file: .tool-versions` (DOC-69 §3); `actions/setup-node` with `node-version-file: .tool-versions` only in the jobs that run Expo or EAS. A job never installs a tool by name and version of its own. The scanners are the exception: they run from exact image tags pinned once in the workflow `env` (DR-240), and the runner image is `ubuntu-24.04`, not `ubuntu-latest`.
+2. **Actions are pinned by commit SHA with the tag in a comment** (DR-95): `uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. The tags are DOC-11 §9; P1-19 resolved the SHAs on 2026-10-22 (the peeled commit of an annotated tag). Dependabot (`github-actions`) updates them weekly. Six actions are used: `actions/checkout`, `oven-sh/setup-bun`, `actions/cache`, `actions/upload-artifact`, `dorny/paths-filter`, and the Docker set (`setup-buildx`, `build-push`, `login`).
+3. **Least privilege.** The workflow default is `permissions: contents: read`. A job that needs more states it: `pull-requests: read` (`changes`: paths-filter lists the files of a pull request), `packages: write` (build), `deployments: write` (deploy jobs); `security-events` is not needed (no code-scanning upload, DR-238); `id-token` is never granted.
+4. **Concurrency.** `ci.yml`: `group: ci-${{ github.ref }}`, `cancel-in-progress: true` for pull requests and **false** on `dev` (a deploy in progress is never cancelled). Deploy jobs: `group: deploy-${{ matrix.env }}`, `cancel-in-progress: false`, so two deploys to one environment queue.
+5. **Timeouts.** `timeout-minutes` on every job: changes 5, verify 10, unit 8, integration 15, security 15, build 15, e2e-web 20, gate 2, deploy 15, race 30.
 6. **Caches** (`actions/cache`, v6.1.0, DOC-11 §9):
 
    | Cache | Path | Key |
    | --- | --- | --- |
    | Bun packages | `~/.bun/install/cache` | `bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}`; restore key `bun-${{ runner.os }}-` |
-   | TypeScript build info | `**/tsconfig.tsbuildinfo` | `tsc-${{ hashFiles('bun.lock', 'tsconfig.base.json') }}-${{ github.sha }}`; restore key without the SHA |
-   | Playwright browsers | `~/.cache/ms-playwright` | `pw-${{ hashFiles('bun.lock') }}` |
+   | TypeScript build info | not cached: `tsc --noEmit` writes no build info, and `typecheck` takes about 4 s | |
+   | Playwright browsers | `~/.cache/ms-playwright` | `pw-${{ hashFiles('bun.lock') }}` (added with the flows, P1-16) |
+   | Trivy database | `~/.cache/trivy` | `trivy-db-<UTC date>`; restore key `trivy-db-` |
    | Docker layers | buildx `type=gha`, `mode=max` | `scope=rms-api` |
 
    A cache is a speed-up only: every job passes with an empty cache.
 7. **`bun install --frozen-lockfile` everywhere.** A changed `bun.lock` after install fails the job (the check of DOC-11 §10 row 1).
 8. **No secret reaches a pull request from a fork.** The repository is private (DR-08), so forks are not expected; the workflows use `pull_request`, never `pull_request_target`.
 9. **A step prints no secret.** Secrets are passed as environment variables of the one step that needs them; `::add-mask::` is used for any value computed at run time.
-10. **Artifacts** (`actions/upload-artifact` v7.0.2): test reports, `authz-matrix.json` and `authz-matrix.md` (DR-151), the coverage summary, Playwright traces on failure. Retention 14 days.
+10. **Artifacts** (`actions/upload-artifact` v7.0.2): `coverage-unit` (lcov per workspace), `semgrep` (the JSON report), `authz-matrix.json` and `authz-matrix.md` (DR-151, from P1-15), Playwright traces on failure (P1-16). Retention 14 days. Each job also writes its table (checks, coverage, Semgrep, bundle, image size) to the job summary.
 
 ## 4. Stages and merge-blocking conditions
 
 ### 4.1 Stages
 
-`changes` runs first and sets path outputs (`dorny/paths-filter` v4.0.3) used by `e2e-web` and the mobile jobs:
+`changes` runs first and sets path outputs (`dorny/paths-filter` v4.0.3, filters in `.github/paths-filter.yml`) used by `e2e-web` and the mobile jobs:
 
 | Output | Paths |
 | --- | --- |
@@ -95,103 +96,48 @@ The cron expressions are in UTC: 01:00 in Ho Chi Minh City is `0 18 * * *` of th
 
 | Stage | Runs | Commands (DOC-69 §5) | Fails when | Blocks merge |
 | --- | --- | --- | --- | --- |
-| `verify` | always | `bun run lint` (Biome), `bun run typecheck`, `bun run check:arch` (three dependency-cruiser configs, knip, jscpd), `bun run check:scope` (building-scope lint, DR-12), `bun run check:i18n` (catalog parity: a key or ICU placeholder missing in `vi` or `en`), the `@app/api` value-import check, `bun run check:commits` (§11.2), `bun run check:authz-metadata` (a route without audience metadata, AG-01) | Any command exits non-zero | **Yes** |
-| `unit` | always | `bun run test` (every workspace; no database) with `--coverage`. The job installs `uv` (`astral-sh/setup-uv`, version pinned in DOC-11 §9 by P1-19) because DS-05 runs fontTools through it and fails without it in CI (DR-237) | A test fails. A coverage figure below its target is a **warning** in the job summary and never fails (DR-77) | **Yes** |
-| `integration` | always | Service container `postgres:18.6`; `0001-provision.sql` through `psql`; `bun run db:migrate`; `bun run test:integration`; `bun run test:authz` | A test fails; the authorization matrix has an unexpected 2xx or 3xx, an unexpected refusal, a 5xx, a leak, a route without metadata or a missing fixture (DR-151, DOC-39 §4.6) | **Yes** |
-| `security` | always | §5: Gitleaks, Trivy filesystem, CodeQL (`security-extended`), dependency review | A finding of the severities of DOC-39 §12 | **Yes** (DR-153) |
-| `build` | always (push only on `main`) | §6: the `rms-api` image; Trivy image scan; on `main` push `sha-<7>` to GHCR | The image does not build or the scan finds a fixed HIGH or CRITICAL vulnerability or a secret in a layer | **Yes** (so the Dockerfile cannot rot) |
-| `e2e-web` | `changes.web` or `changes.api` | Build the web CMS and check the bundle budgets of DOC-53 §8 (first load of `/login` ≤ 170 KB gzip, shell plus landing route ≤ 300 KB, any other route chunk ≤ 120 KB; DR-179); start `bun run dev:api` against a migrated database seeded with `seed:demo`; `bun run test:e2e` (Playwright 1.64.1, Chromium), which includes the accessibility audits of `@axe-core/playwright` in both themes (DS-07, DS-08, DR-184) | A flow fails; a bundle is over budget; an audit finds a serious or critical violation | No on a pull request; **yes as a deploy gate** (§7.3) |
-| `gate` | always, `if: always()` | Fails unless every job above that ran finished `success` or `skipped` | | It **is** the required check |
+| `verify` | always | `bun run check` (`scripts/check.ts`): `lint` (Biome), `typecheck` (every workspace and `scripts/`), `check:arch` (three dependency-cruiser configs; the `@app/api` value import is its rule `clients-import-the-api-type-only`, DR-04), `check:arch:fixtures`, `quality:unused` (knip), `quality:dup` (jscpd), `check:scope` (building-scope lint, DR-12; P1-07), `check:i18n` (catalog parity; P1-09), `check:authz-metadata` (AG-01; P1-15), `check:dependabot`, `check:test-ids` (warning only). Each check runs even after one failed and the job summary lists them; a target not created yet is reported `skipped until <task>` (DR-240). On a pull request also `bun run check:commits` (§11.2) and `check:openapi` (DR-144; from P1-04). `bun install --frozen-lockfile` and `git diff --exit-code bun.lock` come first | Any check exits non-zero | **Yes** |
+| `unit` | always | `bun run test:coverage`: every workspace's tests with lcov (DOC-88 §10). The job installs uv 0.13.5 (`astral-sh/setup-uv` v10.3.1) for the font check DS-05, which runs fontTools with `uv run --with` and fails in CI without it (DR-237) | A test fails. A coverage figure below its target is a **warning** in the job summary and never fails (DR-77) | **Yes** |
+| `integration` | always | Service container `postgres:18.6`; `bun run keys:generate`; `bun run db:provision-ci` (`0001-provision.sql` through `psql` of the same image); `db:migrate` (P1-06), `test:integration` (P1-04) and `test:authz` (P1-15) when they exist; until P1-04 moves it, `bun run --filter @core/db test` with `TEST_ADMIN_DATABASE_URL` runs the one suite that needs a database | A test fails; the provisioning fails; from P1-15 the authorization matrix has an unexpected 2xx or 3xx, an unexpected refusal, a 5xx, a leak, a route without metadata or a missing fixture (DR-151, DOC-39 §4.6) | **Yes** |
+| `security` | always | §5: Trivy vulnerabilities and licences, Semgrep CE, Gitleaks over the commits of the change (DR-238). Every scanner runs even after one failed | A finding of the severities of DOC-39 §12 | **Yes** (DR-153) |
+| `build` | always (push only on `dev`) | §6: build `rms-api` (buildx, `type=gha` cache), print its size, Trivy image scan, boot smoke (the container starts and `/api/v1/health/live` answers 200 within 30 s; P1-04 moves it to `/health/ready` with CF-16, CF-17); on `dev` the scanned image is saved as the artifact `rms-api-image` | The image does not build, the scan finds a fixed HIGH or CRITICAL vulnerability or a secret in a layer, or the process does not answer | **Yes** (so the Dockerfile cannot rot) |
+| `e2e-web` | `changes.web` or `changes.api` | `bun run check:bundle`: builds the web CMS with a Vite manifest and checks the budgets of DOC-53 §8 (first load of `/login` ≤ 170 KB gzip, shell plus landing route ≤ 300 KB, any other route chunk ≤ 120 KB; DR-179). From P1-16: start `bun run dev:api` against a migrated database seeded with `seed:demo`; `bun run test:e2e` (Playwright 1.64.1, Chromium), which includes the accessibility audits of `@axe-core/playwright` in both themes (DS-07, DS-08, DR-184) | A flow fails; a bundle is over budget; an audit finds a serious or critical violation | No on a pull request; **yes as a deploy gate** (§7.3) |
+| `publish` | `push` to `dev`, after `gate` | Loads `rms-api-image`, tags it `sha-<7>` and pushes it to GHCR (§6.2); `packages: write` only here | The push fails | Not a merge check; it gates `deploy-staging` |
+| `gate` | always, `if: always()` | Fails unless `changes`, `verify`, `unit`, `integration`, `security` and `build` finished `success` or `skipped`. `e2e-web` is **not** in its `needs` (DR-240): it gates the deploy, not the merge | | It **is** the required check |
 
-Merge is blocked by `verify`, `unit`, `integration`, `security` and `build` (DR-08 named the first three; DOC-39 §12 and DR-153 make the scans fail the build, which is why `security` and `build` join, DR-163). The branch rule requires one status, `gate`, so that a path-gated job that was skipped does not leave a required check pending.
+Merge is blocked by `verify`, `unit`, `integration`, `security` and `build` (DR-08 named the first three; DOC-39 §12 and DR-153 make the scans fail the build, which is why `security` and `build` join, DR-163). The branch rule requires one status, `gate`, so that a path-gated job that was skipped does not leave a required check pending. **The rule cannot be set on GitHub Free** for a private repository (the API answers 403 "Upgrade to GitHub Pro or make this repository public", checked 2026-10-22), and the Owner keeps the Free plan (DR-241). `gate` is enforced instead by **`bun run pr:merge <number>`** (`scripts/merge-pr.ts`), the one way a pull request is merged: it squash-merges only when the pull request is open, not a draft, targets `dev`, contains the tip of `dev`, and `gate` is `success` on its head commit, and it passes `--match-head-commit` so a later push makes GitHub refuse the merge. A red commit that reaches `dev` anyway (a direct push, or the GitHub button) is not published: `publish` needs `gate` (§7.5).
 
-### 4.2 Example: `.github/workflows/ci.yml` (specification)
+### 4.2 `.github/workflows/ci.yml`
 
-```yaml
-name: ci
-on:
-  pull_request:
-  push: { branches: [main] }
-permissions: { contents: read }
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      api: ${{ steps.f.outputs.api }}
-      web: ${{ steps.f.outputs.web }}
-      mobile: ${{ steps.f.outputs.mobile }}
-    steps:
-      - uses: actions/checkout@<sha> # v7.0.1
-      - id: f
-        uses: dorny/paths-filter@<sha> # v4.0.3
-        with: { filters: .github/paths-filter.yml }
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@<sha> # v7.0.1
-      - uses: oven-sh/setup-bun@<sha> # v2.2.0
-        with: { bun-version-file: .tool-versions }
-      - uses: actions/cache@<sha> # v6.1.0
-        with: { path: ~/.bun/install/cache, key: "bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}" }
-      - run: bun install --frozen-lockfile
-      - run: git diff --exit-code bun.lock
-      - run: bun run check
-  integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18.6
-        env: { POSTGRES_PASSWORD: ci-superuser }
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
-    env:
-      APP_ENV: test
-      PGPASSWORD: ci-superuser
-    steps:
-      - uses: actions/checkout@<sha> # v7.0.1
-      - uses: oven-sh/setup-bun@<sha> # v2.2.0
-        with: { bun-version-file: .tool-versions }
-      - run: bun install --frozen-lockfile
-      - run: bun run keys:generate          # throw-away passwords and keys, written to .env.local
-      - run: bun run db:provision-ci        # psql -f 0001-provision.sql with the generated passwords
-      - run: bun run db:migrate
-      - run: bun run test:integration
-      - run: bun run test:authz
-      - if: always()
-        uses: actions/upload-artifact@<sha> # v7.0.2
-        with: { name: authz-matrix, path: "authz-matrix.*", retention-days: 14 }
-  # unit, security, build, e2e-web: same shape; gate:
-  gate:
-    if: always()
-    needs: [changes, verify, unit, integration, security, build, e2e-web]
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo '${{ toJSON(needs) }}' | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")'
-```
+The workflow file is the source; this section only says how it is laid out, so a reader knows where to look.
 
-`db:provision-ci` is a root script that runs `0001-provision.sql` as `postgres` (DOC-19 §3, DOC-88 §6); it is the CI twin of the `initdb.d` script of DOC-69 §6.
+- **Triggers and concurrency** as in §3 rule 4: `pull_request` (any base) and `push` to `dev`; `cancel-in-progress` only for pull requests.
+- **`env`** pins the images used with `docker run`: `POSTGRES_IMAGE`, `TRIVY_IMAGE`, `GITLEAKS_IMAGE`, `SEMGREP_IMAGE` (the service container repeats `postgres:18.6`, because `services` cannot read `env`). Dependabot does not read these; they are refreshed with DOC-11 §9.
+- **Every job that runs Bun** has the same four steps first: checkout, `setup-bun` from `.tool-versions`, the Bun cache, `bun install --frozen-lockfile`.
+- **A target of a later task** is called with `bun scripts/run-if-defined.ts <target> <task>`, which runs `bun run <target>` if the root `package.json` has it and otherwise writes a notice `skipped: … is created by <task>` (DR-240). So P1-04, P1-06, P1-15 and P1-16 add their target and the step starts running without a workflow edit.
+- **Scanners in containers** read the checkout with `GIT_CONFIG_*` setting `safe.directory`, because the container user is not the owner of the checkout.
+- **`gate`** reads `toJSON(needs)` through an environment variable (never interpolated into the script) and fails unless every result is `success` or `skipped`.
+
+`db:provision-ci` (`scripts/db-provision-ci.ts`) runs `0001-provision.sql` as `postgres` with the passwords `keys:generate` wrote to `.env.local` and `PGPASSWORD` of the service container; `psql` runs from the `postgres:18.6` image with `--network=host`, so the runner needs no client. It is the CI twin of the `initdb.d` script of DOC-69 §6 and was run against a fresh `postgres:18.6` on 2026-10-22 (four roles and the database `rms` created).
 
 ## 5. Security scans
 
 What each scanner must catch and the thresholds are DOC-39 §12 (DR-153); this section is where and when they run. Versions are DOC-11 §9.
 
-| Scanner | Action and tool | Where | Trigger |
+| Scanner | Tool | Where | Trigger |
 | --- | --- | --- | --- |
-| Gitleaks | `gitleaks/gitleaks-action` v3.0.0 with gitleaks 8.30.1; config `.gitleaks.toml` (allow-list entries carry a comment) | job `security`: the commits of the pull request; `weekly.yml`: the full history of `main` | Every PR; weekly |
-| Trivy filesystem | `aquasecurity/trivy-action` v0.36.0, Trivy 0.76.0, `scan-type: fs`, `--ignore-unfixed`, severity `HIGH,CRITICAL` | job `security`: `bun.lock` | Every PR |
-| Trivy image | The same action, `scan-type: image`, plus `--scanners vuln,secret` | job `build`: the image just built; `weekly.yml`: the image tag that runs in production (read from the host over the Tunnel) | Every build; weekly |
-| CodeQL | `github/codeql-action` v4.39.0, languages `javascript-typescript`, queries `security-extended` | job `security` | Every PR; results in the Security tab |
-| Dependency review | `actions/dependency-review-action` v5.0.0, `fail-on-severity: high`, `deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0` for **linked** dependencies | job `security`, PRs only | Every PR |
+| Gitleaks | Image `ghcr.io/gitleaks/gitleaks:v8.30.1`, `gitleaks git` with `.gitleaks.toml` (the default rules plus allow-list entries, each with a comment) | job `security`: the commits of the change (`base..head` of a pull request, `before..sha` of a push); `weekly.yml`: the full history of `dev` | Every PR and push; weekly |
+| Trivy filesystem | Image `aquasec/trivy:0.76.1`, `fs --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL`, `node_modules` skipped | job `security`: `bun.lock` and `tools/depcruise/bun.lock` | Every PR and push |
+| Trivy licences | The same image, `fs --scanners license --severity CRITICAL` with `trivy.yaml`, whose `forbidden` list is GPL-2.0, GPL-3.0 and AGPL in their SPDX forms; Trivy reads the licences from `node_modules` and skips development dependencies (DR-238, in place of `dependency-review-action`) | job `security` | Every PR and push |
+| Trivy image | The same image, `image --scanners vuln,secret --ignore-unfixed --severity HIGH,CRITICAL` | job `build`: the image just built; `weekly.yml`: the image tag that runs (read from the host over the Tunnel; P1-20) | Every build; weekly from P1-20 |
+| Semgrep CE | Image `semgrep/semgrep:1.182.1`, `semgrep scan --config p/default --config .semgrep/rules.yml --metrics=off` over the files git tracks; the job fails on a finding of severity ERROR, HIGH or CRITICAL and lists all findings in the summary (DR-238, in place of CodeQL) | job `security` | Every PR and push |
 | Dependabot | See §11.5 | | Weekly; security updates at once |
 
-The licence rule applies to packages the product links. Grafana, Loki and k6 are AGPL-3.0 and run as separate programs (DOC-11 §0), so they are not in `bun.lock` and the rule does not see them.
+The project rules (`.semgrep/rules.yml`, all ERROR, test files excluded where a test may build SQL or a command from constants): `rms-dynamic-code` (`eval`, `new Function`), `rms-sql-raw-dynamic` (`sql.raw` of anything but a string literal), `rms-shell-command-dynamic` (`exec`/`execSync` from `child_process` with a non-literal command), `rms-weak-hash` (MD5, SHA-1), `rms-tls-verification-off`, `rms-jwt-alg-none`. They were checked on 2026-10-22 against a sample that has each bad form next to its safe form (for example `RegExp.exec` and `execFile` are not flagged). On the code base of that day `p/default` reports only MEDIUM and WARNING findings: Dependabot without a `cooldown`, `bunfig.toml` without `minimumReleaseAge`, a read-only loop in `core-i18n`'s translator and a dynamic `RegExp` in `scripts/check-test-ids.ts`; none fails the build.
+
+Semgrep CE analyses one file at a time and its registry rules are not pinned (they change on the registry as CodeQL's suite changed with the bundle). It is weaker than CodeQL's cross-file taint tracking; the P6-08 review (DOC-39 §13) stays manual. If GitHub Code Security is bought, CodeQL is added back next to it (DR-238).
+
+The licence rule applies to packages the product links. Grafana, Loki and k6 are AGPL-3.0 and run as separate programs (DOC-11 §0), so they are not in `bun.lock` and the rule does not see them. The scanners do not run through `aquasecurity/trivy-action` or `gitleaks/gitleaks-action` (DR-240): an exact image is the same command on a laptop and in CI, and keeps third-party action code away from the token.
 
 A weekly failure of `image-scan-running` sends the failed-run email of GitHub Actions to the Owner; it is the only scanner that finds a new vulnerability in a build nobody touched (DOC-39 §12).
 
@@ -199,58 +145,36 @@ A weekly failure of `image-scan-running` sends the failed-run email of GitHub Ac
 
 ### 6.1 Dockerfile (`docker/Dockerfile.api`)
 
-One image, `rms-api`, serves both roles (`APP_ROLES`, DR-05).
+One image, `rms-api`, serves both roles (`APP_ROLES`, DR-05). The file is `docker/Dockerfile.api` (P1-19) and `.dockerignore` keeps `docs/`, `tools/`, `ops/`, the tests, `.env*` and every `node_modules` out of the context. Its shape:
 
-```dockerfile
-# syntax=docker/dockerfile:1
-FROM oven/bun:1.4.3 AS deps
-WORKDIR /app
-COPY package.json bun.lock ./
-COPY apps/api/package.json apps/api/
-COPY modules/*/package.json modules/   # one COPY line per module: the P1-19 script generates them
-COPY packages/core-*/package.json packages/
-RUN bun install --frozen-lockfile --production --filter @app/api
-
-FROM oven/bun:1.4.3 AS runtime
-RUN groupadd --gid 10001 rms && useradd --uid 10001 --gid rms --no-create-home --shell /usr/sbin/nologin rms
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY apps/api ./apps/api
-COPY modules ./modules
-COPY packages ./packages
-COPY scripts/migrate.ts scripts/healthcheck.ts scripts/keys-generate.ts ./scripts/
-ARG GIT_SHA=unknown
-LABEL org.opencontainers.image.source="https://github.com/<org>/residential-management-system" \
-      org.opencontainers.image.revision="${GIT_SHA}"
-ENV NODE_ENV=production
-USER rms
-EXPOSE 3000 3001
-HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 CMD ["bun", "scripts/healthcheck.ts"]
-CMD ["bun", "apps/api/src/main.ts"]
-```
+| Stage | What it does |
+| --- | --- |
+| `deps` (`oven/bun:1.4.3`) | Copies the root `package.json`, `bun.lock`, `bunfig.toml` and every workspace manifest with `COPY --parents apps/*/package.json modules/*/package.json packages/*/package.json ./` (Dockerfile 1.20+, so no line per module is generated; `--frozen-lockfile` needs every workspace of `bun.lock`), then `bun install --frozen-lockfile --production --omit=peer --filter @app/api` |
+| `runtime` (`oven/bun:1.4.3`) | User `rms` (uid 10001); `node_modules` from `deps`; `apps/api`, `modules`, `packages`, `scripts/healthcheck.ts`; labels `org.opencontainers.image.source` (build argument `SOURCE_URL`, from `github.server_url`/`github.repository`, so no Owner value is in the repository, DR-228) and `org.opencontainers.image.revision` (`GIT_SHA`); `NODE_ENV=production`; ports 3000 and 3001; `HEALTHCHECK` with `bun scripts/healthcheck.ts`; `CMD ["bun", "apps/api/src/main.ts"]` |
 
 Notes:
 
 - `NODE_ENV=production` stays in the image (DOC-41 §3); behavior is `APP_ENV`.
 - The user is `rms`, uid 10001. The files that mount secrets are owned so that this uid can read them (DOC-70 §9.1).
-- `scripts/healthcheck.ts` calls `http://localhost:${OPS_PORT}/health/ready` and exits 0 only on a 200 (the image has no `curl`). Compose uses the same script for the container health state.
-- `scripts/migrate.ts` is the entry of the one-shot migration service: `bun scripts/migrate.ts` runs `db:migrate` with `MIGRATION_DATABASE_URL_FILE` (DOC-70 §6.3). The `api` and `worker` containers never mount that file.
-- The Expo and web workspaces are not in the image. The `bun install --filter @app/api` flag keeps the image small; P1-19 measures it (planned ≤ 400 MB).
-- Whether the TypeScript is run from source (above) or bundled with `bun build --target bun` is decided by P1-04 with the cold-start time of `/health/ready`; the Dockerfile changes only in its last two lines.
+- **`--omit=peer`** (DR-240): Bun installs optional peer dependencies, and Elysia's optional peers `typescript` and `@types/bun` put the TypeScript 7 native compiler (a Go binary) in the image; the first build of P1-19 failed the Trivy image scan on 15 fixed HIGH Go standard-library CVEs in it. `@app/api` therefore lists the peers Elysia needs at run time (`@sinclair/typebox`, `file-type`, `openapi-types`) as its own dependencies. A new runtime peer of a future dependency must be added the same way; the boot smoke of `build` catches a missing one.
+- `scripts/healthcheck.ts` calls `http://localhost:${OPS_PORT}/health/ready` and exits 0 only on a 200 (the image has no `curl`). Compose uses the same script for the container health state. Until P1-04 adds the ops port the skeleton has no `/health/ready`, so a container of today's image reports `unhealthy`; nothing runs it before P1-20.
+- `scripts/migrate.ts` (P1-06) and `scripts/keys-generate.ts --out` (P1-04) join the `COPY scripts/…` line when they exist. `migrate.ts` is the entry of the one-shot migration service: `bun scripts/migrate.ts` runs `db:migrate` with `MIGRATION_DATABASE_URL_FILE` (DOC-70 §6.3). The `api` and `worker` containers never mount that file.
+- The Expo and web workspaces are not in the image (only their manifests, in `deps`). **Measured 2026-10-22**: 333 MB on the local Docker (`node_modules` 7.6 MB), under the planned 400 MB; CI prints the size of every build in the job summary.
+- Whether the TypeScript is run from source (above) or bundled with `bun build --target bun` is decided by P1-04 with the cold-start time of `/health/ready`; the Dockerfile changes only in its last lines. The skeleton answers in about 2 s.
 
 ### 6.2 Tags and registry
 
 | Item | Rule |
 | --- | --- |
-| Registry | `ghcr.io/<org>/rms-api`, private (the repository is private) |
-| Tags built on `main` | `sha-<first 7 hex of the commit>`. The only tag a build pushes |
+| Registry | `ghcr.io/<github-owner>/rms-api` (the workflow uses `github.repository_owner` in lower case), private (the repository is private) |
+| Tags built on `dev` | `sha-<first 7 hex of the commit>`. The only tag a build pushes, after the image scan and the boot smoke passed (DR-239) |
 | Tags on a release | `vX.Y.Z` (semantic version) is **added** to the existing `sha-<7>` image by `docker buildx imagetools create`, not by a new build (§7.4, DR-164). The digest is identical |
 | Never | `latest`, a branch name, a bare major (DR-95). A compose file names an exact tag |
-| Push credentials | `GITHUB_TOKEN` with `packages: write`, only in `build` on `main` and in `promote` |
+| Push credentials | `GITHUB_TOKEN` with `packages: write`, only in `publish` (on `push` to `dev`, after `gate`) and in `promote` |
 | Pull credentials on the VPS | A read-only token stored by `docker login ghcr.io` for the `deploy` user (DOC-70 §4.7) |
-| Retention | A weekly cleanup (`actions/delete-package-versions`, a pinned version chosen by P1-19) keeps the 30 newest `sha-*` versions and every `v*` version. The tag running in an environment is never deleted, because rollback needs it |
+| Retention | A weekly cleanup (`actions/delete-package-versions`, v5.0.0 is the latest tag on 2026-10-22) keeps the 30 newest `sha-*` versions and every `v*` version. The tag running in an environment is never deleted, because rollback needs it. **Added by P1-20** (DR-240): before an environment runs an image there is nothing to protect, and the rule that keeps the running tag needs the deploy state of DOC-70 |
 
-Build arguments: `GIT_SHA=${{ github.sha }}`. Build with `docker/build-push-action` v7.4.0, `docker/setup-buildx-action` v4.4.1, `docker/login-action` v4.6.0, `docker/metadata-action` v6.2.0, platform `linux/amd64` only (the VPS is amd64; multi-arch is not built).
+Build arguments: `GIT_SHA=${{ github.sha }}`, `SOURCE_URL`. Build with `docker/build-push-action` v7.4.0 (`load: true`, `provenance: false`, cache `type=gha,mode=max,scope=rms-api`) and `docker/setup-buildx-action` v4.4.1, platform `linux/amd64` only (the VPS is amd64; multi-arch is not built). The image is loaded, scanned and smoke-tested under the local tag `rms-api:ci`, and only then tagged `sha-<7>` and pushed with `docker push` after `docker/login-action` v4.6.0. `docker/metadata-action` is not used: one computed tag needs no action.
 
 ## 7. Deploy over the Tunnel
 
@@ -313,7 +237,7 @@ Migrations follow expand then contract (DR-08, original SDD §16.3): a release m
 
 ### 7.3 Staging deploy and its gate
 
-Job `deploy-staging` in `ci.yml` runs on `push` to `main` after `gate` is green for that commit and `build` has pushed `sha-<7>`. If `e2e-web` ran for the commit (a web or API change) it must be green too: `needs: [gate]` plus `if: needs.e2e-web.result != 'failure'`. It is a **deploy gate**, not a merge gate (DR-163).
+Job `deploy-staging` in `ci.yml` runs on `push` to `dev` after `gate` is green for that commit and `publish` has pushed `sha-<7>` (`needs: [publish]`). If `e2e-web` ran for the commit (a web or API change) it must be green too: `needs: [gate]` plus `if: needs.e2e-web.result != 'failure'`. It is a **deploy gate**, not a merge gate (DR-163).
 
 After the command returns, the **smoke test** runs from the runner, against the public host:
 
@@ -335,7 +259,7 @@ The deployment is recorded with the GitHub Deployments API (`environment: stagin
 
 `release.yml` runs when a tag `vX.Y.Z` is pushed.
 
-1. **`promote`.** The job fails unless (a) the tagged commit is on `main`; (b) the image `sha-<7>` exists in GHCR (built by `main`); (c) a **successful** `staging` deployment exists for that SHA (`gh api repos/<org>/<repo>/deployments?sha=<sha>&environment=staging`, then its latest status is `success`). Then it adds the tag: `docker buildx imagetools create -t ghcr.io/<org>/rms-api:vX.Y.Z ghcr.io/<org>/rms-api:sha-<7>`. A tag on a commit that was never built or never passed staging is refused (DR-164).
+1. **`promote`.** The job fails unless (a) the tagged commit is on `main`, the production branch created at the first release, whose commits come from `dev` (DR-239; P6-13 fixes how); (b) the image `sha-<7>` exists in GHCR (built and published by `dev`); (c) a **successful** `staging` deployment exists for that SHA (`gh api repos/<org>/<repo>/deployments?sha=<sha>&environment=staging`, then its latest status is `success`). Then it adds the tag: `docker buildx imagetools create -t ghcr.io/<org>/rms-api:vX.Y.Z ghcr.io/<org>/rms-api:sha-<7>`. A tag on a commit that was never built or never passed staging is refused (DR-164).
 2. **Approval.** The next jobs use the GitHub environment `production` with a **required reviewer** (the Owner). Nothing reaches production without a click. The reviewer sees the tag, the SHA, the list of migrations in the release (`git diff <previous tag>..<tag> --stat -- 'modules/*/migrations/*'`) and the staging deployment time, printed by `promote` in the job summary.
 3. **`deploy-production`.** The same steps as §7.1 and §7.2 with host `ssh-production.<domain>` and the tag `vX.Y.Z`; then the smoke test of §7.3 (public checks only). Before the first line of the deploy it notes the previous tag for the rollback.
 4. **Web and mobile.** `deploy-web-production` (§8) and `mobile-production` (§9) run after `deploy-production` succeeded.
@@ -346,10 +270,10 @@ A release is announced to the Owner by the GitHub notification of the deployment
 
 | Gate | Before | Condition |
 | --- | --- | --- |
-| Merge to `main` | A pull request | `gate` is green (§4.1) |
-| Image on `main` | `build` push | `gate` is green for the commit |
-| `deploy-staging` | Push to `main` | `gate` green; `e2e-web` not failed |
-| `promote` | Tag `v*` | Commit on `main`; image exists; staging deployment `success` for the SHA |
+| Merge to `dev` | A pull request | `gate` is green on the head commit and the branch contains the tip of `dev`, checked by `bun run pr:merge` (DR-241) |
+| Image on `dev` | `publish` | `gate` is green for the commit; `publish` pushes the image `build` scanned (artifact `rms-api-image`, one day) |
+| `deploy-staging` | Push to `dev` | `gate` green; `e2e-web` not failed |
+| `promote` | Tag `v*` | Commit on `main` (DR-239); image exists; staging deployment `success` for the SHA |
 | `deploy-production` | `promote` | Owner approval of the environment `production` |
 | Mobile production update | `deploy-production` | Success, and the Owner's approval of the same environment |
 
@@ -387,14 +311,14 @@ The profiles, channels, credentials and store steps are DOC-73; this section is 
 
 | Change | Needs | Done by |
 | --- | --- | --- |
-| JavaScript or assets only | An **OTA update** on the channel | `mobile-staging` on `main`; `mobile-production` on a tag |
+| JavaScript or assets only | An **OTA update** on the channel | `mobile-staging` on `dev`; `mobile-production` on a tag |
 | A native module, `app.config.ts` native keys, an SDK upgrade, a permission string | A **new binary**, and a bump of `version` in `app.config.ts` (runtime version policy `appVersion`, DR-69, so the update never reaches a binary with different native code) | `mobile-build.yml` by hand (DOC-73 §4); the pull request ticks the box "native change" |
 | Neither app changed (`changes.mobile` false) | Nothing | The jobs are skipped |
 
 ### 9.2 Jobs
 
 ```bash
-# mobile-staging (on main, path-gated by changes.mobile), once per app
+# mobile-staging (on dev, path-gated by changes.mobile), once per app
 cd apps/resident-app && eas update --channel staging --environment preview --message "ci: $GITHUB_SHA" --non-interactive
 cd apps/staff-app    && eas update --channel staging --environment preview --message "ci: $GITHUB_SHA" --non-interactive
 # mobile-production (release.yml, after approval)
@@ -415,8 +339,8 @@ See §7.6. The update group id of every OTA is printed in the job summary so tha
 
 | Workflow | When | What | On failure |
 | --- | --- | --- | --- |
-| `nightly.yml` `race` | Every night, 01:00 ICT | `TEST_RACE_PROFILE=nightly bun run test:race` (1,000 rounds, 8 sessions), the database-only subsets of EXP-03, EXP-04 and EXP-11, `bun run test:grants` and the full authorization matrix, on a fresh service-container database, **not** on staging (DOC-88 §8.3, §11, DR-165) | A failed run emails the Owner (GitHub notification) and uploads the harness log; it blocks nothing |
-| `weekly.yml` `gitleaks-history`, `image-scan-running` | Monday 02:00 ICT | §5 | Email; the Owner decides |
+| `nightly.yml` `race` (P2-14) | Every night, 01:00 ICT, on `dev` | `TEST_RACE_PROFILE=nightly bun run test:race` (1,000 rounds, 8 sessions), the database-only subsets of EXP-03, EXP-04 and EXP-11, `bun run test:grants` and the full authorization matrix, on a fresh service-container database, **not** on staging (DOC-88 §8.3, §11, DR-165) | A failed run emails the Owner (GitHub notification) and uploads the harness log; it blocks nothing |
+| `weekly.yml` `gitleaks-history` (written), `image-scan-running` (P1-20) | Monday 02:00 ICT | §5 | Email; the Owner decides |
 | `load.yml` | By hand only | k6 mix against `api-staging.<domain>` (EXP-07). It never runs together with the bulk-PDF experiment (DR-102) | The result file is committed by hand (DOC-88 §12) |
 | Dependabot | Weekly | §11.5 | |
 
@@ -426,20 +350,20 @@ DR-08 said "nightly on staging". The concurrency harness needs to create databas
 
 ### 11.1 Branches
 
-Trunk-based (DR-08): short-lived branches, squash-merged pull requests, protected `main`.
+Trunk-based (DR-08): short-lived branches, squash-merged pull requests, trunk `dev` (DR-239). The Owner keeps GitHub Free (DR-241), which has no branch protection or rulesets for a private repository, so each rule is held by what the plan does offer:
 
-| Setting (branch protection of `main`) | Value |
+| Rule | How it holds on GitHub Free |
 | --- | --- |
-| Require a pull request | Yes |
-| Required status checks | `gate` only; branch must be up to date |
-| Allowed merge method | Squash only; linear history |
-| Force push and deletion | Denied, also for administrators |
+| Require a pull request | `bun run pr:merge` merges pull requests only; nobody pushes to `dev` directly (convention; a red direct push is not published) |
+| Required status checks | `bun run pr:merge` requires `gate` = `success` on the head commit and a branch that contains the tip of `dev` (else: `gh pr update-branch <n>` and wait for CI) |
+| Allowed merge method | Repository setting (set 2026-10-22): squash merges only, merge commits and rebase merges off; the squash commit title is the pull-request title; merged branches are deleted |
+| Force push and deletion | Convention (not enforceable on Free) |
 | Reviews | One approval from the code owners of the touched paths **when the repository has more than one contributor**; none while the Owner is alone (DR-166, confirmed by the Owner on 2026-10-21) |
-| Tag protection | `v*` creatable by the Owner only |
+| Tag protection | `v*` created by the Owner only: convention on Free; `promote` refuses a tag on a commit that did not pass staging anyway (§7.4) |
 
 ### 11.2 Commits and titles
 
-Conventional Commits in English, with the module as the scope: `feat(finance): …`, `fix(identity): …` (DR-08). Because merges are squashed, the **pull request title** becomes the commit, and `bun run check:commits` validates it (and each commit message on a branch):
+Conventional Commits in English, with the module as the scope: `feat(finance): …`, `fix(identity): …` (DR-08). Because merges are squashed, the **pull request title** becomes the commit, and `bun run check:commits` (`scripts/check-commits.ts`, P1-19) validates it and the subject of each non-merge commit of the branch (from the base of the pull request; locally from the merge base with `origin/dev`):
 
 ```
 ^(feat|fix|perf|refactor|docs|test|chore|ci|build|revert)(\((identity|building|residency|finance|tickets|access|vehicles|notices|notification|wiki|audit|reporting|realtime|api|web|resident-app|staff-app|core|shared|ops|docs|deps)\))?!?: .{1,100}$
@@ -472,10 +396,12 @@ The vendored-package sync uses the title `chore(core): sync <sha>` (DR-02). A br
 | Ecosystem | Directory | Interval | Grouping |
 | --- | --- | --- | --- |
 | `bun` | `/` | weekly | minor and patch grouped; a major is its own pull request and needs a DR (DR-01, DR-82) |
+| every entry | | | `cooldown: { default-days: 7 }`: a version update is proposed only 7 days after its release (DR-242); security updates are not delayed (GitHub documentation, read 2026-10-22) |
 | `github-actions` | `/` | weekly | grouped; updates the SHA and the tag comment |
-| `docker` | `/docker`, `/ops` | weekly | grouped; the exact image tags of the compose files (DR-95) |
+| `docker` | `/docker` | weekly | grouped; the base image of `Dockerfile.api` (DR-95) |
+| `docker-compose` | `/docker` | weekly | grouped; the exact image tags of the compose files (DR-95); `/ops` gets an entry when it holds a compose file (P1-20) |
 
-The Expo-managed modules follow the SDK, not npm `latest` (DR-94): the `bun` entry ignores them (`ignore:` list generated from the SDK's `bundledNativeModules.json` by P1-19) and `expo install --fix` is the upgrade path. A pre-release version is never merged (DR-82). `docker/compose.*.yml` images are updated only after DOC-11 §7 is re-verified.
+The Expo-managed modules follow the SDK, not npm `latest` (DR-94): the `bun` entry ignores them and `expo install --fix` is the upgrade path. `.github/dependabot.yml` is generated by `bun run dependabot:sync` from `expo/bundledNativeModules.json` (all 125 modules of SDK 58.0.16, `expo` and `react` among them, so a web-side `react` bump cannot move the apps off the SDK's version; the web's `react` is upgraded by hand with DOC-11 §12); `check:dependabot` in `verify` fails when the file is stale, so the file is regenerated after an SDK upgrade. Commit prefixes are `chore(deps)`, `ci` and `build(deps)`, which pass §11.2. The images that `ci.yml` runs with `docker run` (Trivy, Gitleaks, Semgrep, `postgres` for psql and the service container) are not seen by Dependabot and are refreshed with DOC-11 §9. A pre-release version is never merged (DR-82). `docker/compose.*.yml` images are updated only after DOC-11 §7 is re-verified.
 
 ## 12. Secrets and variables of CI
 
@@ -496,19 +422,19 @@ The application's own secrets (database, keys, S3, SMS) are **not** in CI: they 
 
 ## 13. Time budgets
 
-The target is a whole pull-request pipeline in **12 minutes or less** (P1-19); the jobs run in parallel, so the pipeline takes as long as the slowest job plus the queue. *Planned*, measured by P1-19 on the first green run and written back here with the date and the runner.
+The target is a whole pull-request pipeline in **12 minutes or less** (P1-19); the jobs run in parallel, so the pipeline takes as long as the slowest job plus the queue. **Measured** by P1-19 on 2026-10-22 on GitHub-hosted `ubuntu-24.04` runners (private repository), on the skeleton of that day (no modules yet): run 39746618248 took 175 s from the event to the end of `gate`, run 39747541466 took 100 s. The planned figures stay the targets for the full product; re-measure when P1-15 (the matrix) and P1-16 (Playwright) land.
 
-| Job | Planned | Notes |
-| --- | --- | --- |
-| `changes` | 0.5 min | |
-| `verify` | 3 min | Biome, `tsc` (TypeScript 7, incremental), dependency-cruiser three times, knip, jscpd |
-| `unit` | 2 min | No database |
-| `integration` | 6 min | Includes the migration, the template database, the authorization matrix (about 2,700 cells, DOC-39 §4.6) |
-| `security` | 5 min | CodeQL dominates |
-| `build` | 4 min | With the buildx cache; Trivy image scan 1 min |
-| `e2e-web` | 8 min | Path-gated |
-| `deploy-staging` | 3 min | Pull, migrate, two restarts, smoke |
-| **Critical path of a pull request** | **≈ 9 min** | `max(...)` plus checkout and cache restore |
+| Job | Planned | Measured 2026-10-22 | Notes |
+| --- | --- | --- | --- |
+| `changes` | 0.5 min | 5 s | |
+| `verify` | 3 min | 34 to 45 s | Biome, `tsc` (TypeScript 7), dependency-cruiser three times and its fixtures, knip, jscpd |
+| `unit` | 2 min | 23 to 30 s | With lcov |
+| `integration` | 6 min | 44 to 54 s | Service container, provisioning; the migration, the template database and the authorization matrix (about 2,700 cells, DOC-39 §4.6) come with P1-04 to P1-15 |
+| `security` | 5 min | 84 to 86 s | Semgrep (image pull and the registry rules) is the longest step; Trivy uses the cached database |
+| `build` | 4 min | 46 to 72 s | With the buildx cache; image scan and boot smoke included |
+| `e2e-web` | 8 min | 18 to 24 s | Path-gated; only the bundle budgets until P1-16 |
+| `deploy-staging` | 3 min | | P1-20 |
+| **Critical path of a pull request** | **≈ 9 min** | **1.7 to 2.9 min** | `security` is the critical path today |
 
 ## 14. Failure handling
 
@@ -522,20 +448,22 @@ The target is a whole pull-request pipeline in **12 minutes or less** (P1-19); t
 
 ## 15. Acceptance checks
 
-These are the checks of P1-19, P1-20 and P6-13; they are **not run** yet. They are not test cases and take no test ID.
+These are the checks of P1-19, P1-20 and P6-13. They are not test cases and take no test ID. P1-19 ran items 1 to 4 and 10 on 2026-10-22 with throw-away pull requests against the P1-19 branch (closed and deleted afterwards).
 
-| # | Check | Expected |
-| --- | --- | --- |
-| 1 | A pull request that breaks each of: a Biome rule, a type, a dependency-cruiser rule, a knip finding, a missing `vi`/`en` key, a query without a building predicate, a value import of `@app/api`, a bad PR title, a route without audience metadata | `verify` fails each, naming the rule (P1-19) |
-| 2 | A pull request with a failing unit test; with a failing integration test; with a route that answers an unexpected 2xx | The matching job fails; `gate` is red |
-| 3 | A coverage figure below its target | A warning in the job summary; `gate` green (DR-77) |
-| 4 | A branch that adds a fake key; one that adds a HIGH dependency with a fix | `security` fails (SC-20, SC-31) |
-| 5 | A merge to `main` | An image `sha-<7>` in GHCR; `deploy-staging` runs; the smoke test passes; the whole pull-request pipeline took 12 minutes or less |
-| 6 | A tag on a commit that did not pass staging | `promote` refuses |
-| 7 | A tag on a good commit | The Owner is asked to approve; after approval the production deploy and the smoke test pass |
-| 8 | The rollback workflow on staging | The previous tag runs and the smoke test passes within 10 minutes; the time is written in DOC-70 §6.6 |
-| 9 | A concurrent second merge during a deploy | The second deploy queues and does not cancel the first |
-| 10 | The workflow files | Every `uses:` is a 40-hex SHA with the tag in a comment; `permissions` is declared; every job has `timeout-minutes` |
+| # | Check | Expected | Result |
+| --- | --- | --- | --- |
+| 1 | A pull request that breaks each of: a Biome rule, a type, a dependency-cruiser rule, a knip finding, a missing `vi`/`en` key, a query without a building predicate, a value import of `@app/api`, a bad PR title, a route without audience metadata | `verify` fails each, naming the rule (P1-19) | **Pass** for the rules that exist (PR #2, run 39747558607): Biome `lint/suspicious/noDebugger`, TypeScript `TS2322`, dependency-cruiser `clients-import-the-api-type-only` (the value import), knip "Unused files", `check:commits` on the title and both commit subjects; each is an annotation and a row of the summary table. The catalog key, the building predicate and the route metadata are checked by P1-09, P1-07 and P1-15 when they create `check:i18n`, `check:scope` and `check:authz-metadata`; `check` runs them from then on |
+| 2 | A pull request with a failing unit test; with a failing integration test; with a route that answers an unexpected 2xx | The matching job fails; `gate` is red | **Pass** for the first two: a failing unit test fails `unit` (PR #2; `integration` failed too, because it reran every suite then; it now runs only `@core/db`); a test that fails only against the database fails `integration` alone (PR #3, run 39747030794). The 2xx case is P1-15 |
+| 3 | A coverage figure below its target | A warning in the job summary; `gate` green (DR-77) | **Pass** (PR #4, run 39747036332): "packages/core-db: line coverage 13.4% is below its target 50%", `gate` green |
+| 4 | A branch that adds a fake key; one that adds a HIGH dependency with a fix | `security` fails (SC-20, SC-31) | **Pass** (PR #5, run 39747043834), in one branch: Gitleaks `aws-access-token` and `generic-api-key`; Trivy `lodash` 4.17.20 CVE-2021-23337 (HIGH, fixed 4.17.21); Trivy licences `tinymce` 7.0.0 GPL-2.0-or-later `forbidden`; Semgrep `rms-dynamic-code`, `eval-detected` and the AWS key rule. Every scanner step ran and failed; `build` failed too (the image scan found the lodash CVEs and the key as a CRITICAL secret in a layer) |
+| 5 | A merge to `dev` | An image `sha-<7>` in GHCR; `deploy-staging` runs; the smoke test passes; the whole pull-request pipeline took 12 minutes or less | **Partly**: the pipeline takes 1.7 to 2.9 minutes (§13). The image in GHCR is checked by the first merge of P1-19; `deploy-staging` and the smoke test are P1-20 |
+| 6 | A tag on a commit that did not pass staging | `promote` refuses | P6-13 |
+| 7 | A tag on a good commit | The Owner is asked to approve; after approval the production deploy and the smoke test pass | P6-13 |
+| 8 | The rollback workflow on staging | The previous tag runs and the smoke test passes within 10 minutes; the time is written in DOC-70 §6.6 | P1-20 |
+| 9 | A concurrent second merge during a deploy | The second deploy queues and does not cancel the first | P1-20 |
+| 10 | The workflow files | Every `uses:` is a 40-hex SHA with the tag in a comment; `permissions` is declared; every job has `timeout-minutes` | **Pass** (2026-10-22, checked with a script over `ci.yml` and `weekly.yml`; actionlint 1.7.12 clean) |
+
+Found and fixed while running them: the first run failed on three real problems, recorded in DR-240 and above: `changes` lacked `pull-requests: read`; the image carried the TypeScript 7 Go binary (`--omit=peer`); the first Semgrep shell rule matched `RegExp.exec`. Run A also showed that a failed `check` skipped `check:commits`; the commit and OpenAPI checks now run after a failure.
 
 ## 16. Decisions made while writing
 
@@ -547,6 +475,11 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 | DR-164 | A release **promotes** the `sha-<7>` image that passed staging and never rebuilds; a tag on a commit that never passed staging is refused | Decided | §6.2, §7.4 |
 | DR-165 | Two Pages projects, one per environment (revises the wording of DR-83 item 1); the nightly race job runs on a CI database, not on staging (revises step 3 of DR-08) | Decided | §8, §10 |
 | DR-166 | Code-owner review is required only when the repository has more than one contributor; `bun run check:commits` validates the PR title and the commit messages with the module names as scopes | Decided | §11.1, §11.2 |
+| DR-238 | Semgrep CE and Trivy licences replace CodeQL and dependency review, which need GitHub Code Security on a private repository (Owner) | Decided | §3, §4.1, §5 |
+| DR-239 | The trunk is `dev`; `main` is created as the production branch at the first release (Owner) | Decided | §2, §4, §6.2, §7, §10, §11 |
+| DR-241 | No GitHub Pro: `bun run pr:merge` enforces `gate` and the up-to-date rule; squash only by repository setting (Owner) | Decided | §4.1, §7.5, §11.1 |
+| DR-242 | npm versions resolve only 7 days after release (`minimumReleaseAge`); Dependabot waits 7 days (`cooldown`) | Decided | §11.5 |
+| DR-240 | Pipeline mechanics of P1-19: scanners from pinned images, `bun run check` with skipped targets and `run-if-defined`, `gate` without `e2e-web`, `--omit=peer` and `COPY --parents` in the image, line coverage only, cleanup and running-image scan deferred to P1-20 | Decided (confirm) | §3 to §6, §10, §13, §15 |
 
 ## 17. Not in this document
 
@@ -573,8 +506,9 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 ## Open questions
 
-- **Commit SHAs of the actions** are resolved by P1-19 when it writes the workflows (DR-95). The tags are DOC-11 §9.
+- ~~**Branch protection on GitHub Free.**~~ Decided by DR-241 (Owner, 2026-10-22: no GitHub Pro): `bun run pr:merge` enforces `gate`, the repository settings enforce squash merges (§11.1).
+- ~~**Commit SHAs of the actions**~~: resolved by P1-19 on 2026-10-22 (§3 rule 2).
 - **The `cloudflared access ssh` flag names** (`--service-token-id`, `--service-token-secret`) and **the GHCR read token type** (a classic personal access token with `read:packages`, or a fine-grained token) are checked by P1-20 against the pinned `cloudflared` and the GitHub documentation.
 - **Review rule of §11.1** (it depends on whether a second contributor joins): decided by DR-166 and confirmed by the Owner on 2026-10-21 ("up to you, other people may join the repository later"). The rule does not change: no required review while the Owner is alone, one code-owner approval once a second contributor joins.
 - **EAS flags of §9.2** (`--environment`, `eas update:republish`, `eas update:rollback`) are checked against `eas-cli` 25.2.0 by P6-10.
-- Decisions made while writing: DR-163…166.
+- Decisions made while writing: DR-163…166; while running P1-19: DR-238…242.
