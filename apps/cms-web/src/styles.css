@@ -1,1 +1,10 @@
 @import "tailwindcss";
+@import "@rms/design-tokens/fonts.css";
+@import "@rms/design-tokens/tokens.css";
+@import "@rms/design-tokens/theme.css";
+
+@layer base {
+  body {
+    @apply bg-ground text-ink font-sans;
+  }
+}

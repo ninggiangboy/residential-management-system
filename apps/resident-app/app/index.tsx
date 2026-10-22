@@ -8,8 +8,8 @@ export default function Home() {
     api.api.v1.health.live.get().then(({ data }) => setStatus(data?.status ?? 'down'))
   }, [])
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg font-medium text-slate-900">API: {status}</Text>
+    <View className="flex-1 items-center justify-center bg-ground">
+      <Text className="font-sans-semibold text-body-strong text-ink">API: {status}</Text>
     </View>
   )
 }

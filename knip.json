@@ -33,7 +33,15 @@
     },
     "apps/cms-web": {
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["tailwindcss"]
+      "ignoreDependencies": ["tailwindcss", "@rms/design-tokens"]
+    },
+    "packages/i18n-catalog": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/design-tokens": {
+      "entry": ["src/**/*.test.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/*.ts"]
     }
   },
   "rules": {

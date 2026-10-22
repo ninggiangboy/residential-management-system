@@ -15,21 +15,30 @@
     "check:arch:fixtures": "bun test tools/arch-fixtures",
     "quality:unused": "knip",
     "quality:dup": "jscpd",
-    "verify": "bun run lint && bun run typecheck && bun run check:arch && bun run check:arch:fixtures && bun run quality:unused && bun run quality:dup",
+    "check:i18n": "bun test packages/i18n-catalog",
+    "verify": "bun run lint && bun run typecheck && bun run check:arch && bun run check:arch:fixtures && bun run check:i18n && bun run quality:unused && bun run quality:dup",
     "check:compat": "bun test tools/compat",
+    "tokens:build": "bun packages/design-tokens/scripts/build.ts",
     "check:tools": "bun scripts/check-tools.ts",
     "keys:generate": "bun scripts/keys-generate.ts",
     "infra:up": "bun scripts/infra.ts up",
     "infra:down": "bun scripts/infra.ts down",
     "infra:reset": "bun scripts/infra.ts reset",
-    "setup": "bun scripts/setup.ts"
+    "setup": "bun scripts/setup.ts",
+    "dev:web": "bun run --filter @app/cms-web dev",
+    "build": "bun run --filter @app/cms-web build && bun run --filter @app/resident-app --filter @app/staff-app typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@tailwindcss/node": "4.3.3",
     "@types/bun": "1.4.3",
     "exceljs": "4.4.0",
     "jscpd": "5.4.2",
     "knip": "6.42.1",
+    "nativewind": "4.2.7",
+    "postcss": "8.5.31",
+    "react-native-css-interop": "0.2.7",
+    "tailwindcss": "3.4.19",
     "typescript": "7.0.2"
   }
 }

@@ -1,0 +1,15 @@
+language js
+
+// DOC-54 §2.1: only @rms/design-tokens knows a color value. biome.json turns this off inside that package.
+or {
+  JsStringLiteralExpression(),
+  JsxString(),
+  JsTemplateChunkElement()
+} as $literal where {
+  $literal <: or {
+    r".*#[0-9a-fA-F]{3,8}\b.*",
+    r".*rgba?[(].*",
+    r".*hsla?[(].*"
+  },
+  register_diagnostic(span=$literal, message="Color literal outside @rms/design-tokens: use a token class, or a value of @rms/design-tokens/native (DOC-54 §2.1).")
+}

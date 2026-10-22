@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "1.4.9",
+    "@rms/design-tokens": "workspace:*",
     "expo": "~58.0.16",
     "expo-constants": "~58.0.12",
     "expo-dev-client": "~58.0.14",
