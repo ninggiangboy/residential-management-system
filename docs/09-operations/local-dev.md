@@ -1,6 +1,6 @@
 # Local development
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-237; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-246: the Git hooks in §4; P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-237; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31) · DOC-69
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 
@@ -33,7 +33,7 @@ This document takes a developer from an empty machine to the whole stack running
 | CPU and memory | 4 cores, 16 GB (8 GB works without a mobile emulator) | PostgreSQL, the object store, Mailpit, the API, Vite and Metro run together |
 | Disk | 15 GB free | Docker images (about 1 GB), `node_modules` of three apps, Expo caches |
 | Docker | Docker Engine 29.9 or Docker Desktop (DOC-11 §1); Compose v2 or later. `docker compose version` must work and the engine must be running. Engine 29.8.2 with Compose 5.5.0 on OrbStack passed P1-03 | `infra:up` runs PostgreSQL 18.6, the object store and Mailpit as containers |
-| Git | 2.40 or later | Conventional Commits are checked by a hook (DR-08) |
+| Git | 2.40 or later | Conventional Commits are checked by a hook (DR-08, DR-246; §4) |
 | Network | Internet on the first run (images, packages) | Offline runs work after that |
 | Mobile (optional) | iOS: Xcode 27 on macOS (Expo SDK 58 is built for the iOS 27 SDK, DOC-11 §6.1). Android: Android Studio with one emulator, or a physical device. **No local toolchain at all** is needed if the development build is made in the cloud (`eas build --profile development`, §10) | Expo Go is not used (DOC-11 §13) |
 | Accounts | None for the web and the API. An Expo account for cloud builds only | |
@@ -103,6 +103,16 @@ bun run dev
 | 4 | `bun run infra:up` (§6) | A table of three services, each `healthy`, and `infra up in <n> s`; 3 minutes or less |
 | 5 | `bun run db:migrate`: the migrations of every module in catalog order, then the grants step (DOC-19 §3.1, steps 2 to 4) | `migrated 14 schemas`, `grants applied`. Until P1-06: `skipped: \`bun run db:migrate\` does not exist before P1-06` |
 | 6 | `bun run seed:demo` (§9) | `demo seeded: 240 units, 8 residents, 4 staff`. Until P1-12: `skipped: …` as in step 5 |
+
+**Git hooks (DR-246).** Step 2 also installs the hooks: `bun install` runs the root `prepare` script, `husky`, which points `core.hooksPath` at `.husky/_`. Each hook is a fast subset of CI, which stays the gate:
+
+| Hook | Runs | Fails when |
+| --- | --- | --- |
+| `pre-commit` | `biome check --staged` (the staged files only; it never rewrites them, `bun run format` does) | A format or lint error in a staged file |
+| `commit-msg` | `bun scripts/check-commits.ts --message-file <file>` (merge commits are skipped) | The subject does not match DOC-71 §11.2 |
+| `pre-push` | `bun scripts/pre-push.ts`: Gitleaks with `.gitleaks.toml` over the pushed commits that no remote branch has | Gitleaks finds a secret. Without the `gitleaks` binary (§3) it prints `pre-push: gitleaks not found, secret scan skipped` and lets the push through |
+
+`--no-verify` skips a hook; CI runs the same checks on the pull request.
 
 `bun run dev` starts one process, `APP_ROLES=api,worker` (DOC-07 §4.2), and the Vite dev server of the web CMS; both reload on a file change.
 

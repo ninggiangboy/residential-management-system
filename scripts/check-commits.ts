@@ -4,7 +4,10 @@
  *
  *   PR_TITLE   the pull-request title (set by the workflow; absent locally)
  *   BASE_REF   the commit the branch starts from (default: the merge base with origin/dev)
+ *
+ * `--message-file <path>` checks only the subject of that message: the `commit-msg` hook (`.husky/commit-msg`, DR-246).
  */
+import { readFileSync } from 'node:fs'
 import { annotate } from './lib/ci'
 
 const types = 'feat|fix|perf|refactor|docs|test|chore|ci|build|revert'
@@ -34,6 +37,25 @@ const scopes = [
 ].join('|')
 const pattern = new RegExp(`^(${types})(\\((${scopes})\\))?!?: .{1,100}$`)
 
+const usage = () => {
+  console.log(`expected: <${types}>(<module>)?!?: <summary of 1 to 100 characters>`)
+  console.log(`modules: ${scopes.replaceAll('|', ', ')}`)
+}
+
+const flag = process.argv.indexOf('--message-file')
+if (flag !== -1) {
+  // The subject is the first line that is neither empty nor a comment; a merge commit is not checked (`--no-merges` below).
+  const subject =
+    readFileSync(process.argv[flag + 1] ?? '', 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .find((line) => line !== '' && !line.startsWith('#')) ?? ''
+  if (subject.startsWith('Merge ') || pattern.test(subject)) process.exit(0)
+  console.error(`commit message does not match DOC-71 §11.2: "${subject}"`)
+  usage()
+  process.exit(1)
+}
+
 const git = (...args: string[]) => {
   const proc = Bun.spawnSync(['git', ...args], { stderr: 'inherit' })
   if (proc.exitCode !== 0) process.exit(proc.exitCode ?? 1)
@@ -55,8 +77,5 @@ const bad = subjects.filter((s) => !pattern.test(s.text))
 for (const s of bad)
   annotate('error', 'check:commits', `${s.what} does not match DOC-71 §11.2: "${s.text}"`)
 console.log(`${subjects.length - bad.length}/${subjects.length} subjects follow DOC-71 §11.2`)
-if (bad.length > 0) {
-  console.log(`expected: <${types}>(<module>)?!?: <summary of 1 to 100 characters>`)
-  console.log(`modules: ${scopes.replaceAll('|', ', ')}`)
-}
+if (bad.length > 0) usage()
 process.exit(bad.length > 0 ? 1 : 0)

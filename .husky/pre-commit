@@ -1,0 +1,2 @@
+# Biome over the staged files only (DR-246); `bun run check` and CI `verify` run every check.
+biome check --staged --no-errors-on-unmatched --files-ignore-unknown=true
