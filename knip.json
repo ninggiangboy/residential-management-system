@@ -2,8 +2,21 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts", "tools/arch-fixtures/*.test.ts", "tools/compat/*.test.ts"],
-      "project": ["scripts/*.ts", "tools/arch-fixtures/*.ts", "tools/compat/*.ts"]
+      "entry": [
+        "scripts/*.ts",
+        "tools/arch-fixtures/*.test.ts",
+        "tools/compat/*.test.ts",
+        "tools/scope-lint/*.test.ts",
+        "tools/audit-lint/*.test.ts"
+      ],
+      "project": [
+        "scripts/*.ts",
+        "tools/arch-fixtures/*.ts",
+        "tools/compat/*.ts",
+        "tools/scope-lint/*.ts",
+        "tools/audit-lint/*.ts"
+      ],
+      "ignoreDependencies": ["drizzle-kit"]
     },
     "apps/api": {
       "entry": [
@@ -53,6 +66,10 @@
     "packages/test-support": {
       "entry": ["src/db-clean.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "modules/*": {
+      "entry": ["src/**/*.test.ts", "test/**/*.test.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"]
     }
   },
   "rules": {
