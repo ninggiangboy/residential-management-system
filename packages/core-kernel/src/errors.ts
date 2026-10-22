@@ -47,8 +47,14 @@ export class ValidationError extends DomainError {
 
 /** Well-formed values that a business rule refuses. Answered 422; the code stays `validation_failed` (DR-127). */
 export class RuleViolationError extends DomainError {
-  constructor(rule: string, message = 'A business rule refused the request', path = '') {
-    super('validation_failed', message, 'validation', {
+  /** `code` is `validation_failed` unless the catalog gives the rule an answer code of its own (`file_not_verified`, DOC-42 §5.1). */
+  constructor(
+    rule: string,
+    message = 'A business rule refused the request',
+    path = '',
+    code = 'validation_failed',
+  ) {
+    super(code, message, 'validation', {
       details: [{ path, code: rule, message }] satisfies ValidationDetail[],
     })
   }

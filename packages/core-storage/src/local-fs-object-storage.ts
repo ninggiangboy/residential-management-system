@@ -78,13 +78,15 @@ export class LocalFsObjectStorage implements ObjectStorage {
     })
   }
 
-  presignGet(key: string, expiresInSeconds: number): string {
+  presignGet(key: string, expiresInSeconds: number, opts: { downloadName?: string } = {}): string {
     assertSafeKey(key)
-    return this.link({
+    const link = this.link({
       method: 'GET',
       key,
       expires: Math.floor(this.now().getTime() / 1000) + expiresInSeconds,
     })
+    // Not part of the signature: it only chooses the name a browser saves the file under (`localStoragePlugin` reads it).
+    return opts.downloadName ? `${link}&name=${encodeURIComponent(opts.downloadName)}` : link
   }
 
   /** Whether a link's claim was signed by us and has not expired. */
@@ -106,6 +108,31 @@ export class LocalFsObjectStorage implements ObjectStorage {
   async read(key: string): Promise<Uint8Array | null> {
     const file = Bun.file(this.pathOf(this.objects, key))
     return (await file.exists()) ? await file.bytes() : null
+  }
+
+  async readRange(key: string, start: number, endExclusive: number): Promise<Uint8Array | null> {
+    const file = Bun.file(this.pathOf(this.objects, key))
+    return (await file.exists()) ? await file.slice(start, endExclusive).bytes() : null
+  }
+
+  async writeStream(
+    key: string,
+    data: ReadableStream<Uint8Array>,
+    contentType: string,
+  ): Promise<void> {
+    const chunks: Uint8Array[] = []
+    let size = 0
+    for await (const chunk of data) {
+      chunks.push(chunk)
+      size += chunk.byteLength
+    }
+    const whole = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) {
+      whole.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    await this.write(key, whole, contentType)
   }
 
   async write(key: string, data: Uint8Array, contentType: string): Promise<void> {

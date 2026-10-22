@@ -44,8 +44,9 @@ export class FakeStorage implements ObjectStorage {
   presignPut(key: string) {
     return `http://s3.test/put/${key}`
   }
-  presignGet(key: string) {
-    return `http://s3.test/get/${key}`
+  presignGet(key: string, expiresInSeconds = 900, opts: { downloadName?: string } = {}) {
+    const name = opts.downloadName ? `&name=${encodeURIComponent(opts.downloadName)}` : ''
+    return `http://s3.test/get/${key}?expires=${expiresInSeconds}${name}`
   }
   async stat(key: string) {
     return this.objects.get(key) ?? null
@@ -53,9 +54,27 @@ export class FakeStorage implements ObjectStorage {
   async read(key: string) {
     return this.data.get(key) ?? null
   }
+  async readRange(key: string, start: number, endExclusive: number) {
+    return this.data.get(key)?.slice(start, endExclusive) ?? null
+  }
   async write(key: string, bytes: Uint8Array, contentType: string) {
     this.data.set(key, bytes)
     this.objects.set(key, { size: bytes.byteLength, contentType })
+  }
+  async writeStream(key: string, stream: ReadableStream<Uint8Array>, contentType: string) {
+    const chunks: Uint8Array[] = []
+    let size = 0
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+      size += chunk.byteLength
+    }
+    const whole = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) {
+      whole.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    await this.write(key, whole, contentType)
   }
   async delete(key: string) {
     this.deleted.push(key)
