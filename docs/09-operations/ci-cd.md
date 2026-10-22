@@ -350,20 +350,20 @@ DR-08 said "nightly on staging". The concurrency harness needs to create databas
 
 ### 11.1 Branches
 
-Trunk-based (DR-08): short-lived branches, squash-merged pull requests, trunk `dev` (DR-239). The Owner keeps GitHub Free (DR-241), which has no branch protection or rulesets for a private repository, so each rule is held by what the plan does offer:
+Trunk-based (DR-08): short-lived branches, rebase-merged pull requests (DR-251), trunk `dev` (DR-239). The Owner keeps GitHub Free (DR-241), which has no branch protection or rulesets for a private repository, so each rule is held by what the plan does offer:
 
 | Rule | How it holds on GitHub Free |
 | --- | --- |
 | Require a pull request | `bun run pr:merge` merges pull requests only; nobody pushes to `dev` directly (convention; a red direct push is not published) |
 | Required status checks | `bun run pr:merge` requires `gate` = `success` on the head commit and a branch that contains the tip of `dev` (else: `gh pr update-branch <n>` and wait for CI) |
-| Allowed merge method | Repository setting (set 2026-10-22): squash merges only, merge commits and rebase merges off; the squash commit title is the pull-request title; merged branches are deleted |
+| Allowed merge method | Repository setting (set 2026-10-22, changed to rebase by DR-251): rebase merges only, merge commits and squash merges off; every commit of the branch lands on `dev` as written; merged branches are deleted |
 | Force push and deletion | Convention (not enforceable on Free) |
 | Reviews | One approval from the code owners of the touched paths **when the repository has more than one contributor**; none while the Owner is alone (DR-166, confirmed by the Owner on 2026-10-21) |
 | Tag protection | `v*` created by the Owner only: convention on Free; `promote` refuses a tag on a commit that did not pass staging anyway (§7.4) |
 
 ### 11.2 Commits and titles
 
-Conventional Commits in English, with the module as the scope: `feat(finance): …`, `fix(identity): …` (DR-08). Because merges are squashed, the **pull request title** becomes the commit, and `bun run check:commits` (`scripts/check-commits.ts`, P1-19) validates it and the subject of each non-merge commit of the branch (from the base of the pull request; locally from the merge base with `origin/dev`):
+Conventional Commits in English, with the module as the scope: `feat(finance): …`, `fix(identity): …` (DR-08). Because merges are rebased, **each commit subject** of the branch lands on `dev` unchanged (the pull request title is not a commit, but is still checked), and `bun run check:commits` (`scripts/check-commits.ts`, P1-19) validates it and the subject of each non-merge commit of the branch (from the base of the pull request; locally from the merge base with `origin/dev`):
 
 ```
 ^(feat|fix|perf|refactor|docs|test|chore|ci|build|revert)(\((identity|building|residency|finance|tickets|access|vehicles|notices|notification|wiki|audit|reporting|realtime|api|web|resident-app|staff-app|core|shared|ops|docs|deps)\))?!?: .{1,100}$
@@ -479,7 +479,7 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 | DR-166 | Code-owner review is required only when the repository has more than one contributor; `bun run check:commits` validates the PR title and the commit messages with the module names as scopes | Decided | §11.1, §11.2 |
 | DR-238 | Semgrep CE and Trivy licences replace CodeQL and dependency review, which need GitHub Code Security on a private repository (Owner) | Decided | §3, §4.1, §5 |
 | DR-239 | The trunk is `dev`; `main` is created as the production branch at the first release (Owner) | Decided | §2, §4, §6.2, §7, §10, §11 |
-| DR-241 | No GitHub Pro: `bun run pr:merge` enforces `gate` and the up-to-date rule; squash only by repository setting (Owner) | Decided | §4.1, §7.5, §11.1 |
+| DR-241 | No GitHub Pro: `bun run pr:merge` enforces `gate` and the up-to-date rule; rebase only by repository setting (Owner, DR-251) | Decided | §4.1, §7.5, §11.1 |
 | DR-242 | npm versions resolve only 7 days after release (`minimumReleaseAge`); Dependabot waits 7 days (`cooldown`) | Decided | §11.5 |
 | DR-240 | Pipeline mechanics of P1-19: scanners from pinned images, `bun run check` with skipped targets and `run-if-defined`, `gate` without `e2e-web`, `--omit=peer` and `COPY --parents` in the image, line coverage only, cleanup and running-image scan deferred to P1-20 | Decided (confirm) | §3 to §6, §10, §13, §15 |
 
@@ -508,7 +508,7 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 
 ## Open questions
 
-- ~~**Branch protection on GitHub Free.**~~ Decided by DR-241 (Owner, 2026-10-22: no GitHub Pro): `bun run pr:merge` enforces `gate`, the repository settings enforce squash merges (§11.1).
+- ~~**Branch protection on GitHub Free.**~~ Decided by DR-241 (Owner, 2026-10-22: no GitHub Pro): `bun run pr:merge` enforces `gate`, the repository settings enforce rebase merges (§11.1, DR-251).
 - ~~**Commit SHAs of the actions**~~: resolved by P1-19 on 2026-10-22 (§3 rule 2).
 - **The `cloudflared access ssh` flag names** (`--service-token-id`, `--service-token-secret`) and **the GHCR read token type** (a classic personal access token with `read:packages`, or a fine-grained token) are checked by P1-20 against the pinned `cloudflared` and the GitHub documentation.
 - **Review rule of §11.1** (it depends on whether a second contributor joins): decided by DR-166 and confirmed by the Owner on 2026-10-21 ("up to you, other people may join the repository later"). The rule does not change: no required review while the Owner is alone, one code-owner approval once a second contributor joins.

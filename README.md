@@ -76,7 +76,7 @@ Import boundaries between these scopes are enforced by dependency-cruiser; DOC-1
 
 ## Contributing
 
-- `dev` is the trunk. Work on short branches and squash-merge with `bun run pr:merge <n>`, which requires the `gate` check to be green.
+- `dev` is the trunk. Work on short branches and rebase-merge (never squash) with `bun run pr:merge <n>`, which requires the `gate` check to be green.
 - Commit subjects and PR titles follow `<type>(<scope>)?!?: <summary>`; `bun run check:commits` validates them.
 - Change the docs in the same PR as the behavior, and cite the document or decision behind new code (`DOC-12 §6.2`, `DR-233`, `P1-04`).
 - Dependency versions are exact and must be the latest stable release, recorded in DOC-11.
