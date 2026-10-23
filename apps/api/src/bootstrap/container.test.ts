@@ -48,9 +48,10 @@ describe('the module catalog (DOC-12 §5.2)', () => {
     expect(container.modules.map((module) => module.name)).toEqual(order)
   })
 
-  test('identity writes the mail command and the session event, both of the default retry class', () => {
+  test('identity writes the mail and SMS commands and the session event; only the SMS has its own retry class', () => {
     expect(identityManifest.outboxPolicies).toEqual({
       'identity.mail_requested.v1': 'default',
+      'identity.sms_requested.v1': 'sms',
       'identity.session_revoked.v1': 'default',
     })
     expect(container.modules.find((module) => module.name === 'identity')?.outbox?.name).toBe(

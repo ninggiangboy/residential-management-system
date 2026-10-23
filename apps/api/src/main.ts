@@ -6,6 +6,7 @@ import {
   EXIT_DATABASE_UNREACHABLE,
   waitForDatabase,
 } from './bootstrap/boot'
+import { EXIT_BOOT_GUARD_FAILED, reportBootGuard, runBootGuard } from './bootstrap/boot-guard'
 import { ConfigError, EXIT_CONFIG_INVALID, loadAppConfig } from './bootstrap/config'
 import { createContainer } from './bootstrap/container'
 
@@ -35,6 +36,11 @@ try {
   if (!(error instanceof DatabaseUnreachableError)) throw error
   logger.fatal({ err: error, waitedMs: DATABASE_WAIT_MS }, 'database_unreachable')
   process.exit(EXIT_DATABASE_UNREACHABLE)
+}
+
+// The boot guard (DOC-36 §10.1): a deployment that would let the fixed demo code open a real unit does not start in production or staging.
+if (reportBootGuard(await runBootGuard(container.bootGuard), core.APP_ENV, logger)) {
+  process.exit(EXIT_BOOT_GUARD_FAILED)
 }
 
 // Before anything is served: a process started in the middle of a deploy comes up already in maintenance mode.

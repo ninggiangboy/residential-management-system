@@ -1,6 +1,6 @@
 /**
- * What the staff side of `identity` reads from the configuration (DOC-26 §9, keys in DOC-41 §8). The resident keys join with
- * P1-11. The values reach the module as plain numbers; `apps/api` reads them from the environment.
+ * What `identity` reads from the configuration (DOC-26 §9, keys in DOC-41 §8). The values reach the module as plain numbers and
+ * strings; `apps/api` reads them from the environment.
  */
 export interface IdentityConfig {
   /** `ACCESS_TOKEN_TTL_SECONDS` (900). */
@@ -9,6 +9,10 @@ export interface IdentityConfig {
   refreshTtlDaysStaff: number
   /** `FAMILY_MAX_DAYS_STAFF` (90): the absolute lifetime of a staff family. */
   familyMaxDaysStaff: number
+  /** `REFRESH_TTL_DAYS_RESIDENT` (180): the sliding lifetime of a resident refresh token. */
+  refreshTtlDaysResident: number
+  /** `FAMILY_MAX_DAYS_RESIDENT` (365): the absolute lifetime of a resident family. */
+  familyMaxDaysResident: number
   /** `MAX_FAMILIES_PER_ACCOUNT` (10). */
   maxFamilies: number
   /** `REFRESH_GRACE_SECONDS` (10). */
@@ -31,6 +35,24 @@ export interface IdentityConfig {
   resetPerIpPerHour: number
   /** `RESET_MIN_RESPONSE_MS` (150). */
   resetMinResponseMs: number
+  /** `OTP_TTL_SECONDS` (300). */
+  otpTtlSeconds: number
+  /** `OTP_RESEND_AFTER_SECONDS` (45). */
+  otpResendAfterSeconds: number
+  /** `OTP_MAX_ATTEMPTS` (5). */
+  otpMaxAttempts: number
+  /** `OTP_PER_PHONE_PER_HOUR` (5). */
+  otpPerPhonePerHour: number
+  /** `OTP_PER_IP_PER_HOUR` (20). */
+  otpPerIpPerHour: number
+  /** `OTP_DAILY_CAP` (3000): challenges in a rolling 24 hours for the whole deployment. */
+  otpDailyCap: number
+  /** `SMS_DOWN_FAILURES` (3): failing commands, with none delivered in 10 minutes, that mark the provider down. */
+  smsDownFailures: number
+  /** `SMS_BRAND`: the registered sender text, in every message. */
+  smsBrand: string
+  /** `APP_DOWNLOAD_URL`: the link of the invitation SMS. */
+  appDownloadUrl: string
   /** `ADMIN_BASE_URL`: the base of the invite and reset links. */
   adminBaseUrl: string
 }

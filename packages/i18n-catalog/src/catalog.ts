@@ -3,14 +3,16 @@ import { mailEn } from './mail/en'
 import { mailVi } from './mail/vi'
 import { en as sharedEn } from './shared/en'
 import { vi as sharedVi } from './shared/vi'
+import { smsEn } from './sms/en'
+import { smsVi } from './sms/vi'
 
-const en = { ...sharedEn, ...mailEn } as const
-const vi: Record<keyof typeof en, string> = { ...sharedVi, ...mailVi }
+const en = { ...sharedEn, ...mailEn, ...smsEn } as const
+const vi: Record<keyof typeof en, string> = { ...sharedVi, ...mailVi, ...smsVi }
 
 /**
  * The message catalog of the whole product (DR-71, DOC-68): one flat map of ICU messages per language, keyed by the
- * dotted key of DOC-68 §1. The shared families live in `shared/`; the staff mails of `identity` (`mail.*`, DOC-26 §5.4) are
- * in `mail/`; screen keys (`res.*`, `staff.*`, `web.*`) are added by the screen tasks in their own files and spread in here.
+ * dotted key of DOC-68 §1. The shared families live in `shared/`; the staff mails (`mail.*`) and the resident SMS (`sms.*`) of
+ * `identity` (DOC-26 §5.4) are in `mail/` and `sms/`; screen keys (`res.*`, `staff.*`, `web.*`) are added by the screen tasks in their own files and spread in here.
  */
 export type MessageKey = keyof typeof en
 export type Messages = Readonly<Record<MessageKey, string>>
@@ -26,6 +28,7 @@ export const SHARED_FAMILIES = [
   'offline',
   'upgrade',
   'mail',
+  'sms',
 ] as const
 
 export const isMessageKey = (key: string): key is MessageKey => Object.hasOwn(en, key)

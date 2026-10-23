@@ -7,6 +7,7 @@ import {
   doublePrecision,
   foreignKey,
   index,
+  inet,
   integer,
   pgSchema,
   primaryKey,
@@ -19,8 +20,8 @@ import {
 
 /**
  * DOC-16 §4.1, §4.4, §4.5, §4.6: the staff side of `identity` (P1-10), plus the outbox and inbox of the module
- * (`identity.mail_requested.v1`, `identity.session_revoked.v1`). The resident tables (`resident_account`, `otp_challenge`)
- * come with P1-11, in a migration of their own. Names follow DOC-14 §11. What drizzle-kit cannot express (the deferrable
+ * (`identity.mail_requested.v1`, `identity.session_revoked.v1`). The resident tables of §4.2 and §4.3 (`resident_account`,
+ * `otp_challenge`) are P1-11, in the third migration. Names follow DOC-14 §11. What drizzle-kit cannot express (the deferrable
  * foreign key of `replaced_by_id`) is in the second migration.
  */
 export const identity = pgSchema('identity')
@@ -62,6 +63,87 @@ export const staffAccount = identity.table(
       'ck_staff_account_password',
       sql`${t.status} = 'invited' OR ${t.passwordHash} IS NOT NULL`,
     ),
+  ],
+)
+
+/** A phone number, one account (DOC-16 §4.2). It holds no rights: those are memberships of `residency`. */
+export const residentAccount = identity.table(
+  'resident_account',
+  {
+    id: uuid('id').notNull(),
+    phone: text('phone').notNull(),
+    displayName: text('display_name'),
+    avatarKey: text('avatar_key'),
+    language: text('language').notNull().default('vi'),
+    pushEnabled: boolean('push_enabled').notNull().default(true),
+    status: text('status').notNull().default('active'),
+    isDemo: boolean('is_demo').notNull().default(false),
+    lastAppOpenAt: timestamp('last_app_open_at', { withTimezone: true }),
+    deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
+    deletionApprovedAt: timestamp('deletion_approved_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    version: integer('version').notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_resident_account', columns: [t.id] }),
+    uniqueIndex('resident_account_phone_key').on(t.phone),
+    // A suffix match of a phone fragment becomes a prefix match on the reversed number (DR-41).
+    index('resident_account_phone_suffix_idx').using(
+      'btree',
+      sql`reverse(${t.phone}) text_pattern_ops`,
+    ),
+    index('resident_account_deletion_idx')
+      .on(t.deletionApprovedAt)
+      .where(sql`${t.status} = 'deletion_requested' AND ${t.deletionApprovedAt} IS NOT NULL`),
+    check(
+      'ck_resident_account_phone',
+      sql`${t.phone} ~ '^[+][1-9][0-9]{6,14}$' OR ${t.phone} ~ '^deleted:[0-9a-f-]{36}$'`,
+    ),
+    check('ck_resident_account_language', sql`${t.language} IN ('vi', 'en')`),
+    check(
+      'ck_resident_account_status',
+      sql`${t.status} IN ('active', 'deletion_requested', 'deleted')`,
+    ),
+    check(
+      'ck_resident_account_name_unless_deleted',
+      sql`${t.status} = 'deleted' OR ${t.displayName} IS NOT NULL`,
+    ),
+    check(
+      'ck_resident_account_deletion_dates',
+      sql`(${t.status} = 'active' AND ${t.deletionRequestedAt} IS NULL AND ${t.deletionApprovedAt} IS NULL AND ${t.deletedAt} IS NULL)
+        OR (${t.status} = 'deletion_requested' AND ${t.deletionRequestedAt} IS NOT NULL AND ${t.deletedAt} IS NULL)
+        OR (${t.status} = 'deleted' AND ${t.deletedAt} IS NOT NULL)`,
+    ),
+    check(
+      'ck_resident_account_deleted_phone',
+      sql`(${t.status} = 'deleted') = (${t.phone} LIKE 'deleted:%')`,
+    ),
+  ],
+)
+
+/** One SMS code sent to one phone (DOC-16 §4.3). No building: a challenge exists before the person has chosen a unit. */
+export const otpChallenge = identity.table(
+  'otp_challenge',
+  {
+    id: uuid('id').notNull(),
+    phone: text('phone').notNull(),
+    codeHmac: text('code_hmac').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    resendAfter: timestamp('resend_after', { withTimezone: true }).notNull(),
+    attempts: smallint('attempts').notNull().default(0),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    ip: inet('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_otp_challenge', columns: [t.id] }),
+    // One live challenge per phone (DR-37): a new request first consumes the older one.
+    uniqueIndex('otp_challenge_one_live_per_phone').on(t.phone).where(sql`${t.consumedAt} IS NULL`),
+    index('otp_challenge_created_idx').on(t.createdAt),
+    check('ck_otp_challenge_attempts', sql`${t.attempts} BETWEEN 0 AND 5`),
+    check('ck_otp_challenge_expiry', sql`${t.expiresAt} > ${t.createdAt}`),
   ],
 )
 

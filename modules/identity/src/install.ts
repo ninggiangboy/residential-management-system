@@ -16,6 +16,8 @@ export function installIdentity(host: IdentityHost): IdentityModule {
     otpHmacKey: host.otpHmacKey,
     secretBox: host.secretBox,
     mailer: host.mailer,
+    sms: host.sms,
+    memberships: host.memberships,
     building: host.building,
     audited: host.audited,
     guards: host.guards,

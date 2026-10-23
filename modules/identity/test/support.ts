@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS } from '@mod/building/contracts'
 import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
 import { cloneTemplate, type TestDb } from '@rms/test-support'
 import { type IdentityConfig, type IdentityModule, identityManifest, installIdentity } from '../src'
-import type { PasswordHasher } from '../src/application/ports'
+import type { ActiveMembership, PasswordHasher } from '../src/application/ports'
 import { Argon2PasswordHasher } from '../src/infrastructure/security/argon2-password-hasher'
 
 /**
@@ -69,6 +69,20 @@ export interface HarnessOptions {
   jwtKeys?: Record<string, string>
 }
 
+export interface SeedResident {
+  phone?: string
+  displayName?: string
+  status?: 'active' | 'deletion_requested' | 'deleted'
+  isDemo?: boolean
+  language?: 'vi' | 'en'
+}
+
+export interface SentSms {
+  to: string
+  text: string
+  requestId: string
+}
+
 export interface SentMail {
   to: string
   subject: string
@@ -76,7 +90,10 @@ export interface SentMail {
   html: string
 }
 
-const NO_GUARDS: Guards = { staff: () => ({ transform: async () => {} }) }
+const NO_GUARDS: Guards = {
+  staff: () => ({ transform: async () => {} }),
+  resident: () => ({ transform: async () => {} }),
+}
 
 export async function createHarness(options: HarnessOptions = {}) {
   const db: TestDb = await cloneTemplate('empty')
@@ -86,6 +103,10 @@ export async function createHarness(options: HarnessOptions = {}) {
   const secretBox = createSecretBox({ k1: new Uint8Array(32).fill(1) })
   const hasher = new CountingHasher(new Argon2PasswordHasher(TEST_ARGON2))
   const sent: SentMail[] = []
+  const texts: SentSms[] = []
+  /** The provider of the test: `fail` makes the next sends throw, as a provider outage does. */
+  const provider = { fail: false }
+  const memberships = new Map<string, ActiveMembership[]>()
   const jwtKeys = options.jwtKeys ?? { k1: es256Pem() }
   const lockout = options.lockout ?? DEFAULT_SETTINGS.lockout
 
@@ -104,6 +125,17 @@ export async function createHarness(options: HarnessOptions = {}) {
     resetPerEmailPerHour: 3,
     resetPerIpPerHour: 10,
     resetMinResponseMs: 0,
+    refreshTtlDaysResident: 180,
+    familyMaxDaysResident: 365,
+    otpTtlSeconds: 300,
+    otpResendAfterSeconds: 45,
+    otpMaxAttempts: 5,
+    otpPerPhonePerHour: 5,
+    otpPerIpPerHour: 20,
+    otpDailyCap: 3000,
+    smsDownFailures: 3,
+    smsBrand: 'SUNRISE',
+    appDownloadUrl: 'https://rms.example/app',
     adminBaseUrl: 'https://admin.example.vn',
     ...options.config,
   }
@@ -130,6 +162,13 @@ export async function createHarness(options: HarnessOptions = {}) {
         sent.push(mail)
       },
     },
+    sms: {
+      async send(message) {
+        if (provider.fail) throw new Error('provider down')
+        texts.push(message)
+      },
+    },
+    memberships: { listActive: async (accountId) => memberships.get(accountId) ?? [] },
     building: { getSettings: async () => ({ ...DEFAULT_SETTINGS, lockout }) },
     audited: audit.audited,
     guards: NO_GUARDS,
@@ -165,6 +204,68 @@ export async function createHarness(options: HarnessOptions = {}) {
       scope: { buildingId },
     }
     return { id, email, password, buildingId, context }
+  }
+
+  let phoneCounter = 0
+  /** Inserts a resident account as the migrator; the phone is a valid Vietnamese mobile number, a new one each time. */
+  async function seedResident(seed: SeedResident = {}) {
+    phoneCounter++
+    const id = ids.next()
+    const phone = seed.phone ?? `+84901${String(phoneCounter).padStart(6, '0')}`
+    const status = seed.status ?? 'active'
+    await admin`
+      INSERT INTO identity.resident_account (id, phone, display_name, status, is_demo, language, deletion_requested_at, deleted_at)
+      VALUES (${id}, ${phone}, ${seed.displayName ?? `Resident ${phoneCounter}`}, ${status}, ${seed.isDemo ?? false},
+              ${seed.language ?? 'vi'}, ${status === 'deletion_requested' ? clock.now() : null}, ${status === 'deleted' ? clock.now() : null})`
+    return { id, phone }
+  }
+
+  const requestOtp = (phone: string, ip = IP) => identity.useCases.requestOtp.execute({ phone, ip })
+  const verifyOtp = (
+    challengeId: string,
+    code: string,
+    extra: { ip?: string; userAgent?: string } = {},
+  ) =>
+    identity.useCases.verifyOtp.execute({
+      challengeId,
+      code,
+      ip: extra.ip ?? IP,
+      userAgent: extra.userAgent ?? 'rms-resident/1.0.0 (iOS 19.1; iPhone17,1)',
+    })
+
+  /** The commands the relay would deliver: each pending SMS command goes to the handler, which sends through the recorder. */
+  async function deliverSms(): Promise<SentSms[]> {
+    const before = texts.length
+    const rows = await db.sql`
+      SELECT id, type, aggregate_id, payload, occurred_at FROM identity.outbox_messages
+       WHERE published_at IS NULL AND type = 'identity.sms_requested.v1' ORDER BY id`
+    for (const pending of rows) {
+      const envelope: Envelope = {
+        id: pending.id,
+        type: pending.type,
+        source: 'identity',
+        aggregateId: pending.aggregate_id,
+        occurredAt: new Date(pending.occurred_at).toISOString(),
+        payload: pending.payload,
+        headers: {},
+      }
+      for (const handler of identity.handlers ?? [])
+        if (handler.eventType === pending.type) await handler.handle(envelope)
+      await db.sql`UPDATE identity.outbox_messages SET published_at = now() WHERE id = ${pending.id}`
+    }
+    return texts.slice(before)
+  }
+
+  let signInIp = 0
+  /** A resident who asks for a code, receives it by SMS and signs in: the account, the answer, and the `sid` of the session. */
+  async function signInResident(seed: SeedResident = {}, userAgent?: string) {
+    const resident = await seedResident(seed)
+    const requested = await requestOtp(resident.phone, `198.19.0.${++signInIp}`)
+    const sms = (await deliverSms()).find((message) => message.to === resident.phone)
+    if (!sms) throw new Error('the code was not sent')
+    const answer = await verifyOtp(requested.challengeId, otpOf(sms), { userAgent })
+    const sid = (await identity.verifier.verify(answer.session.accessToken)).sid
+    return { resident, answer, sid }
   }
 
   const row = async (id: string) =>
@@ -225,6 +326,14 @@ export async function createHarness(options: HarnessOptions = {}) {
     sent,
     secretBox,
     seedStaff,
+    seedResident,
+    signInResident,
+    requestOtp,
+    verifyOtp,
+    deliverSms,
+    texts,
+    provider,
+    memberships,
     row,
     signIn,
     sidOf,
@@ -252,5 +361,12 @@ export const linkTokenOf = (mail: SentMail): string => {
 export const codeOf = (mail: SentMail): string => {
   const code = /\b(\d{6})\b/.exec(mail.text)?.[1]
   if (!code) throw new Error(`no code in: ${mail.text}`)
+  return code
+}
+
+/** The six-digit code in an OTP message. */
+export const otpOf = (sms: SentSms): string => {
+  const code = /^(\d{6}) /.exec(sms.text)?.[1]
+  if (!code) throw new Error(`no code in: ${sms.text}`)
   return code
 }

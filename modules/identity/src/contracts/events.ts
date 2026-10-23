@@ -1,10 +1,11 @@
 /**
  * The events `identity` writes to its own outbox (DOC-09 §6.3). `mail_requested` is a command for the worker (retry class
- * `default`); `session_revoked` is a fact that `realtime` and `notification` consume. The resident `sms_requested` and
- * `account_deletion_executed` join with P1-11 and P1-16.
+ * `default`); `session_revoked` is a fact that `realtime` and `notification` consume. `sms_requested` is the resident command
+ * for the worker (retry class `sms`, P1-11). `account_deletion_executed` joins with P6-04.
  */
 export const IDENTITY_EVENTS = {
   mailRequested: 'identity.mail_requested.v1',
+  smsRequested: 'identity.sms_requested.v1',
   sessionRevoked: 'identity.session_revoked.v1',
 } as const
 
@@ -42,4 +43,21 @@ export interface SessionRevokedPayload {
   accountId: string
   sessionId: string
   reason: RevocationReason
+}
+
+export type SmsKind = 'otp' | 'member_invitation'
+
+/**
+ * No phone and no plaintext code: the handler reads the phone from `resident_account` and opens `secretEnc` (DR-117, DOC-09 §6.3).
+ * `aggregate_id` is `requestId`, a fresh id per send.
+ */
+export interface SmsRequestedPayload {
+  buildingId: string | null
+  requestId: string
+  accountId: string
+  kind: SmsKind
+  locale: 'vi' | 'en'
+  params: Record<string, string>
+  secretEnc: string | null
+  expiresAt: string
 }

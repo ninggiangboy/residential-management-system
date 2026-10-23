@@ -1,5 +1,6 @@
 import type { StaffContext, StaffRole } from '@rms/shared-types'
-import type { IdentityApi, StaffDto, StepUpAction } from '../../contracts'
+import type { IdentityApi, ResidentAccountDto, StaffDto, StepUpAction } from '../../contracts'
+import type { ResidentQueries } from '../queries/resident-queries'
 import type { StaffQueries } from '../queries/staff-queries'
 import type { VerifyStepUp } from '../use-cases/verify-step-up'
 
@@ -7,6 +8,7 @@ import type { VerifyStepUp } from '../use-cases/verify-step-up'
 export class IdentityApiImpl implements IdentityApi {
   constructor(
     private readonly queries: StaffQueries,
+    private readonly residentQueries: ResidentQueries,
     private readonly verifyStepUpCase: VerifyStepUp,
   ) {}
 
@@ -20,6 +22,14 @@ export class IdentityApiImpl implements IdentityApi {
     page?: { after?: string; limit?: number },
   ): Promise<{ items: StaffDto[]; next: string | null }> {
     return this.queries.listActive(buildingId, roles, page)
+  }
+
+  listDemoAccountIds(): Promise<string[]> {
+    return this.residentQueries.listDemoAccountIds()
+  }
+
+  getResidentAccounts(ids: string[]): Promise<ResidentAccountDto[]> {
+    return this.residentQueries.getResidentAccounts(ids)
   }
 
   verifyStepUp(

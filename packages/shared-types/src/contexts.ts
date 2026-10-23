@@ -1,4 +1,4 @@
-import type { BuildingId, BuildingScope, StaffId } from './ids'
+import type { BuildingId, BuildingScope, ResidentAccountId, StaffId } from './ids'
 import type { StaffRole } from './people'
 
 /**
@@ -15,6 +15,15 @@ export interface StaffContext {
 
 /** A staff request after the `staff` guard: the context of a use case plus the session (`sid`) the access token names. */
 export interface StaffSession extends StaffContext {
+  readonly sessionId: string
+}
+
+/**
+ * A resident request after the `resident` guard: the account the token names and its session (`sid`). It carries no building and
+ * no unit: those come from the selected membership (ADR-0010, FR-16.3).
+ */
+export interface ResidentSession {
+  readonly accountId: ResidentAccountId
   readonly sessionId: string
 }
 
@@ -39,6 +48,11 @@ export interface RouteGuard {
  */
 export interface Guards {
   staff(roles: readonly StaffRole[]): RouteGuard
+  /**
+   * Verifies the token (`kind = resident`) and that the account may still act (`active` or `deletion_requested`): 401 otherwise.
+   * It loads nothing else. The `unit(capability)` guard of P1-12 builds on it and adds the membership and the terms gate.
+   */
+  resident(): RouteGuard
 }
 
 /** The staff member a `staff` guard proved, read by the handler of a route that carries it. */
@@ -46,4 +60,11 @@ export function staffOf(context: object): StaffSession {
   const staff = (context as { staff?: StaffSession }).staff
   if (!staff) throw new Error('staffOf: the route has no staff guard')
   return staff
+}
+
+/** The resident a `resident` guard proved, read by the handler of a route that carries it. */
+export function residentOf(context: object): ResidentSession {
+  const resident = (context as { resident?: ResidentSession }).resident
+  if (!resident) throw new Error('residentOf: the route has no resident guard')
+  return resident
 }

@@ -14,29 +14,46 @@ import { IdentityApiImpl } from './application/api/identity-api-impl'
 import type { IdentityConfig } from './application/config'
 import { FailureCounter } from './application/failure-counter'
 import { SendMailHandler } from './application/handlers/send-mail'
+import { SendSmsHandler } from './application/handlers/send-sms'
 import { InviteIssuer } from './application/invite-issuer'
 import { MailCommands } from './application/mail-commands'
-import type { Delay, Mailer, PasswordHasher } from './application/ports'
+import type {
+  ActiveMemberships,
+  Delay,
+  Mailer,
+  PasswordHasher,
+  SmsSender,
+} from './application/ports'
+import { ResidentQueries } from './application/queries/resident-queries'
 import { SessionQueries } from './application/queries/session-queries'
 import { StaffQueries } from './application/queries/staff-queries'
 import { SessionEvents } from './application/session-events'
 import { SessionIssuer } from './application/session-issuer'
+import { SessionOwners } from './application/session-owners'
+import { SmsCommands } from './application/sms-commands'
 import { RefreshSession } from './application/use-cases/refresh-session'
+import { RequestOtp } from './application/use-cases/request-otp'
 import { RequestPasswordReset } from './application/use-cases/request-password-reset'
 import { RequestStepUp } from './application/use-cases/request-step-up'
 import { ResendStaffInvite } from './application/use-cases/resend-staff-invite'
+import { RevokeResidentSession } from './application/use-cases/revoke-resident-session'
 import { RevokeStaffSession } from './application/use-cases/revoke-staff-session'
 import { SetPassword } from './application/use-cases/set-password'
 import { SignInStaff } from './application/use-cases/sign-in-staff'
 import { SignOut } from './application/use-cases/sign-out'
+import { VerifyOtp } from './application/use-cases/verify-otp'
 import { VerifyStepUp } from './application/use-cases/verify-step-up'
 import type { AccessTokenVerifier, IdentityApi } from './contracts'
 import { DatabaseAutonomous } from './infrastructure/persistence/database-autonomous'
+import { DrizzleOtpChallengeRepository } from './infrastructure/persistence/drizzle-otp-challenge-repository'
 import { DrizzlePasswordTokenRepository } from './infrastructure/persistence/drizzle-password-token-repository'
+import { DrizzleResidentAccountRepository } from './infrastructure/persistence/drizzle-resident-account-repository'
 import { DrizzleSessionRepository } from './infrastructure/persistence/drizzle-session-repository'
 import { DrizzleStaffAccountRepository } from './infrastructure/persistence/drizzle-staff-account-repository'
+import { OutboxSmsProviderProbe } from './infrastructure/persistence/outbox-sms-provider-probe'
 import { identityInbox, identityOutbox } from './infrastructure/persistence/schema'
 import { SqlRateLimiter } from './infrastructure/persistence/sql-rate-limiter'
+import { LibphonenumberPhones } from './infrastructure/phone/libphonenumber-phones'
 import {
   type Argon2Params,
   Argon2PasswordHasher,
@@ -45,6 +62,7 @@ import { CryptoTokenFactory } from './infrastructure/security/crypto-token-facto
 import { JoseTokens } from './infrastructure/security/jose-tokens'
 import { identityManifest } from './manifest'
 import { authRoutes } from './presentation/auth-routes'
+import { residentRoutes } from './presentation/resident-routes'
 import { staffRoutes } from './presentation/staff-routes'
 
 export interface IdentityDeps {
@@ -57,6 +75,10 @@ export interface IdentityDeps {
   /** The `SETTINGS_ENCRYPTION_KEYS` ring: opens and seals the secret of a mail command (DR-117). */
   secretBox: SecretBox
   mailer: Mailer
+  /** The SMS driver of `SMS_DRIVER`: console, allowlist or the provider adapter (DOC-26 §5.5). */
+  sms: SmsSender
+  /** `ResidencyApi.listActiveMemberships`, bound by the container; a stand-in until P1-12 (DOC-26 §3.4). */
+  memberships: ActiveMemberships
   /** Only the lockout settings of the staff member's building are read (DOC-26 §4.1). */
   building: Pick<BuildingApi, 'getSettings'>
   audited: Audited
@@ -77,8 +99,12 @@ export interface IdentityModuleDeps extends IdentityDeps {
 
 export type IdentityRoutes = ReturnType<typeof createRoutes>
 
-function createRoutes(deps: Parameters<typeof authRoutes>[0] & Parameters<typeof staffRoutes>[0]) {
-  return routePlugin().use(authRoutes(deps)).use(staffRoutes(deps))
+function createRoutes(
+  deps: Parameters<typeof authRoutes>[0] &
+    Parameters<typeof staffRoutes>[0] &
+    Parameters<typeof residentRoutes>[0],
+) {
+  return routePlugin().use(authRoutes(deps)).use(staffRoutes(deps)).use(residentRoutes(deps))
 }
 
 /** What the routes call; the test harness and later tasks (P1-14, P1-22) call the same objects. */
@@ -89,6 +115,12 @@ export interface IdentityUseCases {
   refreshSession: RefreshSession
   /** `POST /auth/logout`. */
   signOut: SignOut
+  /** `POST /auth/otp`. */
+  requestOtp: RequestOtp
+  /** `POST /auth/otp/verify`. */
+  verifyOtp: VerifyOtp
+  /** `DELETE /me/sessions/{id}`. */
+  revokeResidentSession: RevokeResidentSession
   /** `POST /auth/staff/password-reset`. */
   requestPasswordReset: RequestPasswordReset
   /** `POST /auth/staff/password`. */
@@ -104,8 +136,8 @@ export interface IdentityUseCases {
 export interface IdentityModule extends AppModule<'identity', IdentityRoutes> {
   readonly api: IdentityApi
   readonly useCases: IdentityUseCases
-  /** The reads behind `GET /staff/me` and `GET /staff/sessions`. */
-  readonly queries: { staff: StaffQueries; sessions: SessionQueries }
+  /** The reads behind `GET /staff/me`, `GET /staff/sessions` and `GET /me`. */
+  readonly queries: { staff: StaffQueries; sessions: SessionQueries; residents: ResidentQueries }
   readonly verifier: AccessTokenVerifier & { ready(): Promise<void> }
   /** Issues an invite for a staff account created by P1-14; here for the resend. */
   readonly inviteIssuer: InviteIssuer
@@ -118,6 +150,8 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
   const staffAccounts = new DrizzleStaffAccountRepository(database)
   const passwordTokens = new DrizzlePasswordTokenRepository(database)
   const sessions = new DrizzleSessionRepository(database)
+  const residents = new DrizzleResidentAccountRepository(database)
+  const challenges = new DrizzleOtpChallengeRepository(database)
   const limiter = new SqlRateLimiter(database, 'identity.rate_bucket')
   const accountLimiter = new SqlRateLimiter(database, 'platform.rate_bucket')
   const autonomous = new DatabaseAutonomous(database)
@@ -139,6 +173,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
 
   const events = new SessionEvents(outbox)
   const mail = new MailCommands(outbox, deps.secretBox, clock)
+  const sms = new SmsCommands(outbox, deps.secretBox, clock, ids)
   const issuer = new SessionIssuer(sessions, events, factory, tokens, clock, ids, config)
   const inviteIssuer = new InviteIssuer(passwordTokens, factory, mail, clock, ids, config)
 
@@ -155,9 +190,10 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     logger,
     config,
   )
+  const owners = new SessionOwners(sessions, staffAccounts, residents, events, config)
   const refreshSession = new RefreshSession(
     sessions,
-    staffAccounts,
+    owners,
     events,
     factory,
     tokens,
@@ -167,6 +203,32 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     logger,
     config,
   )
+  const requestOtp = new RequestOtp(
+    new LibphonenumberPhones(),
+    residents,
+    challenges,
+    limiter,
+    new OutboxSmsProviderProbe(database, clock, config.smsDownFailures),
+    factory,
+    sms,
+    database,
+    clock,
+    ids,
+    logger,
+    config,
+  )
+  const verifyOtp = new VerifyOtp(
+    challenges,
+    residents,
+    deps.memberships,
+    issuer,
+    factory,
+    database,
+    clock,
+    logger,
+    config,
+  )
+  const revokeResidentSession = new RevokeResidentSession(sessions, events, database, clock)
   const signOut = new SignOut(sessions, events, factory, database, clock)
   const revokeStaffSession = new RevokeStaffSession(sessions, events, database, clock)
   const requestPasswordReset = new RequestPasswordReset(
@@ -222,6 +284,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
   )
 
   const staffQueries = new StaffQueries(staffAccounts)
+  const residentQueries = new ResidentQueries(residents, deps.memberships)
   const sessionQueries = new SessionQueries(sessions, clock)
 
   const handlers: IntegrationEventHandler[] = [
@@ -234,12 +297,19 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       logger,
       config.adminBaseUrl,
     ),
+    new SendSmsHandler(residents, deps.secretBox, deps.sms, inbox, clock, logger, {
+      brand: config.smsBrand,
+      appUrl: config.appDownloadUrl,
+    }),
   ]
 
   const useCases: IdentityUseCases = {
     signInStaff,
     refreshSession,
     signOut,
+    requestOtp,
+    verifyOtp,
+    revokeResidentSession,
     requestPasswordReset,
     setPassword,
     resendStaffInvite,
@@ -249,14 +319,15 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
 
   return {
     name: 'identity',
-    api: new IdentityApiImpl(staffQueries, verifyStepUp),
+    api: new IdentityApiImpl(staffQueries, residentQueries, verifyStepUp),
     useCases,
-    queries: { staff: staffQueries, sessions: sessionQueries },
+    queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },
     verifier: tokens,
     inviteIssuer,
     routes: createRoutes({
       ...useCases,
       staffQueries,
+      residentQueries,
       sessionQueries,
       guards: deps.guards,
       clock,

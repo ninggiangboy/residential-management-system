@@ -14,11 +14,14 @@ import type { Logger } from '@core/telemetry'
 import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
-import { installIdentity } from '@mod/identity'
+import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
+import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
 import { createGuards } from './guards'
 import { createMailerFor } from './mailer'
 import { MODULE_CATALOG } from './module-catalog'
+import { createSmsSenderFor } from './sms'
+import { createTermsGate } from './terms-gate'
 
 /**
  * Replacements for what a test must not share with the real world (DOC-12 §5.1). The mailer, SMS sender, payment gateway,
@@ -35,12 +38,27 @@ export interface ContainerOverrides {
   mailer?: Mailer
   /** `IdentityApi.verifyStepUp` for `building` (tests: a stand-in); by default `identity`'s own. */
   stepUp?: StepUpVerifier
+  /** The SMS sender (tests: one that records); by default the driver `SMS_DRIVER` names. */
+  sms?: SmsSender
+  /** `residency`'s `listActiveMemberships` for the sign-in answer; the real one comes with P1-12. */
+  memberships?: ActiveMemberships
+  /** `ResidencyApi.buildingIdsOfAccounts` for boot guard check 1; the real one comes with P1-12. */
+  accountBuildings?: AccountBuildings
   /** `finance`'s answer to "is an intent active?"; the real one comes with the finance module (DOC-36 §7.3). */
   probe?: ActiveIntentProbe
 }
 
 /** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
 const noIntents: ActiveIntentProbe = { hasActive: async () => false }
+
+/**
+ * Until `residency` is installed (P1-12) no account has a unit, so none is active: the sign-in answers `memberships: []` and the
+ * app shows "no unit is linked" (UC-14 E7). P1-12 replaces this with `ResidencyApi.listActiveMemberships`.
+ */
+const noMemberships: ActiveMemberships = { listActive: async () => [] }
+
+/** The same for boot guard check 1: with no `residency` there is no membership, so no flagged account is anywhere (P1-12 binds the real call). */
+const noAccountBuildings: AccountBuildings = { buildingIdsOfAccounts: async () => [] }
 
 /** What the process says about its own life, read by `/health/ready` and by the shutdown. */
 interface Lifecycle {
@@ -104,6 +122,10 @@ export function createContainer(
     verifier: { verify: (token) => identity.verifier.verify(token) },
     identity: { getStaff: (ids) => identity.api.getStaff(ids) },
   })
+  // The gate of DOC-35 §9.2 reads `building`; the `unit(capability)` guard of P1-12 calls it once it knows the building.
+  const termsGate = createTermsGate({
+    missingTerms: (...args) => building.api.missingTerms(...args),
+  })
   const building = installBuilding({
     logger,
     clock,
@@ -154,6 +176,8 @@ export function createContainer(
     ids,
     database,
     mailer: overrides.mailer ?? createMailerFor(config, logger),
+    sms: overrides.sms ?? createSmsSenderFor(config, logger),
+    memberships: overrides.memberships ?? noMemberships,
     secretBox,
     building: building.api,
     audited: audit.audited,
@@ -161,6 +185,8 @@ export function createContainer(
     config: {
       accessTtlSeconds: identityConfig.ACCESS_TOKEN_TTL_SECONDS,
       refreshTtlDaysStaff: identityConfig.REFRESH_TTL_DAYS_STAFF,
+      refreshTtlDaysResident: identityConfig.REFRESH_TTL_DAYS_RESIDENT,
+      familyMaxDaysResident: identityConfig.FAMILY_MAX_DAYS_RESIDENT,
       familyMaxDaysStaff: identityConfig.FAMILY_MAX_DAYS_STAFF,
       maxFamilies: identityConfig.MAX_FAMILIES_PER_ACCOUNT,
       refreshGraceSeconds: identityConfig.REFRESH_GRACE_SECONDS,
@@ -173,6 +199,15 @@ export function createContainer(
       resetPerEmailPerHour: identityConfig.RESET_PER_EMAIL_PER_HOUR,
       resetPerIpPerHour: identityConfig.RESET_PER_IP_PER_HOUR,
       resetMinResponseMs: identityConfig.RESET_MIN_RESPONSE_MS,
+      otpTtlSeconds: identityConfig.OTP_TTL_SECONDS,
+      otpResendAfterSeconds: identityConfig.OTP_RESEND_AFTER_SECONDS,
+      otpMaxAttempts: identityConfig.OTP_MAX_ATTEMPTS,
+      otpPerPhonePerHour: identityConfig.OTP_PER_PHONE_PER_HOUR,
+      otpPerIpPerHour: identityConfig.OTP_PER_IP_PER_HOUR,
+      otpDailyCap: identityConfig.OTP_DAILY_CAP,
+      smsDownFailures: identityConfig.SMS_DOWN_FAILURES,
+      smsBrand: config.drivers.SMS_BRAND ?? 'RMS',
+      appDownloadUrl: http.APP_DOWNLOAD_URL ?? '',
       adminBaseUrl: http.ADMIN_BASE_URL,
     },
     argon2: {
@@ -233,6 +268,14 @@ export function createContainer(
     database,
     building,
     identity,
+    guards,
+    termsGate,
+    /** What `bootGuard` reads (DOC-36 §10.1). */
+    bootGuard: {
+      identity: identity.api,
+      accountBuildings: overrides.accountBuildings ?? noAccountBuildings,
+      building: building.api,
+    },
     /** The installed modules, in install order. */
     modules: installed as readonly AppModule[],
     runtime,
