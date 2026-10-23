@@ -285,17 +285,23 @@ A resident token never passes a staff guard and the reverse, whatever the role (
 Every route declares its audience; there is no default-allow route (original SDD §19.5):
 
 ```ts
-// modules/finance/src/presentation/resident-routes.ts
-export const residentRoutes = (d: FinanceRouteDeps) =>
-  new Elysia({ prefix: '/me/payments' })
-    .post('/intents', ({ unit, body }) => d.createIntent.execute(unit, body), {
-      guard: d.guards.unit('pay'),                       // resident token + membership + capability
-      audience: { kind: 'resident', capability: 'pay' },  // route metadata read by the matrix generator
+// modules/finance/src/presentation/resident-routes.ts: schemas on top, handlers as functions, one line per route
+export function residentRoutes(d: FinanceRouteDeps) {
+  const createIntent = ({ unit, body }: { unit: UnitContext; body: Static<typeof CreateIntentBody> }) =>
+    d.createIntent.execute(unit, body)
+
+  return routePlugin({ prefix: '/me/payments' })
+    .post('/intents', createIntent, {
+      ...unitRoute(d.guards, 'payments', 'pay'),   // guard + audience { kind: 'resident', capability: 'pay' } from one argument
       body: CreateIntentBody, response: { 201: IntentDto, 409: ProblemDto },
     })
+}
 ```
 
-`audience` is route metadata, not a comment. The authorization-matrix generator of EXP-10 and DOC-39 reads it from the mounted `App`, and a route without it fails the build (DR-77). Public routes say `audience: { kind: 'public' }`, the payOS webhook says `{ kind: 'webhook', provider }`.
+The helpers `publicRoute`, `staffRoute(guards, tag, roles)` and `residentRoute(guards, tag)` of `@core/http` return the guard and the `detail['x-audience']` metadata together, so the roles a route is guarded with are the roles it declares. A handler is a function inside the route factory (it needs the use cases in `d`), typed by `Static<typeof Schema>` and `RouteSet`; the chain only names path, handler and options. An optional body arrives as `T | null`.
+
+
+The audience is route metadata (`detail['x-audience']`), not a comment. The authorization-matrix generator of EXP-10 and DOC-39 reads it from the mounted `App`, and a route without it fails the build (DR-77). Public routes say `audience: { kind: 'public' }`, the payOS webhook says `{ kind: 'webhook', provider }`.
 
 ### 5.4 The type-only `App` import
 

@@ -1,7 +1,7 @@
-import { API_PREFIX, routePlugin, strictObject } from '@core/http'
+import { API_PREFIX, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
 import { ValidationError, VersionConflictError } from '@core/kernel'
 import { type Guards, staffOf } from '@rms/shared-types'
-import { Type } from '@sinclair/typebox'
+import { type Static, Type } from '@sinclair/typebox'
 import type { BuildingDocument } from '../application/building-document'
 import {
   type BuildingQueries,
@@ -33,10 +33,6 @@ export interface BuildingRouteDeps {
   staffNames: StaffNames
   guards: Guards
 }
-
-const audience = (roles: readonly string[]) => ({
-  detail: { tags: ['building'], 'x-audience': { kind: 'staff', roles } },
-})
 
 const quoted = (value: string | number) => `"${value}"`
 
@@ -75,6 +71,8 @@ const GatewayBody = strictObject({
 
 const TermsKindSchema = Type.Union([Type.Literal('terms'), Type.Literal('privacy')])
 
+const TermsQuery = strictObject({ kind: Type.Optional(TermsKindSchema) })
+
 const TermsBody = strictObject({
   kind: TermsKindSchema,
   text: strictObject({
@@ -104,99 +102,84 @@ export function buildingRoutes(d: BuildingRouteDeps) {
     }))
   }
 
+  const getSettings = async (context: { request: Request; set: RouteSet }) => {
+    const document = await d.queries.settings(staffOf(context))
+    const etag = quoted(document.etag)
+    context.set.headers.etag = etag
+    context.set.headers['cache-control'] = 'private, no-cache'
+    if (context.request.headers.get('if-none-match') === etag) {
+      context.set.status = 304
+      return undefined
+    }
+    return documentBody(document)
+  }
+
+  const updateSettings = async (context: {
+    request: Request
+    body: Static<typeof SettingsUpdateSchema>
+    set: RouteSet
+  }) => {
+    if (!context.body.building && !context.body.settings)
+      throw new ValidationError([
+        { path: 'building', code: 'required', message: 'building or settings' },
+      ])
+    const document = await d.updateBuildingSettings.execute(staffOf(context), {
+      ...context.body,
+      etag: context.request.headers.get('if-match') ?? undefined,
+    })
+    context.set.headers.etag = quoted(document.etag)
+    return documentBody(document)
+  }
+
+  const getGateway = async (context: { set: RouteSet }) => {
+    context.set.headers['cache-control'] = 'no-store'
+    return d.queries.gatewayView(staffOf(context))
+  }
+
+  const saveGateway = async (context: {
+    request: Request
+    body: Static<typeof GatewayBody>
+    set: RouteSet
+  }) => {
+    const { created, config } = await d.saveGatewayConfig.execute(staffOf(context), {
+      ...context.body,
+      version: versionOf(context.request.headers.get('if-match')),
+    })
+    context.set.headers.etag = quoted(config.version)
+    context.set.headers['cache-control'] = 'no-store'
+    if (created) {
+      context.set.status = 201
+      context.set.headers.location = `${API_PREFIX}/staff/gateway`
+    }
+    return config
+  }
+
+  const listTerms = async (context: { query: Static<typeof TermsQuery>; set: RouteSet }) => {
+    context.set.headers['cache-control'] = 'no-store'
+    return { items: await termsListing(staffOf(context), context.query.kind ?? null) }
+  }
+
+  const publishTerms = async (context: { body: Static<typeof TermsBody>; set: RouteSet }) => {
+    const staff = staffOf(context)
+    const published = await d.publishTerms.execute(staff, context.body)
+    const [created] = (await termsListing(staff, published.kind)).filter(
+      (row) => row.versionId === published.id,
+    )
+    context.set.status = 201
+    context.set.headers.location = `${API_PREFIX}/staff/terms?kind=${published.kind}`
+    return created
+  }
+
+  const route = (roles: Parameters<Guards['staff']>[0]) => staffRoute(d.guards, 'building', roles)
+
   return routePlugin({ prefix: '/staff' })
-    .get(
-      '/settings',
-      async (context) => {
-        const document = await d.queries.settings(staffOf(context))
-        const etag = quoted(document.etag)
-        context.set.headers.etag = etag
-        context.set.headers['cache-control'] = 'private, no-cache'
-        if (context.request.headers.get('if-none-match') === etag) {
-          context.set.status = 304
-          return undefined
-        }
-        return documentBody(document)
-      },
-      { ...d.guards.staff(GET_SETTINGS_ROLES), ...audience(GET_SETTINGS_ROLES) },
-    )
-    .patch(
-      '/settings',
-      async (context) => {
-        if (!context.body.building && !context.body.settings)
-          throw new ValidationError([
-            { path: 'building', code: 'required', message: 'building or settings' },
-          ])
-        const document = await d.updateBuildingSettings.execute(staffOf(context), {
-          ...context.body,
-          etag: context.request.headers.get('if-match') ?? undefined,
-        })
-        context.set.headers.etag = quoted(document.etag)
-        return documentBody(document)
-      },
-      {
-        ...d.guards.staff(UPDATE_BUILDING_SETTINGS_ROLES),
-        body: SettingsUpdateSchema,
-        ...audience(UPDATE_BUILDING_SETTINGS_ROLES),
-      },
-    )
-    .get(
-      '/gateway',
-      async (context) => {
-        context.set.headers['cache-control'] = 'no-store'
-        return d.queries.gatewayView(staffOf(context))
-      },
-      { ...d.guards.staff(GET_GATEWAY_ROLES), ...audience(GET_GATEWAY_ROLES) },
-    )
-    .put(
-      '/gateway',
-      async (context) => {
-        const { created, config } = await d.saveGatewayConfig.execute(staffOf(context), {
-          ...context.body,
-          version: versionOf(context.request.headers.get('if-match')),
-        })
-        context.set.headers.etag = quoted(config.version)
-        context.set.headers['cache-control'] = 'no-store'
-        if (created) {
-          context.set.status = 201
-          context.set.headers.location = `${API_PREFIX}/staff/gateway`
-        }
-        return config
-      },
-      {
-        ...d.guards.staff(SAVE_GATEWAY_CONFIG_ROLES),
-        body: GatewayBody,
-        ...audience(SAVE_GATEWAY_CONFIG_ROLES),
-      },
-    )
-    .get(
-      '/terms',
-      async (context) => {
-        context.set.headers['cache-control'] = 'no-store'
-        return { items: await termsListing(staffOf(context), context.query.kind ?? null) }
-      },
-      {
-        ...d.guards.staff(LIST_TERMS_ROLES),
-        query: strictObject({ kind: Type.Optional(TermsKindSchema) }),
-        ...audience(LIST_TERMS_ROLES),
-      },
-    )
-    .post(
-      '/terms',
-      async (context) => {
-        const staff = staffOf(context)
-        const published = await d.publishTerms.execute(staff, context.body)
-        const [created] = (await termsListing(staff, published.kind)).filter(
-          (row) => row.versionId === published.id,
-        )
-        context.set.status = 201
-        context.set.headers.location = `${API_PREFIX}/staff/terms?kind=${published.kind}`
-        return created
-      },
-      {
-        ...d.guards.staff(PUBLISH_TERMS_ROLES),
-        body: TermsBody,
-        ...audience(PUBLISH_TERMS_ROLES),
-      },
-    )
+    .get('/settings', getSettings, route(GET_SETTINGS_ROLES))
+    .patch('/settings', updateSettings, {
+      ...route(UPDATE_BUILDING_SETTINGS_ROLES),
+      body: SettingsUpdateSchema,
+    })
+    .get('/gateway', getGateway, route(GET_GATEWAY_ROLES))
+    .put('/gateway', saveGateway, { ...route(SAVE_GATEWAY_CONFIG_ROLES), body: GatewayBody })
+    .get('/terms', listTerms, { ...route(LIST_TERMS_ROLES), query: TermsQuery })
+    .post('/terms', publishTerms, { ...route(PUBLISH_TERMS_ROLES), body: TermsBody })
 }

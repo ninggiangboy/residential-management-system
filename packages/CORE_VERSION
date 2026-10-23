@@ -15,6 +15,8 @@ local-changes:
     Metro has no `bun` condition); `build` script, `files` and `tsconfig.build.json` removed; `test` script is
     `bun test --pass-with-no-tests` where the reference had none; version 0.0.0
   - core-runtime: `AppModule.privacy` and the `@core/privacy-participant` dependency removed (DR-03, DR-98)
+  - core-http: `routes.ts` gains `IdParams`, `RouteSet`, `publicRoute`, `staffRoute` and `residentRoute`, so a module declares guard and
+    audience in one spread (DOC-12 §5.3)
   - core-db: `Database.transaction()` added: begins a transaction, and inside an open one it is a savepoint; `run()` calls it
     when no transaction is open and still joins an open one (DOC-12 §8.1 items 1 and 2); test in `src/database.test.ts`
   - OpenTelemetry pinned to the 2.12 line (`@opentelemetry/api` 1.9.1, `resources` and `sdk-trace-node` 2.12.0,
