@@ -44,16 +44,16 @@ beforeAll(async () => {
   await admin.end()
   database = new Database({ url: db.url, poolMax: 10, prepare: false })
   writer = new AuditApiImpl(
-    new RecordAuditEntry({
-      repository: new DrizzleAuditLogRepository(database),
-      transaction: database,
+    new RecordAuditEntry(
+      new DrizzleAuditLogRepository(database),
+      database,
       ids,
-      actions: auditActionCatalogOf([
+      auditActionCatalogOf([
         { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
       ]),
-      requestInfo: requestInfoFromContext,
-      logger: { info() {}, warn() {}, error() {} },
-    }),
+      requestInfoFromContext,
+      { info() {}, warn() {}, error() {} },
+    ),
   )
   audited = createAudited(writer)
   voidPayment = audited(

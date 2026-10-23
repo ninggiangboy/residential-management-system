@@ -35,15 +35,15 @@ export interface AuditModule extends AppModule<'audit'> {
 export function createAuditModule(deps: AuditModuleDeps): AuditModule {
   const { database } = deps
   const api = new AuditApiImpl(
-    new RecordAuditEntry({
-      repository: new DrizzleAuditLogRepository(database),
-      transaction: database,
-      ids: deps.ids,
-      actions: deps.actions,
-      requestInfo: requestInfoFromContext,
-      logger: deps.logger,
-      metrics: deps.metrics,
-    }),
+    new RecordAuditEntry(
+      new DrizzleAuditLogRepository(database),
+      database,
+      deps.ids,
+      deps.actions,
+      requestInfoFromContext,
+      deps.logger,
+      deps.metrics,
+    ),
   )
   return {
     name: 'audit',
