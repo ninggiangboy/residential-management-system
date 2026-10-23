@@ -1,0 +1,2 @@
+ALTER TABLE "identity"."staff_account" DROP CONSTRAINT "ck_staff_account_password";--> statement-breakpoint
+ALTER TABLE "identity"."staff_account" ADD CONSTRAINT "ck_staff_account_password" CHECK ("identity"."staff_account"."status" IN ('invited', 'disabled') OR "identity"."staff_account"."password_hash" IS NOT NULL);

@@ -1,7 +1,8 @@
 import { NotFoundError, requireRole } from '@core/kernel'
 import type { BuildingId, StaffContext, StaffRole } from '@rms/shared-types'
 import type { StaffDto } from '../../contracts'
-import type { StaffAccountRepository } from '../../domain/staff-account-repository'
+import type { StaffAccountRepository, StaffSearch } from '../../domain/staff-account-repository'
+import { type StaffAccountView, toStaffAccountView } from '../staff-account-view'
 import { type StaffProfile, toStaffDto, toStaffProfile } from '../staff-dto'
 
 /** Every staff role reads its own profile (DOC-26 §7). The route reads this list for its `audience`. */
@@ -11,6 +12,21 @@ export const GET_STAFF_ME_ROLES = [
   'technician',
   'guard',
 ] as const satisfies readonly StaffRole[]
+
+/** A Manager reads the whole list, read only (DR-147). The routes read this list for their `audience`. */
+export const LIST_STAFF_ACCOUNTS_ROLES = [
+  'admin',
+  'manager',
+] as const satisfies readonly StaffRole[]
+export const GET_STAFF_ACCOUNT_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
+
+/** The page of E-39: `page` from 1, `pageSize` 1…50. */
+export interface StaffAccountPage {
+  items: StaffAccountView[]
+  page: number
+  pageSize: number
+  total: number
+}
 
 const DEFAULT_PAGE = 100
 const MAX_PAGE = 500
@@ -24,6 +40,29 @@ export class StaffQueries {
     const record = await this.staffAccounts.findById(staff.staffId)
     if (!record) throw new NotFoundError()
     return toStaffProfile(record)
+  }
+
+  async list(
+    staff: StaffContext,
+    query: StaffSearch & { page: number; pageSize: number },
+  ): Promise<StaffAccountPage> {
+    requireRole(staff, LIST_STAFF_ACCOUNTS_ROLES)
+    const { page, pageSize, ...filter } = query
+    const { rows, total } = await this.staffAccounts.search(
+      staff.scope,
+      filter,
+      (page - 1) * pageSize,
+      pageSize,
+    )
+    return { items: rows.map(toStaffAccountView), page, pageSize, total }
+  }
+
+  /** An id of another building is 404, never 403 (DOC-12 §7). */
+  async get(staff: StaffContext, id: string): Promise<StaffAccountView> {
+    requireRole(staff, GET_STAFF_ACCOUNT_ROLES)
+    const record = await this.staffAccounts.findScoped(staff.scope, id)
+    if (!record) throw new NotFoundError()
+    return toStaffAccountView(record)
   }
 
   async getStaff(ids: readonly string[]): Promise<StaffDto[]> {

@@ -59,9 +59,10 @@ export const staffAccount = identity.table(
     ),
     check('ck_staff_account_attempts', sql`${t.failedAttempts} >= 0`),
     check('ck_staff_account_language', sql`${t.language} IN ('vi', 'en')`),
+    // A person who was invited and never set a password may be disabled (DR-147, DR-260): enable returns them to `invited`.
     check(
       'ck_staff_account_password',
-      sql`${t.status} = 'invited' OR ${t.passwordHash} IS NOT NULL`,
+      sql`${t.status} IN ('invited', 'disabled') OR ${t.passwordHash} IS NOT NULL`,
     ),
   ],
 )

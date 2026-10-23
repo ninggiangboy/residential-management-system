@@ -9,6 +9,7 @@ import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/
 import { cloneTemplate, type TestDb } from '@rms/test-support'
 import { type IdentityConfig, type IdentityModule, identityManifest, installIdentity } from '../src'
 import type { ActiveMembership, PasswordHasher } from '../src/application/ports'
+import type { OpenTicketsProbe } from '../src/contracts'
 import { Argon2PasswordHasher } from '../src/infrastructure/security/argon2-password-hasher'
 
 /**
@@ -108,6 +109,17 @@ export async function createHarness(options: HarnessOptions = {}) {
   /** The provider of the test: `fail` makes the next sends throw, as a provider outage does. */
   const provider = { fail: false }
   const memberships = new Map<string, ActiveMembership[]>()
+  /** The open tickets `tickets` would report, by staff id; `reassignAll` moves them (DOC-26 §4.4 rule 4). */
+  const openTickets = new Map<string, { ticketId: string; code: string; status: string }[]>()
+  const tickets: OpenTicketsProbe = {
+    openTicketsOf: async (staffId) => openTickets.get(staffId) ?? [],
+    reassignAll: async (from, to) => {
+      const moved = openTickets.get(from) ?? []
+      openTickets.set(to, [...(openTickets.get(to) ?? []), ...moved])
+      openTickets.delete(from)
+      return moved.length
+    },
+  }
   const jwtKeys = options.jwtKeys ?? { k1: es256Pem() }
   const lockout = options.lockout ?? DEFAULT_SETTINGS.lockout
 
@@ -173,6 +185,9 @@ export async function createHarness(options: HarnessOptions = {}) {
     building: { getSettings: async () => ({ ...DEFAULT_SETTINGS, lockout }) },
     audited: audit.audited,
     guards: NO_GUARDS,
+    // The routes are not mounted here: the use cases are called directly.
+    idempotent: (_spec, handler) => handler,
+    tickets,
     outboxMaxPayloadBytes: 65536,
     hasher,
     delay: async () => {},
@@ -335,6 +350,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     texts,
     provider,
     memberships,
+    openTickets,
     row,
     signIn,
     sidOf,

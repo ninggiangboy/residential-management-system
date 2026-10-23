@@ -22,3 +22,26 @@ export class CanPayTenantOnlyError extends RuleViolationError {
     super('can_pay_tenant_only', 'can_pay applies to a tenant only', 'canPay')
   }
 }
+
+/** 409 `unit_code_in_use`: the code, matched without case, belongs to another unit of the building (DOC-27 §4.1 rule 2). */
+export class UnitCodeInUseError extends ConflictError {
+  constructor() {
+    super('unit_code_in_use', 'Another unit has this code')
+  }
+}
+
+/** 409 `member_exists`: the account already has a non-removed membership of the unit (DOC-27 §5.1, §7). */
+export class MemberExistsError extends ConflictError {
+  constructor(membershipId: string, memberType?: string) {
+    super('member_exists', 'This person is already a member of the unit', {
+      details: memberType === undefined ? { membershipId } : { membershipId, memberType },
+    })
+  }
+}
+
+/** 409 `unit_has_owner`: replacing an owner is a transfer (DOC-27 §5.1 step 3). */
+export class UnitHasOwnerError extends ConflictError {
+  constructor(ownerMembershipId: string) {
+    super('unit_has_owner', 'The unit already has an owner', { details: { ownerMembershipId } })
+  }
+}

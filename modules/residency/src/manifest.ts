@@ -22,11 +22,16 @@ export const residencyManifest = {
     [RESIDENCY_EVENTS.ownerChanged]: 'default',
   },
   auditActions: [
+    'residency.unit.create',
+    'residency.unit.update',
     'residency.profile.update',
+    'residency.membership.add',
     'residency.membership.update',
     'residency.membership.lock',
     'residency.membership.unlock',
     'residency.membership.remove',
+    'residency.owner.transfer',
+    'residency.login_phone.change',
     'residency.import.commit',
   ],
 } as const satisfies ModuleManifest

@@ -21,7 +21,8 @@ export class InviteIssuer {
     private readonly config: IdentityConfig,
   ) {}
 
-  async issue(staff: Pick<StaffAccountRecord, 'id' | 'buildingId' | 'language'>): Promise<void> {
+  /** The moment the link stops working, for the answer of the create (E-40). */
+  async issue(staff: Pick<StaffAccountRecord, 'id' | 'buildingId' | 'language'>): Promise<Date> {
     const { tokens, factory, mail, clock, ids, config } = this
     const now = clock.now()
     const expiresAt = new Date(now.getTime() + config.inviteTtlHours * HOUR_MS)
@@ -38,5 +39,6 @@ export class InviteIssuer {
       now,
     )
     await mail.request(staff, 'staff_invite', { secret: link.token, expiresAt })
+    return expiresAt
   }
 }

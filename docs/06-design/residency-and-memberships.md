@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-14: the staff API as built, §17.5, DR-260; earlier 2026-10-23 P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -8,7 +8,7 @@ This document says how the `residency` module behaves: the request guard and the
 
 **Statements tested on 2026-10-20** on `postgres:18.6` (aarch64, Docker) on a database built from the DDL of DOC-16 §3.1, §4 and §5, seeded with 6 accounts, 3 units and 5 memberships. §17.1 lists what was run. The seeded plans are for correctness, not for speed; only the import loop of §9.3 is a timing, and it is server side only.
 
-Every new decision in this document is recorded as DR-136…DR-141 and summarized in §18.
+Every new decision in this document is recorded as DR-136…DR-141 and summarized in §18; the staff API as built is DR-260 (§17.5).
 
 ## 1. Purpose and scope
 
@@ -62,7 +62,7 @@ interface ResidentHitDto { accountId: Uuid; fullName: string | null; phone: stri
 | --- | --- |
 | `listActiveMemberships` | The memberships of the account whose status is `active`, ordered by unit code. A `locked` one is not returned: a locked membership gives no access, and the app must not offer it in `Unit-Pick`. At most 500 rows; more is a data defect and the call throws (same rule as `activeUnitIds`). Statement: S11 of §17.1; served by `membership_one_per_account_unit` (prefix `account_id`) and the unit primary key. An empty answer is the neutral screen "No unit is linked to this account" (UC-14 E7). |
 | `buildingIdsOfAccounts` | The distinct buildings in which each account has a **non-removed** membership, for up to 500 account ids; an account with none is absent. The boot guard of DOC-36 §10.1 check 1 calls it with the `is_demo` account ids and compares each building with `BuildingApi.isDemo`. |
-| `lookup` | The union search of §11 for units and residents. `limitPerKind` 1…20, default 20. The DTO carries the **full** E.164 phone; the caller maps it to the audience (a Guard gets it masked, DOC-12 §10, DOC-29). The caller never logs the DTO. |
+| `lookup` | *Built in P1-14 (DR-260).* The union search of §11 for units and residents. `limitPerKind` 1…20, default 20. The DTO carries the **full** E.164 phone; the caller maps it to the audience (a Guard gets it masked, DOC-12 §10, DOC-29). The caller never logs the DTO. |
 
 `MembershipDto.status` is `active` or `locked`; a `removed` row is never returned (DOC-09 §7.2). The calls `getUnits`, `listRecipients`, `listNoticeRecipients`, `getMembershipForScan` and `ownedUnitIds` behave as DOC-09 §7.2 says.
 
@@ -793,7 +793,7 @@ Built and run on PostgreSQL 18.6: the tables of DOC-16 §5.1 to §5.4 (`import_j
 | RM-49, 50, 51 | `modules/residency/test/queries.integration.test.ts`, `unit-guard.integration.test.ts` | RM-50 end to end: the boot guard fails with the real call |
 | RM-01, 03, 04, 05, 08 | `apps/api/tests/integration/unit-guard.integration.test.ts` | the very next request after a lock, over HTTP; AD-32 and AD-33 with the real guard and `/me/terms` |
 
-Differences from the text above: `lookup` is not built (it needs `IdentityApi.findResidentAccountsByPhoneFragment` and `getResidentAccounts` for names, P1-14); `UnitContext` is a type of `@rms/shared-types` and `assertCan` is not in the contract (DOC-12 §11); `ownedUnitIds` counts a locked owner; a failed guarded statement is answered by loading again and deciding on the winner's state, which gives the `invalid_transition` of §6.1 without a separate `SELECT` (DR-255).
+Differences from the text above: `lookup` is not built (it needs `IdentityApi.findResidentAccountsByPhoneFragment` and `getResidentAccounts` for names; built in P1-14, §17.5); `UnitContext` is a type of `@rms/shared-types` and `assertCan` is not in the contract (DOC-12 §11); `ownedUnitIds` counts a locked owner; a failed guarded statement is answered by loading again and deciding on the winner's state, which gives the `invalid_transition` of §6.1 without a separate `SELECT` (DR-255).
 
 ### 17.4 As built (P1-13, 2026-10-23, DR-258)
 
@@ -806,6 +806,23 @@ Differences from the text above: `lookup` is not built (it needs `IdentityApi.fi
 | RM-41 | the same (IM-10, IM-40) | the import side only: `vacant → rented` writes `moved_in`; the Manager's edit is P1-14 |
 
 Differences from the text above: the statements of steps 3, 5 and 6 are batched (§9.5), `file_key` holds the file id, and `findResidentAccountsByPhones` answers `{phone, accountId, displayName, status}`.
+
+### 17.5 As built (P1-14, 2026-10-23, DR-260)
+
+Built and run on PostgreSQL 18.6: the staff routes `/staff/units` (E-57…E-62), `/staff/residents` (E-63…E-67) and `/staff/memberships/{id}` (E-69), with the use cases `CreateUnit`, `UpdateUnit`, `CreateResident`, `TransferOwnership` and `ChangeLoginPhone`, the query services `UnitQueries`, `ResidentQueries` and `LookupQueries`, and `ResidencyApi.lookup`. `ChangeMembership` (P1-12) and `UpdateProfile` now answer the row they changed.
+
+| Test | Where | Note |
+| --- | --- | --- |
+| RM-22, RM-19, RM-29 | `modules/residency/test/residents.integration.test.ts`, `apps/api/tests/integration/residency-staff.integration.test.ts` | the Manager's add: account, profile, membership by staff, `member_added` or `owner_changed`, no SMS; two owners at once, one `unit_has_owner` |
+| RM-23…RM-28 | `modules/residency/test/transfer.integration.test.ts` | RM-25 as two parallel calls; RM-23 over HTTP: the old owner's and the helper's next request is 403 `membership_inactive` |
+| RM-30, RM-31, RM-32 | `residents.integration.test.ts` (the contract stood in on the table), `residency-staff.integration.test.ts` (the real `identity`: every family `phone_changed`, `identity.session_revoked.v1` written, memberships unchanged) | |
+| RM-33, RM-34, RM-35 | `residents.integration.test.ts`, `units.integration.test.ts`, `src/domain/lookup-plan.test.ts` | names without diacritics, the phone as a suffix of 4 digits or more, the code prefix with the exact match first |
+| RM-36, RM-37 | `residents.integration.test.ts`, `residency-staff.integration.test.ts` | lists show the full phone and `•••• 2345`; the detail writes one `pii.read`; a failed insert returns no data |
+| RM-38, RM-39 | `profile.integration.test.ts` (P1-12) and E-66 over HTTP | the answer of E-66 is masked |
+| RM-40, RM-41 | `units.integration.test.ts`, `src/domain/unit.test.ts` | `unit_code_in_use`, `version_conflict`, 428; history across vacancy only |
+| RM-21, RM-09, RM-10, RM-13 | `membership.integration.test.ts` (P1-12) and E-69 over HTTP | `one_change_only`, `owner_must_transfer`, `invalid_transition`, the lock seen on the next request |
+
+Differences from the text above: the unit row is held (`SELECT … FOR UPDATE`) before an owner is added by the Manager (§5.1 step 3); `pii.read` is written by the audit wrapper after the read in the same transaction, and not before it (§5.3), with the same effect on a failed insert; `neverSignedIn` and `deletion=requested` restrict the page through `identity` (§5.3); a phone fragment is 4 to 15 digits (§11.1); `GET /staff/lookup` (E-70) waits for `access`, E-68 for the deletion task and `/me/members` for P4-10. Not run: RM-11 (finance), RM-15…RM-18, RM-20 (the owner's add, P4-10), RM-48 as an HTTP flow. The metrics of §15 wait for P1-18.
 
 ### 17.2 Where DOC-16 and DOC-27 differed
 

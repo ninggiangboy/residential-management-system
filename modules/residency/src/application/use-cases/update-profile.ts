@@ -50,7 +50,12 @@ export class UpdateProfile {
     this.auditedUpdate = this.buildAudited(audited)
   }
 
-  async execute(staff: StaffContext, accountId: string, input: UpdateProfileInput) {
+  /** The profile after the edit (or as it is, when nothing changed), which `PATCH /staff/residents/{accountId}` answers masked. */
+  async execute(
+    staff: StaffContext,
+    accountId: string,
+    input: UpdateProfileInput,
+  ): Promise<ResidentProfileRecord> {
     requireRole(staff, UPDATE_PROFILE_ROLES)
     if (input.version === undefined) throw new PreconditionRequiredError()
     return this.uow.run(() =>
@@ -62,7 +67,10 @@ export class UpdateProfile {
     return audited(
       {
         action: 'residency.profile.update',
-        object: (accountId: string) => ({ type: 'resident_profile', id: accountId }),
+        object: (profile: ResidentProfileRecord) => ({
+          type: 'resident_profile',
+          id: profile.accountId,
+        }),
         masks: {
           fullName: 'personal',
           email: 'email',
@@ -71,10 +79,10 @@ export class UpdateProfile {
           note: 'personal',
         },
       },
-      async (staff: StaffContext, accountId: string, edit: ProfileEdit, version: number) => ({
-        result: accountId,
-        changes: await this.update(staff, accountId, edit, version),
-      }),
+      async (staff: StaffContext, accountId: string, edit: ProfileEdit, version: number) => {
+        const { after, changes } = await this.update(staff, accountId, edit, version)
+        return { result: after, changes }
+      },
     )
   }
 
@@ -83,7 +91,7 @@ export class UpdateProfile {
     accountId: string,
     edit: ProfileEdit,
     version: number,
-  ): Promise<AuditChange[]> {
+  ): Promise<{ after: ResidentProfileRecord; changes: AuditChange[] }> {
     const { profiles, clock } = this
     const record = await profiles.find(staff.scope, accountId)
     if (!record || record.clearedAt !== null) throw new NotFoundError()
@@ -96,11 +104,11 @@ export class UpdateProfile {
       await this.sealed(staff, accountId, edit),
       today,
     )
-    if (!transition) return []
+    if (!transition) return { after: record, changes: [] }
     // A second edit with the same `If-Match` finds the version moved: 409, nothing written.
     const after = await profiles.apply(staff.scope, transition, now)
     if (!after) throw new VersionConflictError()
-    return changedFields(record, after, edit)
+    return { after, changes: changedFields(record, after, edit) }
   }
 
   /** The number sealed with the newest key; `null` clears it, `undefined` leaves it alone. */

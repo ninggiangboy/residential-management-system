@@ -1,8 +1,12 @@
 import { applyTransition, type Database, inBuilding } from '@core/db'
 import type { BuildingScope, StaffRole } from '@rms/shared-types'
-import { and, asc, eq, gt, inArray } from 'drizzle-orm'
+import { and, asc, count, eq, gt, inArray, or, type SQL, sql } from 'drizzle-orm'
 import type { StaffAccountRecord, StaffAccountTransition } from '../../domain/staff-account'
-import type { StaffAccountRepository } from '../../domain/staff-account-repository'
+import type {
+  NewStaffAccount,
+  StaffAccountRepository,
+  StaffSearch,
+} from '../../domain/staff-account-repository'
 import { staffAccount } from './schema'
 
 const toRecord = (row: typeof staffAccount.$inferSelect): StaffAccountRecord => ({
@@ -19,8 +23,21 @@ const toRecord = (row: typeof staffAccount.$inferSelect): StaffAccountRecord => 
   pushEnabled: row.pushEnabled,
   avatarKey: row.avatarKey,
   lastLoginAt: row.lastLoginAt,
+  createdAt: row.createdAt,
   version: row.version,
 })
+
+/** `%`, `_` and the escape character are literal in a search term. */
+const likeEscaped = (value: string) => value.replace(/[\\%_]/g, '\\$&')
+
+/** A name with case and diacritics ignored, or the start of the email (E-39). Tens of rows: no index serves it. */
+const matches = (q: string): SQL | undefined => {
+  const term = likeEscaped(q)
+  return or(
+    sql`lower(platform.immutable_unaccent(${staffAccount.fullName})) LIKE '%' || lower(platform.immutable_unaccent(${term})) || '%'`,
+    sql`lower(${staffAccount.email}::text) LIKE lower(${term}) || '%'`,
+  )
+}
 
 export class DrizzleStaffAccountRepository implements StaffAccountRepository {
   constructor(private readonly database: Database) {}
@@ -92,6 +109,74 @@ export class DrizzleStaffAccountRepository implements StaffAccountRepository {
       )
       .orderBy(asc(staffAccount.id))
     return rows.map((row) => row.id)
+  }
+
+  async findScoped(scope: BuildingScope, id: string): Promise<StaffAccountRecord | null> {
+    const [row] = await this.database.executor
+      .select()
+      .from(staffAccount)
+      .where(and(inBuilding(staffAccount, scope), eq(staffAccount.id, id)))
+    return row ? toRecord(row) : null
+  }
+
+  async search(
+    scope: BuildingScope,
+    filter: StaffSearch,
+    offset: number,
+    limit: number,
+  ): Promise<{ rows: StaffAccountRecord[]; total: number }> {
+    const narrowed = [
+      filter.role === undefined ? undefined : eq(staffAccount.role, filter.role),
+      filter.status === undefined ? undefined : eq(staffAccount.status, filter.status),
+      filter.q === undefined ? undefined : matches(filter.q),
+    ]
+    const rows = await this.database.executor
+      .select()
+      .from(staffAccount)
+      .where(and(inBuilding(staffAccount, scope), ...narrowed))
+      .orderBy(sql`lower(${staffAccount.fullName})`, asc(staffAccount.id))
+      .limit(limit)
+      .offset(offset)
+    const [total] = await this.database.executor
+      .select({ total: count() })
+      .from(staffAccount)
+      .where(and(inBuilding(staffAccount, scope), ...narrowed))
+    return { rows: rows.map(toRecord), total: total?.total ?? 0 }
+  }
+
+  async lockActiveAdminIds(scope: BuildingScope): Promise<string[]> {
+    const rows = await this.database.executor
+      .select({ id: staffAccount.id })
+      .from(staffAccount)
+      .where(
+        and(
+          inBuilding(staffAccount, scope),
+          eq(staffAccount.role, 'admin'),
+          eq(staffAccount.status, 'active'),
+        ),
+      )
+      .orderBy(asc(staffAccount.id))
+      .for('update')
+    return rows.map((row) => row.id)
+  }
+
+  async insert(
+    scope: BuildingScope,
+    account: NewStaffAccount,
+    now: Date,
+  ): Promise<StaffAccountRecord> {
+    const [row] = await this.database.executor
+      .insert(staffAccount)
+      .values({
+        ...account,
+        buildingId: scope.buildingId,
+        status: 'invited',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning()
+    if (!row) throw new Error('the insert of a staff account returned no row')
+    return toRecord(row)
   }
 
   // scope-ok: the transition names the row by id; the aggregate was loaded by a caller that has authorised it

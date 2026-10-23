@@ -8,8 +8,8 @@ const dir = fileURLToPath(new URL('..', import.meta.url))
 /**
  * Static data, importable without building the container (DOC-12 §4.2). `identity` writes three types to its own outbox: the mail
  * command and the revocation fact of the `default` retry class, and the SMS command of the `sms` class, which a late send makes
- * useless (DOC-09 §4.2). The audit action of the invite resend is declared; the rest of `identity.staff.*` joins with the staff
- * accounts (P1-14).
+ * useless (DOC-09 §4.2). The audit actions of the staff accounts (DOC-35 §4) are declared here; the invite resend writes
+ * `identity.staff.update` too.
  */
 export const identityManifest = {
   name: 'identity',
@@ -23,5 +23,13 @@ export const identityManifest = {
     [IDENTITY_EVENTS.smsRequested]: 'sms',
     [IDENTITY_EVENTS.sessionRevoked]: 'default',
   },
-  auditActions: ['identity.staff.update'],
+  auditActions: [
+    'identity.staff.create',
+    'identity.staff.update',
+    'identity.staff.lock',
+    'identity.staff.force_lock',
+    'identity.staff.unlock',
+    'identity.staff.disable',
+    'identity.staff.enable',
+  ],
 } as const satisfies ModuleManifest

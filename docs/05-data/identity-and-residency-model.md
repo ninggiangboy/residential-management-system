@@ -151,7 +151,7 @@ CREATE TABLE identity.staff_account (
   updated_at      timestamptz NOT NULL DEFAULT now(),
   version         integer NOT NULL DEFAULT 1,
   CONSTRAINT staff_account_password_when_not_invited
-    CHECK (status = 'invited' OR password_hash IS NOT NULL)
+    CHECK (status IN ('invited', 'disabled') OR password_hash IS NOT NULL)   -- DR-261: a never-activated invite may be disabled
 );
 CREATE UNIQUE INDEX staff_account_email_key ON identity.staff_account (email);
 CREATE INDEX staff_account_building_role_idx ON identity.staff_account (building_id, role, status);
@@ -162,7 +162,7 @@ CREATE INDEX staff_account_building_role_idx ON identity.staff_account (building
 | Column | Meaning |
 | --- | --- |
 | `status` | `invited` (no password yet), `active`, `locked` (locked by a Manager or Admin, FR-14.3), `disabled` (deactivated by the Admin). The temporary lockout after failed sign-ins is **not** a status: it is `locked_until` while the status stays `active` (DR-107). |
-| `password_hash` | argon2id string; `NULL` only while `invited` (the `CHECK` below). |
+| `password_hash` | argon2id string; `NULL` only while `invited`, or `disabled` after an invite that was never accepted (the `CHECK` below, *DR-261*). |
 | `failed_attempts`, `locked_until` | The lockout counter of FR-13.1 and the end of the temporary lock. Both are reset by a success, by an unlock and by a password reset. The limit and the duration (5 and 15 minutes) are building settings read by the use case, never hard-coded in SQL. |
 | `language`, `push_enabled`, `avatar_key` | Profile settings (`avatar_key` holds the `file_object` id as text, *noted 2026-10-20, DR-146*); `language` decides the language of mail and push (FR-29). |
 | `version` | Optimistic lock for edits by two Admins (DR-12). |
@@ -183,6 +183,7 @@ stateDiagram-v2
   invited --> active: staff member sets a password
   active --> locked: Manager or Admin locks
   locked --> active: Manager or Admin unlocks
+  invited --> disabled: Admin deactivates
   active --> disabled: Admin deactivates
   locked --> disabled: Admin deactivates
   disabled --> active: Admin re-enables
@@ -195,8 +196,8 @@ stateDiagram-v2
 | `invited` → `active` | the staff member | `POST /auth/staff/password` with a valid invite token | `password_hash` set; token consumed |
 | `active` → `locked` | Manager (Technician, Guard) or Admin | Manual lock; refused with 409 `staff_has_open_tickets` while the person holds tickets, unless the Admin forces with `reassignTo` (FR-14.3) | All refresh families revoked (`account_locked`); `version + 1` |
 | `locked` → `active` | Manager or Admin | Unlock | `failed_attempts = 0`, `locked_until = NULL` |
-| `active`, `locked` → `disabled` | Admin | The person leaves | Families revoked; the email stays reserved |
-| `disabled` → `active` | Admin | The person returns | Counters cleared |
+| `invited`, `active`, `locked` → `disabled` | Admin | The person leaves, or an invite was a mistake (*DR-147, DR-261*) | Families revoked; the email stays reserved |
+| `disabled` → `active`, or `invited` when no password was ever set | Admin | The person returns | Counters cleared |
 
 A change of `role` is not a state change but revokes every family of the account and takes effect on the next request because the guard re-reads the row (FR-14.4). Creating or promoting an Admin and changing `email` need a step-up (FR-14.5, FR-50, §4.4).
 

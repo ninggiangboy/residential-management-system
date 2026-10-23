@@ -80,25 +80,30 @@ export class ChangeMembership {
     }
   }
 
-  async execute(staff: StaffContext, membershipId: string, edit: MembershipEdit): Promise<void> {
+  /** The membership after the change, as `PATCH /staff/memberships/{id}` answers it (E-69). */
+  async execute(
+    staff: StaffContext,
+    membershipId: string,
+    edit: MembershipEdit,
+  ): Promise<MembershipRecord> {
     requireRole(staff, CHANGE_MEMBERSHIP_ROLES)
-    await this.uow.run(() => this.audited[actionOf(edit)](staff, membershipId, edit))
+    return this.uow.run(() => this.audited[actionOf(edit)](staff, membershipId, edit))
   }
 
   private buildAudited(audited: Audited, action: string) {
     return audited(
-      { action, object: (id: string) => ({ type: 'membership', id }) },
-      async (staff: StaffContext, membershipId: string, edit: MembershipEdit) => ({
-        result: membershipId,
-        changes: await this.apply(staff, membershipId, edit),
-      }),
+      { action, object: (after: MembershipRecord) => ({ type: 'membership', id: after.id }) },
+      async (staff: StaffContext, membershipId: string, edit: MembershipEdit) => {
+        const { after, changes } = await this.apply(staff, membershipId, edit)
+        return { result: after, changes }
+      },
     )
   }
 
   private apply(staff: StaffContext, membershipId: string, edit: MembershipEdit) {
     const { memberships, history, outbox, clock, ids } = this
     const actor: MembershipActor = { kind: 'manager' }
-    return decide<AuditChange[]>(async () => {
+    return decide<{ after: MembershipRecord; changes: AuditChange[] }>(async () => {
       const now = clock.now()
       const before = await memberships.find(staff.scope, membershipId)
       if (!before) throw new NotFoundError()
@@ -137,7 +142,7 @@ export class ChangeMembership {
           occurredAt: now,
         },
       ])
-      return { done: true as const, value: fieldsOf(before, after) }
+      return { done: true as const, value: { after, changes: fieldsOf(before, after) } }
     })
   }
 }
