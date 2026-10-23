@@ -17,7 +17,8 @@ export class SqlRateLimiter implements RateLimiter {
 
   async take({ key, capacity, perSeconds }: RateRule): Promise<void> {
     const rate = capacity / perSeconds
-    const bucket = sql.raw(this.table)
+    const [schema, name] = this.table.split('.') as [string, string]
+    const bucket = sql`${sql.identifier(schema)}.${sql.identifier(name)}`
     const granted = await this.database.executor.execute(sql`
       INSERT INTO ${bucket} AS b (key, tokens, updated_at)
       VALUES (${key}, ${capacity}::float8 - 1, now())

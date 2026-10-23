@@ -41,6 +41,7 @@
       "class": "personal"
     },
     { "schema": "identity", "table": "staff_account", "column": "full_name", "class": "personal" },
+    { "schema": "identity", "table": "staff_account", "column": "avatar_key", "class": "personal" },
     { "schema": "identity", "table": "staff_account", "column": "email", "class": "personal" },
     { "schema": "identity", "table": "otp_challenge", "column": "ip", "class": "personal" },
     {
