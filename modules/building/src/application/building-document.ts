@@ -28,7 +28,7 @@ export interface BuildingDocument {
   etag: string
 }
 
-export const etagOf = (building: number, settings: number) => `${building}.${settings}`
+const etagOf = (building: number, settings: number) => `${building}.${settings}`
 
 /** `3.8` → `[3, 8]`; quotes are the route's, but are tolerated here. */
 export function parseEtag(etag: string): { building: number; settings: number } | null {

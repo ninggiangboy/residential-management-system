@@ -22,7 +22,7 @@ export interface PublishTermsDeps {
 }
 
 /** The terms are the Admin's alone (DOC-35 §9). The route reads this list for its `audience` (DOC-12 §5.3). */
-export const PUBLISH_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const PUBLISH_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /**
  * An Admin publishes a version of the terms of use or the privacy notice (DOC-35 §9, DOC-36 §8). A version is write-once; the

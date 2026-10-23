@@ -25,7 +25,7 @@ export interface VerifyStepUpDeps {
 }
 
 /** Every step-up action is the Admin's (DOC-26 §4.5). */
-export const VERIFY_STEP_UP_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const VERIFY_STEP_UP_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /**
  * `IdentityApi.verifyStepUp` (DOC-26 §4.5), in the transaction of the action that asked: checks the password, consumes the live

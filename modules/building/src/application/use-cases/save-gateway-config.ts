@@ -53,7 +53,7 @@ export interface SaveGatewayConfigDeps {
 type Saved = { created: boolean; config: GatewayView }
 
 /** The gateway is the Admin's alone (DOC-36 §7). The route reads this list for its `audience` (DOC-12 §5.3). */
-export const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /**
  * The Admin's save of the payment-gateway configuration (DOC-36 §7, DR-33): a step-up proof, the version the form read, the
