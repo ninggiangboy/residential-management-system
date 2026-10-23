@@ -80,7 +80,7 @@ const ROWS: Row[] = [
   [
     'GRT-11',
     'rms_app',
-    `INSERT INTO residency.resident_profile (id, full_name) VALUES (gen_random_uuid(), 'Đặng Thị Vân')`,
+    `INSERT INTO residency.resident_profile (building_id, account_id, full_name) VALUES (gen_random_uuid(), gen_random_uuid(), 'Đặng Thị Vân')`,
     'ok',
   ],
   ['GRT-12', 'rms_app', 'DELETE FROM finance.inbox WHERE false', 'ok'],
@@ -413,7 +413,7 @@ describe('the bootstrap (DOC-14 §16 checks 1, 9 and 13)', () => {
   })
 
   test('the unaccent wrapper and a trigram index find "dang thi" and "van an"', async () => {
-    await su`INSERT INTO residency.resident_profile (id, full_name) VALUES (gen_random_uuid(), 'Đặng Thị Vân')`
+    await su`INSERT INTO residency.resident_profile (building_id, account_id, full_name) VALUES (gen_random_uuid(), gen_random_uuid(), 'Đặng Thị Vân')`
     const found = await su<
       { full_name: string }[]
     >`SELECT full_name FROM residency.resident_profile WHERE platform.immutable_unaccent(lower(full_name)) LIKE ${'%dang thi%'} OR platform.immutable_unaccent(lower(full_name)) LIKE ${'%van an%'} ORDER BY full_name`
