@@ -1,6 +1,7 @@
 import type { Clock, IdGenerator } from '@core/kernel'
 import type { AccessClaims } from '../contracts'
-import type { Client, SessionRepository } from '../domain/session-repository'
+import type { Client } from '../domain/refresh-family'
+import type { SessionRepository } from '../domain/session-repository'
 import type { StaffAccountRecord } from '../domain/staff-account'
 import type { IdentityConfig } from './config'
 import type { TokenFactory, TokenSigner } from './ports'
@@ -13,16 +14,6 @@ export interface IssuedSession {
   expiresIn: number
   refreshToken: string
   refreshExpiresAt: Date
-}
-
-export interface SessionIssuerDeps {
-  sessions: SessionRepository
-  events: SessionEvents
-  tokens: TokenFactory
-  signer: TokenSigner
-  clock: Clock
-  ids: IdGenerator
-  config: IdentityConfig
 }
 
 /** The sliding limit of a refresh token, never beyond the family's absolute limit (DOC-26 §3.5 step 6). */
@@ -43,13 +34,21 @@ export const staffClaims = (staff: StaffAccountRecord, sessionId: string): Acces
  * signs the access token (DOC-26 §3.6). Runs inside the caller's transaction.
  */
 export class SessionIssuer {
-  constructor(private readonly deps: SessionIssuerDeps) {}
+  constructor(
+    private readonly sessions: SessionRepository,
+    private readonly events: SessionEvents,
+    private readonly tokens: TokenFactory,
+    private readonly signer: TokenSigner,
+    private readonly clock: Clock,
+    private readonly ids: IdGenerator,
+    private readonly config: IdentityConfig,
+  ) {}
 
   async openStaffSession(
     staff: StaffAccountRecord,
     input: { client: Client; userAgent: string | null },
   ): Promise<IssuedSession> {
-    const { sessions, events, tokens, signer, clock, ids, config } = this.deps
+    const { sessions, events, tokens, signer, clock, ids, config } = this
     const now = clock.now()
     const evicted = await sessions.evictOldest('staff', staff.id, config.maxFamilies - 1, now)
     await events.revoked(evicted, 'cap_exceeded', now)

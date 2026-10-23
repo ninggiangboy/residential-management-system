@@ -1,21 +1,10 @@
 import type { BuildingScope, StaffRole } from '@rms/shared-types'
-import type { StaffAccountRecord } from './staff-account'
-
-export interface Lockout {
-  maxAttempts: number
-  minutes: number
-}
-
-/** The row after a wrong password was counted. */
-export interface FailureCount {
-  failedAttempts: number
-  lockedUntil: Date | null
-}
+import type { StaffAccountRecord, StaffAccountTransition } from './staff-account'
 
 /**
  * Staff accounts as `identity` reads and moves them. Every time-dependent statement takes `now` from the `Clock`, so a test
- * with a fake clock decides when a lock ends (DOC-26 §12). The writes of DOC-16 §4.1 are single statements: the database
- * arbitrates a race, not the code.
+ * with a fake clock decides when a lock ends (DOC-26 §12). The rules live in `StaffAccount`; a write is one guarded statement
+ * (`apply`), so the database arbitrates a race and holds no rule.
  */
 export interface StaffAccountRepository {
   findByEmail(email: string): Promise<StaffAccountRecord | null>
@@ -31,22 +20,8 @@ export interface StaffAccountRepository {
   activeAdminIds(scope: BuildingScope): Promise<string[]>
 
   /**
-   * The lockout statement of DOC-16 §4.1 for the sign-in: counts one wrong password, or starts a new count once the lock has
-   * ended. `null` means the account is locked right now (a parallel attempt locked it first, or the email is unknown).
+   * Applies the change an aggregate decided (DR-255) in one statement, `now` stamping `updated_at`. `false` means no row matched:
+   * the state the decision read has moved, and the caller decides again or answers 409.
    */
-  recordFailureByEmail(email: string, lockout: Lockout, now: Date): Promise<FailureCount | null>
-  /** The same statement by id, for a wrong password in a step-up proof (DOC-26 §4.5). */
-  recordFailureById(id: string, lockout: Lockout, now: Date): Promise<FailureCount | null>
-  /** Clears the counters, stamps `last_login_at`, and stores `passwordHash` when the stored one needs a rehash. */
-  markSignedIn(id: string, now: Date, rehashed?: string): Promise<void>
-  /**
-   * Sets the password where the status is still `expectedStatus`; an invite also activates. Clears `failed_attempts` and
-   * `locked_until`. `false` means zero rows: the status changed since the link was issued (DR-150).
-   */
-  setPassword(
-    id: string,
-    passwordHash: string,
-    expectedStatus: 'invited' | 'active',
-    now: Date,
-  ): Promise<boolean>
+  apply(transition: StaffAccountTransition, now: Date): Promise<boolean>
 }

@@ -60,6 +60,18 @@ describe('password reset (DOC-26 §4.3)', () => {
     ).toBeInstanceOf(TokenInvalidError)
   })
 
+  test('AU-05b: the same link used twice in parallel sets the password once', async () => {
+    const staff = await h.seedStaff()
+    const token = await requestReset(staff.email)
+    const results = await Promise.allSettled([
+      h.identity.useCases.setPassword.execute({ token, password: NEW_PASSWORD }),
+      h.identity.useCases.setPassword.execute({ token, password: NEW_PASSWORD }),
+    ])
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    const lost = results.find((result) => result.status === 'rejected')
+    expect(lost?.status === 'rejected' && lost.reason).toBeInstanceOf(TokenInvalidError)
+  })
+
   test('AU-05: a newer link voids the older', async () => {
     const staff = await h.seedStaff()
     const older = await requestReset(staff.email)

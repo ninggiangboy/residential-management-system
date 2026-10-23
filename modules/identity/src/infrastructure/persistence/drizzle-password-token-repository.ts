@@ -1,13 +1,27 @@
-import type { Database } from '@core/db'
-import { sql } from 'drizzle-orm'
+import { applyTransition, type Database } from '@core/db'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type {
-  LinkKind,
+  PasswordTokenRecord,
+  PasswordTokenTransition,
+  StepUpAction,
+} from '../../domain/password-token'
+import type {
   NewLink,
   NewStepUpCode,
   PasswordTokenRepository,
-  StepUpAction,
 } from '../../domain/password-token-repository'
 import { passwordToken } from './schema'
+
+const toRecord = (row: typeof passwordToken.$inferSelect): PasswordTokenRecord => ({
+  id: row.id,
+  staffId: row.staffId,
+  kind: row.kind as PasswordTokenRecord['kind'],
+  action: row.action as StepUpAction | null,
+  tokenHash: row.tokenHash,
+  attempts: row.attempts,
+  expiresAt: row.expiresAt,
+  consumedAt: row.consumedAt,
+})
 
 const ts = (date: Date) => sql`${date.toISOString()}::timestamptz`
 
@@ -26,17 +40,42 @@ export class DrizzlePasswordTokenRepository implements PasswordTokenRepository {
   }
 
   // scope-ok: the hash is the credential
-  async consumeLink(
-    tokenHash: string,
-    now: Date,
-  ): Promise<{ staffId: string; kind: LinkKind } | null> {
+  async findLink(tokenHash: string): Promise<PasswordTokenRecord | null> {
     // scope-ok: see above
-    const rows = await this.database.executor.execute<{ staff_id: string; kind: LinkKind }>(sql`
-      UPDATE identity.password_token SET consumed_at = ${ts(now)}
-       WHERE token_hash = ${tokenHash} AND kind IN ('reset', 'invite') AND consumed_at IS NULL AND expires_at > ${ts(now)}
-      RETURNING staff_id, kind`)
-    const [row] = rows
-    return row ? { staffId: row.staff_id, kind: row.kind } : null
+    const [row] = await this.database.executor
+      .select()
+      .from(passwordToken)
+      .where(
+        and(
+          eq(passwordToken.tokenHash, tokenHash),
+          inArray(passwordToken.kind, ['reset', 'invite']),
+        ),
+      )
+    return row ? toRecord(row) : null
+  }
+
+  // scope-ok: bound to the staff member and the action of the caller
+  async findStepUp(staffId: string, action: StepUpAction): Promise<PasswordTokenRecord | null> {
+    // scope-ok: see above
+    const [row] = await this.database.executor
+      .select()
+      .from(passwordToken)
+      .where(
+        and(
+          eq(passwordToken.staffId, staffId),
+          eq(passwordToken.kind, 'step_up'),
+          eq(passwordToken.action, action),
+          isNull(passwordToken.consumedAt),
+        ),
+      )
+      .orderBy(desc(passwordToken.createdAt))
+      .limit(1)
+    return row ? toRecord(row) : null
+  }
+
+  // scope-ok: the transition names the token by id, which the caller found by its hash or its owner
+  async apply(transition: PasswordTokenTransition): Promise<boolean> {
+    return (await applyTransition(this.database, passwordToken, transition)) !== null
   }
 
   // scope-ok: the staff id comes from the caller's own row
@@ -46,54 +85,6 @@ export class DrizzlePasswordTokenRepository implements PasswordTokenRepository {
       UPDATE identity.password_token SET consumed_at = ${ts(now)}
        WHERE staff_id = ${code.staffId}::uuid AND kind = 'step_up' AND action = ${code.action} AND consumed_at IS NULL`)
     await this.insert({ ...code, kind: 'step_up', codeHash: code.codeHmac }, now)
-  }
-
-  // scope-ok: bound to the staff member and the action of the caller
-  async consumeStepUp(
-    staffId: string,
-    action: StepUpAction,
-    codeHmac: string,
-    now: Date,
-    maxAttempts: number,
-  ): Promise<boolean> {
-    // scope-ok: see above
-    const rows = await this.database.executor.execute(sql`
-      UPDATE identity.password_token SET consumed_at = ${ts(now)}
-       WHERE staff_id = ${staffId}::uuid AND kind = 'step_up' AND action = ${action} AND token_hash = ${codeHmac}
-         AND consumed_at IS NULL AND expires_at > ${ts(now)} AND attempts < ${maxAttempts}::int
-      RETURNING id`)
-    return rows.length > 0
-  }
-
-  // scope-ok: bound to the staff member and the action of the caller
-  async countStepUpFailure(
-    staffId: string,
-    action: StepUpAction,
-    maxAttempts: number,
-    now: Date,
-  ): Promise<void> {
-    // scope-ok: see above
-    await this.database.executor.execute(sql`
-      UPDATE identity.password_token
-         SET attempts = attempts + 1,
-             consumed_at = CASE WHEN attempts + 1 >= ${maxAttempts}::int THEN ${ts(now)} END
-       WHERE staff_id = ${staffId}::uuid AND kind = 'step_up' AND action = ${action} AND consumed_at IS NULL`)
-  }
-
-  // scope-ok: bound to the staff member and the action of the caller
-  async stepUpAttemptsLeft(
-    staffId: string,
-    action: StepUpAction,
-    maxAttempts: number,
-    now: Date,
-  ): Promise<number> {
-    // scope-ok: see above
-    const rows = await this.database.executor.execute<{ attempts: number }>(sql`
-      SELECT attempts FROM identity.password_token
-       WHERE staff_id = ${staffId}::uuid AND kind = 'step_up' AND action = ${action}
-         AND consumed_at IS NULL AND expires_at > ${ts(now)}`)
-    const [row] = rows
-    return row ? Math.max(0, maxAttempts - Number(row.attempts)) : 0
   }
 
   private async insert(

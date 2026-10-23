@@ -1,5 +1,7 @@
+import type { Transition } from '@core/kernel'
 import type { StaffRole } from '@rms/shared-types'
 import type { Language, StaffStatus } from '../contracts'
+import { TokenInvalidError } from './errors'
 
 export interface StaffAccountRecord {
   id: string
@@ -20,9 +22,28 @@ export interface StaffAccountRecord {
   version: number
 }
 
+/** The columns a transition may name; the fields the rules of this file read or write. */
+export type StaffAccountTransition = Transition<StaffAccountRecord>
+
+/** The lockout of the building's settings: `maxAttempts` wrong passwords lock the account for `minutes` (DR-107). */
+export interface Lockout {
+  maxAttempts: number
+  minutes: number
+}
+
+/** What one wrong password did: the count after it, the seconds still locked, and the change to store (`null` when none was made). */
+export interface FailureOutcome {
+  failedAttempts: number
+  lockedSeconds: number
+  transition: StaffAccountTransition | null
+}
+
+const MINUTE_MS = 60_000
+
 /**
- * A staff member as the sign-in sees them (DOC-26 §4.1, DOC-16 §4.1). The counters are moved by single SQL statements, not by
- * this class, because 20 parallel wrong passwords must leave 5 failures: the class holds the rules that read the row.
+ * A staff member (DOC-26 §4, DOC-16 §4.1). The class holds every rule that reads or moves the row; a method that moves it returns
+ * a `Transition` and the repository applies it in one guarded statement, so 20 parallel wrong passwords still leave 5 failures
+ * (DR-255): each `expect` carries the counters the decision read, and a lost race is decided again by `decide`.
  */
 export class StaffAccount {
   constructor(readonly record: StaffAccountRecord) {}
@@ -44,5 +65,70 @@ export class StaffAccount {
     const until = this.record.lockedUntil
     if (!until || until <= now) return 0
     return Math.ceil((until.getTime() - now.getTime()) / 1000)
+  }
+
+  /**
+   * Counts one wrong password (DOC-16 §4.1). A lock still running counts nothing. Once `lockedUntil` has passed, the next wrong
+   * password starts a new count at 1; the one that reaches `maxAttempts` locks for `minutes`. The status stays `active`.
+   */
+  recordFailure(lockout: Lockout, now: Date): FailureOutcome {
+    const { failedAttempts: before, lockedUntil: until } = this.record
+    const stillLocked = this.lockedSeconds(now)
+    if (stillLocked > 0)
+      return { failedAttempts: before, lockedSeconds: stillLocked, transition: null }
+    const failedAttempts = until !== null ? 1 : before + 1
+    const lockedUntil =
+      failedAttempts >= lockout.maxAttempts
+        ? new Date(now.getTime() + lockout.minutes * MINUTE_MS)
+        : null
+    return {
+      failedAttempts,
+      lockedSeconds: lockedUntil ? lockout.minutes * 60 : 0,
+      transition: {
+        id: this.id,
+        expect: { failedAttempts: before, lockedUntil: until },
+        set: { failedAttempts, lockedUntil },
+      },
+    }
+  }
+
+  /**
+   * The right password: the counters clear and `last_login_at` is stamped. A stored hash that needs a rehash is replaced only
+   * while it is still the one that was verified, so a password changed in between is not overwritten.
+   */
+  signedIn(now: Date, rehashed?: string): StaffAccountTransition {
+    return {
+      id: this.id,
+      expect:
+        rehashed === undefined
+          ? { status: 'active' }
+          : { status: 'active', passwordHash: this.record.passwordHash },
+      set: {
+        failedAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: now,
+        ...(rehashed === undefined ? {} : { passwordHash: rehashed }),
+      },
+    }
+  }
+
+  /**
+   * Sets the password from a link (DOC-26 §4.3, DR-150). An invite needs an `invited` account and activates it; a reset needs an
+   * `active` one. A status that moved since the link was issued (locked, disabled) answers `token_invalid`. The counters clear.
+   */
+  setPassword(passwordHash: string, linkKind: 'invite' | 'reset'): StaffAccountTransition {
+    const expected = linkKind === 'invite' ? 'invited' : 'active'
+    if (this.record.status !== expected) throw new TokenInvalidError()
+    return {
+      id: this.id,
+      expect: { status: expected, version: this.record.version },
+      set: {
+        passwordHash,
+        status: 'active',
+        failedAttempts: 0,
+        lockedUntil: null,
+        version: this.record.version + 1,
+      },
+    }
   }
 }

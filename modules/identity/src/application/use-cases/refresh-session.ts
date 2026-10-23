@@ -1,7 +1,10 @@
 import type { Clock, IdGenerator, Log, UnitOfWork } from '@core/kernel'
+import { decide } from '@core/kernel'
 import type { RevocationReason } from '../../contracts'
 import { UnauthenticatedError } from '../../domain/errors'
-import type { ConsumedToken, SessionRepository } from '../../domain/session-repository'
+import { type Client, RefreshFamily } from '../../domain/refresh-family'
+import type { SessionRepository } from '../../domain/session-repository'
+import type { StaffAccountRecord } from '../../domain/staff-account'
 import type { StaffAccountRepository } from '../../domain/staff-account-repository'
 import type { IdentityConfig } from '../config'
 import type { TokenFactory, TokenSigner } from '../ports'
@@ -13,20 +16,14 @@ export interface RefreshResult {
   expiresIn: number
   refreshToken: string
   refreshExpiresAt: Date
-  client: ConsumedToken['client']
+  client: Client
 }
 
-export interface RefreshSessionDeps {
-  sessions: SessionRepository
-  staffAccounts: StaffAccountRepository
-  events: SessionEvents
-  tokens: TokenFactory
-  signer: TokenSigner
-  uow: UnitOfWork
-  clock: Clock
-  ids: IdGenerator
-  logger: Log
-  config: IdentityConfig
+/** A presented token that may be answered: its family, the active account, and the id of the token that follows. */
+interface Found {
+  family: RefreshFamily
+  staff: StaffAccountRecord
+  successorId: string
 }
 
 type Outcome = { denied: true } | { denied: false; result: RefreshResult }
@@ -37,78 +34,97 @@ type Outcome = { denied: true } | { denied: false; result: RefreshResult }
  * after, so the revocation is not rolled back with the exception (DOC-12 §8.1).
  */
 export class RefreshSession {
-  constructor(private readonly deps: RefreshSessionDeps) {}
+  constructor(
+    private readonly sessions: SessionRepository,
+    private readonly staffAccounts: StaffAccountRepository,
+    private readonly events: SessionEvents,
+    private readonly tokens: TokenFactory,
+    private readonly signer: TokenSigner,
+    private readonly uow: UnitOfWork,
+    private readonly clock: Clock,
+    private readonly ids: IdGenerator,
+    private readonly logger: Log,
+    private readonly config: IdentityConfig,
+  ) {}
 
   async execute(input: { refreshToken: string }): Promise<RefreshResult> {
-    const outcome = await this.deps.uow.run(() => this.rotate(input.refreshToken))
+    const outcome = await this.uow.run(() => this.rotate(input.refreshToken))
     if (outcome.denied) throw new UnauthenticatedError()
     return outcome.result
   }
 
   private async rotate(presented: string): Promise<Outcome> {
-    const { sessions, staffAccounts, events, tokens, signer, clock, ids, logger, config } =
-      this.deps
+    const { sessions, staffAccounts, events, tokens, signer, clock, ids, logger, config } = this
     const now = clock.now()
     const hash = tokens.hashOpaque(presented)
     const nextId = ids.next()
     const log = (result: string, extra: object = {}) =>
       logger.info({ event: 'auth.refresh', outcome: result, ...extra }, 'auth.refresh')
 
-    // 2. The first use of a live token: one row.
-    let family = await sessions.consume(hash, nextId, now)
-    let successorId = nextId
-    if (!family) {
-      // 3. Not the first use: classify with one SELECT.
-      const fate = await sessions.classify(hash, now, config.refreshGraceSeconds)
-      if (fate.fate === 'reuse') {
-        await events.revoked([fate.family], 'token_reuse', now)
+    // 2 to 4. What the presented token is is the family's rule. Spending it is one guarded statement; the loser of two parallel
+    // refreshes finds the token spent when it decides again, and takes the grace path.
+    const found = await decide<Found | null>(async () => {
+      const current = await sessions.findByToken(hash)
+      if (!current) {
+        log('expired')
+        return { done: true, value: null }
+      }
+      const family = new RefreshFamily(current.family)
+      const presentation = family.present(current.token, now, config.refreshGraceSeconds, nextId)
+      if (presentation.kind === 'dead') {
+        log('expired')
+        return { done: true, value: null }
+      }
+      if (presentation.kind === 'reuse') {
+        if (!(await sessions.revokeFamily(presentation.revocation, now))) return { done: false }
+        await events.revoked([family.summary], 'token_reuse', now)
         logger.warn(
-          { event: 'auth.refresh', outcome: 'reuse', sessionId: fate.family.id },
+          { event: 'auth.refresh', outcome: 'reuse', sessionId: family.id },
           'auth.refresh',
         )
-        return { denied: true }
+        return { done: true, value: null }
       }
-      if (fate.fate !== 'grace') {
-        log('expired')
-        return { denied: true }
-      }
-      // 4. Grace: the first answer may have been lost, and the raw token cannot be returned again, so mint a sibling.
-      family = fate.family
-      successorId = ids.next()
-    }
 
-    // 5. A staff family needs an `active` account. A temporary lockout does not stop a refresh. Resident families join with P1-11.
-    const staff = family.kind === 'staff' ? await staffAccounts.findById(family.accountId) : null
-    if (!staff || staff.status !== 'active') {
-      const reason: RevocationReason =
-        staff?.status === 'locked' ? 'account_locked' : 'account_disabled'
-      // The consume named a successor that will not exist; the deferred foreign key would refuse the commit.
-      if (successorId === nextId) await sessions.dropSuccessor(hash)
-      const revoked = await sessions.revokeFamily(family.familyId, reason, now)
-      if (revoked) await events.revoked([revoked], reason, now)
-      log('account_inactive', { sessionId: family.familyId })
-      return { denied: true }
-    }
+      // 5. A staff family needs an `active` account; a temporary lockout does not stop a refresh. Resident families join with
+      // P1-11. It is checked before the token is spent, so a refused account leaves the token as it was.
+      const staff =
+        family.record.kind === 'staff'
+          ? await staffAccounts.findById(family.record.accountId)
+          : null
+      if (!staff || staff.status !== 'active') {
+        const reason: RevocationReason =
+          staff?.status === 'locked' ? 'account_locked' : 'account_disabled'
+        const revocation = family.revoke(reason, now)
+        if (revocation && (await sessions.revokeFamily(revocation, now)))
+          await events.revoked([family.summary], reason, now)
+        log('account_inactive', { sessionId: family.id })
+        return { done: true, value: null }
+      }
+
+      if (presentation.kind === 'grace')
+        // The first answer may have been lost, and the raw token cannot be returned again, so mint a sibling.
+        return { done: true, value: { family, staff, successorId: ids.next() } }
+      return (await sessions.rotateToken(presentation.transition))
+        ? { done: true, value: { family, staff, successorId: nextId } }
+        : { done: false }
+    })
+    if (!found) return { denied: true }
+    const { family, staff, successorId } = found
 
     // 6. Issue the successor and sign with the role read now.
     const next = tokens.opaque()
     const refreshExpiresAt = slidingExpiry(
       now,
       config.refreshTtlDaysStaff,
-      family.absoluteExpiresAt,
+      family.record.absoluteExpiresAt,
     )
     await sessions.insertToken(
-      {
-        id: successorId,
-        familyId: family.familyId,
-        tokenHash: next.hash,
-        expiresAt: refreshExpiresAt,
-      },
+      { id: successorId, familyId: family.id, tokenHash: next.hash, expiresAt: refreshExpiresAt },
       now,
     )
-    await sessions.touchFamily(family.familyId, now)
-    const access = await signer.signAccess(staffClaims(staff, family.familyId))
-    log(successorId === nextId ? 'ok' : 'grace', { sessionId: family.familyId })
+    await sessions.applyFamily(family.touched(now))
+    const access = await signer.signAccess(staffClaims(staff, family.id))
+    log(successorId === nextId ? 'ok' : 'grace', { sessionId: family.id })
     return {
       denied: false,
       result: {
@@ -116,7 +132,7 @@ export class RefreshSession {
         expiresIn: access.expiresIn,
         refreshToken: next.token,
         refreshExpiresAt,
-        client: family.client,
+        client: family.record.client,
       },
     }
   }

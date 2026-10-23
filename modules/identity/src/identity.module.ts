@@ -12,6 +12,7 @@ import type { BuildingApi } from '@mod/building/contracts'
 import type { Guards } from '@rms/shared-types'
 import { IdentityApiImpl } from './application/api/identity-api-impl'
 import type { IdentityConfig } from './application/config'
+import { FailureCounter } from './application/failure-counter'
 import { SendMailHandler } from './application/handlers/send-mail'
 import { InviteIssuer } from './application/invite-issuer'
 import { MailCommands } from './application/mail-commands'
@@ -138,113 +139,101 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
 
   const events = new SessionEvents(outbox)
   const mail = new MailCommands(outbox, deps.secretBox, clock)
-  const issuer = new SessionIssuer({
-    sessions,
-    events,
-    tokens: factory,
-    signer: tokens,
-    clock,
-    ids,
-    config,
-  })
-  const inviteIssuer = new InviteIssuer({
-    tokens: passwordTokens,
-    factory,
-    mail,
-    clock,
-    ids,
-    config,
-  })
+  const issuer = new SessionIssuer(sessions, events, factory, tokens, clock, ids, config)
+  const inviteIssuer = new InviteIssuer(passwordTokens, factory, mail, clock, ids, config)
 
-  const signInStaff = new SignInStaff({
+  const failures = new FailureCounter(staffAccounts)
+  const signInStaff = new SignInStaff(
     staffAccounts,
+    failures,
     hasher,
     limiter,
-    building: deps.building,
+    deps.building,
     issuer,
-    uow: database,
+    database,
     clock,
     logger,
     config,
-  })
-  const refreshSession = new RefreshSession({
+  )
+  const refreshSession = new RefreshSession(
     sessions,
     staffAccounts,
     events,
-    tokens: factory,
-    signer: tokens,
-    uow: database,
+    factory,
+    tokens,
+    database,
     clock,
     ids,
     logger,
     config,
-  })
-  const signOut = new SignOut({ sessions, events, tokens: factory, uow: database, clock })
-  const revokeStaffSession = new RevokeStaffSession({ sessions, events, uow: database, clock })
-  const requestPasswordReset = new RequestPasswordReset({
+  )
+  const signOut = new SignOut(sessions, events, factory, database, clock)
+  const revokeStaffSession = new RevokeStaffSession(sessions, events, database, clock)
+  const requestPasswordReset = new RequestPasswordReset(
     staffAccounts,
     passwordTokens,
     limiter,
     factory,
     mail,
-    uow: database,
+    database,
     clock,
     ids,
     config,
-    delay: deps.delay ?? ((milliseconds) => Bun.sleep(milliseconds)),
-  })
-  const setPassword = new SetPassword({
+    deps.delay ?? ((milliseconds) => Bun.sleep(milliseconds)),
+  )
+  const setPassword = new SetPassword(
     staffAccounts,
     passwordTokens,
     sessions,
     events,
     hasher,
     factory,
-    uow: database,
+    database,
     clock,
-  })
-  const resendStaffInvite = new ResendStaffInvite({
+  )
+  const resendStaffInvite = new ResendStaffInvite(
     staffAccounts,
     inviteIssuer,
-    uow: database,
-    audited: deps.audited,
-  })
-  const requestStepUp = new RequestStepUp({
+    database,
+    deps.audited,
+  )
+  const requestStepUp = new RequestStepUp(
     staffAccounts,
     passwordTokens,
-    limiter: accountLimiter,
+    accountLimiter,
     factory,
     mail,
-    uow: database,
+    database,
     clock,
     ids,
     config,
-  })
-  const verifyStepUp = new VerifyStepUp({
+  )
+  const verifyStepUp = new VerifyStepUp(
     staffAccounts,
+    failures,
     passwordTokens,
     hasher,
     factory,
     mail,
-    building: deps.building,
+    deps.building,
     autonomous,
     clock,
     config,
-  })
+  )
 
-  const staffQueries = new StaffQueries({ staffAccounts })
-  const sessionQueries = new SessionQueries({ sessions, clock })
+  const staffQueries = new StaffQueries(staffAccounts)
+  const sessionQueries = new SessionQueries(sessions, clock)
 
   const handlers: IntegrationEventHandler[] = [
-    new SendMailHandler({
+    new SendMailHandler(
       staffAccounts,
-      secretBox: deps.secretBox,
-      mailer: deps.mailer,
+      deps.secretBox,
+      deps.mailer,
       inbox,
       clock,
       logger,
-      adminBaseUrl: config.adminBaseUrl,
-    }),
+      config.adminBaseUrl,
+    ),
   ]
 
   const useCases: IdentityUseCases = {

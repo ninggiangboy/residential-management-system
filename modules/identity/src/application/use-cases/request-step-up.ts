@@ -12,19 +12,6 @@ const MINUTE_MS = 60_000
 const HOUR_SECONDS = 3600
 const CODE_DIGITS = 6
 
-export interface RequestStepUpDeps {
-  staffAccounts: StaffAccountRepository
-  passwordTokens: PasswordTokenRepository
-  /** The buckets of authenticated callers, in `platform.rate_bucket` (DOC-26 §6). */
-  limiter: RateLimiter
-  factory: TokenFactory
-  mail: MailCommands
-  uow: UnitOfWork
-  clock: Clock
-  ids: IdGenerator
-  config: IdentityConfig
-}
-
 /** The three sensitive actions are the Admin's alone (DOC-26 §4.5). */
 export const REQUEST_STEP_UP_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
@@ -34,12 +21,22 @@ export const REQUEST_STEP_UP_ROLES = ['admin'] as const satisfies readonly Staff
  * to the person and the action, so a code for `staff_email` does not open `gateway_config` (DR-132).
  */
 export class RequestStepUp {
-  constructor(private readonly deps: RequestStepUpDeps) {}
+  constructor(
+    private readonly staffAccounts: StaffAccountRepository,
+    private readonly passwordTokens: PasswordTokenRepository,
+    /** The buckets of authenticated callers, in `platform.rate_bucket` (DOC-26 §6). */
+    private readonly limiter: RateLimiter,
+    private readonly factory: TokenFactory,
+    private readonly mail: MailCommands,
+    private readonly uow: UnitOfWork,
+    private readonly clock: Clock,
+    private readonly ids: IdGenerator,
+    private readonly config: IdentityConfig,
+  ) {}
 
   async execute(staff: StaffContext, action: StepUpAction): Promise<void> {
     requireRole(staff, REQUEST_STEP_UP_ROLES)
-    const { staffAccounts, passwordTokens, limiter, factory, mail, uow, clock, ids, config } =
-      this.deps
+    const { staffAccounts, passwordTokens, limiter, factory, mail, uow, clock, ids, config } = this
     await limiter.take({
       key: `stepup:staff:${staff.staffId}`,
       capacity: config.stepUpRequestsPerHour,

@@ -1,21 +1,45 @@
-import type { Database } from '@core/db'
+import { applyTransition, type Database } from '@core/db'
 import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm'
 import type { RevocationReason } from '../../contracts'
 import type {
   AccountKind,
   Client,
-  ConsumedToken,
+  FamilyRecord,
+  FamilyTransition,
+  RevokedFamily,
+  TokenRecord,
+  TokenTransition,
+} from '../../domain/refresh-family'
+import type {
+  FoundToken,
   NewFamily,
   NewToken,
-  RevokedFamily,
   SessionRepository,
   SessionRow,
-  TokenFate,
 } from '../../domain/session-repository'
-import { asDate, asDateOrNull } from './dates'
 import { refreshFamily, refreshToken } from './schema'
 
 const ts = (date: Date) => sql`${date.toISOString()}::timestamptz`
+
+const toFamily = (row: typeof refreshFamily.$inferSelect): FamilyRecord => ({
+  id: row.id,
+  kind: row.kind as AccountKind,
+  accountId: row.accountId,
+  buildingId: row.buildingId,
+  client: row.client as Client,
+  absoluteExpiresAt: row.absoluteExpiresAt,
+  lastUsedAt: row.lastUsedAt,
+  revokedAt: row.revokedAt,
+  revokedReason: row.revokedReason as RevocationReason | null,
+})
+
+const toToken = (row: typeof refreshToken.$inferSelect): TokenRecord => ({
+  id: row.id,
+  familyId: row.familyId,
+  expiresAt: row.expiresAt,
+  revokedAt: row.revokedAt,
+  replacedById: row.replacedById,
+})
 
 type FamilyRow = {
   id: string
@@ -86,98 +110,46 @@ export class DrizzleSessionRepository implements SessionRepository {
   }
 
   // scope-ok: the hash is the credential
-  async consume(tokenHash: string, nextId: string, now: Date): Promise<ConsumedToken | null> {
-    // scope-ok: the hash is the credential
-    const rows = await this.database.executor.execute<
-      FamilyRow & { family_id: string; client: Client; absolute_expires_at: Date | string }
-    >(sql`
-      UPDATE identity.refresh_token t SET revoked_at = ${ts(now)}, replaced_by_id = ${nextId}::uuid
-        FROM identity.refresh_family f
-       WHERE t.token_hash = ${tokenHash} AND t.revoked_at IS NULL AND t.expires_at > ${ts(now)}
-         AND f.id = t.family_id AND f.revoked_at IS NULL AND f.absolute_expires_at > ${ts(now)}
-      RETURNING t.family_id, f.kind, f.account_id, f.building_id, f.client, f.absolute_expires_at`)
-    const [row] = rows
-    return row ? this.toConsumed(row) : null
-  }
-
-  async dropSuccessor(tokenHash: string): Promise<void> {
-    await this.database.executor
-      .update(refreshToken)
-      .set({ replacedById: null })
+  async findByToken(tokenHash: string): Promise<FoundToken | null> {
+    // scope-ok: see above
+    const [row] = await this.database.executor
+      .select({ token: refreshToken, family: refreshFamily })
+      .from(refreshToken)
+      .innerJoin(refreshFamily, eq(refreshFamily.id, refreshToken.familyId))
       .where(eq(refreshToken.tokenHash, tokenHash))
+    return row ? { family: toFamily(row.family), token: toToken(row.token) } : null
   }
 
-  // scope-ok: the hash is the credential
-  async classify(tokenHash: string, now: Date, graceSeconds: number): Promise<TokenFate> {
-    // scope-ok: the hash is the credential
-    const rows = await this.database.executor.execute<
-      FamilyRow & {
-        family_id: string
-        client: Client
-        absolute_expires_at: Date | string
-        token_revoked_at: Date | string | null
-        token_expires_at: Date | string
-        family_revoked_at: Date | string | null
-      }
-    >(sql`
-      SELECT t.family_id, f.kind, f.account_id, f.building_id, f.client, f.absolute_expires_at,
-             t.revoked_at AS token_revoked_at, t.expires_at AS token_expires_at, f.revoked_at AS family_revoked_at
-        FROM identity.refresh_token t JOIN identity.refresh_family f ON f.id = t.family_id
-       WHERE t.token_hash = ${tokenHash}`)
-    const [row] = rows
-    if (!row) return { fate: 'unknown' }
-    const rotatedAt = asDateOrNull(row.token_revoked_at)
-    if (
-      row.family_revoked_at !== null ||
-      asDate(row.token_expires_at) <= now ||
-      asDate(row.absolute_expires_at) <= now ||
-      rotatedAt === null
-    )
-      return { fate: 'dead' }
-    const sinceRotation = now.getTime() - rotatedAt.getTime()
-    if (sinceRotation < graceSeconds * 1000) return { fate: 'grace', family: this.toConsumed(row) }
-    // Rotated more than the grace window ago and presented again: reuse. The family and its tokens are revoked.
-    const revoked = await this.revokeFamily(row.family_id, 'token_reuse', now)
-    return revoked ? { fate: 'reuse', family: revoked } : { fate: 'dead' }
-  }
-
-  // scope-ok: the id is the family the token just proved
-  async touchFamily(familyId: string, now: Date): Promise<void> {
+  // scope-ok: the id is a family the caller has just proved, listed or owns
+  async findFamily(familyId: string): Promise<FamilyRecord | null> {
     // scope-ok: see above
-    await this.database.executor
-      .update(refreshFamily)
-      .set({ lastUsedAt: now })
+    const [row] = await this.database.executor
+      .select()
+      .from(refreshFamily)
       .where(eq(refreshFamily.id, familyId))
+    return row ? toFamily(row) : null
   }
 
-  // scope-ok: the id is a family the caller has just proved or listed
-  async revokeFamily(
-    familyId: string,
-    reason: RevocationReason,
-    now: Date,
-  ): Promise<RevokedFamily | null> {
-    // scope-ok: see above
-    const rows = await this.database.executor.execute<FamilyRow>(sql`
-      UPDATE identity.refresh_family SET revoked_at = ${ts(now)}, revoked_reason = ${reason}
-       WHERE id = ${familyId}::uuid AND revoked_at IS NULL
-      RETURNING id, kind, account_id, building_id`)
-    return this.finishRevocation(rows, now)
+  // scope-ok: the transition names the token by id, which the caller found by its hash
+  async rotateToken(transition: TokenTransition): Promise<boolean> {
+    const familyLive = sql`EXISTS (SELECT 1 FROM identity.refresh_family f
+                                    WHERE f.id = ${refreshToken.familyId} AND f.revoked_at IS NULL)`
+    return (
+      (await applyTransition(this.database, refreshToken, transition, { also: familyLive })) !==
+      null
+    )
   }
 
-  // scope-ok: the account owns the session, which is the scope of the statement
-  async revokeOwned(
-    kind: AccountKind,
-    accountId: string,
-    familyId: string,
-    reason: RevocationReason,
-    now: Date,
-  ): Promise<RevokedFamily | null> {
-    // scope-ok: see above
-    const rows = await this.database.executor.execute<FamilyRow>(sql`
-      UPDATE identity.refresh_family SET revoked_at = ${ts(now)}, revoked_reason = ${reason}
-       WHERE id = ${familyId}::uuid AND kind = ${kind} AND account_id = ${accountId}::uuid AND revoked_at IS NULL
-      RETURNING id, kind, account_id, building_id`)
-    return this.finishRevocation(rows, now)
+  // scope-ok: the transition names the family by id
+  async revokeFamily(transition: FamilyTransition, now: Date): Promise<boolean> {
+    if (!(await this.applyFamily(transition))) return false
+    await this.revokeTokensOf([{ id: transition.id }], now)
+    return true
+  }
+
+  // scope-ok: the transition names the family by id
+  async applyFamily(transition: FamilyTransition): Promise<boolean> {
+    return (await applyTransition(this.database, refreshFamily, transition)) !== null
   }
 
   // scope-ok: every session of one account
@@ -195,14 +167,6 @@ export class DrizzleSessionRepository implements SessionRepository {
     const families = rows.map(toRevoked)
     await this.revokeTokensOf(families, now)
     return families
-  }
-
-  async familyOfToken(tokenHash: string): Promise<{ id: string } | null> {
-    const [row] = await this.database.executor
-      .select({ id: refreshToken.familyId })
-      .from(refreshToken)
-      .where(eq(refreshToken.tokenHash, tokenHash))
-    return row ?? null
   }
 
   // scope-ok: the sessions of one account
@@ -229,15 +193,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     }))
   }
 
-  private async finishRevocation(rows: FamilyRow[], now: Date): Promise<RevokedFamily | null> {
-    const [row] = rows
-    if (!row) return null
-    const family = toRevoked(row)
-    await this.revokeTokensOf([family], now)
-    return family
-  }
-
-  private async revokeTokensOf(families: readonly RevokedFamily[], now: Date): Promise<void> {
+  private async revokeTokensOf(families: readonly { id: string }[], now: Date): Promise<void> {
     if (families.length === 0) return
     await this.database.executor
       .update(refreshToken)
@@ -251,18 +207,5 @@ export class DrizzleSessionRepository implements SessionRepository {
           isNull(refreshToken.revokedAt),
         ),
       )
-  }
-
-  private toConsumed(
-    row: FamilyRow & { family_id: string; client: Client; absolute_expires_at: Date | string },
-  ): ConsumedToken {
-    return {
-      familyId: row.family_id,
-      kind: row.kind,
-      accountId: row.account_id,
-      buildingId: row.building_id,
-      client: row.client,
-      absoluteExpiresAt: asDate(row.absolute_expires_at),
-    }
   }
 }

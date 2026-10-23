@@ -9,17 +9,6 @@ import type { Mailer } from '../ports'
 const HOUR_MS = 3_600_000
 const MINUTE_MS = 60_000
 
-export interface SendMailDeps {
-  staffAccounts: StaffAccountRepository
-  secretBox: SecretBox
-  mailer: Mailer
-  inbox: InboxGuard
-  clock: Clock
-  logger: Log
-  /** `ADMIN_BASE_URL`: the invite and reset links open there (DOC-26 §4.3). */
-  adminBaseUrl: string
-}
-
 /**
  * `identity.send_mail` (DOC-26 §5.4): turns `identity.mail_requested.v1` into a mail. A command past its `expiresAt` returns
  * normally and sends nothing; the address is read from `staff_account`, the secret is opened in memory and forgotten. A relay
@@ -29,15 +18,24 @@ export class SendMailHandler implements IntegrationEventHandler {
   readonly name = 'identity.send_mail'
   readonly eventType = IDENTITY_EVENTS.mailRequested
 
-  constructor(private readonly deps: SendMailDeps) {}
+  constructor(
+    private readonly staffAccounts: StaffAccountRepository,
+    private readonly secretBox: SecretBox,
+    private readonly mailer: Mailer,
+    private readonly inbox: InboxGuard,
+    private readonly clock: Clock,
+    private readonly logger: Log,
+    /** `ADMIN_BASE_URL`: the invite and reset links open there (DOC-26 §4.3). */
+    private readonly adminBaseUrl: string,
+  ) {}
 
   async handle(message: Envelope): Promise<void> {
     const command = message.payload as unknown as MailRequestedPayload
-    await this.deps.inbox.afterSideEffect(message.id, this.name, () => this.send(message, command))
+    await this.inbox.afterSideEffect(message.id, this.name, () => this.send(message, command))
   }
 
   private async send(message: Envelope, command: MailRequestedPayload): Promise<void> {
-    const { staffAccounts, secretBox, mailer, clock, logger, adminBaseUrl } = this.deps
+    const { staffAccounts, secretBox, mailer, clock, logger, adminBaseUrl } = this
     const log = (outcome: string) =>
       logger.info(
         { event: 'auth.mail', kind: command.kind, outcome, staffId: command.staffId },

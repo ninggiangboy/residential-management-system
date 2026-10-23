@@ -137,6 +137,29 @@ describe('step-up (DOC-26 §4.5)', () => {
     })
   })
 
+  test('AU-46b: parallel wrong codes are each counted, the fifth consumes the challenge, and later ones count nothing', async () => {
+    const admin = await seedAdmin()
+    const code = await requestCode(admin)
+    const wrong = wrongCodeOf(code)
+    const round = (size: number) =>
+      Promise.allSettled(Array.from({ length: size }, () => verify(admin, { code: wrong })))
+    for (const result of [...(await round(4)), ...(await round(3))])
+      expect(result.status === 'rejected' && result.reason).toMatchObject({
+        code: 'step_up_failed',
+      })
+    const rows = await h.db.sql`
+      SELECT attempts, consumed_at FROM identity.password_token WHERE staff_id = ${admin.id} AND kind = 'step_up'`
+    expect(rows[0]?.attempts).toBe(5)
+    expect(rows[0]?.consumed_at).not.toBeNull()
+  })
+
+  test('AU-43b: the right code twice in parallel opens one action', async () => {
+    const admin = await seedAdmin()
+    const code = await requestCode(admin)
+    const results = await Promise.allSettled([verify(admin, { code }), verify(admin, { code })])
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+  })
+
   test('AU-47: a wrong password counts toward the sign-in lock, not toward the code; five lock sign-in', async () => {
     const admin = await seedAdmin()
     const code = await requestCode(admin)
