@@ -1,15 +1,13 @@
 import type { Clock, IdGenerator, Log, UnitOfWork } from '@core/kernel'
 import { decide } from '@core/kernel'
-import type { RevocationReason } from '../../contracts'
 import { UnauthenticatedError } from '../../domain/errors'
 import { type Client, RefreshFamily } from '../../domain/refresh-family'
 import type { SessionRepository } from '../../domain/session-repository'
-import type { StaffAccountRecord } from '../../domain/staff-account'
-import type { StaffAccountRepository } from '../../domain/staff-account-repository'
 import type { IdentityConfig } from '../config'
 import type { TokenFactory, TokenSigner } from '../ports'
 import type { SessionEvents } from '../session-events'
-import { slidingExpiry, staffClaims } from '../session-issuer'
+import { slidingExpiry } from '../session-issuer'
+import type { ActiveOwner, SessionOwners } from '../session-owners'
 
 export interface RefreshResult {
   accessToken: string
@@ -22,7 +20,7 @@ export interface RefreshResult {
 /** A presented token that may be answered: its family, the active account, and the id of the token that follows. */
 interface Found {
   family: RefreshFamily
-  staff: StaffAccountRecord
+  owner: ActiveOwner
   successorId: string
 }
 
@@ -36,7 +34,7 @@ type Outcome = { denied: true } | { denied: false; result: RefreshResult }
 export class RefreshSession {
   constructor(
     private readonly sessions: SessionRepository,
-    private readonly staffAccounts: StaffAccountRepository,
+    private readonly owners: SessionOwners,
     private readonly events: SessionEvents,
     private readonly tokens: TokenFactory,
     private readonly signer: TokenSigner,
@@ -54,7 +52,7 @@ export class RefreshSession {
   }
 
   private async rotate(presented: string): Promise<Outcome> {
-    const { sessions, events, tokens, signer, clock, ids, logger, config } = this
+    const { sessions, owners, events, tokens, signer, clock, ids, logger, config } = this
     const now = clock.now()
     const hash = tokens.hashOpaque(presented)
     const nextId = ids.next()
@@ -86,35 +84,32 @@ export class RefreshSession {
       }
 
       // 5. Checked before the token is spent, so a refused account leaves the token as it was.
-      const staff = await this.activeStaff(family, now)
-      if (!staff) {
+      const owner = await owners.active(family, now)
+      if (!owner) {
         log('account_inactive', { sessionId: family.id })
         return { done: true, value: null }
       }
 
       if (presentation.kind === 'grace')
         // The first answer may have been lost, and the raw token cannot be returned again, so mint a sibling.
-        return { done: true, value: { family, staff, successorId: ids.next() } }
+        return { done: true, value: { family, owner, successorId: ids.next() } }
       return (await sessions.rotateToken(presentation.transition))
-        ? { done: true, value: { family, staff, successorId: nextId } }
+        ? { done: true, value: { family, owner, successorId: nextId } }
         : { done: false }
     })
     if (!found) return { denied: true }
-    const { family, staff, successorId } = found
+    const { family, owner, successorId } = found
 
     // 6. Issue the successor and sign with the role read now.
     const next = tokens.opaque()
-    const refreshExpiresAt = slidingExpiry(
-      now,
-      config.refreshTtlDaysStaff,
-      family.record.absoluteExpiresAt,
-    )
+    const refreshExpiresAt = slidingExpiry(now, owner.slidingDays, family.record.absoluteExpiresAt)
     await sessions.insertToken(
       { id: successorId, familyId: family.id, tokenHash: next.hash, expiresAt: refreshExpiresAt },
       now,
     )
     await sessions.applyFamily(family.touched(now))
-    const access = await signer.signAccess(staffClaims(staff, family.id))
+    await owner.afterRefresh(now)
+    const access = await signer.signAccess(owner.claims)
     log(successorId === nextId ? 'ok' : 'grace', { sessionId: family.id })
     return {
       denied: false,
@@ -126,22 +121,5 @@ export class RefreshSession {
         client: family.record.client,
       },
     }
-  }
-
-  /**
-   * A staff family needs an `active` account; a temporary lockout does not stop a refresh. Resident families join with P1-11.
-   * An account that may not have a session ends the family and tells `realtime` and `notification`; `null` then.
-   */
-  private async activeStaff(family: RefreshFamily, now: Date): Promise<StaffAccountRecord | null> {
-    const { sessions, staffAccounts, events } = this
-    const staff =
-      family.record.kind === 'staff' ? await staffAccounts.findById(family.record.accountId) : null
-    if (staff?.status === 'active') return staff
-    const reason: RevocationReason =
-      staff?.status === 'locked' ? 'account_locked' : 'account_disabled'
-    const revocation = family.revoke(reason, now)
-    if (revocation && (await sessions.revokeFamily(revocation, now)))
-      await events.revoked([family.summary], reason, now)
-    return null
   }
 }

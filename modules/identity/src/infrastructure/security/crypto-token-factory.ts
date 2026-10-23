@@ -21,4 +21,8 @@ export class CryptoTokenFactory implements TokenFactory {
   stepUpHmac(staffId: string, action: string, code: string): string {
     return hmacSha256Hex(this.hmacKey, `stepup:${staffId}:${action}:${code}`)
   }
+
+  otpHmac(challengeId: string, code: string): string {
+    return hmacSha256Hex(this.hmacKey, `otp:${challengeId}:${code}`)
+  }
 }

@@ -99,7 +99,10 @@ export async function createHarness(options: HarnessOptions = {}) {
     stepUp,
     probe,
     audited: audit.audited,
-    guards: { staff: () => ({ transform: async () => {} }) },
+    guards: {
+      staff: () => ({ transform: async () => {} }),
+      resident: () => ({ transform: async () => {} }),
+    },
     staffNames: { names: async () => ({}) },
     files: {
       env: 'test',

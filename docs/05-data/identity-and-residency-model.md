@@ -352,8 +352,9 @@ stateDiagram-v2
 **Issue and verify** (tested on PostgreSQL 18.6, §9.3):
 
 ```sql
--- issue, in one transaction
-UPDATE identity.otp_challenge SET consumed_at = now() WHERE phone = :phone AND consumed_at IS NULL;
+-- issue, in one transaction (P1-11, DR-256: only a challenge whose resend wait is over is spent, so a second request of the same instant
+-- finds the index occupied and fails the insert; it answers 429 and waits, whichever of the two read the resend gate first)
+UPDATE identity.otp_challenge SET consumed_at = now() WHERE phone = :phone AND consumed_at IS NULL AND resend_after <= now();
 INSERT INTO identity.otp_challenge (id, phone, code_hmac, expires_at, resend_after, ip)
 VALUES (:id, :phone, :hmac, now() + interval '5 minutes', now() + interval '45 seconds', :ip);
 

@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ERROR_CODES, RULE_CODES } from '@rms/shared-types'
-import { CATALOGS, SHARED_FAMILIES } from './catalog'
+import { CATALOGS, type MessageKey, SHARED_FAMILIES } from './catalog'
+import { createTranslator } from './translator'
 
 const keys = Object.keys(CATALOGS.en)
 const entries = (prefix: string) =>
@@ -33,7 +34,7 @@ test('UICP-03: every code of DOC-42 §5 has error.<code>, and no error key lacks
   expect(errorKeys.sort()).toEqual([...codes].sort())
 })
 
-test('UICP-06: the shared catalog holds only its seven families, each key once', () => {
+test('UICP-06: the shared catalog holds only its eight families, each key once', () => {
   const families = new Set<string>(SHARED_FAMILIES)
   expect(keys.filter((k) => !families.has(k.split('.')[0]!))).toEqual([])
   expect(new Set(keys).size).toBe(keys.length)
@@ -60,5 +61,24 @@ describe('UICP-13: error messages are short plain sentences', () => {
     expect(text.replace(/\{[^}]*\}/g, '')).not.toMatch(/[a-z]+_[a-z_]+/)
     expect(text).not.toMatch(/\bHTTP\b|\bAPI\b|\btoken\b|\bnull\b/)
     expect(text).toMatch(/[.)]$/)
+  })
+})
+
+describe('the SMS texts of DOC-26 §5.4 fit one message part', () => {
+  const example = {
+    code: '482913',
+    brand: 'SUNRISE',
+    unitCode: 'A-1508',
+    appUrl: 'https://rms.example/app',
+  }
+  const texts = entries('sms.')
+  test.each(texts)('$lang $key: at most 160 characters', ({ lang, key, text }) => {
+    const filled = createTranslator(lang)(key as MessageKey, example)
+    expect(filled.length).toBeLessThanOrEqual(160)
+    expect(text).toBeTruthy()
+  })
+  test('the Vietnamese texts have no diacritics (DR-37)', () => {
+    for (const { text } of texts.filter((e) => e.lang === 'vi'))
+      expect(text.normalize('NFD')).not.toMatch(/[\u0300-\u036f\u0111\u0110]/)
   })
 })

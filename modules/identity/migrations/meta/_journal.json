@@ -15,6 +15,13 @@
       "when": 1792688025583,
       "tag": "0001_deferrable_token_successor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792726701990,
+      "tag": "0002_resident_otp",
+      "breakpoints": true
     }
   ]
 }

@@ -6,12 +6,14 @@ import { type Static, Type } from '@sinclair/typebox'
 import type { IssuedSession } from '../application/session-issuer'
 import type { StaffProfile } from '../application/staff-dto'
 import type { RefreshSession } from '../application/use-cases/refresh-session'
+import type { RequestOtp } from '../application/use-cases/request-otp'
 import type { RequestPasswordReset } from '../application/use-cases/request-password-reset'
 import type { ResendStaffInvite } from '../application/use-cases/resend-staff-invite'
 import { RESEND_STAFF_INVITE_ROLES } from '../application/use-cases/resend-staff-invite'
 import type { SetPassword } from '../application/use-cases/set-password'
 import type { SignInStaff } from '../application/use-cases/sign-in-staff'
 import type { SignOut } from '../application/use-cases/sign-out'
+import type { VerifyOtp } from '../application/use-cases/verify-otp'
 import { UnauthenticatedError } from '../domain/errors'
 import { clearedRefreshCookie, refreshCookie, refreshCredential } from './refresh-cookie'
 
@@ -22,6 +24,8 @@ export interface AuthRouteDeps {
   requestPasswordReset: RequestPasswordReset
   setPassword: SetPassword
   resendStaffInvite: ResendStaffInvite
+  requestOtp: RequestOtp
+  verifyOtp: VerifyOtp
   guards: Guards
   clock: Clock
 }
@@ -117,6 +121,41 @@ export function authRoutes(d: AuthRouteDeps) {
         ...d.guards.staff(RESEND_STAFF_INVITE_ROLES),
         body: strictObject({ staffId: Type.String({ format: 'uuid' }) }),
         ...audience({ kind: 'staff', roles: RESEND_STAFF_INVITE_ROLES }),
+      },
+    )
+    .post(
+      '/otp',
+      async ({ body, set }) => {
+        const requested = await d.requestOtp.execute({ phone: body.phone, ip: clientIp() })
+        set.status = 202
+        return requested
+      },
+      {
+        body: strictObject({ phone: Type.String({ minLength: 3, maxLength: 32 }) }),
+        ...audience({ kind: 'public' }),
+      },
+    )
+    .post(
+      '/otp/verify',
+      async ({ body }) => {
+        const signedIn = await d.verifyOtp.execute({
+          ...body,
+          userAgent: requestContext.get()?.userAgent ?? null,
+          ip: clientIp(),
+        })
+        // A resident always signs in from the app: the refresh token is in the body, never a cookie (DOC-26 §3.3).
+        return {
+          ...session(signedIn.session, 'app', { headers: {} }),
+          account: signedIn.account,
+          memberships: signedIn.memberships,
+        }
+      },
+      {
+        body: strictObject({
+          challengeId: Type.String({ format: 'uuid' }),
+          code: Type.String({ pattern: '^[0-9]{6}$' }),
+        }),
+        ...audience({ kind: 'public' }),
       },
     )
     .post(

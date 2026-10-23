@@ -5,8 +5,6 @@
  * checks (GRT-89…97) already run over every real table.
  */
 export const STAND_INS = `
-  CREATE TABLE identity.resident_account (id uuid PRIMARY KEY, phone text NOT NULL, language text NOT NULL);
-  CREATE TABLE identity.otp_challenge (id uuid PRIMARY KEY, code_hash text NOT NULL);
   CREATE TABLE residency.resident_profile (id uuid PRIMARY KEY, full_name text NOT NULL, cccd_last4 text, cccd_enc text, date_of_birth date);
   CREATE INDEX ix_resident_profile_name_trgm ON residency.resident_profile USING gin (platform.immutable_unaccent(lower(full_name)) gin_trgm_ops);
   CREATE TABLE notification.device_token (id uuid PRIMARY KEY, token text NOT NULL);

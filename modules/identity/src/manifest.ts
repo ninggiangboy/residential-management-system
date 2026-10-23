@@ -6,9 +6,10 @@ import { identityOutbox } from './infrastructure/persistence/schema'
 const dir = fileURLToPath(new URL('..', import.meta.url))
 
 /**
- * Static data, importable without building the container (DOC-12 §4.2). `identity` writes two types to its own outbox, both of
- * the `default` retry class (DOC-09 §4.2); the SMS command and its `sms` class join with P1-11. The audit action of the invite resend is
- * declared; the rest of `identity.staff.*` joins with the staff accounts (P1-14).
+ * Static data, importable without building the container (DOC-12 §4.2). `identity` writes three types to its own outbox: the mail
+ * command and the revocation fact of the `default` retry class, and the SMS command of the `sms` class, which a late send makes
+ * useless (DOC-09 §4.2). The audit action of the invite resend is declared; the rest of `identity.staff.*` joins with the staff
+ * accounts (P1-14).
  */
 export const identityManifest = {
   name: 'identity',
@@ -19,6 +20,7 @@ export const identityManifest = {
   config: undefined,
   outboxPolicies: {
     [IDENTITY_EVENTS.mailRequested]: 'default',
+    [IDENTITY_EVENTS.smsRequested]: 'sms',
     [IDENTITY_EVENTS.sessionRevoked]: 'default',
   },
   auditActions: ['identity.staff.update'],

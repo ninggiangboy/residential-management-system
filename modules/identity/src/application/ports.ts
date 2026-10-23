@@ -24,6 +24,44 @@ export interface TokenFactory {
   digits(digits: number): string
   /** `HMAC-SHA256(OTP_HMAC_KEY, "stepup:" || staff || ":" || action || ":" || code)` in hex (DR-132). */
   stepUpHmac(staffId: string, action: string, code: string): string
+  /** `HMAC-SHA256(OTP_HMAC_KEY, "otp:" || challenge || ":" || code)` in hex: the challenge id binds the value (DOC-26 §5.1). */
+  otpHmac(challengeId: string, code: string): string
+}
+
+/**
+ * The SMS driver: `console`, `allowlist` or the provider adapter by `SMS_DRIVER` (DOC-26 §5.5, DR-68). It needs only `send`, and
+ * reports a provider failure as an exception, so the outbox retries.
+ */
+export interface SmsSender {
+  send(message: { to: string; text: string; requestId: string }): Promise<void>
+}
+
+/** A phone as the product stores it. The parser is `libphonenumber-js`, which the application layer may not import. */
+export interface PhoneNumbers {
+  /** E.164 of a number that is valid somewhere in the world, region VN for a national format; `null` for any other input. */
+  toE164(input: string): string | null
+}
+
+/** What `ResidencyApi.listActiveMemberships` answers: the active memberships of an account with the unit code (DOC-26 §3.4). */
+export interface ActiveMembership {
+  membershipId: string
+  unitId: string
+  unitCode: string
+  memberType: 'owner' | 'tenant' | 'family' | 'resident'
+  canPay: boolean
+}
+
+/**
+ * `identity` declares the question and the composition root binds `residency` to it (DOC-12 §4.4): `residency` depends on
+ * `identity` (it asks for accounts), so `identity` cannot import it. Until P1-12 the stand-in answers "none".
+ */
+export interface ActiveMemberships {
+  listActive(accountId: string): Promise<ActiveMembership[]>
+}
+
+/** Whether recent SMS commands are failing: three failing and none delivered in 10 minutes (DOC-26 §5.4, DR-134). */
+export interface SmsProviderProbe {
+  isDown(): Promise<boolean>
 }
 
 /** `@core/mail`'s `Mailer`: console, allowlist or smtp by `MAIL_DRIVER` (DOC-26 §5.5). */

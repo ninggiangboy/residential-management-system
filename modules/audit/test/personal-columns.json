@@ -28,6 +28,7 @@
     { "schema": "residency", "table": "resident_profile", "column": "email", "class": "personal" },
     { "schema": "residency", "table": "resident_profile", "column": "note", "class": "personal" },
     { "schema": "identity", "table": "resident_account", "column": "phone", "class": "personal" },
+    { "schema": "identity", "table": "otp_challenge", "column": "phone", "class": "personal" },
     {
       "schema": "identity",
       "table": "resident_account",
