@@ -342,13 +342,16 @@ Prefix `FS-` (files). They run against a local S3-compatible store and the real 
 | FS-04 | A registered 5 MB image whose object is 11 MB | Verify runs | 422 `file_not_verified` (`too_large`); the row is `deleted`; one `file_delete_requested` command; after the worker runs, `HEAD` gives 404 (FR-40.2) |
 | FS-05 | A `.jpg` whose first bytes are PNG, and a text file named `.jpg` | Verify runs for each | 422 for both; rows `deleted` (FR-40.2) |
 | FS-06 | A good 800 KB JPEG | Verify runs | 200; `size` is the real size; `status = verified`; one `thumbnail_requested` command |
+| FS-06b | Four parallel verifies of one pending file (DR-255) | each answers the same 200; one thumbnail command |
 | FS-07 | A registered file with no object yet | Verify runs; the client `PUT`s; verify runs again | First 422 (`missing`) with the row `pending`; second 200 |
 | FS-08 | A file registered by account A | Account B verifies it; account B's ticket attaches it | 404; 422 `file_not_verified`; the file is unchanged |
 | FS-09 | A verified file and a ticket transaction that rolls back after `attach` | The transaction ends | The file is `verified` again, `owner_ref` null |
+| FS-09b | Two owners attach one verified file in parallel (DR-255) | one attaches; the other is 422 `not_verified` |
 | FS-10 | Files `pending` 25 h, `verified` 25 h, `attached` 25 h and `pending` 1 h (fake clock) | `orphan_uploads` runs | The first two are `deleted` with commands; the others are unchanged (FR-40.3) |
 | FS-11 | An attached photo and a vehicle paper | `signedUrl` is called; the request is logged | 900 s and 300 s; the host is `S3_PUBLIC_ENDPOINT`; no log line holds the query string of the URL |
 | FS-12 | An attached image before and after its thumbnail exists | `signedUrl(variant: 'thumb')` is called | The original's URL; then the thumbnail's |
 | FS-13 | An attached image with a thumbnail | `remove` runs in a transaction | Both rows `deleted`; two delete commands in that transaction |
+| FS-13b | Three parallel removes of one file (DR-255) | the file is `deleted`; one delete command |
 | FS-14 | A `deleted` row, and an `attached` row named by a stray command | `building.delete_file_object` runs twice for each | The first is deleted from the bucket and the second run changes nothing; the second row's object is not touched |
 | FS-15 | A 25 MB generated stream | `storeGenerated` runs; then a run where the stream fails at 10 MB | The first is `attached` with a SHA-256; the second leaves a `pending` row and aborts its multipart upload |
 | FS-16 | 40 GiB of 50 GiB used | `storage_quota` runs | `storage_usage_ratio` is 0.8 |

@@ -663,6 +663,7 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-03 | The first wrong password after the lock ended (fake clock +15 min 1 s) | 401; `failed_attempts` is 1 and `locked_until` is null |
 | AU-04 | One IP makes 31 sign-in attempts across 31 emails in 15 minutes (FR-13.2) | the 31st is 429 `rate_limited` with `Retry-After` |
 | AU-05 | A reset link used at 29 min 59 s, again, and at 30 min 01 s; a newer link requested before use | the first use works once; the second and the 30 min 01 s use are 400 `token_invalid`; the older link is refused after the newer is issued (FR-13.3) |
+| AU-05b | The same reset link used twice in parallel (DR-255) | one sets the password; the other is 400 `token_invalid` |
 | AU-06 | Reset for a known and an unknown email; 4 requests for one email in an hour; 11 from one IP | identical `202 {}` and body for the first two; the 4th for the email and the 11th for the IP are 429 (FR-13.4) |
 | AU-07 | Passwords `abc12345`, `abcdefgh`, `12345678`, `abc1234`, 129 characters | the first is accepted; the others are 400 `password_weak` (FR-13.5); a link used with a weak password is not consumed |
 | AU-08 | Manager unlocks a locked Technician; a completed reset of a temporarily locked Manager | sign-in works at once in both; a reset does not unlock a manual `locked` account (FR-13.6) |
@@ -691,6 +692,7 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-31 | An account with 3 sessions revokes one (FR-45.1) | its family and tokens are revoked (`user_revoked`), `identity.session_revoked.v1` is written, its refresh is 401; another account's session id is 404 |
 | AU-32 | A rotated token used again 11 s after its rotation (FR-45.2) | 401, the whole family revoked with `token_reuse`, committed |
 | AU-33 | The same token sent twice within 10 s (a lost response) | both are 200; the second creates a sibling; the first successor and the sibling both refresh once |
+| AU-33b | Ten parallel refreshes of one token (DR-255) | exactly one spends it (`replaced_by_id` set once); the other nine mint a sibling; eleven tokens in the family, which stays live |
 | AU-34 | Eleven sign-ins of one account (FR-45.3) | ten live families; the oldest is revoked with `cap_exceeded` and one event |
 | AU-35 | Refresh at day 29, 31 (staff) and 179, 181 (resident) after the last use, and at day 91 and 366 after sign-in (fake clock; FR-45.4) | the sliding limit and the absolute limit each refuse; a refresh at day 29 extends to day 59 but never past day 90 |
 | AU-36 | Refresh with a token of a revoked family | 401 and no new event |
@@ -701,9 +703,11 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-41 | A resident token on a `/staff/*` route and a staff token on `/me/*` (FR-16.4) | 401 `unauthenticated` each, whatever the role |
 | AU-42 | An expired token, a token with a changed payload, `alg: none`, an unknown `kid`, `iss` other than `rms` | 401 `unauthenticated` each |
 | AU-43 | A step-up code (FR-50.1) | 6 digits; valid 10 minutes (refused at 10 min 1 s); single use; a second request consumes the first |
+| AU-43b | The right step-up code verified twice in parallel (DR-255) | one succeeds; the other is 403 `step_up_failed` |
 | AU-44 | A proof with no `stepUp`, a wrong code, an expired code, a used code, a wrong password, another Admin's code (FR-50.2) | 403 `step_up_required` for the first; 403 `step_up_failed` for the other five; the action changed nothing |
 | AU-45 | A code requested for `staff_email` used for `gateway_config` | 403 `step_up_failed` |
 | AU-46 | Five wrong codes, then the right one (FR-50.3) | the fifth consumes the challenge; the right code is 403 `step_up_failed` with `attemptsLeft: 0`; the counts were committed although each action rolled back |
+| AU-46b | Parallel wrong codes, four then three (DR-255) | each is counted until the fifth; the fifth consumes the challenge; the sixth and seventh count nothing; every answer is 403 `step_up_failed` |
 | AU-47 | A wrong password in a step-up proof | 403 `step_up_failed`; `failed_attempts` of the Admin + 1; the code's `attempts` unchanged; five such proofs lock sign-in |
 | AU-48 | A successful step-up change (FR-50.4) | one `step_up_notice` command per active Admin (actor included) and, after the relay, one inbox entry `staff.step_up_done` each; the audit row has the changed fields and no secret |
 | AU-49 | A successful `verifyStepUp` followed by a business failure (409 `gateway_in_use`) | the transaction rolls back: the code is still live and no notice exists |
@@ -713,6 +717,8 @@ Prefix `AU-` (registered in master plan §0.2; DOC-88 indexes it). "(race)" test
 | AU-53 | `queueMemberInvitation` for a phone whose OTP bucket is empty | 429 `rate_limited`; the caller's insert rolls back |
 | AU-54 | A resident opens the app 5 times in 30 minutes | `last_app_open_at` is written once |
 | AU-55 | `GET /me/sessions` and `GET /staff/sessions` | the current session is marked; `client` is `web` for a staff sign-in with `client: "web"` and `app` otherwise; the `device` labels of `rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` and of a Chrome on macOS user agent are `iPhone17,1, iOS 19.1` and `Chrome on macOS` |
+
+**DR-255 (2026-10-23).** The statements of §13 are no longer written in the repositories: `StaffAccount`, `RefreshFamily` and `PasswordToken` decide, and each repository applies the change in one guarded `UPDATE` (`applyTransition`); the lockout count and the code count decide again with `decide` (30 tries at most). AU-01…50 run unchanged. Set-based statements stay statements: the eviction of the oldest families, the revocation of every family of an account, and the supersede of an older link or code.
 
 ## 13. Statements run
 
