@@ -15,6 +15,11 @@ export interface TermsVersionListing extends TermsVersionRecord {
   acceptedCount: number
 }
 
+/** The latest version of a kind with its text, and whether one account has accepted it (E-16). */
+export interface TermsAcceptanceView extends TermsVersionRecord {
+  accepted: boolean
+}
+
 export interface TermsRepository {
   /** Every version of the kind (both when `null`), newest first, with the number of acceptances. */
   list(
@@ -26,6 +31,8 @@ export interface TermsRepository {
     scope: BuildingScope,
     accountId: string,
   ): Promise<Array<Pick<TermsVersionRecord, 'id' | 'kind' | 'version'>>>
+  /** The latest version of each kind with the account's acceptance, in the order of the gate. */
+  latestFor(scope: BuildingScope, accountId: string): Promise<TermsAcceptanceView[]>
   latest(scope: BuildingScope): Promise<Array<Pick<TermsVersionRecord, 'id' | 'kind' | 'version'>>>
   /** The next number of the kind; a lost race is the unique index, which the caller turns into 409. */
   insertNext(

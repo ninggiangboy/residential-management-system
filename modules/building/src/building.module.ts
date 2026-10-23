@@ -57,6 +57,11 @@ import {
   buildingRoutes,
   type StaffNames,
 } from './presentation/building-routes'
+import {
+  type ResidentBuildings,
+  type ResidentTermsRouteDeps,
+  residentTermsRoutes,
+} from './presentation/resident-terms-routes'
 import { type UploadRouteDeps, uploadRoutes } from './presentation/upload-routes'
 
 export interface BuildingDeps {
@@ -64,6 +69,8 @@ export interface BuildingDeps {
   guards: Guards
   /** The names of the staff who published a terms version, from `identity`. */
   staffNames: StaffNames
+  /** The buildings of the account of `GET /me/terms`, from `residency`. */
+  residentBuildings: ResidentBuildings
   storage: ObjectStorage
   /** The `SETTINGS_ENCRYPTION_KEYS` ring (DOC-36 §6). */
   secretBox: SecretBox
@@ -111,14 +118,14 @@ export interface BuildingModule extends AppModule<'building'> {
   /** The reads behind `GET /staff/settings` and `GET /staff/gateway` (DOC-36 §4, §7.1). */
   readonly queries: BuildingQueries
   readonly useCases: BuildingUseCases
-  /** `/staff/settings`, `/gateway`, `/terms` and `/uploads` (E-36, E-37, E-47…E-50, E-52, E-53). */
+  /** `/staff/settings`, `/gateway`, `/terms` and `/uploads` (E-36, E-37, E-47…E-50, E-52, E-53), and `/me/terms` (E-16, E-17). */
   readonly routes: BuildingRoutes
 }
 
 export type BuildingRoutes = ReturnType<typeof createRoutes>
 
-function createRoutes(d: BuildingRouteDeps & UploadRouteDeps) {
-  return routePlugin().use(buildingRoutes(d)).use(uploadRoutes(d))
+function createRoutes(d: BuildingRouteDeps & UploadRouteDeps & ResidentTermsRouteDeps) {
+  return routePlugin().use(buildingRoutes(d)).use(uploadRoutes(d)).use(residentTermsRoutes(d))
 }
 
 const NO_USAGE: UsageReporter = { report() {} }
@@ -244,6 +251,7 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       files,
       ...useCases,
       staffNames: deps.staffNames,
+      residentBuildings: deps.residentBuildings,
       guards: deps.guards,
     }),
     handlers,

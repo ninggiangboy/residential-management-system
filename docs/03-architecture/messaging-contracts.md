@@ -1126,7 +1126,7 @@ interface ScanMembershipDto {
 | `activeUnitIds` | The units where the account has an `active` membership; the inbox visibility filter (DR-53). Not paginated: an account has a handful of memberships. More than 500 rows is a data defect and the call throws. |
 | `getUnits` | Unit code, floor and occupancy for up to 500 ids; reports and the debt list use it for one page at a time (DR-42). |
 | `getMembershipForScan` | The membership by id with its `credentialVersion`, whatever its status; the QR scan compares status and version (DR-48). `null` for an unknown id. |
-| `ownedUnitIds` | The ids of the units whose active owner is the account; `[]` when none. Identity asks it at the approval and at the execution of an account deletion (`owner_must_transfer`, DOC-35 §10). |
+| `ownedUnitIds` | The ids of the units whose owner row is the account's and is not removed (a locked owner counts, DR-257); `[]` when none. Identity asks it at the approval and at the execution of an account deletion (`owner_must_transfer`, DOC-35 §10). |
 | `listActiveMemberships` | The `active` memberships of the account with the unit code, ordered by unit code; a `locked` one is not returned. More than 500 rows is a data defect and the call throws. The sign-in answer, `GET /me` and `Unit-Pick` use it (DOC-26 §3.4, DOC-27 §2.1). |
 | `buildingIdsOfAccounts` | The distinct buildings of the non-removed memberships of up to 500 accounts; an account with none is absent. The boot guard check 1 of DOC-36 §10.1 uses it. |
 | `lookup` | The union search of units and residents (DOC-27 §11), `limitPerKind` 1…20, default 20. The DTO holds the full phone; the route that serves `GET /staff/lookup` (in `access`, DR-140) maps it to the audience (a Guard gets it masked, DOC-29). |

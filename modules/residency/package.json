@@ -1,0 +1,53 @@
+{
+  "name": "@mod/residency",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./contracts": {
+      "bun": "./src/contracts/index.ts",
+      "types": "./src/contracts/index.ts",
+      "default": "./src/contracts/index.ts"
+    },
+    "./manifest": {
+      "bun": "./src/manifest.ts",
+      "types": "./src/manifest.ts",
+      "default": "./src/manifest.ts"
+    },
+    "./schema": {
+      "bun": "./src/infrastructure/persistence/schema.ts",
+      "types": "./src/infrastructure/persistence/schema.ts",
+      "default": "./src/infrastructure/persistence/schema.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src --pass-with-no-tests",
+    "test:integration": "bun --env-file=../../.env.local test ./test --timeout 60000 --pass-with-no-tests"
+  },
+  "dependencies": {
+    "@core/db": "workspace:*",
+    "@core/http": "workspace:*",
+    "@core/kernel": "workspace:*",
+    "@core/messaging": "workspace:*",
+    "@core/runtime": "workspace:*",
+    "@mod/audit": "workspace:*",
+    "@mod/building": "workspace:*",
+    "@mod/identity": "workspace:*",
+    "@rms/shared-types": "workspace:*",
+    "@sinclair/typebox": "0.34.52",
+    "drizzle-orm": "0.45.4",
+    "elysia": "1.4.30"
+  },
+  "devDependencies": {
+    "@core/testing": "workspace:*",
+    "@rms/test-support": "workspace:*",
+    "@types/bun": "1.4.3",
+    "drizzle-kit": "0.31.11"
+  }
+}

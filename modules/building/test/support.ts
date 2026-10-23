@@ -102,8 +102,10 @@ export async function createHarness(options: HarnessOptions = {}) {
     guards: {
       staff: () => ({ transform: async () => {} }),
       resident: () => ({ transform: async () => {} }),
+      unit: () => ({ transform: async () => {} }),
     },
     staffNames: { names: async () => ({}) },
+    residentBuildings: { buildingIdsOf: async () => [] },
     files: {
       env: 'test',
       uploadUrlTtlSeconds: 900,

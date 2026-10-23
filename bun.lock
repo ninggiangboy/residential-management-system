@@ -36,6 +36,7 @@
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
         "@mod/identity": "workspace:*",
+        "@mod/residency": "workspace:*",
         "@sinclair/typebox": "0.34.52",
         "drizzle-orm": "0.45.4",
         "elysia": "1.4.30",
@@ -141,6 +142,7 @@
       "name": "@mod/building",
       "version": "0.0.0",
       "dependencies": {
+        "@core/context": "workspace:*",
         "@core/db": "workspace:*",
         "@core/http": "workspace:*",
         "@core/kernel": "workspace:*",
@@ -184,6 +186,30 @@
       "devDependencies": {
         "@core/testing": "workspace:*",
         "@mod/audit": "workspace:*",
+        "@rms/test-support": "workspace:*",
+        "@types/bun": "1.4.3",
+        "drizzle-kit": "0.31.11",
+      },
+    },
+    "modules/residency": {
+      "name": "@mod/residency",
+      "version": "0.0.0",
+      "dependencies": {
+        "@core/db": "workspace:*",
+        "@core/http": "workspace:*",
+        "@core/kernel": "workspace:*",
+        "@core/messaging": "workspace:*",
+        "@core/runtime": "workspace:*",
+        "@mod/audit": "workspace:*",
+        "@mod/building": "workspace:*",
+        "@mod/identity": "workspace:*",
+        "@rms/shared-types": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
+        "drizzle-orm": "0.45.4",
+        "elysia": "1.4.30",
+      },
+      "devDependencies": {
+        "@core/testing": "workspace:*",
         "@rms/test-support": "workspace:*",
         "@types/bun": "1.4.3",
         "drizzle-kit": "0.31.11",
@@ -872,6 +898,8 @@
     "@mod/building": ["@mod/building@workspace:modules/building"],
 
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
+
+    "@mod/residency": ["@mod/residency@workspace:modules/residency"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA=="],
 

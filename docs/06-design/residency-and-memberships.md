@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -767,6 +767,21 @@ Prefix `RM-` (master plan §0.2, unused elsewhere: `grep -rn "| RM-" docs/` foun
 | S15 | Two sessions: two transfers with `version = 1`; two invitation counts under the advisory lock | A: 1 row; B: waited, 0 rows. A inserted, B counted 4 and was refused |
 
 Not run: anything through `IdentityApi`, `FinanceApi`, the outbox, the HTTP guard, `SecretBox` and the application-level code; those are tested by the tasks above with the fakes of `./testing`. The two-session tests ran as two `psql` clients against one container, not as two API instances.
+
+### 17.3 As built (P1-12, 2026-10-23, DR-257)
+
+Built and run on PostgreSQL 18.6: the tables of DOC-16 §5.1 to §5.4 (`import_job` waits for P1-13), `ResidencyApi` except `lookup`, `UnitGuard` as the `unit(capability)` guard in `apps/api` (§3.1), `can` (§3.2), the `Membership` aggregate and the use case `ChangeMembership` (§6.1, §6.3; no route yet), `UpdateProfile` (§5.3; no route yet) and the deletion handler (§12).
+
+| Test | Where | Note |
+| --- | --- | --- |
+| RM-06, RM-07 | `modules/residency/src/contracts/policy.test.ts`, `unit-guard.integration.test.ts` | the 64 generated cells; the helper over HTTP |
+| RM-02, 09, 10, 12, 13, 14, 21 | `modules/residency/test/membership.integration.test.ts` (and `src/domain/membership.test.ts`) | RM-10: the owner's side is the aggregate, since `/me/members` is P4-10; the race of the two locks is decided by the guarded statement |
+| RM-38, 39 | `modules/residency/test/profile.integration.test.ts` | the sealed number opens only with its own building and account |
+| RM-46, 47 | `modules/residency/test/deletion.integration.test.ts` | the owner case logs and leaves the unit ownerless |
+| RM-49, 50, 51 | `modules/residency/test/queries.integration.test.ts`, `unit-guard.integration.test.ts` | RM-50 end to end: the boot guard fails with the real call |
+| RM-01, 03, 04, 05, 08 | `apps/api/tests/integration/unit-guard.integration.test.ts` | the very next request after a lock, over HTTP; AD-32 and AD-33 with the real guard and `/me/terms` |
+
+Differences from the text above: `lookup` is not built (it needs `IdentityApi.findResidentAccountsByPhoneFragment` and `getResidentAccounts` for names, P1-14); `UnitContext` is a type of `@rms/shared-types` and `assertCan` is not in the contract (DOC-12 §11); `ownedUnitIds` counts a locked owner; a failed guarded statement is answered by loading again and deciding on the winner's state, which gives the `invalid_transition` of §6.1 without a separate `SELECT` (DR-255).
 
 ### 17.2 Where DOC-16 and DOC-27 differed
 

@@ -2,6 +2,7 @@ import type { Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { sql } from 'drizzle-orm'
 import type {
+  TermsAcceptanceView,
   TermsRepository,
   TermsVersionListing,
   TermsVersionRecord,
@@ -57,6 +58,30 @@ export class DrizzleTermsRepository implements TermsRepository {
                             WHERE a.account_id = ${accountId} AND a.version_id = v.id)
          ORDER BY v.kind`)),
     ]
+  }
+
+  async latestFor(scope: BuildingScope, accountId: string): Promise<TermsAcceptanceView[]> {
+    const rows = await this.database.executor.execute<{
+      id: string
+      kind: TermsVersionRecord['kind']
+      version: number
+      text: TermsVersionRecord['text']
+      accepted: boolean
+    }>(sql`
+      SELECT v.id, v.kind, v.version, v.text,
+             EXISTS (SELECT 1 FROM building.terms_acceptance a
+                      WHERE a.account_id = ${accountId} AND a.version_id = v.id) AS accepted
+        FROM (SELECT DISTINCT ON (kind) id, kind, version, text
+                FROM building.terms_version WHERE building_id = ${scope.buildingId}
+               ORDER BY kind, version DESC) v
+       ORDER BY v.kind`)
+    return [...rows].map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      version: Number(row.version),
+      text: row.text,
+      accepted: row.accepted,
+    }))
   }
 
   async latest(scope: BuildingScope): Promise<Row[]> {

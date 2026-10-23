@@ -1,3 +1,4 @@
+import type { MemberType } from '@rms/shared-types'
 import type { AccessClaims } from '../contracts'
 
 /** Argon2id (DOC-26 §4.2). The adapter is `Bun.password`; the application never sees the algorithm's parameters. */
@@ -47,7 +48,7 @@ export interface ActiveMembership {
   membershipId: string
   unitId: string
   unitCode: string
-  memberType: 'owner' | 'tenant' | 'family' | 'resident'
+  memberType: MemberType
   canPay: boolean
 }
 

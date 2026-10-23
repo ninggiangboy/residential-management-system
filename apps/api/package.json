@@ -34,6 +34,7 @@
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
     "@mod/identity": "workspace:*",
+    "@mod/residency": "workspace:*",
     "@elysiajs/openapi": "1.4.16",
     "@sinclair/typebox": "0.34.52",
     "drizzle-orm": "0.45.4",

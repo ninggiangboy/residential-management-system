@@ -778,6 +778,7 @@ export function assertCan(c: UnitContext, cap: Capability): void   // throws For
 ```
 
 - The `unit('pay')` guard calls `can`; a use case that has a second, finer rule (for example "a tenant cannot retire a vehicle", FR-43.1) calls `can` or a named predicate in its own `application/policies/` and never re-reads `memberType` inline.
+- *As built (P1-12, DR-257):* `UnitContext` is declared in `@rms/shared-types` (the guards and `unitOf(context)` need it, and a contract imports nothing else), `@mod/residency/contracts` re-exports it and exports `can`; `assertCan` is not exported, because it would throw `ForbiddenError` and a contract may not import `@core/kernel`: the `unit(capability)` guard throws for a route, and a use case with a finer rule writes `if (!can(unit, capability)) throw new ForbiddenError()`.
 - Policy functions are pure and exhaustively table-tested (`RM-` tests: four member types × eight capabilities × `canPay`; FR-16.2).
 - The history rule is data, not policy: use cases that list paid history, receipts and payer names pass `ctx.startedAt` to the repository as a filter on payment date; Manager and Admin pass none (DR-40).
 - Staff authorization is a role check against the fixed table of original SDD §7.4 (`assertRole(staff, …)` and the `staff(...roles)` guard). The full endpoint × role matrix is generated from route metadata (DOC-39).

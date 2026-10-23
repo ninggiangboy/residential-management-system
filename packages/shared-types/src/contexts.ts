@@ -1,5 +1,12 @@
-import type { BuildingId, BuildingScope, ResidentAccountId, StaffId } from './ids'
-import type { StaffRole } from './people'
+import type {
+  BuildingId,
+  BuildingScope,
+  MembershipId,
+  ResidentAccountId,
+  StaffId,
+  UnitId,
+} from './ids'
+import type { Capability, MemberType, StaffRole } from './people'
 
 /**
  * The request context of a staff call, built by the `staff(...roles)` guard from the verified token and the account row
@@ -25,6 +32,23 @@ export interface StaffSession extends StaffContext {
 export interface ResidentSession {
   readonly accountId: ResidentAccountId
   readonly sessionId: string
+}
+
+/**
+ * The context of a resident request after the `unit(capability)` guard (DOC-12 §11.1, DOC-27 §3.1): built from the membership
+ * row of `(account, unit)` on every request, so a lock or a removal applies to the very next one (FR-16.1). The policy function
+ * `can` is `@mod/residency`'s; the type lives here because the guards and the other modules take it as an argument.
+ */
+export interface UnitContext {
+  readonly buildingId: BuildingId
+  readonly unitId: UnitId
+  readonly membershipId: MembershipId
+  readonly accountId: ResidentAccountId
+  readonly memberType: MemberType
+  readonly canPay: boolean
+  /** `membership.created_at`: finance shows paid history only from this instant on (DR-40). */
+  readonly startedAt: Date
+  readonly scope: BuildingScope
 }
 
 /** What a guard needs of an Elysia context; structural, so this leaf package imports no framework. */
@@ -53,6 +77,11 @@ export interface Guards {
    * It loads nothing else. The `unit(capability)` guard of P1-12 builds on it and adds the membership and the terms gate.
    */
   resident(): RouteGuard
+  /**
+   * After `resident`: reads `X-Unit-Id`, loads the membership on every request, runs the terms gate and asks the policy for
+   * `capability` (DOC-27 §3.1): 400 for a missing or malformed header, 403 `membership_inactive`, `terms_required` or `forbidden`.
+   */
+  unit(capability: Capability): RouteGuard
 }
 
 /** The staff member a `staff` guard proved, read by the handler of a route that carries it. */
@@ -67,4 +96,11 @@ export function residentOf(context: object): ResidentSession {
   const resident = (context as { resident?: ResidentSession }).resident
   if (!resident) throw new Error('residentOf: the route has no resident guard')
   return resident
+}
+
+/** The unit context a `unit(capability)` guard built, read by the handler of a route that carries it. */
+export function unitOf(context: object): UnitContext {
+  const unit = (context as { unit?: UnitContext }).unit
+  if (!unit) throw new Error('unitOf: the route has no unit guard')
+  return unit
 }

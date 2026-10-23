@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { createLogger } from '@core/telemetry'
 import { buildingManifest } from '@mod/building/manifest'
 import { identityManifest } from '@mod/identity/manifest'
+import { residencyManifest } from '@mod/residency/manifest'
 import { loadAppConfig } from './config'
 import { localEnv } from './config/support'
 import { createContainer } from './container'
@@ -42,8 +43,8 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
 })
 
 describe('the module catalog (DOC-12 §5.2)', () => {
-  test('audit comes before building and identity, and a module is installed for every manifest', () => {
-    const order = ['audit', 'building', 'identity']
+  test('audit comes before building, identity and residency, and a module is installed for every manifest', () => {
+    const order = ['audit', 'building', 'identity', 'residency']
     expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(order)
     expect(container.modules.map((module) => module.name)).toEqual(order)
   })
@@ -56,6 +57,16 @@ describe('the module catalog (DOC-12 §5.2)', () => {
     })
     expect(container.modules.find((module) => module.name === 'identity')?.outbox?.name).toBe(
       'identity',
+    )
+  })
+
+  test('residency writes the two facts of DOC-09 §6.2, both of the default retry class', () => {
+    expect(residencyManifest.outboxPolicies).toEqual({
+      'residency.membership_changed.v1': 'default',
+      'residency.owner_changed.v1': 'default',
+    })
+    expect(container.modules.find((module) => module.name === 'residency')?.outbox?.name).toBe(
+      'residency',
     )
   })
 
