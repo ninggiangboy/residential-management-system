@@ -3,10 +3,11 @@ import { LockedError } from '@core/kernel'
 import type { BuildingApi } from '@mod/building/contracts'
 import { InvalidCredentialsError } from '../../domain/errors'
 import { normalizePassword } from '../../domain/password-policy'
-import type { Client } from '../../domain/session-repository'
+import type { Client } from '../../domain/refresh-family'
 import { StaffAccount } from '../../domain/staff-account'
 import type { StaffAccountRepository } from '../../domain/staff-account-repository'
 import type { IdentityConfig } from '../config'
+import type { FailureCounter } from '../failure-counter'
 import type { PasswordHasher, RateLimiter } from '../ports'
 import type { IssuedSession, SessionIssuer } from '../session-issuer'
 import { type StaffProfile, toStaffProfile } from '../staff-dto'
@@ -24,31 +25,40 @@ export interface StaffSignInResult {
   staff: StaffProfile
 }
 
-export interface SignInStaffDeps {
-  staffAccounts: StaffAccountRepository
-  hasher: PasswordHasher
-  limiter: RateLimiter
-  building: Pick<BuildingApi, 'getSettings'>
-  issuer: SessionIssuer
-  uow: UnitOfWork
-  clock: Clock
-  logger: Log
-  config: IdentityConfig
-}
-
 const FIFTEEN_MINUTES = 900
 
 /**
  * Staff sign-in by email and password (DOC-26 §4.1, DR-128): the IP bucket, one answer for every credential failure, a dummy
- * Argon2 verify so an unknown email costs the same, the lockout as one statement, and a session on success. A sign-in writes no
+ * Argon2 verify so an unknown email costs the same, the lockout counted by `StaffAccount.recordFailure`, and a session on success. A sign-in writes no
  * audit row (FR-37 covers mutations); it writes the log line `auth.staff_login` with the outcome, never the email or password.
  */
 export class SignInStaff {
-  constructor(private readonly deps: SignInStaffDeps) {}
+  constructor(
+    private readonly staffAccounts: StaffAccountRepository,
+    private readonly failures: FailureCounter,
+    private readonly hasher: PasswordHasher,
+    private readonly limiter: RateLimiter,
+    private readonly building: Pick<BuildingApi, 'getSettings'>,
+    private readonly issuer: SessionIssuer,
+    private readonly uow: UnitOfWork,
+    private readonly clock: Clock,
+    private readonly logger: Log,
+    private readonly config: IdentityConfig,
+  ) {}
 
   async execute(input: StaffSignInInput): Promise<StaffSignInResult> {
-    const { staffAccounts, hasher, limiter, building, issuer, uow, clock, logger, config } =
-      this.deps
+    const {
+      staffAccounts,
+      failures,
+      hasher,
+      limiter,
+      building,
+      issuer,
+      uow,
+      clock,
+      logger,
+      config,
+    } = this
     const outcome = (result: string, staffId?: string) =>
       logger.info(
         { event: 'auth.staff_login', outcome: result, staffId, ip: input.ip },
@@ -86,15 +96,13 @@ export class SignInStaff {
       throw new LockedError(lockedFor)
     }
 
-    // 5 and 6. A wrong password is counted by one statement, so 20 parallel attempts leave 5 failures.
+    // 5 and 6. A wrong password is counted by the aggregate and one guarded statement, so 20 parallel attempts leave 5 failures.
     if (!(await hasher.verify(password, record.passwordHash))) {
       const { lockout } = await building.getSettings(record.buildingId)
-      const counted = await staffAccounts.recordFailureByEmail(record.email, lockout, now)
-      if (counted === null || (counted.lockedUntil !== null && counted.lockedUntil > now)) {
-        const fresh = await staffAccounts.findById(record.id)
-        const seconds = fresh ? new StaffAccount(fresh).lockedSeconds(now) : 0
+      const counted = await failures.count(record.id, lockout, now)
+      if (counted && counted.lockedSeconds > 0) {
         outcome('locked', record.id)
-        throw new LockedError(Math.max(seconds, 1))
+        throw new LockedError(counted.lockedSeconds)
       }
       outcome('invalid', record.id)
       throw new InvalidCredentialsError()
@@ -105,7 +113,9 @@ export class SignInStaff {
       ? await hasher.hash(password)
       : undefined
     const session = await uow.run(async () => {
-      await staffAccounts.markSignedIn(record.id, now, rehashed)
+      // Zero rows: the account was disabled or its password changed since it was read; the sign-in fails like any other.
+      if (!(await staffAccounts.apply(account.signedIn(now, rehashed), now)))
+        throw new InvalidCredentialsError()
       return issuer.openStaffSession(record, { client: input.client, userAgent: input.userAgent })
     })
     outcome('ok', record.id)

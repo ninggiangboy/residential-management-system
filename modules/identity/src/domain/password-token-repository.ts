@@ -1,5 +1,11 @@
-export type LinkKind = 'reset' | 'invite'
-export type StepUpAction = 'gateway_config' | 'admin_change' | 'staff_email'
+import type {
+  LinkKind,
+  PasswordTokenRecord,
+  PasswordTokenTransition,
+  StepUpAction,
+} from './password-token'
+
+export type { LinkKind, StepUpAction }
 
 export interface NewLink {
   id: string
@@ -21,34 +27,22 @@ export interface NewStepUpCode {
   expiresAt: Date
 }
 
-/** The single-use credentials of DOC-16 §4.4: reset and invite links, and step-up codes. */
+/**
+ * The single-use credentials of DOC-16 §4.4: reset and invite links, and step-up codes. The rules live in `PasswordToken`; a
+ * write is an issue, or the guarded `apply` of what the aggregate decided (DR-255).
+ */
 export interface PasswordTokenRepository {
-  /** Consumes the live token of `(staff, kind)` and inserts the new one, so a newer link voids the older. */
+  /**
+   * Set-based (DR-255 item 5): spends the live link of `(staff, kind)` and inserts the new one, so a newer link voids the older
+   * (DOC-26 §4.4).
+   */
   issueLink(link: NewLink, now: Date): Promise<void>
-  /** The atomic statement of DOC-26 §4.3: a row on first use, none for an unknown, expired or used link. */
-  consumeLink(tokenHash: string, now: Date): Promise<{ staffId: string; kind: LinkKind } | null>
-  /** Consumes the live code of `(staff, action)` and inserts the new one. */
+  /** The same for the live code of `(staff, action)`. */
   issueStepUp(code: NewStepUpCode, now: Date): Promise<void>
-  /** The atomic statement of DOC-16 §4.4, bound to the staff member and the action. */
-  consumeStepUp(
-    staffId: string,
-    action: StepUpAction,
-    codeHmac: string,
-    now: Date,
-    maxAttempts: number,
-  ): Promise<boolean>
-  /** Counts a wrong code on the live code; the last allowed attempt consumes it. */
-  countStepUpFailure(
-    staffId: string,
-    action: StepUpAction,
-    maxAttempts: number,
-    now: Date,
-  ): Promise<void>
-  /** `maxAttempts - attempts` of the live code, or 0 when there is none. */
-  stepUpAttemptsLeft(
-    staffId: string,
-    action: StepUpAction,
-    maxAttempts: number,
-    now: Date,
-  ): Promise<number>
+  /** The link with that hash, in any state. */
+  findLink(tokenHash: string): Promise<PasswordTokenRecord | null>
+  /** The newest unspent code of `(staff, action)`, in any state of expiry. */
+  findStepUp(staffId: string, action: StepUpAction): Promise<PasswordTokenRecord | null>
+  /** `false`: the token was spent, or counted, since it was loaded. */
+  apply(transition: PasswordTokenTransition): Promise<boolean>
 }

@@ -1,6 +1,6 @@
 import type { OutboxWriter } from '@core/messaging'
 import { IDENTITY_EVENTS, type RevocationReason, type SessionRevokedPayload } from '../contracts'
-import type { RevokedFamily } from '../domain/session-repository'
+import type { RevokedFamily } from '../domain/refresh-family'
 
 /**
  * One `identity.session_revoked.v1` per revoked family, in the transaction of the revocation (DOC-26 §3.8). `realtime` closes

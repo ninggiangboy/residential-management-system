@@ -2,12 +2,8 @@ import type { Clock } from '@core/kernel'
 import { requireRole } from '@core/kernel'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
 import { deviceLabel } from '../../domain/device-label'
-import type { Client, SessionRepository } from '../../domain/session-repository'
-
-export interface SessionQueriesDeps {
-  sessions: SessionRepository
-  clock: Clock
-}
+import type { Client } from '../../domain/refresh-family'
+import type { SessionRepository } from '../../domain/session-repository'
 
 /** One row of `GET /staff/sessions` (DOC-26 §3.7). */
 export interface SessionDto {
@@ -29,11 +25,14 @@ export const LIST_STAFF_SESSIONS_ROLES = [
 
 /** The session lists: the live families of an account, most recently used first, the current one marked. */
 export class SessionQueries {
-  constructor(private readonly deps: SessionQueriesDeps) {}
+  constructor(
+    private readonly sessions: SessionRepository,
+    private readonly clock: Clock,
+  ) {}
 
   async listStaff(staff: StaffContext, currentSessionId: string): Promise<SessionDto[]> {
     requireRole(staff, LIST_STAFF_SESSIONS_ROLES)
-    const rows = await this.deps.sessions.listLive('staff', staff.staffId, this.deps.clock.now())
+    const rows = await this.sessions.listLive('staff', staff.staffId, this.clock.now())
     return rows.map((row) => ({
       id: row.id,
       client: row.client,

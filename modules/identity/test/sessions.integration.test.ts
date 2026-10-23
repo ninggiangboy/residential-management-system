@@ -67,6 +67,21 @@ describe('refresh (DOC-26 §3.5)', () => {
     await refresh(second.refreshToken)
   })
 
+  test('AU-33b: 10 parallel refreshes of one token spend it once and the rest take the grace path', async () => {
+    const { session, sid } = await signedIn()
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => refresh(session.session.refreshToken)),
+    )
+    expect(new Set(results.map((result) => result.refreshToken)).size).toBe(10)
+    const [spent] = await h.db
+      .sql`SELECT count(*)::int AS n FROM identity.refresh_token WHERE family_id = ${sid} AND replaced_by_id IS NOT NULL`
+    expect(spent?.n).toBe(1)
+    const [all] = await h.db
+      .sql`SELECT count(*)::int AS n FROM identity.refresh_token WHERE family_id = ${sid}`
+    expect(all?.n).toBe(11)
+    expect((await familyOf(sid))?.revoked_at).toBeNull()
+  })
+
   test('AU-36: a token of a revoked family is 401 and writes no new event', async () => {
     const { staff, session, sid } = await signedIn()
     await h.identity.useCases.signOut.execute({ refreshToken: session.session.refreshToken })
