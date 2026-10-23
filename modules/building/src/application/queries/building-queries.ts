@@ -13,28 +13,26 @@ import { scopeOf } from '../scope-of'
 const READ_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 const READ_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
-export interface BuildingQueriesDeps {
-  documents: BuildingDocumentLoader
-  gateways: GatewayConfigRepository
-  terms: TermsRepository
-  directory: BuildingDirectory
-  reader: GatewayConfigReader
-}
-
 /** The reads of the building: settings, gateway configuration and terms. No state change, no transaction, no rule of its own (DOC-12 §4.5 rule 3). */
 export class BuildingQueries {
-  constructor(private readonly deps: BuildingQueriesDeps) {}
+  constructor(
+    private readonly documents: BuildingDocumentLoader,
+    private readonly gateways: GatewayConfigRepository,
+    private readonly terms: TermsRepository,
+    private readonly directory: BuildingDirectory,
+    private readonly reader: GatewayConfigReader,
+  ) {}
 
   /** `GET /staff/settings` (DOC-36 §4): the building row and the settings in one document, with its `ETag`. */
   async settings(staff: StaffContext): Promise<BuildingDocument> {
     requireRole(staff, READ_SETTINGS_ROLES)
-    return this.deps.documents.load(staff.buildingId)
+    return this.documents.load(staff.buildingId)
   }
 
   /** `GET /staff/gateway`: the active configurations with masked secrets and the drivers this building may use (DOC-36 §7.1). */
   async gatewayView(staff: StaffContext) {
     requireRole(staff, READ_GATEWAY_ROLES)
-    const { gateways, directory, reader } = this.deps
+    const { gateways, directory, reader } = this
     const isDemo = await directory.isDemo(staff.buildingId)
     const configs: GatewayView[] = []
     for (const provider of ['payos', 'vietqr'] as const) {
@@ -56,7 +54,7 @@ export class BuildingQueries {
     provider: GatewayProvider,
     opts: { lock?: 'share' } = {},
   ): Promise<GatewayConfigDto | null> {
-    return this.deps.reader.config(buildingId, provider, opts)
+    return this.reader.config(buildingId, provider, opts)
   }
 
   /**
@@ -64,7 +62,7 @@ export class BuildingQueries {
    * after a publish must be refused, and two API containers cannot share an invalidation (DR-125).
    */
   async missingTerms(accountId: string, buildingId: string): Promise<MissingTerm[]> {
-    const rows = await this.deps.terms.missing(scopeOf(buildingId), accountId)
+    const rows = await this.terms.missing(scopeOf(buildingId), accountId)
     return rows.map((row) => ({ kind: row.kind, version: row.version, versionId: row.id }))
   }
 }

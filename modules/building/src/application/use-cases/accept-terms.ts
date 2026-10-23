@@ -12,22 +12,20 @@ export interface AcceptTermsInput {
   appVersion: string | null
 }
 
-export interface AcceptTermsDeps {
-  uow: UnitOfWork
-  terms: TermsRepository
-}
-
 /**
  * `POST /me/terms`: accepts several versions at once. An acceptance of the latest version inserts a row (and stores the IP,
  * which is personal data); one that already exists is kept and answers the same; a version that is no longer the latest is 409
  * with the current ones; an unknown or foreign id is 404 (DOC-35 §9.3).
  */
 export class AcceptTerms {
-  constructor(private readonly deps: AcceptTermsDeps) {}
+  constructor(
+    private readonly uow: UnitOfWork,
+    private readonly terms: TermsRepository,
+  ) {}
 
   async execute(input: AcceptTermsInput): Promise<void> {
     const scope = scopeOf(input.buildingId)
-    const { terms, uow } = this.deps
+    const { terms, uow } = this
     await uow.run(async () => {
       for (const versionId of input.versionIds) {
         if (!(await terms.exists(scope, versionId))) throw new NotFoundError()

@@ -1,7 +1,12 @@
-import { type Database, inBuilding } from '@core/db'
+import { applyTransition, type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, asc, eq, inArray, lt, ne, sql } from 'drizzle-orm'
-import { FileObject, type FileRecord, type NewFile } from '../../domain/file-object'
+import {
+  FileObject,
+  type FileRecord,
+  type FileTransition,
+  type NewFile,
+} from '../../domain/file-object'
 import type { FileRepository } from '../../domain/file-repository'
 import { fileObject } from './schema'
 
@@ -83,80 +88,15 @@ export class DrizzleFileRepository implements FileRepository {
     return row ? toRecord(row) : null
   }
 
-  async markVerified(
+  async apply(
     scope: BuildingScope,
-    id: string,
-    size: number,
+    transition: FileTransition,
     now: Date,
   ): Promise<FileObject | null> {
-    const [row] = await this.database.executor
-      .update(fileObject)
-      .set({ status: 'verified', verifiedAt: now, size, updatedAt: now })
-      .where(
-        and(inBuilding(fileObject, scope), eq(fileObject.id, id), eq(fileObject.status, 'pending')),
-      )
-      .returning()
-    return row ? toRecord(row) : null
-  }
-
-  async markDeleted(scope: BuildingScope, id: string, now: Date): Promise<FileObject | null> {
-    const [row] = await this.database.executor
-      .update(fileObject)
-      .set({ status: 'deleted', deletedAt: now, updatedAt: now })
-      .where(
-        and(inBuilding(fileObject, scope), eq(fileObject.id, id), ne(fileObject.status, 'deleted')),
-      )
-      .returning()
-    return row ? toRecord(row) : null
-  }
-
-  /** The conditional `UPDATE` of DOC-37 §6.4: one row or none. */
-  async attach(
-    scope: BuildingScope,
-    row: {
-      id: string
-      ownerRef: string
-      accountKind: FileRecord['accountKind']
-      accountId: string
-    },
-    now: Date,
-  ): Promise<boolean> {
-    const rows = await this.database.executor
-      .update(fileObject)
-      .set({ status: 'attached', attachedAt: now, ownerRef: row.ownerRef, updatedAt: now })
-      .where(
-        and(
-          inBuilding(fileObject, scope),
-          eq(fileObject.id, row.id),
-          eq(fileObject.status, 'verified'),
-          eq(fileObject.accountKind, row.accountKind),
-          eq(fileObject.accountId, row.accountId),
-        ),
-      )
-      .returning({ id: fileObject.id })
-    return rows.length === 1
-  }
-
-  async completeGenerated(
-    scope: BuildingScope,
-    id: string,
-    result: { size: number; checksum: string },
-    now: Date,
-  ): Promise<FileObject | null> {
-    const [row] = await this.database.executor
-      .update(fileObject)
-      .set({
-        status: 'attached',
-        verifiedAt: now,
-        attachedAt: now,
-        size: result.size,
-        checksum: result.checksum,
-        updatedAt: now,
-      })
-      .where(
-        and(inBuilding(fileObject, scope), eq(fileObject.id, id), eq(fileObject.status, 'pending')),
-      )
-      .returning()
+    const row = await applyTransition(this.database, fileObject, transition, {
+      stamp: { updatedAt: now },
+      also: inBuilding(fileObject, scope),
+    })
     return row ? toRecord(row) : null
   }
 

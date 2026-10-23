@@ -37,19 +37,6 @@ export interface SaveGatewayInput {
   version?: number
 }
 
-export interface SaveGatewayConfigDeps {
-  uow: UnitOfWork
-  gateways: GatewayConfigRepository
-  directory: BuildingDirectory
-  reader: GatewayConfigReader
-  secretBox: SecretBox
-  stepUp: StepUpVerifier
-  /** `finance` answers it from `integrations/building`; without it a gateway could change under live intents. */
-  probe: ActiveIntentProbe
-  audited: Audited
-  ids: IdGenerator
-}
-
 type Saved = { created: boolean; config: GatewayView }
 
 /** The gateway is the Admin's alone (DOC-36 §7). The route reads this list for its `audience` (DOC-12 §5.3). */
@@ -62,27 +49,38 @@ const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRol
 export class SaveGatewayConfig {
   private readonly auditedSave: ReturnType<SaveGatewayConfig['buildAuditedSave']>
 
-  constructor(private readonly deps: SaveGatewayConfigDeps) {
+  constructor(
+    private readonly uow: UnitOfWork,
+    private readonly gateways: GatewayConfigRepository,
+    private readonly directory: BuildingDirectory,
+    private readonly reader: GatewayConfigReader,
+    private readonly secretBox: SecretBox,
+    private readonly stepUp: StepUpVerifier,
+    /** `finance` answers it from `integrations/building`; without it a gateway could change under live intents. */
+    private readonly probe: ActiveIntentProbe,
+    private readonly audited: Audited,
+    private readonly ids: IdGenerator,
+  ) {
     this.auditedSave = this.buildAuditedSave()
   }
 
   async execute(staff: StaffContext, input: SaveGatewayInput): Promise<Saved> {
     requireRole(staff, SAVE_GATEWAY_CONFIG_ROLES)
     GatewayConfig.assertAccount(input.receivingAccount)
-    const result = await this.deps.uow.run(() => this.auditedSave(staff, input))
-    this.deps.reader.invalidate(staff.buildingId, input.provider)
+    const result = await this.uow.run(() => this.auditedSave(staff, input))
+    this.reader.invalidate(staff.buildingId, input.provider)
     return result
   }
 
   private buildAuditedSave() {
-    return this.deps.audited(
+    return this.audited(
       {
         action: 'building.gateway.update',
         object: (r: Saved) => ({ type: 'gateway_config', id: r.config.id }),
         details: () => ({ stepUp: true }),
       },
       async (staff: StaffContext, input: SaveGatewayInput) => {
-        const { gateways, directory, stepUp } = this.deps
+        const { gateways, directory, stepUp } = this
         // A save asks for a second proof, even one that only re-saves; the verifier counts a wrong password toward the lockout.
         if (!input.stepUp)
           throw new ForbiddenError('step_up_required', 'A step-up proof is required')
@@ -107,7 +105,7 @@ export class SaveGatewayConfig {
 
   /** The save of a row that exists: the version the form read, the lock, the intent probe, the merge of the secrets (DOC-36 §7.3). */
   private async update(staff: StaffContext, input: SaveGatewayInput, existing: GatewayConfig) {
-    const { gateways, secretBox, probe, reader } = this.deps
+    const { gateways, secretBox, probe, reader } = this
     if (input.version === undefined) throw new PreconditionRequiredError()
     const lockedRecord = await gateways.lockForUpdate(
       staff.scope,
@@ -155,7 +153,7 @@ export class SaveGatewayConfig {
   }
 
   private async create(staff: StaffContext, input: SaveGatewayInput) {
-    const { gateways, secretBox, ids, reader } = this.deps
+    const { gateways, secretBox, ids, reader } = this
     const { secrets, changes } = GatewayConfig.create(input)
     const id = ids.next()
     const blob = await secretBox.seal(gatewayAad(id), JSON.stringify(secrets))

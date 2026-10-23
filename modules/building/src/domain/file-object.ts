@@ -1,3 +1,4 @@
+import type { Transition } from '@core/kernel'
 import type {
   FileAccountKind,
   FileActor,
@@ -36,6 +37,15 @@ export interface FileRecord {
   accountId: string
   createdAt: Date
 }
+
+/** The columns a transition of a file may name: the record, and the instants of its moves. */
+export type FileColumns = FileRecord & {
+  verifiedAt: Date | null
+  attachedAt: Date | null
+  deletedAt: Date | null
+}
+
+export type FileTransition = Transition<FileColumns>
 
 /** What a new row is born with; the repository adds the building and the time. */
 export interface NewFile {
@@ -215,6 +225,65 @@ export class FileObject implements FileRecord {
       ownerRef: `thumb:${this.id}`,
       accountKind: 'system',
       accountId: SYSTEM_ACCOUNT_ID,
+    }
+  }
+
+  /**
+   * `pending → verified` with the real size of the object (DOC-37 §6.3). `null` when the file is not `pending` any more: a double
+   * click or the orphan job got there first.
+   */
+  verify(size: number, now: Date): FileTransition | null {
+    if (this.status !== 'pending') return null
+    return {
+      id: this.id,
+      expect: { status: 'pending' },
+      set: { status: 'verified', verifiedAt: now, size },
+    }
+  }
+
+  /**
+   * `verified → attached` to the owner `ownerRef`, only for the account that registered the file (DOC-37 §6.4). `null` when the
+   * file is not verified, is someone else's, or is attached already.
+   */
+  attach(
+    ownerRef: string,
+    actor: Pick<FileActor, 'accountKind' | 'accountId'>,
+    now: Date,
+  ): FileTransition | null {
+    if (this.status !== 'verified' || !this.isOwnedBy(actor)) return null
+    return {
+      id: this.id,
+      expect: { status: 'verified', accountKind: this.accountKind, accountId: this.accountId },
+      set: { status: 'attached', attachedAt: now, ownerRef },
+    }
+  }
+
+  /**
+   * Any live status → `deleted` (the object goes with a delete command, DR-122). `null` when it is deleted already. The guard
+   * is the status the rule read, so a file that moved on since (a pending upload that was verified) is decided again.
+   */
+  delete(now: Date): FileTransition | null {
+    if (this.isDeleted) return null
+    return {
+      id: this.id,
+      expect: { status: this.status },
+      set: { status: 'deleted', deletedAt: now },
+    }
+  }
+
+  /** A generated file is `pending → attached` at once, with the real size and the SHA-256 (DOC-37 §9 step 3). */
+  completeGenerated(result: { size: number; checksum: string }, now: Date): FileTransition | null {
+    if (this.status !== 'pending') return null
+    return {
+      id: this.id,
+      expect: { status: 'pending' },
+      set: {
+        status: 'attached',
+        verifiedAt: now,
+        attachedAt: now,
+        size: result.size,
+        checksum: result.checksum,
+      },
     }
   }
 

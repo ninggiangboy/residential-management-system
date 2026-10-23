@@ -12,6 +12,7 @@ import { BuildingApiImpl } from './application/api/building-api-impl'
 import { FilesApiImpl } from './application/api/files-api-impl'
 import { BuildingDocumentLoader } from './application/building-document'
 import { BuildingDirectory } from './application/directory'
+import { FileDeleter } from './application/file-deleter'
 import type { FilesConfig } from './application/files-config'
 import { GatewayConfigReader } from './application/gateway-config-reader'
 import { DeleteFileObjectHandler } from './application/handlers/delete-file-object'
@@ -130,86 +131,70 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
   )
 
   // Files (DOC-37)
-  const registerFile = new RegisterFile({
-    files: fileRows,
+  const registerFile = new RegisterFile(
+    fileRows,
     store,
-    uow: database,
-    rateLimiter: new SqlUploadRateLimiter(database, deps.uploadRatePerHour),
+    database,
+    new SqlUploadRateLimiter(database, deps.uploadRatePerHour),
     directory,
     clock,
     ids,
-    config: deps.files,
-  })
-  const verifyFile = new VerifyFile({
-    files: fileRows,
+    deps.files,
+  )
+  const fileDeleter = new FileDeleter(fileRows, outbox)
+  const verifyFile = new VerifyFile(
+    fileRows,
     store,
-    uow: database,
-    transaction: database,
+    database,
+    database,
+    fileDeleter,
     outbox,
     clock,
-    config: deps.files,
-  })
+    deps.files,
+  )
   const files = new FilesApiImpl(
     {
       registerFile,
       verifyFile,
-      attachFile: new AttachFile({ files: fileRows, clock, transaction: database }),
-      removeFile: new RemoveFile({ files: fileRows, outbox, clock, transaction: database }),
-      storeGeneratedFile: new StoreGeneratedFile({
-        files: fileRows,
-        store,
-        uow: database,
-        clock,
-        ids,
-        config: deps.files,
-      }),
+      attachFile: new AttachFile(fileRows, clock, database),
+      removeFile: new RemoveFile(fileRows, fileDeleter, clock, database),
+      storeGeneratedFile: new StoreGeneratedFile(fileRows, store, database, clock, ids, deps.files),
     },
-    new FileQueries({ files: fileRows, directory, store, config: deps.files }),
+    new FileQueries(fileRows, directory, store, deps.files),
   )
 
   // Gateway configuration (DOC-36 §7)
-  const reader = new GatewayConfigReader({
-    gateways,
-    secretBox: deps.secretBox,
-    clock,
-    cacheSeconds: deps.settingsCacheSeconds,
-  })
+  const reader = new GatewayConfigReader(gateways, deps.secretBox, clock, deps.settingsCacheSeconds)
 
   // Settings (DOC-36 §4)
-  const documents = new BuildingDocumentLoader({ buildings, settings, filesApi: files })
+  const documents = new BuildingDocumentLoader(buildings, settings, files)
 
-  const queries = new BuildingQueries({ documents, gateways, terms, directory, reader })
+  const queries = new BuildingQueries(documents, gateways, terms, directory, reader)
 
   const useCases: BuildingUseCases = {
-    updateBuildingSettings: new UpdateBuildingSettings({
-      uow: database,
+    updateBuildingSettings: new UpdateBuildingSettings(
+      database,
       buildings,
       settings,
-      files: fileRows,
-      filesApi: files,
+      fileRows,
+      files,
       directory,
       documents,
-      audited: deps.audited,
-    }),
-    saveGatewayConfig: new SaveGatewayConfig({
-      uow: database,
+      deps.audited,
+    ),
+    saveGatewayConfig: new SaveGatewayConfig(
+      database,
       gateways,
       directory,
       reader,
-      secretBox: deps.secretBox,
-      stepUp: deps.stepUp,
-      probe: deps.probe,
-      audited: deps.audited,
+      deps.secretBox,
+      deps.stepUp,
+      deps.probe,
+      deps.audited,
       ids,
-    }),
-    publishTerms: new PublishTerms({
-      uow: database,
-      terms,
-      directory,
-      audited: deps.audited,
-      ids,
-    }),
-    acceptTerms: new AcceptTerms({ uow: database, terms }),
+    ),
+    publishTerms: new PublishTerms(database, terms, directory, deps.audited, ids),
+    acceptTerms: new AcceptTerms(database, terms),
   }
 
   const handlers: IntegrationEventHandler[] = [
@@ -229,7 +214,7 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
 
   return {
     name: 'building',
-    api: new BuildingApiImpl({ directory, queries }),
+    api: new BuildingApiImpl(directory, queries),
     features: { get: async () => ({ ...deps.features }) },
     files,
     queries,
@@ -237,22 +222,10 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
     handlers,
     outbox: { name: 'building', table: buildingOutbox, inboxTable: buildingInbox },
     jobs: [
-      storageQuotaJob(
-        new ReportStorageQuota({
-          files: fileRows,
-          directory,
-          usage: deps.usage ?? NO_USAGE,
-        }),
-      ),
+      storageQuotaJob(new ReportStorageQuota(fileRows, directory, deps.usage ?? NO_USAGE)),
       orphanUploadsJob(
-        new ExpireOrphanUploads({
-          files: fileRows,
-          uow: database,
-          outbox,
-          clock,
-          config: deps.files,
-        }),
-        new PurgeDeletedFiles({ files: fileRows, uow: database, clock, config: deps.files }),
+        new ExpireOrphanUploads(fileRows, database, fileDeleter, clock, deps.files),
+        new PurgeDeletedFiles(fileRows, database, clock, deps.files),
       ),
     ],
   }

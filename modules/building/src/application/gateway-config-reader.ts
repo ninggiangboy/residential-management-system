@@ -29,13 +29,6 @@ export interface GatewayView {
 /** The place-bound AAD of the encrypted blob: a blob copied to another row does not open (DOC-36 §6). */
 export const gatewayAad = (id: string) => `gateway_config|${id}`
 
-export interface GatewayConfigReaderDeps {
-  gateways: GatewayConfigRepository
-  secretBox: SecretBox
-  clock: Clock
-  cacheSeconds: number
-}
-
 /**
  * Reads, decrypts and masks the gateway configuration, for `finance` and the webhook route (through `BuildingQueries`) and for
  * the Admin's view and save. A secret is encrypted with the newest key and a place-bound AAD, shown masked, and never in a log
@@ -44,8 +37,13 @@ export interface GatewayConfigReaderDeps {
 export class GatewayConfigReader {
   private readonly cache: TtlCache<GatewayConfigDto | null>
 
-  constructor(private readonly deps: GatewayConfigReaderDeps) {
-    this.cache = new TtlCache(deps.clock, deps.cacheSeconds * 1000)
+  constructor(
+    private readonly gateways: GatewayConfigRepository,
+    private readonly secretBox: SecretBox,
+    clock: Clock,
+    cacheSeconds: number,
+  ) {
+    this.cache = new TtlCache(clock, cacheSeconds * 1000)
   }
 
   async config(
@@ -55,7 +53,7 @@ export class GatewayConfigReader {
   ): Promise<GatewayConfigDto | null> {
     const scope = { buildingId: buildingId as BuildingId }
     const load = async () => {
-      const row = await this.deps.gateways.findActive(scope, provider, opts.lock)
+      const row = await this.gateways.findActive(scope, provider, opts.lock)
       return row ? this.decrypt(row) : null
     }
     // `lock: 'share'` skips the cache and holds the row lock inside the caller's transaction: either the intent holds the lock
@@ -69,7 +67,7 @@ export class GatewayConfigReader {
 
   async decrypt(row: GatewayConfigRecord): Promise<GatewayConfigDto> {
     const secrets = JSON.parse(
-      await this.deps.secretBox.open(gatewayAad(row.id), row.secretsEnc),
+      await this.secretBox.open(gatewayAad(row.id), row.secretsEnc),
     ) as Record<string, string>
     return {
       id: row.id,

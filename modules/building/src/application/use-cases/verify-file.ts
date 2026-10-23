@@ -6,31 +6,31 @@ import { FileNotVerifiedError, FilesTransactionError } from '../../domain/errors
 import type { FileObject, ObjectFailure } from '../../domain/file-object'
 import type { FileRepository } from '../../domain/file-repository'
 import { HEAD_BYTES } from '../../domain/magic-bytes'
-import { deleteCommand, thumbnailCommand } from '../file-commands'
+import { thumbnailCommand } from '../file-commands'
+import type { FileDeleter } from '../file-deleter'
 import { toFileDto } from '../file-dto'
 import type { FilesConfig } from '../files-config'
 import type { ObjectStore, TransactionProbe } from '../ports'
 import { scopeOf } from '../scope-of'
-
-export interface VerifyFileDeps {
-  files: FileRepository
-  store: ObjectStore
-  uow: UnitOfWork
-  transaction: TransactionProbe
-  outbox: OutboxWriter
-  clock: Clock
-  config: FilesConfig
-}
 
 /**
  * `FilesApi.verify` (DOC-37 §6.3): the object is there, has the registered size and type and starts with the right bytes.
  * Nothing is trusted until then. It talks to the bucket, so no transaction may be open while it runs (DOC-12 §8.2).
  */
 export class VerifyFile {
-  constructor(private readonly deps: VerifyFileDeps) {}
+  constructor(
+    private readonly files: FileRepository,
+    private readonly store: ObjectStore,
+    private readonly uow: UnitOfWork,
+    private readonly transaction: TransactionProbe,
+    private readonly deleter: FileDeleter,
+    private readonly outbox: OutboxWriter,
+    private readonly clock: Clock,
+    private readonly config: FilesConfig,
+  ) {}
 
   async execute(actor: FileActor, fileId: string): Promise<FileDto> {
-    const { files, store, uow, outbox, clock, transaction } = this.deps
+    const { files, store, uow, deleter, outbox, clock, transaction } = this
     if (transaction.inTransaction)
       throw new FilesTransactionError('FilesApi.verify must be called outside a transaction')
     const scope = scopeOf(actor.buildingId)
@@ -49,14 +49,12 @@ export class VerifyFile {
     const now = clock.now()
     if (failure) {
       // The object is deleted by the worker, not by this request (DOC-37 §6.3 step 6).
-      await uow.run(async () => {
-        const deleted = await files.markDeleted(scope, file.id, now)
-        if (deleted) await outbox.add([deleteCommand(deleted, now)])
-      })
+      await uow.run(() => deleter.delete(scope, file, now))
       throw new FileNotVerifiedError(failure)
     }
     const verified = await uow.run(async () => {
-      const row = await files.markVerified(scope, file.id, head.size, now)
+      const change = file.verify(head.size, now)
+      const row = change ? await files.apply(scope, change, now) : null
       if (row?.wantsThumbnailOnVerify()) await outbox.add([thumbnailCommand(row, now)])
       return row
     })
@@ -71,7 +69,7 @@ export class VerifyFile {
     file: FileObject,
     head: { size: number; contentType: string },
   ): Promise<ObjectFailure | null> {
-    const { config, store } = this.deps
+    const { config, store } = this
     const failure = file.inspectObject(head, config.limits)
     if (failure) return failure
     const bytes = await store.readHead(file.objectKey, HEAD_BYTES)

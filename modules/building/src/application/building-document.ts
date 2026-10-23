@@ -36,18 +36,16 @@ export function parseEtag(etag: string): { building: number; settings: number } 
   return match ? { building: Number(match[1]), settings: Number(match[2]) } : null
 }
 
-export interface BuildingDocumentLoaderDeps {
-  buildings: BuildingRepository
-  settings: SettingsRepository
-  filesApi: FilesApi
-}
-
 /** Builds the document of DOC-36 §4 from the two rows and the signed URL of the logo; shared by the read and the update. */
 export class BuildingDocumentLoader {
-  constructor(private readonly deps: BuildingDocumentLoaderDeps) {}
+  constructor(
+    private readonly buildings: BuildingRepository,
+    private readonly settings: SettingsRepository,
+    private readonly filesApi: FilesApi,
+  ) {}
 
   async load(buildingId: string): Promise<BuildingDocument> {
-    const { buildings, settings, filesApi } = this.deps
+    const { buildings, settings, filesApi } = this
     const record = await buildings.find(buildingId)
     if (!record) throw new NotFoundError()
     const saved = await settings.find({ buildingId: buildingId as BuildingId })
