@@ -6,7 +6,7 @@ import type { Config } from './config'
  * Sends only to the addresses of `MAIL_ALLOWLIST` and logs `not_allowlisted` for any other, returning normally (DOC-26 §5.5): the
  * `staging` driver, so a test environment never mails a real person by accident.
  */
-export class AllowlistMailer implements Mailer {
+class AllowlistMailer implements Mailer {
   private readonly allowed: ReadonlySet<string>
 
   constructor(

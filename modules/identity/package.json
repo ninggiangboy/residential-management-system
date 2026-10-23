@@ -36,7 +36,6 @@
     "@core/db": "workspace:*",
     "@core/http": "workspace:*",
     "@core/kernel": "workspace:*",
-    "@core/mail": "workspace:*",
     "@core/messaging": "workspace:*",
     "@core/runtime": "workspace:*",
     "@mod/building": "workspace:*",
@@ -49,6 +48,7 @@
   },
   "devDependencies": {
     "@core/testing": "workspace:*",
+    "@mod/audit": "workspace:*",
     "@rms/test-support": "workspace:*",
     "@types/bun": "1.4.3",
     "drizzle-kit": "0.31.11"

@@ -59,7 +59,7 @@ const BUILDING_MASKS = {
 } as const
 
 /** The settings are the Admin's alone (DOC-36 §4). The route reads this list for its `audience` (DOC-12 §5.3). */
-export const UPDATE_BUILDING_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const UPDATE_BUILDING_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /**
  * `PATCH /staff/settings` (DOC-36 §4): the Admin edits the building row and the settings in one transaction, each guarded by

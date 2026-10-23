@@ -325,7 +325,7 @@ A successful sign-in of a **Manager or Technician on the web CMS** is not specia
 
 Examples (FR-13.5): `abc12345` is accepted; `abcdefgh` (no digit), `12345678` (no letter), a 129-character password and `abc1234` (7 characters) are refused.
 
-**Cost, measured** on 2026-10-20 on a development machine (Apple M2, Bun 1.4.3), not on the staging host: one hash 28 ms, one verify 19 ms on average over 20 runs, 8 verifies in parallel 44 ms. The stored string is `$argon2id$v=19$m=19456,t=2,p=1$…`, from which `needsRehash` reads `m` and `t`. DR-39 asks to benchmark on the staging host in P1-10 and raise the parameters if the host allows; the keys `ARGON2_MEMORY_KIB` and `ARGON2_TIME_COST` exist for that, and a change takes effect at each person's next sign-in.
+**Cost, measured** on 2026-10-20 on a development machine (Apple M2, Bun 1.4.3), not on the staging host: one hash 28 ms, one verify 19 ms on average over 20 runs, 8 verifies in parallel 44 ms. The stored string is `$argon2id$v=19$m=19456,t=2,p=1$…`, from which `needsRehash` reads `m` and `t`. DR-39 asks to benchmark on the staging host in P1-10 and raise the parameters if the host allows; the keys `ARGON2_MEMORY_KIB` and `ARGON2_TIME_COST` exist for that, and a change takes effect at each person's next sign-in. *Measured again 2026-10-23 (P1-10) with `scripts/bench-argon2.ts` on a second development machine (Intel i7-4790, 8 threads, Linux, Bun 1.4.3): hash 41 ms, verify 43 ms, 8 verifies in parallel 101 ms at the default parameters: well under the 250 ms sign-in budget, so the defaults stay. The staging host does not exist yet; the same script is run there when it does and the result is added to DR-39.*
 
 ### 4.3 Invite and reset
 

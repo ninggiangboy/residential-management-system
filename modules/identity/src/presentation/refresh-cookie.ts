@@ -2,7 +2,7 @@ import { API_PREFIX } from '@core/http'
 import { ForbiddenError } from '@core/kernel'
 
 /** DOC-26 §3.3. `__Secure-` and not `__Host-`, because `__Host-` forces `Path=/` and the cookie must stay on `/api/v1/auth`. */
-export const REFRESH_COOKIE = '__Secure-rms_refresh'
+const REFRESH_COOKIE = '__Secure-rms_refresh'
 const ATTRIBUTES = `Path=${API_PREFIX}/auth; Secure; HttpOnly; SameSite=Strict`
 
 /** The web CMS never sees the refresh token: the API sets it here. No `Domain`, so it is host-only on `api.<domain>`. */

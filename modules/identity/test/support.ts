@@ -17,21 +17,20 @@ import { Argon2PasswordHasher } from '../src/infrastructure/security/argon2-pass
  * the parameters of production are checked by AU-11 and by the benchmark of DOC-26 §4.2.
  */
 
-export const BUILDING = '018f0000-0000-7000-8000-000000000001' as BuildingId
-export const OTHER_BUILDING = '018f0000-0000-7000-8000-000000000002' as BuildingId
+const BUILDING = '018f0000-0000-7000-8000-000000000001' as BuildingId
 export const PASSWORD = 'Sunrise2026!'
-export const IP = '203.0.113.7'
+const IP = '203.0.113.7'
 
 const silent = { info() {}, warn() {}, error() {} }
 const TEST_ARGON2 = { memoryKib: 256, timeCost: 1 }
 
-export const es256Pem = () =>
+const es256Pem = () =>
   generateKeyPairSync('ec', { namedCurve: 'P-256' })
     .privateKey.export({ type: 'pkcs8', format: 'pem' })
     .toString()
 
 /** A hasher that counts the work: AU-02 and AU-09 look at how many Argon2 checks a request cost. */
-export class CountingHasher implements PasswordHasher {
+class CountingHasher implements PasswordHasher {
   verifies = 0
   dummies = 0
   constructor(private readonly inner: PasswordHasher) {}

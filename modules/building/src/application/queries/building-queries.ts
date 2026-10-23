@@ -10,8 +10,8 @@ import type { GatewayConfigReader, GatewayView } from '../gateway-config-reader'
 import { scopeOf } from '../scope-of'
 
 /** `GET /staff/settings` and `GET /staff/gateway` are the Admin's alone (DOC-36 §4, §7.1). The routes read these lists for their `audience`. */
-export const READ_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
-export const READ_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const READ_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+const READ_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 export interface BuildingQueriesDeps {
   documents: BuildingDocumentLoader
