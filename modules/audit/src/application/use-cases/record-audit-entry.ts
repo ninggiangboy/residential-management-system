@@ -11,25 +11,23 @@ import type {
   TransactionProbe,
 } from '../ports'
 
-export interface RecordAuditEntryDeps {
-  repository: AuditLogRepository
-  transaction: TransactionProbe
-  ids: IdGenerator
-  actions: AuditActionCatalog
-  requestInfo: RequestInfoProvider
-  logger: Log
-  metrics?: AuditMetrics
-}
-
 /**
  * `AuditApi.record` (DOC-35 §3.1, ADR-0018): joins the caller's transaction, never opens one, and throws when none is open.
  * A failed insert propagates, so the mutation rolls back with it (FR-37.1); a rolled-back mutation takes the row with it.
  */
 export class RecordAuditEntry {
-  constructor(private readonly deps: RecordAuditEntryDeps) {}
+  constructor(
+    private readonly repository: AuditLogRepository,
+    private readonly transaction: TransactionProbe,
+    private readonly ids: IdGenerator,
+    private readonly actions: AuditActionCatalog,
+    private readonly requestInfo: RequestInfoProvider,
+    private readonly logger: Log,
+    private readonly metrics?: AuditMetrics,
+  ) {}
 
   async execute(entry: AuditEntry): Promise<void> {
-    const { transaction, actions, ids, repository, requestInfo, logger, metrics } = this.deps
+    const { transaction, actions, ids, repository, requestInfo, logger, metrics } = this
     if (!transaction.inTransaction) throw new NoTransactionError()
     assertActionShape(entry.action)
     if (!actions.isDeclared(entry.action)) throw new UndeclaredAuditActionError(entry.action)

@@ -31,25 +31,25 @@ function harness(options: { inTransaction?: boolean; failInsert?: boolean } = {}
   const log = (level: string) => (fields: object, message: string) =>
     lines.push({ fields: { level, ...fields }, message })
   const writer = new AuditApiImpl(
-    new RecordAuditEntry({
-      repository: {
+    new RecordAuditEntry(
+      {
         async insert(scope, row) {
           if (options.failInsert) throw new Error('insert failed')
           rows.push({ ...row, buildingId: scope.buildingId })
         },
       },
       transaction,
-      ids: {
+      {
         next: () => `018f0000-0000-7000-8000-00000000${String(rows.length + 1).padStart(4, '0')}`,
       },
-      actions: auditActionCatalogOf([
+      auditActionCatalogOf([
         { name: 'finance', auditActions: ['finance.payment.void', 'finance.payment.post'] },
         { name: 'residency', auditActions: ['residency.unit.update'] },
       ]),
-      requestInfo: () => ({ requestId: 'req-1', ip: '203.0.113.9', userAgent: 'RmsApp/1.0' }),
-      logger: { info: log('info'), warn: log('warn'), error: log('error') },
-      metrics: { writeFailed: () => failures++ },
-    }),
+      () => ({ requestId: 'req-1', ip: '203.0.113.9', userAgent: 'RmsApp/1.0' }),
+      { info: log('info'), warn: log('warn'), error: log('error') },
+      { writeFailed: () => failures++ },
+    ),
   )
   return { writer, rows, lines, transaction, failures: () => failures }
 }
