@@ -54,7 +54,7 @@ export class RefreshSession {
   }
 
   private async rotate(presented: string): Promise<Outcome> {
-    const { sessions, staffAccounts, events, tokens, signer, clock, ids, logger, config } = this
+    const { sessions, events, tokens, signer, clock, ids, logger, config } = this
     const now = clock.now()
     const hash = tokens.hashOpaque(presented)
     const nextId = ids.next()
@@ -85,18 +85,9 @@ export class RefreshSession {
         return { done: true, value: null }
       }
 
-      // 5. A staff family needs an `active` account; a temporary lockout does not stop a refresh. Resident families join with
-      // P1-11. It is checked before the token is spent, so a refused account leaves the token as it was.
-      const staff =
-        family.record.kind === 'staff'
-          ? await staffAccounts.findById(family.record.accountId)
-          : null
-      if (!staff || staff.status !== 'active') {
-        const reason: RevocationReason =
-          staff?.status === 'locked' ? 'account_locked' : 'account_disabled'
-        const revocation = family.revoke(reason, now)
-        if (revocation && (await sessions.revokeFamily(revocation, now)))
-          await events.revoked([family.summary], reason, now)
+      // 5. Checked before the token is spent, so a refused account leaves the token as it was.
+      const staff = await this.activeStaff(family, now)
+      if (!staff) {
         log('account_inactive', { sessionId: family.id })
         return { done: true, value: null }
       }
@@ -135,5 +126,22 @@ export class RefreshSession {
         client: family.record.client,
       },
     }
+  }
+
+  /**
+   * A staff family needs an `active` account; a temporary lockout does not stop a refresh. Resident families join with P1-11.
+   * An account that may not have a session ends the family and tells `realtime` and `notification`; `null` then.
+   */
+  private async activeStaff(family: RefreshFamily, now: Date): Promise<StaffAccountRecord | null> {
+    const { sessions, staffAccounts, events } = this
+    const staff =
+      family.record.kind === 'staff' ? await staffAccounts.findById(family.record.accountId) : null
+    if (staff?.status === 'active') return staff
+    const reason: RevocationReason =
+      staff?.status === 'locked' ? 'account_locked' : 'account_disabled'
+    const revocation = family.revoke(reason, now)
+    if (revocation && (await sessions.revokeFamily(revocation, now)))
+      await events.revoked([family.summary], reason, now)
+    return null
   }
 }
