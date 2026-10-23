@@ -1,6 +1,6 @@
-import { routePlugin, strictObject } from '@core/http'
+import { IdParams, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
 import { type Guards, staffOf } from '@rms/shared-types'
-import { Type } from '@sinclair/typebox'
+import { type Static, Type } from '@sinclair/typebox'
 import {
   LIST_STAFF_SESSIONS_ROLES,
   type SessionQueries,
@@ -20,53 +20,41 @@ export interface StaffRouteDeps {
   guards: Guards
 }
 
-const audience = (roles: readonly string[]) => ({
-  detail: { tags: ['staff'], 'x-audience': { kind: 'staff', roles } },
+const StepUpBody = strictObject({
+  action: Type.Union([
+    Type.Literal('gateway_config'),
+    Type.Literal('admin_change'),
+    Type.Literal('staff_email'),
+  ]),
 })
 
 /** `/staff/*` of `identity` (DOC-26 §7): the profile, the sessions of the signed-in member, and the step-up code request. */
 export function staffRoutes(d: StaffRouteDeps) {
+  const me = (context: object) => d.staffQueries.me(staffOf(context))
+
+  const listSessions = async (context: object) => {
+    const staff = staffOf(context)
+    return { items: await d.sessionQueries.listStaff(staff, staff.sessionId) }
+  }
+
+  const revokeSession = async (context: { params: Static<typeof IdParams>; set: RouteSet }) => {
+    await d.revokeStaffSession.execute(staffOf(context), context.params.id)
+    context.set.status = 204
+  }
+
+  const requestStepUp = async (context: { body: Static<typeof StepUpBody>; set: RouteSet }) => {
+    await d.requestStepUp.execute(staffOf(context), context.body.action)
+    context.set.status = 204
+  }
+
+  const route = (roles: Parameters<Guards['staff']>[0]) => staffRoute(d.guards, 'staff', roles)
+
   return routePlugin({ prefix: '/staff' })
-    .get('/me', (context) => d.staffQueries.me(staffOf(context)), {
-      ...d.guards.staff(GET_STAFF_ME_ROLES),
-      ...audience(GET_STAFF_ME_ROLES),
+    .get('/me', me, route(GET_STAFF_ME_ROLES))
+    .get('/sessions', listSessions, route(LIST_STAFF_SESSIONS_ROLES))
+    .delete('/sessions/:id', revokeSession, {
+      ...route(REVOKE_STAFF_SESSION_ROLES),
+      params: IdParams,
     })
-    .get(
-      '/sessions',
-      async (context) => {
-        const staff = staffOf(context)
-        return { items: await d.sessionQueries.listStaff(staff, staff.sessionId) }
-      },
-      { ...d.guards.staff(LIST_STAFF_SESSIONS_ROLES), ...audience(LIST_STAFF_SESSIONS_ROLES) },
-    )
-    .delete(
-      '/sessions/:id',
-      async (context) => {
-        await d.revokeStaffSession.execute(staffOf(context), context.params.id)
-        context.set.status = 204
-      },
-      {
-        ...d.guards.staff(REVOKE_STAFF_SESSION_ROLES),
-        params: strictObject({ id: Type.String({ format: 'uuid' }) }),
-        ...audience(REVOKE_STAFF_SESSION_ROLES),
-      },
-    )
-    .post(
-      '/step-up',
-      async (context) => {
-        await d.requestStepUp.execute(staffOf(context), context.body.action)
-        context.set.status = 204
-      },
-      {
-        ...d.guards.staff(REQUEST_STEP_UP_ROLES),
-        body: strictObject({
-          action: Type.Union([
-            Type.Literal('gateway_config'),
-            Type.Literal('admin_change'),
-            Type.Literal('staff_email'),
-          ]),
-        }),
-        ...audience(REQUEST_STEP_UP_ROLES),
-      },
-    )
+    .post('/step-up', requestStepUp, { ...route(REQUEST_STEP_UP_ROLES), body: StepUpBody })
 }

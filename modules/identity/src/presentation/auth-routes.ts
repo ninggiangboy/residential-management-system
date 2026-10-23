@@ -1,5 +1,12 @@
 import { requestContext } from '@core/context'
-import { bucketIp, routePlugin, strictObject } from '@core/http'
+import {
+  bucketIp,
+  publicRoute,
+  type RouteSet,
+  routePlugin,
+  staffRoute,
+  strictObject,
+} from '@core/http'
 import type { Clock } from '@core/kernel'
 import { type Guards, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
@@ -32,16 +39,40 @@ export interface AuthRouteDeps {
 
 const Email = Type.String({ format: 'email', maxLength: 254 })
 const Client = Type.Union([Type.Literal('web'), Type.Literal('app')])
+type Client = Static<typeof Client>
+
+const LoginBody = strictObject({
+  email: Email,
+  password: Type.String({ minLength: 1, maxLength: 128 }),
+  client: Client,
+})
+const PasswordResetBody = strictObject({ email: Email })
+const SetPasswordBody = strictObject({
+  token: Type.String({ minLength: 1, maxLength: 200 }),
+  password: Type.String({ minLength: 1, maxLength: 1024 }),
+})
+const ResendInviteBody = strictObject({ staffId: Type.String({ format: 'uuid' }) })
+const OtpBody = strictObject({ phone: Type.String({ minLength: 3, maxLength: 32 }) })
+const VerifyOtpBody = strictObject({
+  challengeId: Type.String({ format: 'uuid' }),
+  code: Type.String({ pattern: '^[0-9]{6}$' }),
+})
 const RefreshBody = Type.Optional(
   strictObject({ refreshToken: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })) }),
 )
-type Client = Static<typeof Client>
-
-/** The route metadata of DOC-12 §5.3, as the vendor extension the OpenAPI document carries (DOC-50 §2). */
-const audience = (value: object) => ({ detail: { tags: ['auth'], 'x-audience': value } })
 
 /** The ip the buckets key on: an IPv6 address is reduced to its /64 (DOC-39 §5.3). */
 const clientIp = () => bucketIp(requestContext.get()?.ip ?? 'unknown')
+
+/** Where a sign-in comes from, for the rate buckets and the session list. */
+const clientInfo = () => ({
+  ip: clientIp(),
+  userAgent: requestContext.get()?.userAgent ?? null,
+})
+
+/** Routes of `/auth` that carry no session; the refresh and the logout take the refresh token instead. */
+const open = publicRoute('auth')
+const withRefreshToken = publicRoute('auth', { credential: 'refresh_token' })
 
 /**
  * `/auth/*` for staff (DOC-26 §7): sign-in, password reset and set-password, the refresh and the logout, and the resend of an
@@ -52,7 +83,7 @@ export function authRoutes(d: AuthRouteDeps) {
   const session = (
     issued: Pick<IssuedSession, 'accessToken' | 'expiresIn' | 'refreshToken' | 'refreshExpiresAt'>,
     client: Client,
-    set: { headers: Record<string, string | number | undefined> },
+    set: Pick<RouteSet, 'headers'>,
   ) => {
     if (client === 'web')
       set.headers['set-cookie'] = refreshCookie(
@@ -67,116 +98,105 @@ export function authRoutes(d: AuthRouteDeps) {
     }
   }
 
+  const staffLogin = async ({
+    body,
+    set,
+  }: {
+    body: Static<typeof LoginBody>
+    set: RouteSet
+  }): Promise<{ staff: StaffProfile } & ReturnType<typeof session>> => {
+    const result = await d.signInStaff.execute({ ...body, ...clientInfo() })
+    return { ...session(result.session, body.client, set), staff: result.staff }
+  }
+
+  const requestPasswordReset = async ({
+    body,
+    set,
+  }: {
+    body: Static<typeof PasswordResetBody>
+    set: RouteSet
+  }) => {
+    await d.requestPasswordReset.execute({ email: body.email, ip: clientIp() })
+    set.status = 202
+    return {}
+  }
+
+  const setPassword = async ({
+    body,
+    set,
+  }: {
+    body: Static<typeof SetPasswordBody>
+    set: RouteSet
+  }) => {
+    await d.setPassword.execute(body)
+    set.status = 204
+  }
+
+  const resendStaffInvite = async (context: {
+    body: Static<typeof ResendInviteBody>
+    set: RouteSet
+  }) => {
+    await d.resendStaffInvite.execute(staffOf(context), context.body.staffId)
+    context.set.status = 204
+  }
+
+  const requestOtp = async ({ body, set }: { body: Static<typeof OtpBody>; set: RouteSet }) => {
+    const requested = await d.requestOtp.execute({ phone: body.phone, ip: clientIp() })
+    set.status = 202
+    return requested
+  }
+
+  const verifyOtp = async ({ body }: { body: Static<typeof VerifyOtpBody> }) => {
+    const signedIn = await d.verifyOtp.execute({ ...body, ...clientInfo() })
+    // A resident always signs in from the app: the refresh token is in the body, never a cookie (DOC-26 §3.3).
+    return {
+      ...session(signedIn.session, 'app', { headers: {} }),
+      account: signedIn.account,
+      memberships: signedIn.memberships,
+    }
+  }
+
+  const refresh = async ({
+    request,
+    body,
+    set,
+  }: {
+    request: Request
+    body: Static<typeof RefreshBody> | null
+    set: RouteSet
+  }) => {
+    const token = refreshCredential(request, body?.refreshToken)
+    if (!token) throw new UnauthenticatedError()
+    const result = await d.refreshSession.execute({ refreshToken: token })
+    return session(result, result.client, set)
+  }
+
+  const logout = async ({
+    request,
+    body,
+    set,
+  }: {
+    request: Request
+    body: Static<typeof RefreshBody> | null
+    set: RouteSet
+  }) => {
+    const token = refreshCredential(request, body?.refreshToken)
+    if (token) await d.signOut.execute({ refreshToken: token })
+    // The same answer whether or not the token is known; the browser drops the cookie either way.
+    set.headers['set-cookie'] = clearedRefreshCookie()
+    set.status = 204
+  }
+
   return routePlugin({ prefix: '/auth' })
-    .post(
-      '/staff/login',
-      async ({ body, set }): Promise<{ staff: StaffProfile } & ReturnType<typeof session>> => {
-        const context = requestContext.get()
-        const result = await d.signInStaff.execute({
-          ...body,
-          ip: clientIp(),
-          userAgent: context?.userAgent ?? null,
-        })
-        return { ...session(result.session, body.client, set), staff: result.staff }
-      },
-      {
-        body: strictObject({
-          email: Email,
-          password: Type.String({ minLength: 1, maxLength: 128 }),
-          client: Client,
-        }),
-        ...audience({ kind: 'public' }),
-      },
-    )
-    .post(
-      '/staff/password-reset',
-      async ({ body, set }) => {
-        await d.requestPasswordReset.execute({ email: body.email, ip: clientIp() })
-        set.status = 202
-        return {}
-      },
-      { body: strictObject({ email: Email }), ...audience({ kind: 'public' }) },
-    )
-    .post(
-      '/staff/password',
-      async ({ body, set }) => {
-        await d.setPassword.execute(body)
-        set.status = 204
-      },
-      {
-        body: strictObject({
-          token: Type.String({ minLength: 1, maxLength: 200 }),
-          password: Type.String({ minLength: 1, maxLength: 1024 }),
-        }),
-        ...audience({ kind: 'public' }),
-      },
-    )
-    .post(
-      '/staff/invite/resend',
-      async (context) => {
-        await d.resendStaffInvite.execute(staffOf(context), context.body.staffId)
-        context.set.status = 204
-      },
-      {
-        ...d.guards.staff(RESEND_STAFF_INVITE_ROLES),
-        body: strictObject({ staffId: Type.String({ format: 'uuid' }) }),
-        ...audience({ kind: 'staff', roles: RESEND_STAFF_INVITE_ROLES }),
-      },
-    )
-    .post(
-      '/otp',
-      async ({ body, set }) => {
-        const requested = await d.requestOtp.execute({ phone: body.phone, ip: clientIp() })
-        set.status = 202
-        return requested
-      },
-      {
-        body: strictObject({ phone: Type.String({ minLength: 3, maxLength: 32 }) }),
-        ...audience({ kind: 'public' }),
-      },
-    )
-    .post(
-      '/otp/verify',
-      async ({ body }) => {
-        const signedIn = await d.verifyOtp.execute({
-          ...body,
-          userAgent: requestContext.get()?.userAgent ?? null,
-          ip: clientIp(),
-        })
-        // A resident always signs in from the app: the refresh token is in the body, never a cookie (DOC-26 §3.3).
-        return {
-          ...session(signedIn.session, 'app', { headers: {} }),
-          account: signedIn.account,
-          memberships: signedIn.memberships,
-        }
-      },
-      {
-        body: strictObject({
-          challengeId: Type.String({ format: 'uuid' }),
-          code: Type.String({ pattern: '^[0-9]{6}$' }),
-        }),
-        ...audience({ kind: 'public' }),
-      },
-    )
-    .post(
-      '/refresh',
-      async ({ request, body, set }) => {
-        const token = refreshCredential(request, body?.refreshToken)
-        if (!token) throw new UnauthenticatedError()
-        const result = await d.refreshSession.execute({ refreshToken: token })
-        return session(result, result.client, set)
-      },
-      { body: RefreshBody, ...audience({ kind: 'public', credential: 'refresh_token' }) },
-    )
-    .post(
-      '/logout',
-      async ({ request, body, set }) => {
-        const token = refreshCredential(request, body?.refreshToken)
-        if (token) await d.signOut.execute({ refreshToken: token })
-        // The same answer whether or not the token is known; the browser drops the cookie either way.
-        set.headers['set-cookie'] = clearedRefreshCookie()
-        set.status = 204
-      },
-      { body: RefreshBody, ...audience({ kind: 'public', credential: 'refresh_token' }) },
-    )
+    .post('/staff/login', staffLogin, { body: LoginBody, ...open })
+    .post('/staff/password-reset', requestPasswordReset, { body: PasswordResetBody, ...open })
+    .post('/staff/password', setPassword, { body: SetPasswordBody, ...open })
+    .post('/staff/invite/resend', resendStaffInvite, {
+      ...staffRoute(d.guards, 'auth', RESEND_STAFF_INVITE_ROLES),
+      body: ResendInviteBody,
+    })
+    .post('/otp', requestOtp, { body: OtpBody, ...open })
+    .post('/otp/verify', verifyOtp, { body: VerifyOtpBody, ...open })
+    .post('/refresh', refresh, { body: RefreshBody, ...withRefreshToken })
+    .post('/logout', logout, { body: RefreshBody, ...withRefreshToken })
 }

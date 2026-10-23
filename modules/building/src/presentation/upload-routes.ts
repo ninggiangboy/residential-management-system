@@ -1,7 +1,7 @@
-import { routePlugin, strictObject } from '@core/http'
+import { IdParams, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
 import { ValidationError } from '@core/kernel'
 import { type Guards, type StaffRole, type StaffSession, staffOf } from '@rms/shared-types'
-import { Type } from '@sinclair/typebox'
+import { type Static, Type } from '@sinclair/typebox'
 import type { FileActor, FileModule, FilesApi, UploadPurpose } from '../contracts'
 import { PURPOSE_RULES } from '../domain/purposes'
 
@@ -18,8 +18,11 @@ const STAFF_UPLOAD_ROLES = [
   'guard',
 ] as const satisfies readonly StaffRole[]
 
-const audience = (roles: readonly string[]) => ({
-  detail: { tags: ['files'], 'x-audience': { kind: 'staff', roles, byPurpose: true } },
+const RegisterBody = strictObject({
+  purpose: Type.String({ maxLength: 40 }),
+  module: Type.Optional(Type.String({ maxLength: 20 })),
+  mime: Type.String({ maxLength: 120 }),
+  size: Type.Integer({ minimum: 1 }),
 })
 
 const actorOf = (staff: StaffSession): FileActor => ({
@@ -48,38 +51,24 @@ function moduleOf(purpose: string, named: string | undefined): FileModule {
  * second `pending` row, which the orphan job removes after 24 h.
  */
 export function uploadRoutes(d: UploadRouteDeps) {
+  const register = async (context: { body: Static<typeof RegisterBody>; set: RouteSet }) => {
+    const { purpose, module, mime, size } = context.body
+    const ticket = await d.files.register(actorOf(staffOf(context)), {
+      purpose: purpose as UploadPurpose,
+      module: moduleOf(purpose, module),
+      mime,
+      size,
+    })
+    context.set.status = 201
+    return ticket
+  }
+
+  const verify = (context: { params: Static<typeof IdParams> }) =>
+    d.files.verify(actorOf(staffOf(context)), context.params.id)
+
+  const route = staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, { byPurpose: true })
+
   return routePlugin({ prefix: '/staff/uploads' })
-    .post(
-      '/',
-      async (context) => {
-        const { purpose, module, mime, size } = context.body
-        const ticket = await d.files.register(actorOf(staffOf(context)), {
-          purpose: purpose as UploadPurpose,
-          module: moduleOf(purpose, module),
-          mime,
-          size,
-        })
-        context.set.status = 201
-        return ticket
-      },
-      {
-        ...d.guards.staff(STAFF_UPLOAD_ROLES),
-        body: strictObject({
-          purpose: Type.String({ maxLength: 40 }),
-          module: Type.Optional(Type.String({ maxLength: 20 })),
-          mime: Type.String({ maxLength: 120 }),
-          size: Type.Integer({ minimum: 1 }),
-        }),
-        ...audience(STAFF_UPLOAD_ROLES),
-      },
-    )
-    .post(
-      '/:id/verify',
-      (context) => d.files.verify(actorOf(staffOf(context)), context.params.id),
-      {
-        ...d.guards.staff(STAFF_UPLOAD_ROLES),
-        params: strictObject({ id: Type.String({ format: 'uuid' }) }),
-        ...audience(STAFF_UPLOAD_ROLES),
-      },
-    )
+    .post('/', register, { ...route, body: RegisterBody })
+    .post('/:id/verify', verify, { ...route, params: IdParams })
 }
