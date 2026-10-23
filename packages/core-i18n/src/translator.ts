@@ -17,6 +17,8 @@ const lookup = (catalog: Catalog, path: string): string | undefined => {
   let node: string | Catalog | undefined = catalog
   for (const part of path.split('.')) {
     if (typeof node !== 'object') return undefined
+    if (!Object.hasOwn(node, part)) return undefined
+    // nosemgrep: javascript.lang.security.audit.prototype-pollution.prototype-pollution-loop.prototype-pollution-loop -- a read only walk; `hasOwn` above refuses `__proto__` and inherited keys
     node = node[part]
   }
   return typeof node === 'string' ? node : undefined

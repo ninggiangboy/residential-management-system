@@ -57,3 +57,4 @@ local-changes:
     because a core package may not import `@rms/shared-types` (P1-07)
   - core-kernel: `requireRole(actor, allowed)`, the role gate of a use case: 403 `forbidden` unless `actor.role` is listed (DOC-12 §5.3, §14
     item 3); test in `src/require-role.test.ts`
+  - core-i18n: the catalog lookup walks own keys only (`Object.hasOwn`), so `__proto__` and inherited keys resolve to nothing (Semgrep, P1-10)

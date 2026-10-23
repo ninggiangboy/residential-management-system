@@ -30,6 +30,7 @@ function readIndex() {
 /** IDs in the first column of the document's tables (`| AU-22 |`, `| AU-S04 |`). */
 function documentedIds(doc: string, prefix: string) {
   const ids = new Set<string>()
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- `prefix` is a test prefix of DOC-88, never user input
   const re = new RegExp(`^\\| \\*{0,2}(${prefix}S?\\d+)\\b`, 'gm')
   for (const m of readFileSync(doc, 'utf8').matchAll(re)) if (m[1]) ids.add(m[1])
   return ids

@@ -146,6 +146,7 @@ export function lintSources(ts: Ts, root: string, scoped: readonly ScopedTable[]
   const variables = new Set(scoped.map((t) => t.variable))
   const qualifiedNames = scoped.map((t) => t.qualified.replace('.', '\\.'))
   const rawPattern =
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- table names of the scoped tables, from the schema files
     qualifiedNames.length > 0 ? new RegExp(`\\b(${qualifiedNames.join('|')})\\b`) : null
 
   const files = walk(
@@ -223,6 +224,7 @@ export function lintSources(ts: Ts, root: string, scoped: readonly ScopedTable[]
           if (!isPublic) continue
           const body = member.body.getText(file)
           const touches =
+            // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- identifiers of the scoped tables, from the schema files
             [...variables].some((v) => new RegExp(`\\b${v}\\b`).test(body)) ||
             (rawPattern?.test(body) ?? false)
           const first = member.parameters[0]
