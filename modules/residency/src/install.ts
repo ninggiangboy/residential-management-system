@@ -15,6 +15,7 @@ export function installResidency(host: ResidencyHost): ResidencyModule {
     files: host.files,
     identity: host.identity,
     guards: host.guards,
+    idempotent: host.idempotent,
     pii: host.pii,
     audited: host.audited,
     outboxMaxPayloadBytes: host.outboxMaxPayloadBytes,

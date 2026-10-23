@@ -1,4 +1,5 @@
 import { Database } from '@core/db'
+import { noIdempotency } from '@core/http'
 import { createSecretBox, NotFoundError, UuidV7Generator } from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { FakeClock } from '@core/testing'
@@ -169,6 +170,7 @@ export async function createHarness() {
     files,
     identity,
     // The import routes are not mounted in these tests: the guards are the host's.
+    idempotent: noIdempotency,
     guards: { staff: () => ({}), resident: () => ({}), unit: () => ({}) } as unknown as Guards,
     pii: () => pii,
     audited: audit.audited,

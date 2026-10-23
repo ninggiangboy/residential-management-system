@@ -1,4 +1,5 @@
 import { Database } from '@core/db'
+import { noIdempotency } from '@core/http'
 import { createSecretBox, type SecretBox, UuidV7Generator } from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { type ObjectStorage, S3ObjectStorage } from '@core/storage'
@@ -90,6 +91,7 @@ export async function createHarness(options: HarnessOptions = {}) {
   })
   const usage: Array<{ buildingId: string; ratio: number; isDemo: boolean }> = []
   const building: BuildingModule = installBuilding({
+    idempotent: noIdempotency,
     logger: silent,
     clock,
     ids,

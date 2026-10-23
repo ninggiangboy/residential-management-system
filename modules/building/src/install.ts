@@ -16,6 +16,7 @@ export function installBuilding(host: BuildingHost): BuildingModule {
     probe: host.probe,
     audited: host.audited,
     guards: host.guards,
+    idempotent: host.idempotent,
     staffNames: host.staffNames,
     residentBuildings: host.residentBuildings,
     files: host.files,

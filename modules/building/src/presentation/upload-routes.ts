@@ -1,4 +1,11 @@
-import { IdParams, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
+import {
+  type Idempotent,
+  IdParams,
+  type RouteSet,
+  routePlugin,
+  staffRoute,
+  strictObject,
+} from '@core/http'
 import { ValidationError } from '@core/kernel'
 import { type Guards, type StaffRole, type StaffSession, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
@@ -8,6 +15,8 @@ import { PURPOSE_RULES } from '../domain/purposes'
 export interface UploadRouteDeps {
   files: Pick<FilesApi, 'register' | 'verify'>
   guards: Guards
+  /** E-36 takes an `Idempotency-Key` (DOC-50 §8.1). */
+  idempotent: Idempotent
 }
 
 /** Any staff role may call: which purpose a role may register is the rule of the purpose (DOC-37 §4), checked by `FilesApi.register`. */
@@ -23,6 +32,12 @@ const RegisterBody = strictObject({
   module: Type.Optional(Type.String({ maxLength: 20 })),
   mime: Type.String({ maxLength: 120 }),
   size: Type.Integer({ minimum: 1 }),
+})
+
+/** The key belongs to the staff account (DOC-50 §8.3). */
+const staffAccount = (context: object) => ({
+  kind: 'staff' as const,
+  id: staffOf(context).staffId as string,
 })
 
 const actorOf = (staff: StaffSession): FileActor => ({
@@ -47,11 +62,15 @@ function moduleOf(purpose: string, named: string | undefined): FileModule {
 
 /**
  * `/staff/uploads` (E-36, E-37; DOC-37 §6): the two calls around the client's `PUT` to the bucket. No byte passes through the
- * API. The `Idempotency-Key` of E-36 joins with the idempotency plugin of DOC-50 §8; until then a retried registration makes a
- * second `pending` row, which the orphan job removes after 24 h.
+ * API. E-36 takes an `Idempotency-Key` (DOC-50 §8, P1-28): a retried registration answers the first ticket instead of making a
+ * second `pending` row. E-37 is safe to repeat by itself (DR-146).
  */
 export function uploadRoutes(d: UploadRouteDeps) {
-  const register = async (context: { body: Static<typeof RegisterBody>; set: RouteSet }) => {
+  const register = async (context: {
+    body: Static<typeof RegisterBody>
+    request: Request
+    set: RouteSet
+  }) => {
     const { purpose, module, mime, size } = context.body
     const ticket = await d.files.register(actorOf(staffOf(context)), {
       purpose: purpose as UploadPurpose,
@@ -69,6 +88,9 @@ export function uploadRoutes(d: UploadRouteDeps) {
   const route = staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, { byPurpose: true })
 
   return routePlugin({ prefix: '/staff/uploads' })
-    .post('/', register, { ...route, body: RegisterBody })
+    .post('/', d.idempotent({ account: (context) => staffAccount(context) }, register), {
+      ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, { byPurpose: true, idempotent: true }),
+      body: RegisterBody,
+    })
     .post('/:id/verify', verify, { ...route, params: IdParams })
 }

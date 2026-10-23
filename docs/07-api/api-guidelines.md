@@ -168,6 +168,8 @@ A request refused at a gate before 13 leaves no idempotency row (§8), no audit 
 
 The convention is ADR-0023 and DR-74; the table is DOC-17 §3 `platform.idempotency_key (account_kind, account_id, key, request_hash, status, response_status, response_body, created_at)`, 24-hour retention.
 
+*As built (P1-28, 2026-10-23, DR-259):* the wrapper is `createIdempotent` of `@core/http` and the adapter `SqlIdempotencyStore` of `@core/db`. A route runs in the `transaction` mode of §8.3, or in the `external` mode when its handler reaches outside before it commits (E-72 reads the bucket): the key is committed `in_progress` first, a duplicate meanwhile is 409 `request_in_progress` with `Retry-After: 1`, and a key `in_progress` for more than five minutes is taken over. The stored response is an envelope `{headers: {location?}, body}`, so a replay carries `Location`. The hourly sweep of 24-hour keys runs in the `api` process. A missing key is 400 with `details [{path: "header.Idempotency-Key", code: "required"}]`, a malformed one the same with `format`.
+
 ### 8.1 Which requests
 
 A route marked `R` in DOC-51 §2 (`idempotent: true` in the metadata) **requires** `Idempotency-Key`: the creates of tickets, ticket messages, vehicles, notices, members, residents, units, staff accounts, imports, uploads, payment intents, manual payments, reminders, statements, exports and fee batches. A missing key is 400 `validation_failed` with `details [{path: "header.Idempotency-Key", code: "required"}]`. An action that is already safe to repeat by its own arbiter (publish, recall, void, transition, approve) does not take a key: the second call finds the state changed and answers 409 as DOC-42 says. A key on a route that does not take one is ignored.

@@ -1,4 +1,11 @@
-import { IdParams, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
+import {
+  type Idempotent,
+  IdParams,
+  type RouteSet,
+  routePlugin,
+  staffRoute,
+  strictObject,
+} from '@core/http'
 import { NotFoundError, ValidationError } from '@core/kernel'
 import { createTranslator, isMessageKey } from '@rms/i18n-catalog'
 import { type Guards, type Language, staffOf } from '@rms/shared-types'
@@ -22,6 +29,7 @@ export interface ImportRouteDeps {
   validate: ValidateUnitOwnerImport
   commit: CommitUnitOwnerImport
   guards: Guards
+  idempotent: Idempotent
 }
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -32,6 +40,8 @@ const KindParams = strictObject({ kind: Type.String() })
 const CreateBody = strictObject({
   kind: Type.Union(KINDS.map((kind) => Type.Literal(kind))),
   fileId: Type.String({ format: 'uuid' }),
+  /** The name of the file as the browser knows it: the upload flow keeps none (DR-258). */
+  fileName: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
   params: Type.Optional(strictObject({})),
 })
 const ListQuery = strictObject({
@@ -39,6 +49,12 @@ const ListQuery = strictObject({
   status: Type.Optional(Type.Union(STATUSES.map((status) => Type.Literal(status)))),
   cursor: Type.Optional(Type.String({ maxLength: 200 })),
   limit: Type.Optional(Type.String({ pattern: '^[0-9]{1,3}$' })),
+})
+
+/** The key belongs to the staff account (DOC-50 §8.3). */
+const staffAccount = (context: object) => ({
+  kind: 'staff' as const,
+  id: staffOf(context).staffId as string,
 })
 
 /** `en` when the caller asks for it; Vietnamese otherwise (DR-71), as `GET /me/terms` does. */
@@ -110,8 +126,8 @@ function jobBody(job: ImportJobRecord, committed: CommittedCounts | null, lang: 
  * `/staff/imports` (E-71…E-74, E-169; DOC-27 §9, DOC-18 §1): the template, the synchronous validation that stores the preview, the
  * preview again, the commit and the history. `kind` selects the module; `unit_owner` is `residency`'s, `fee_batch` waits for
  * `finance` (P2-04) and is 404 on the template and 400 on the body until then. Every handler is the call of a use case or a query.
- * The `Idempotency-Key` of E-72 joins with the idempotency plugin of DOC-50 §8; until then a retried request validates the file
- * again and makes a second job, which expires on its own.
+ * E-72 takes an `Idempotency-Key` (DOC-50 §8, P1-28) in the `external` mode: the validation reads the bucket, so the key is committed
+ * `in_progress` before and completed after, and a retry replays the first preview, `Location` included.
  */
 export function importRoutes(d: ImportRouteDeps) {
   const template = async (context: { params: Static<typeof KindParams>; request: Request }) => {
@@ -136,7 +152,10 @@ export function importRoutes(d: ImportRouteDeps) {
       throw new ValidationError([
         { path: 'kind', code: 'unsupported', message: 'not available yet' },
       ])
-    const job = await d.validate.execute(staffOf(context), { fileId: context.body.fileId })
+    const job = await d.validate.execute(staffOf(context), {
+      fileId: context.body.fileId,
+      fileName: context.body.fileName,
+    })
     context.set.status = 201
     context.set.headers.location = `/api/v1/staff/imports/${job.id}`
     return jobBody(job, null, languageOf(context.request.headers.get('accept-language')))
@@ -194,12 +213,14 @@ export function importRoutes(d: ImportRouteDeps) {
   }
 
   const read = staffRoute(d.guards, 'residency', IMPORT_READ_ROLES)
-  const create_ = staffRoute(d.guards, 'residency', VALIDATE_UNIT_OWNER_IMPORT_ROLES)
   const commit_ = staffRoute(d.guards, 'residency', COMMIT_UNIT_OWNER_IMPORT_ROLES)
 
   return routePlugin({ prefix: '/staff/imports' })
     .get('/templates/:kind', template, { ...read, params: KindParams })
-    .post('/', create, { ...create_, body: CreateBody })
+    .post('/', d.idempotent({ account: staffAccount, mode: 'external' }, create), {
+      ...staffRoute(d.guards, 'residency', VALIDATE_UNIT_OWNER_IMPORT_ROLES, { idempotent: true }),
+      body: CreateBody,
+    })
     .get('/', list, { ...read, query: ListQuery })
     .get('/:id', get, { ...read, params: IdParams })
     .post('/:id/commit', commit, { ...commit_, params: IdParams })

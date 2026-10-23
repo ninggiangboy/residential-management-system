@@ -334,7 +334,7 @@ DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07
 
 Prefix `FS-` (files). They run against a local S3-compatible store and the real PostgreSQL, with a fake clock. DOC-88 indexes the prefix.
 
-**Run in P1-13 (2026-10-23, DR-258):** FS-17 over HTTP in `apps/api/tests/integration/import.integration.test.ts` (the upload of a committed import is `deleted` and has its delete command) and `FilesApi.read` in `modules/building/test/files.integration.test.ts`; the jobs `import_expire` and `import_purge` remove the file of a job that is not committed.
+**Run in P1-13 (2026-10-23, DR-258):** FS-17 over HTTP in `apps/api/tests/integration/import.integration.test.ts` (the upload of a committed import is `deleted` and has its delete command) and `FilesApi.read` in `modules/building/test/files.integration.test.ts`; the `Idempotency-Key` of E-36 (P1-28) in `apps/api/tests/integration/import.integration.test.ts`; the jobs `import_expire` and `import_purge` remove the file of a job that is not committed.
 
 **Run in P1-07 (2026-10-22, `modules/building/test/files.integration.test.ts`):** FS-01…16, FS-18, FS-20, FS-21 and FS-22, against SeaweedFS 4.48 and, when no store answers (CI has none yet), against `FakeStorage` of `@core/testing`, which refuses a `PUT` whose `Content-Type` is not the signed one. FS-17 (an import is consumed) waits for P1-13 and FS-19 (`finance_purge`) for P2. FS-11 asserts the lifetimes and the host of the URL; that no log line holds its query string is the logger's redaction (DOC-42 §8.3), not tested here.
 

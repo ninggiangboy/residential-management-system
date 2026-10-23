@@ -18,14 +18,21 @@ let admin: string
 let manager: string
 let technician: string
 
-const call = (path: string, init: RequestInit & { token?: string; json?: unknown } = {}) => {
-  const { token, json, headers, ...rest } = init
+/** A `POST` carries a fresh `Idempotency-Key` unless the test says `key: null` (a route that takes none ignores it, DOC-50 §8.1). */
+const call = (
+  path: string,
+  init: RequestInit & { token?: string; json?: unknown; key?: string | null } = {},
+) => {
+  const { token, json, headers, key, ...rest } = init
   return app.handle(
     new Request(`http://localhost/api/v1${path}`, {
       ...rest,
       headers: {
         ...(json === undefined ? {} : { 'content-type': 'application/json' }),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(rest.method === 'POST' && key !== null
+          ? { 'idempotency-key': key ?? crypto.randomUUID() }
+          : {}),
         ...headers,
       },
       body: json === undefined ? undefined : JSON.stringify(json),

@@ -64,3 +64,8 @@ local-changes:
     guarded statement, and `decide` loads and decides again when the statement lost a race (DR-255); test in `src/transition.test.ts`
   - core-db: `applyTransition(database, table, transition, { stamp, also })`, the one guarded `UPDATE … SET <set> WHERE id AND <expect> RETURNING *`
     that applies a kernel `Transition` (DR-255); timestamps compare at millisecond precision
+  - core-http: `createIdempotent(store, clock)` and `noIdempotency`, the wrapper of DOC-50 §8 for a route marked `R` (the key row, the replay of a stored
+    2xx with `Idempotent-Replayed`, 422 `idempotency_key_reuse`, the `external` mode with 409 `request_in_progress` and the takeover of a dead key
+    after five minutes), with `requestHash` and `canonicalJson`; `staffRoute`'s `extra` carries `idempotent: true`; core-db: `SqlIdempotencyStore`,
+    its adapter on `platform.idempotency_key`, matched to the core-http `IdempotencyStore` by shape because a core package may not import
+    another that is not listed for it (P1-28, DR-259); tests in `idempotency.test.ts`

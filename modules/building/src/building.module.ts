@@ -1,5 +1,5 @@
 import type { Database } from '@core/db'
-import { routePlugin } from '@core/http'
+import { type Idempotent, routePlugin } from '@core/http'
 import type { Clock, IdGenerator, Log, SecretBox } from '@core/kernel'
 import {
   DrizzleInboxGuard,
@@ -65,6 +65,8 @@ import {
 import { type UploadRouteDeps, uploadRoutes } from './presentation/upload-routes'
 
 export interface BuildingDeps {
+  /** The wrapper of DOC-50 §8 for the routes behind an `Idempotency-Key` (E-36). */
+  idempotent: Idempotent
   /** The guards of DOC-12 §5.3, built by the composition root from the contracts of `identity`. */
   guards: Guards
   /** The names of the staff who published a terms version, from `identity`. */
@@ -253,6 +255,7 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       staffNames: deps.staffNames,
       residentBuildings: deps.residentBuildings,
       guards: deps.guards,
+      idempotent: deps.idempotent,
     }),
     handlers,
     outbox: { name: 'building', table: buildingOutbox, inboxTable: buildingInbox },

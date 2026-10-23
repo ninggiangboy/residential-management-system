@@ -18,6 +18,13 @@ export const VALIDATE_UNIT_OWNER_IMPORT_ROLES = [
   'manager',
 ] as const satisfies readonly StaffRole[]
 
+/** The name the browser reported, without control characters; blank is no name (DR-258). */
+const cleanName = (name: string | undefined) =>
+  name
+    ?.replace(/\p{Cc}/gu, '')
+    .trim()
+    .slice(0, 255) || null
+
 /**
  * `POST /staff/imports` with `kind = unit_owner` (E-72, DOC-27 §9.1): reads the verified upload, runs the file, row, set and db
  * layers of DOC-18 §1 in memory and stores the preview as an `import_job`. Nothing is written to the units tables. The file is
@@ -36,7 +43,10 @@ export class ValidateUnitOwnerImport {
     private readonly ids: IdGenerator,
   ) {}
 
-  async execute(staff: StaffContext, input: { fileId: string }): Promise<ImportJobRecord> {
+  async execute(
+    staff: StaffContext,
+    input: { fileId: string; fileName?: string },
+  ): Promise<ImportJobRecord> {
     requireRole(staff, VALIDATE_UNIT_OWNER_IMPORT_ROLES)
     const actor = fileActorOf(staff)
     const bytes = await this.files.read(actor, input.fileId, {
@@ -59,7 +69,7 @@ export class ValidateUnitOwnerImport {
       kind: 'unit_owner' as const,
       status: read.kind === 'failed' ? ('failed' as const) : ('validated' as const),
       fileId: input.fileId,
-      fileName: null,
+      fileName: cleanName(input.fileName),
       result: preview,
       createdBy: staff.staffId,
       createdAt: now,
