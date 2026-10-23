@@ -58,3 +58,7 @@ local-changes:
   - core-kernel: `requireRole(actor, allowed)`, the role gate of a use case: 403 `forbidden` unless `actor.role` is listed (DOC-12 §5.3, §14
     item 3); test in `src/require-role.test.ts`
   - core-i18n: the catalog lookup walks own keys only (`Object.hasOwn`), so `__proto__` and inherited keys resolve to nothing (Semgrep, P1-10)
+  - core-kernel: `Transition<S>`, `decide` and `MAX_DECIDE_ATTEMPTS`: an aggregate returns the state change it decided, a repository applies it in one
+    guarded statement, and `decide` loads and decides again when the statement lost a race (DR-255); test in `src/transition.test.ts`
+  - core-db: `applyTransition(database, table, transition, { stamp, also })`, the one guarded `UPDATE … SET <set> WHERE id AND <expect> RETURNING *`
+    that applies a kernel `Transition` (DR-255); timestamps compare at millisecond precision

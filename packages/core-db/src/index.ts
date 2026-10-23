@@ -1,4 +1,5 @@
 export * from './advisory-lock'
+export * from './apply-transition'
 export * from './config'
 export * from './database'
 export * from './migrate'
