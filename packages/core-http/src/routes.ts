@@ -19,30 +19,64 @@ export type RouteSet = Context['set']
 /** The path parameter of a route that names one row. */
 export const IdParams = strictObject({ id: Type.String({ format: 'uuid' }) })
 
-/** The route metadata of DOC-12 §5.3, as the vendor extension the OpenAPI document carries (DOC-50 §2). */
-const routeMeta = (tag: string, audience: object) => ({
-  detail: { tags: [tag], 'x-audience': audience },
-})
+/**
+ * What a route says about itself beyond its guard (DOC-50 §2, DOC-39 §4.1): the catalog number and `operationId` of DOC-51 §2, which
+ * the authorization-matrix generator joins with the audience, and the flags the catalog marks (`R`, step-up). `byPurpose` and
+ * `credential` stay inside the audience: they name how the gate decides, not a second endpoint property.
+ */
+export interface RouteInfo {
+  /** `E-57`: the number in DOC-51 §2 (AG-02 compares the mounted routes with the catalog). */
+  endpoint: string
+  operationId: string
+  /** `Idempotency-Key` is required (the `R` of the catalog). */
+  idempotent?: true
+  /** The step-up actions the route may demand (DOC-26 §4.5), one or several. */
+  stepUp?: string | readonly string[]
+  /** The roles are checked by purpose inside the use case (DOC-37 §4). */
+  byPurpose?: true
+  /** A credential other than a token (`refresh_token`). */
+  credential?: string
+}
 
-/** A route nobody signs in for; `extra` names what it takes instead (`{ credential: 'refresh_token' }`). */
-export const publicRoute = (tag: string, extra: object = {}) =>
-  routeMeta(tag, { kind: 'public', ...extra })
+/** The route metadata of DOC-12 §5.3, as the vendor extensions the OpenAPI document carries (DOC-50 §2). */
+const routeMeta = (tag: string, audience: object, info: RouteInfo) => {
+  const { endpoint, operationId, idempotent, stepUp, byPurpose, credential } = info
+  return {
+    detail: {
+      tags: [tag],
+      operationId,
+      'x-endpoint-id': endpoint,
+      'x-audience': {
+        ...audience,
+        ...(byPurpose ? { byPurpose } : {}),
+        ...(credential ? { credential } : {}),
+      },
+      ...(idempotent ? { 'x-idempotent': true } : {}),
+      ...(stepUp ? { 'x-step-up': stepUp } : {}),
+    },
+  }
+}
+
+/** A route nobody signs in for; `info.credential` names what it takes instead (`refresh_token`). */
+export const publicRoute = (tag: string, info: RouteInfo) =>
+  routeMeta(tag, { kind: 'public' }, info)
 
 /** A staff route: the `staff` guard and the audience from the same `roles`, so the two cannot differ. */
 export const staffRoute = <Guard extends object, Role extends string>(
   guards: { staff(roles: readonly Role[]): Guard },
   tag: string,
   roles: readonly Role[],
-  extra: object = {},
-) => ({ ...guards.staff(roles), ...routeMeta(tag, { kind: 'staff', roles, ...extra }) })
+  info: RouteInfo,
+) => ({ ...guards.staff(roles), ...routeMeta(tag, { kind: 'staff', roles }, info) })
 
 /** A token-only resident route: the `resident` guard and no unit (DOC-12 §5.3). */
 export const residentRoute = <Guard extends object>(
   guards: { resident(): Guard },
   tag: string,
+  info: RouteInfo,
 ) => ({
   ...guards.resident(),
-  ...routeMeta(tag, { kind: 'resident' }),
+  ...routeMeta(tag, { kind: 'resident' }, info),
 })
 
 /**
@@ -53,7 +87,8 @@ export const unitRoute = <Guard extends object, Capability extends string>(
   guards: { unit(capability: Capability): Guard },
   tag: string,
   capability: Capability,
+  info: RouteInfo,
 ) => ({
   ...guards.unit(capability),
-  ...routeMeta(tag, { kind: 'resident', capability }),
+  ...routeMeta(tag, { kind: 'resident', capability }, info),
 })

@@ -39,6 +39,13 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) => {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
 
+/** The route metadata of DOC-50 §2 (the same record `@core/http` writes for a route of a module): the route is public and numbered E-02. */
+const ROUTE_META: object = {
+  operationId: 'getHealthReady',
+  'x-endpoint-id': 'E-02',
+  'x-audience': { kind: 'public' },
+}
+
 /** `GET <prefix>/ready` (DOC-51 E-02): 200 `ok`, 503 `degraded` or `stopping`; never the error shape (DOC-42 §6). */
 export function readyRoute(options: HealthOptions) {
   const probe = async (check: HealthCheck) => {
@@ -74,6 +81,7 @@ export function readyRoute(options: HealthOptions) {
     },
     {
       detail: {
+        ...ROUTE_META,
         summary: 'Readiness',
         description:
           'The process can do its work: the database answers within the timeout. 200 stays during maintenance (`maintenance: true`); 503 `degraded` or `stopping` otherwise.',

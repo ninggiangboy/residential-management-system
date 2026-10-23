@@ -132,6 +132,20 @@ export async function ensureTemplate(root: Sql, kind: TemplateKind): Promise<str
 export async function cloneTemplate(kind: TemplateKind = 'empty'): Promise<TestDb> {
   const root = connect(adminUrl())
   const template = await ensureTemplate(root, kind)
+  return createClone(root, template)
+}
+
+/**
+ * A copy of a database a test has already seeded (the authorization matrix restores its fixtures this way between routes, EXP-10
+ * §5 step 4). PostgreSQL copies only a database nobody is connected to, so the pool of `source` is closed first; `source` can
+ * still be dropped afterwards, and nothing else may be connected to it.
+ */
+export async function cloneDatabase(source: TestDb): Promise<TestDb> {
+  await source.sql.end({ timeout: 2 })
+  return createClone(connect(adminUrl()), source.name)
+}
+
+async function createClone(root: Sql, template: string): Promise<TestDb> {
   const name = `${TEST_DB_PREFIX}${process.pid}_${randomBytes(4).toString('hex')}`
   for (let attempt = 1; ; attempt++) {
     try {

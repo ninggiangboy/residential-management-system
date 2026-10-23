@@ -71,6 +71,11 @@ export class SaveGatewayConfig {
 
   async execute(staff: StaffContext, input: SaveGatewayRequest): Promise<Saved> {
     requireRole(staff, SAVE_GATEWAY_CONFIG_ROLES)
+    // Decided before any database work, and it names the action the client asks the proof for (EXP-10 S0, DOC-39 §9).
+    if (!input.stepUp)
+      throw new ForbiddenError('step_up_required', 'A step-up proof is required', {
+        details: { action: 'gateway_config' },
+      })
     if (input.receivingAccount) GatewayConfig.assertAccount(input.receivingAccount)
     const result = await this.uow.run(() => this.auditedSave(staff, input))
     this.reader.invalidate(staff.buildingId, input.provider)
@@ -86,10 +91,13 @@ export class SaveGatewayConfig {
       },
       async (staff: StaffContext, request: SaveGatewayRequest) => {
         const { gateways, directory, stepUp } = this
-        // A save asks for a second proof, even one that only re-saves; the verifier counts a wrong password toward the lockout.
-        if (!request.stepUp)
-          throw new ForbiddenError('step_up_required', 'A step-up proof is required')
-        await stepUp.verifyStepUp(staff, 'gateway_config', request.stepUp)
+        // A save asks for a second proof, even one that only re-saves (`execute` refused a request without one); the verifier
+        // counts a wrong password toward the lockout.
+        await stepUp.verifyStepUp(
+          staff,
+          'gateway_config',
+          request.stepUp as NonNullable<SaveGatewayRequest['stepUp']>,
+        )
 
         const existing = await gateways.findActive(staff.scope, request.provider)
         const input = this.resolve(request, existing)

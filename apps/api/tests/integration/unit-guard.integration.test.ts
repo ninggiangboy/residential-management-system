@@ -130,15 +130,29 @@ beforeAll(async () => {
     .get(
       '/me/notices',
       (context) => ({ memberType: unitOf(context).memberType }),
-      unitRoute(guards, 'test', 'broadcast_notices'),
+      unitRoute(guards, 'test', 'broadcast_notices', {
+        endpoint: 'T-01',
+        operationId: 'probeNotices',
+      }),
     )
     .get(
       '/me/fees',
       (context) => ({ startedAt: unitOf(context).startedAt.toISOString() }),
-      unitRoute(guards, 'test', 'view_fees'),
+      unitRoute(guards, 'test', 'view_fees', { endpoint: 'T-02', operationId: 'probeFees' }),
     )
-    .get('/me/payments', () => ({ ok: true }), unitRoute(guards, 'test', 'pay'))
-    .get('/me/members', () => ({ ok: true }), unitRoute(guards, 'test', 'manage_members'))
+    .get(
+      '/me/payments',
+      () => ({ ok: true }),
+      unitRoute(guards, 'test', 'pay', { endpoint: 'T-03', operationId: 'probePay' }),
+    )
+    .get(
+      '/me/members',
+      () => ({ ok: true }),
+      unitRoute(guards, 'test', 'manage_members', {
+        endpoint: 'T-04',
+        operationId: 'probeMembers',
+      }),
+    )
 })
 afterAll(async () => {
   await built.container.close()

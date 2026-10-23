@@ -77,9 +77,11 @@ type Audience =
   | { kind: 'webhook'; provider: string }
 
 interface RouteSecurity {
+  endpoint: string                                      // 'E-27', the number of DOC-51 §2
+  operationId: string
   audience: Audience
   idempotent?: true                                     // Idempotency-Key required
-  stepUp?: StepUpAction                                 // 'gateway_config' | 'admin_change' | 'staff_email'
+  stepUp?: StepUpAction | StepUpAction[]                // 'gateway_config' | 'admin_change' | 'staff_email'
 }
 ```
 
@@ -99,7 +101,7 @@ The generator turns a route into this record (one JSON object per route; the fil
 }
 ```
 
-`scopeOfObject` is `unit` (the object belongs to the unit named by `X-Unit-Id`), `building` (staff routes) or `none` (no object: a list of the caller's own data, a public route). It is **derived** from the audience and the path, not declared, except that a route may override it with `objectScope` when the derivation is wrong (a review finds the case). `endpointId` comes from `x-endpoint-id`; a route whose id is not in DOC-51 §2 fails AG-02 before the matrix starts.
+`scopeOfObject` is `unit` (the object belongs to the unit named by `X-Unit-Id`), `building` (staff routes), `account` (a token-only resident route with a path parameter: the object is the caller's own, such as a session) or `none` (no object: a list of the caller's own data, a public route). It is **derived** from the audience and the path, not declared. `pathParams` lists every `{name}`; `objectParams` lists the ones that name an object of a unit or a building (`{kind}` of an import template names none), and only those make a `foreign` cell expect 404 (DR-262). `endpointId` comes from `x-endpoint-id`; the route helpers of `@core/http` write `operationId`, `x-endpoint-id`, `x-audience`, `x-idempotent` and `x-step-up` from one `RouteInfo`, so the guard and the audience cannot differ; a route whose id is not in DOC-51 §2 fails AG-02 before the matrix starts.
 
 The generator **fails before sending a request** when: a route has no `audience`; an `endpointId` is missing or duplicated; a path parameter has no fixture (§4.5); a route in `/staff/*` lists no roles; a route that DOC-51 §2 marks with a *Step-up* lacks `stepUp`.
 
@@ -117,7 +119,7 @@ Sixteen actors. A *token* actor holds a real token issued by the sign-in use cas
 | `res.tenant_nopay` | Active tenant of U1, `can_pay` off |
 | `res.helper` | Active helper of U1 |
 | `res.locked` | A member of U1 whose membership is `locked` |
-| `res.terms_pending` | Owner of U1 who has not accepted the latest terms |
+| `res.terms_pending` | Family member of U1 who has not accepted the latest terms (a unit has one owner, `membership_one_owner_per_unit`, DR-262) |
 | `res.stranger` | A resident with a membership of U2 only; sends `X-Unit-Id` = U1 |
 | `staff.admin` | Admin of B1 |
 | `staff.manager` | Manager of B1 |
@@ -142,9 +144,9 @@ A cell is (route, actor, scope). The scope names which fixture objects the path 
 | Audience | `anon`, `tok.expired` | `res.*` | `staff.*` of listed roles | other staff roles | `staff.disabled` | `staff.admin_b2` |
 | --- | --- | --- | --- | --- | --- | --- |
 | `public` | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW |
-| `resident` (no capability) | `401 unauthenticated` | ALLOW (a locked or stranger membership does not matter: no unit guard) | — | `403 forbidden` for every staff actor | `403 forbidden` | `403 forbidden` |
-| `resident` with capability | `401 unauthenticated` | by the rows below | — | `403 forbidden` for every staff actor | `403 forbidden` | `403 forbidden` |
-| `staff` | `401 unauthenticated` | `403 forbidden` for every `res.*` | ALLOW | `403 forbidden` | `401 unauthenticated` | ALLOW at the gate; scope rules of §4.3 |
+| `resident` (no capability) | `401 unauthenticated` | ALLOW (a locked or stranger membership does not matter: no unit guard) | — | `401 unauthenticated` for every staff actor (a token of the wrong kind) | `401 unauthenticated` | `401 unauthenticated` |
+| `resident` with capability | `401 unauthenticated` | by the rows below | — | `401 unauthenticated` for every staff actor | `401 unauthenticated` | `401 unauthenticated` |
+| `staff` | `401 unauthenticated` | `401 unauthenticated` for every `res.*` (a token of the wrong kind) | ALLOW | `403 forbidden` | `401 unauthenticated` | ALLOW at the gate; its `own` objects are B1's, so a route with an object parameter answers it `404 not_found`, and its `foreign` cell (B2's objects) is ALLOW (DR-262) |
 | `webhook` | `401 invalid_signature` | `401 invalid_signature` | `401 invalid_signature` | — | — | — |
 
 For `resident` with a capability, in the order of the gates of DOC-50 §7 (membership, then terms, then policy):
@@ -158,7 +160,7 @@ For `resident` with a capability, in the order of the gates of DOC-50 §7 (membe
 Two more rules:
 
 - **`scope = foreign` and the actor passes the gate** → `404 not_found`. Never 200, never 403 (rule 4 of §2). For a list route (no path parameter) the cell is ALLOW and the **leak scan** applies: the response body must contain none of the ids of the other scope's fixtures.
-- **A route with `stepUp`**: an actor that passes the gate and sends the step-up body without `stepUp` gets `403 step_up_required` if it is `staff.admin`, and `403 forbidden` if it is another listed role (DR-147). The `ALLOW` cell for such a route is the one **with a valid proof**, run once (§4.5).
+- **A route with `stepUp`**: an actor that passes the gate and sends the step-up body without `stepUp` gets `403 step_up_required` if it is `staff.admin`, and `403 forbidden` if it is another listed role (DR-147). The `ALLOW` cell for such a route is the one **with a valid proof**, run once (§4.5). A route whose minimal request already needs the proof (E-50) is `403 step_up_required` for `staff.admin` in the matrix, and its `ALLOW` is state S9 of the step-up pass (DOC-99 §7.1); E-40 and E-42 need it only for the body that makes an Admin or changes an email, which the minimal request of the matrix is not (DR-262).
 
 ### 4.5 The run
 
@@ -183,11 +185,11 @@ Five routes of the catalog, as the generator expects them (own scope; `foreign` 
 | Route | `anon` | `res.owner` | `res.helper` | `res.locked` | `res.terms_pending` | `staff.admin` | `staff.manager` | `staff.guard` | `staff.admin_b2` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | E-03 `GET /public/config` (public) | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW | ALLOW |
-| E-13 `GET /me` (resident) | 401 | ALLOW | ALLOW | ALLOW | ALLOW | 403 forbidden | 403 forbidden | 403 forbidden | 403 forbidden |
-| E-27 `POST /me/members` (unit: manage_members) | 401 | ALLOW | 403 forbidden | 403 membership_inactive | 403 terms_required | 403 forbidden | 403 forbidden | 403 forbidden | 403 forbidden |
-| E-40 `POST /staff/accounts` (staff: admin, manager; step-up when the role is `admin`) | 401 | 403 forbidden | 403 forbidden | 403 forbidden | 403 forbidden | ALLOW for `role: technician`; `403 step_up_required` for `role: admin` | ALLOW for `role: technician`; `403 forbidden` for `role: admin` (DR-147) | 403 forbidden | ALLOW at the gate; **foreign** scope not applicable (no path object) |
+| E-13 `GET /me` (resident) | 401 | ALLOW | ALLOW | ALLOW | ALLOW | 401 | 401 | 401 | 401 |
+| E-27 `POST /me/members` (unit: manage_members) | 401 | ALLOW | 403 forbidden | 403 membership_inactive | 403 terms_required | 401 | 401 | 401 | 401 |
+| E-40 `POST /staff/accounts` (staff: admin, manager; step-up when the role is `admin`) | 401 | 401 | 401 | 401 | 401 | ALLOW for `role: technician`; `403 step_up_required` for `role: admin` | ALLOW for `role: technician`; `403 forbidden` for `role: admin` (DR-147) | 403 forbidden | ALLOW at the gate; **foreign** scope not applicable (no path object) |
 | E-117 `POST /payments/webhooks/{provider}/{gatewayConfigId}` (webhook) | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature | 401 invalid_signature |
-| E-41 `GET /staff/accounts/{id}`, **foreign** scope (an account of B2) | 401 | 403 | 403 | 403 | 403 | 404 not_found | 404 not_found | 403 | the account is its own: ALLOW (own scope of B2) |
+| E-41 `GET /staff/accounts/{id}`, **foreign** scope (an account of B2) | 401 | 401 | 401 | 401 | 401 | 404 not_found | 404 not_found | 403 | the account is its own: ALLOW |
 
 The last row is the isolation proof (NFR-08): the Admin of B1 asking for a staff account of B2 is told it does not exist.
 
@@ -453,7 +455,7 @@ Metrics (DOC-40): `rate_limited_total{scope}`, `webhook_rejections_total{reason}
 
 ## 16. Required tests
 
-Prefix `SC-` (security; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). A test written in an earlier document is referenced, not repeated. All are **not run** yet.
+Prefix `SC-` (security; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). A test written in an earlier document is referenced, not repeated. SC-01 to SC-09 and SC-13 are written and run in P1-15 (`bun run test:authz`; SC-04 and SC-05 are mutants M2 and M3 of DOC-99 §3); the others are **not run** yet.
 
 | ID | Scenario | Expected | Written in |
 | --- | --- | --- | --- |
@@ -465,7 +467,7 @@ Prefix `SC-` (security; unused before this document; master plan §0.2, DR-156; 
 | SC-06 | A permitted actor on `foreign` objects of every object route | 404 `not_found` each; never 200 or 403 | P1-15 |
 | SC-07 | The list routes as `staff.admin_b2` | 200; the body holds none of the ids of B1 | P1-15 |
 | SC-08 | A step-up route, as `staff.admin` without `stepUp`, as `staff.manager` | `step_up_required`; `forbidden` | P1-15 |
-| SC-09 | Every `/staff/*` route with each `res.*` token; every `/me/*` route with each `staff.*` token | 403 `forbidden` for all | P1-15 |
+| SC-09 | Every `/staff/*` route with each `res.*` token; every `/me/*` route with each `staff.*` token | 401 `unauthenticated` for all: the guards check the token kind first (RM-03, AU-41; DR-262) | P1-15 |
 | SC-10 | Every `/me/*` and `/staff/*` route with no token and an invalid body | 401, never 400 (AG-04) | P1-04 |
 | SC-11 | E-117 with an Admin bearer token and no signature | 401 `invalid_signature`; no `gateway_event` row; one `webhook_rejection` row | P3-03 |
 | SC-12 | A resident endpoint list over tickets with internal notes | No internal note and no `before` photo in any resident response | P4 |

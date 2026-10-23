@@ -1,4 +1,4 @@
-import { IdParams, type RouteSet, residentRoute, routePlugin } from '@core/http'
+import { IdParams, type RouteInfo, type RouteSet, residentRoute, routePlugin } from '@core/http'
 import { type Guards, residentOf } from '@rms/shared-types'
 import type { Static } from '@sinclair/typebox'
 import type { ResidentQueries } from '../application/queries/resident-queries'
@@ -29,10 +29,13 @@ export function residentRoutes(d: ResidentRouteDeps) {
     context.set.status = 204
   }
 
-  const route = residentRoute(d.guards, 'resident')
+  const route = (info: RouteInfo) => residentRoute(d.guards, 'resident', info)
 
   return routePlugin({ prefix: '/me' })
-    .get('/', me, route)
-    .get('/sessions', listSessions, route)
-    .delete('/sessions/:id', revokeSession, { ...route, params: IdParams })
+    .get('/', me, route({ endpoint: 'E-13', operationId: 'getMe' }))
+    .get('/sessions', listSessions, route({ endpoint: 'E-20', operationId: 'listMySessions' }))
+    .delete('/sessions/:id', revokeSession, {
+      ...route({ endpoint: 'E-21', operationId: 'revokeMySession' }),
+      params: IdParams,
+    })
 }

@@ -57,7 +57,10 @@ export function membershipRoutes(d: MembershipRouteDeps) {
     )
 
   return routePlugin({ prefix: '/staff/memberships' }).patch('/:id', update, {
-    ...staffRoute(d.guards, 'residency', CHANGE_MEMBERSHIP_ROLES),
+    ...staffRoute(d.guards, 'residency', CHANGE_MEMBERSHIP_ROLES, {
+      endpoint: 'E-69',
+      operationId: 'updateMembership',
+    }),
     params: IdParams,
     body: UpdateBody,
   })

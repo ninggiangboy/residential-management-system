@@ -2,6 +2,7 @@ import { requestContext } from '@core/context'
 import {
   bucketIp,
   publicRoute,
+  type RouteInfo,
   type RouteSet,
   routePlugin,
   staffRoute,
@@ -71,8 +72,9 @@ const clientInfo = () => ({
 })
 
 /** Routes of `/auth` that carry no session; the refresh and the logout take the refresh token instead. */
-const open = publicRoute('auth')
-const withRefreshToken = publicRoute('auth', { credential: 'refresh_token' })
+const open = (info: RouteInfo) => publicRoute('auth', info)
+const withRefreshToken = (info: Omit<RouteInfo, 'credential'>) =>
+  publicRoute('auth', { ...info, credential: 'refresh_token' })
 
 /**
  * `/auth/*` for staff (DOC-26 §7): sign-in, password reset and set-password, the refresh and the logout, and the resend of an
@@ -188,15 +190,39 @@ export function authRoutes(d: AuthRouteDeps) {
   }
 
   return routePlugin({ prefix: '/auth' })
-    .post('/staff/login', staffLogin, { body: LoginBody, ...open })
-    .post('/staff/password-reset', requestPasswordReset, { body: PasswordResetBody, ...open })
-    .post('/staff/password', setPassword, { body: SetPasswordBody, ...open })
+    .post('/staff/login', staffLogin, {
+      body: LoginBody,
+      ...open({ endpoint: 'E-05', operationId: 'loginStaff' }),
+    })
+    .post('/staff/password-reset', requestPasswordReset, {
+      body: PasswordResetBody,
+      ...open({ endpoint: 'E-06', operationId: 'requestStaffPasswordReset' }),
+    })
+    .post('/staff/password', setPassword, {
+      body: SetPasswordBody,
+      ...open({ endpoint: 'E-07', operationId: 'setStaffPassword' }),
+    })
     .post('/staff/invite/resend', resendStaffInvite, {
-      ...staffRoute(d.guards, 'auth', RESEND_STAFF_INVITE_ROLES),
+      ...staffRoute(d.guards, 'auth', RESEND_STAFF_INVITE_ROLES, {
+        endpoint: 'E-08',
+        operationId: 'resendStaffInvite',
+      }),
       body: ResendInviteBody,
     })
-    .post('/otp', requestOtp, { body: OtpBody, ...open })
-    .post('/otp/verify', verifyOtp, { body: VerifyOtpBody, ...open })
-    .post('/refresh', refresh, { body: RefreshBody, ...withRefreshToken })
-    .post('/logout', logout, { body: RefreshBody, ...withRefreshToken })
+    .post('/otp', requestOtp, {
+      body: OtpBody,
+      ...open({ endpoint: 'E-09', operationId: 'requestOtp' }),
+    })
+    .post('/otp/verify', verifyOtp, {
+      body: VerifyOtpBody,
+      ...open({ endpoint: 'E-10', operationId: 'verifyOtp' }),
+    })
+    .post('/refresh', refresh, {
+      body: RefreshBody,
+      ...withRefreshToken({ endpoint: 'E-11', operationId: 'refreshSession' }),
+    })
+    .post('/logout', logout, {
+      body: RefreshBody,
+      ...withRefreshToken({ endpoint: 'E-12', operationId: 'logout' }),
+    })
 }

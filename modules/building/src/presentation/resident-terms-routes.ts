@@ -1,5 +1,5 @@
 import { requestContext } from '@core/context'
-import { type RouteSet, residentRoute, routePlugin, strictObject } from '@core/http'
+import { type RouteInfo, type RouteSet, residentRoute, routePlugin, strictObject } from '@core/http'
 import { NotFoundError } from '@core/kernel'
 import { type Guards, residentOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
@@ -67,9 +67,12 @@ export function residentTermsRoutes(d: ResidentTermsRouteDeps) {
     context.set.status = 204
   }
 
-  const route = residentRoute(d.guards, 'building')
+  const route = (info: RouteInfo) => residentRoute(d.guards, 'building', info)
 
   return routePlugin({ prefix: '/me/terms' })
-    .get('/', list, route)
-    .post('/', accept, { ...route, body: AcceptBody })
+    .get('/', list, route({ endpoint: 'E-16', operationId: 'getMyTerms' }))
+    .post('/', accept, {
+      ...route({ endpoint: 'E-17', operationId: 'acceptTerms' }),
+      body: AcceptBody,
+    })
 }

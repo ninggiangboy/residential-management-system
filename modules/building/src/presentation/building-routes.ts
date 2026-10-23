@@ -1,4 +1,11 @@
-import { API_PREFIX, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
+import {
+  API_PREFIX,
+  type RouteInfo,
+  type RouteSet,
+  routePlugin,
+  staffRoute,
+  strictObject,
+} from '@core/http'
 import { ValidationError, VersionConflictError } from '@core/kernel'
 import { type Guards, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
@@ -170,16 +177,38 @@ export function buildingRoutes(d: BuildingRouteDeps) {
     return created
   }
 
-  const route = (roles: Parameters<Guards['staff']>[0]) => staffRoute(d.guards, 'building', roles)
+  const route = (roles: Parameters<Guards['staff']>[0], info: RouteInfo) =>
+    staffRoute(d.guards, 'building', roles, info)
 
   return routePlugin({ prefix: '/staff' })
-    .get('/settings', getSettings, route(GET_SETTINGS_ROLES))
+    .get(
+      '/settings',
+      getSettings,
+      route(GET_SETTINGS_ROLES, { endpoint: 'E-47', operationId: 'getSettings' }),
+    )
     .patch('/settings', updateSettings, {
-      ...route(UPDATE_BUILDING_SETTINGS_ROLES),
+      ...route(UPDATE_BUILDING_SETTINGS_ROLES, { endpoint: 'E-48', operationId: 'updateSettings' }),
       body: SettingsUpdateSchema,
     })
-    .get('/gateway', getGateway, route(GET_GATEWAY_ROLES))
-    .put('/gateway', saveGateway, { ...route(SAVE_GATEWAY_CONFIG_ROLES), body: GatewayBody })
-    .get('/terms', listTerms, { ...route(LIST_TERMS_ROLES), query: TermsQuery })
-    .post('/terms', publishTerms, { ...route(PUBLISH_TERMS_ROLES), body: TermsBody })
+    .get(
+      '/gateway',
+      getGateway,
+      route(GET_GATEWAY_ROLES, { endpoint: 'E-49', operationId: 'getGateway' }),
+    )
+    .put('/gateway', saveGateway, {
+      ...route(SAVE_GATEWAY_CONFIG_ROLES, {
+        endpoint: 'E-50',
+        operationId: 'putGateway',
+        stepUp: 'gateway_config',
+      }),
+      body: GatewayBody,
+    })
+    .get('/terms', listTerms, {
+      ...route(LIST_TERMS_ROLES, { endpoint: 'E-52', operationId: 'listTermsVersions' }),
+      query: TermsQuery,
+    })
+    .post('/terms', publishTerms, {
+      ...route(PUBLISH_TERMS_ROLES, { endpoint: 'E-53', operationId: 'publishTermsVersion' }),
+      body: TermsBody,
+    })
 }

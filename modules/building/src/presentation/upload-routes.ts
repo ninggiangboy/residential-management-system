@@ -85,12 +85,22 @@ export function uploadRoutes(d: UploadRouteDeps) {
   const verify = (context: { params: Static<typeof IdParams> }) =>
     d.files.verify(actorOf(staffOf(context)), context.params.id)
 
-  const route = staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, { byPurpose: true })
-
   return routePlugin({ prefix: '/staff/uploads' })
     .post('/', d.idempotent({ account: (context) => staffAccount(context) }, register), {
-      ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, { byPurpose: true, idempotent: true }),
+      ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, {
+        endpoint: 'E-36',
+        operationId: 'registerStaffUpload',
+        byPurpose: true,
+        idempotent: true,
+      }),
       body: RegisterBody,
     })
-    .post('/:id/verify', verify, { ...route, params: IdParams })
+    .post('/:id/verify', verify, {
+      ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, {
+        endpoint: 'E-37',
+        operationId: 'verifyStaffUpload',
+        byPurpose: true,
+      }),
+      params: IdParams,
+    })
 }

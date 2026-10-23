@@ -9,3 +9,4 @@ coverage/
 .expo/
 ios/
 android/
+apps/api/tests/authz/out/

@@ -1,6 +1,7 @@
 import {
   type Idempotent,
   IdParams,
+  type RouteInfo,
   type RouteSet,
   routePlugin,
   staffRoute,
@@ -191,24 +192,41 @@ export function unitRoutes(d: UnitRouteDeps) {
     }
   }
 
-  const read = staffRoute(d.guards, 'residency', UNIT_READ_ROLES)
+  const read = (info: RouteInfo) => staffRoute(d.guards, 'residency', UNIT_READ_ROLES, info)
 
   return routePlugin({ prefix: '/staff/units' })
-    .get('/', list, { ...read, query: ListQuery })
+    .get('/', list, { ...read({ endpoint: 'E-57', operationId: 'listUnits' }), query: ListQuery })
     .post('/', d.idempotent({ account: staffAccount }, create), {
-      ...staffRoute(d.guards, 'residency', CREATE_UNIT_ROLES, { idempotent: true }),
+      ...staffRoute(d.guards, 'residency', CREATE_UNIT_ROLES, {
+        endpoint: 'E-58',
+        operationId: 'createUnit',
+        idempotent: true,
+      }),
       body: CreateBody,
     })
-    .get('/:id', get, { ...read, params: IdParams })
+    .get('/:id', get, {
+      ...read({ endpoint: 'E-59', operationId: 'getUnit' }),
+      params: IdParams,
+    })
     .patch('/:id', update, {
-      ...staffRoute(d.guards, 'residency', UPDATE_UNIT_ROLES),
+      ...staffRoute(d.guards, 'residency', UPDATE_UNIT_ROLES, {
+        endpoint: 'E-60',
+        operationId: 'updateUnit',
+      }),
       params: IdParams,
       body: UpdateBody,
     })
     .post('/:id/owner', transfer, {
-      ...staffRoute(d.guards, 'residency', TRANSFER_OWNERSHIP_ROLES),
+      ...staffRoute(d.guards, 'residency', TRANSFER_OWNERSHIP_ROLES, {
+        endpoint: 'E-61',
+        operationId: 'transferOwnership',
+      }),
       params: IdParams,
       body: TransferBody,
     })
-    .get('/:id/history', history, { ...read, params: IdParams, query: HistoryQuery })
+    .get('/:id/history', history, {
+      ...read({ endpoint: 'E-62', operationId: 'listUnitHistory' }),
+      params: IdParams,
+      query: HistoryQuery,
+    })
 }

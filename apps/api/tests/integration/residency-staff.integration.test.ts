@@ -135,7 +135,10 @@ beforeAll(async () => {
     .get(
       '/me/notices',
       () => ({ ok: true }),
-      unitRoute(built.container.guards, 'test', 'broadcast_notices'),
+      unitRoute(built.container.guards, 'test', 'broadcast_notices', {
+        endpoint: 'T-01',
+        operationId: 'probeNotices',
+      }),
     )
   admin = await signInStaff('admin@sunrise.example')
   manager = await signInStaff('manager@sunrise.example')
