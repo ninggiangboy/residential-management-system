@@ -1139,7 +1139,7 @@ interface IdentityApi {
   listActiveStaff(buildingId: Uuid, roles: StaffRole[], page?: PageRequest): Promise<Page<StaffDto>>
   getResidentAccounts(ids: Uuid[]): Promise<ResidentAccountDto[]>
   findResidentAccountsByPhoneFragment(fragment: string, limit: number): Promise<ResidentAccountDto[]>
-  findResidentAccountsByPhones(phones: string[]): Promise<Array<{ phone: string; accountId: Uuid }>>
+  findResidentAccountsByPhones(phones: string[]): Promise<Array<{ phone: string; accountId: Uuid; displayName: string | null; status: 'active' | 'deletion_requested' }>>   // DR-114, DR-258
   listDeletionRequests(page?: PageRequest): Promise<Page<{ accountId: Uuid; requestedAt: Instant; approvedAt: Instant | null }>>   // DR-125
   verifyStepUp(staff: StaffContext, action: StepUpAction, proof: { password: string; code: string }): Promise<void>
   findOrCreateResidentAccount(phone: string, displayName: string): Promise<{ accountId: Uuid; created: boolean }>   // DR-135
@@ -1158,7 +1158,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `getStaff`, `listActiveStaff` | `listActiveStaff` returns only `active` staff of the roles asked, keyset on `staff_id`. No email in the DTO: nobody but `identity` mails staff. |
 | `getResidentAccounts` | Up to 500 ids. The DTO has the phone (E.164) because `residency` shows it masked in the unit detail; a caller never logs it. A `deleted` account is returned with its `deleted:<id>` phone so a caller can tell. |
 | `findResidentAccountsByPhoneFragment` | Suffix match on the digits, at least 4 characters (FR-18.5, DR-41; the index is `resident_account_phone_suffix_idx`), `limit` up to 500 (the lookup uses 20 per kind). *Revised 2026-10-20 (DR-140):* DOC-09 said "contains, at least 3"; DR-41 and DOC-16 §4.2 say suffix, at least 4 digits. |
-| `findResidentAccountsByPhones` | Exact E.164 match, at most 5,000 numbers: the units import asks which owner phones already have an account (DR-114). |
+| `findResidentAccountsByPhones` | Exact E.164 match, at most 5,000 numbers (more is a `RangeError`): the units import asks which owner phones already have an account (DR-114). A `deleted` account has the phone `deleted:<id>` and never matches. *As built (P1-13, DR-258):* the answer carries `displayName` and `status`, the shape DOC-18 §1.5 uses. |
 | `listDeletionRequests` | The accounts in `deletion_requested`, oldest first, keyset on `account_id`, with the two dates; `W-Residents` joins the names from its own profiles (DOC-35 §10.2). |
 | `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure; the failure counters are committed in an **autonomous transaction** before the throw, the one exception to rule 2 (DR-132, DOC-26 §4.5). On success it writes one `identity.mail_requested.v1` kind `step_up_notice` per active Admin of the building. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
 | `findOrCreateResidentAccount` | Parses the phone (`libphonenumber-js/max`, region VN); invalid: `ValidationError` rule `phone_invalid`. `INSERT … ON CONFLICT (phone) DO NOTHING`; an existing account is returned unchanged (its name is not overwritten) with `created: false`. Used by the household add, the owner creation and the units-import commit (DOC-26 §2.2, DOC-27). |

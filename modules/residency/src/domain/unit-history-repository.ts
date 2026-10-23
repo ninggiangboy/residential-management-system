@@ -20,4 +20,6 @@ export interface UnitHistoryEntry {
 /** The append-only history of a unit (DOC-16 §5.4). */
 export interface UnitHistoryRepository {
   add(scope: BuildingScope, entry: UnitHistoryEntry, at: Date): Promise<void>
+  /** Several entries in one statement per 500 (the import writes one per owner). */
+  addMany(scope: BuildingScope, entries: readonly UnitHistoryEntry[], at: Date): Promise<void>
 }

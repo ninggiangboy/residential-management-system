@@ -1,6 +1,7 @@
 import { applyTransition, type Database } from '@core/db'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, ne } from 'drizzle-orm'
 import type {
+  NewResidentAccount,
   ResidentAccountRecord,
   ResidentAccountTransition,
 } from '../../domain/resident-account'
@@ -61,6 +62,36 @@ export class DrizzleResidentAccountRepository implements ResidentAccountReposito
       .from(residentAccount)
       .where(inArray(residentAccount.id, [...ids]))
     return rows.map(toRecord)
+  }
+
+  // scope-ok: see above
+  async findByPhones(phones: readonly string[]): Promise<ResidentAccountRecord[]> {
+    if (phones.length === 0) return []
+    // scope-ok: see above
+    const rows = await this.database.executor
+      .select()
+      .from(residentAccount)
+      .where(
+        and(inArray(residentAccount.phone, [...phones]), ne(residentAccount.status, 'deleted')),
+      )
+    return rows.map(toRecord)
+  }
+
+  // scope-ok: see above
+  async insertIfAbsent(account: NewResidentAccount, now: Date): Promise<boolean> {
+    // scope-ok: see above
+    const rows = await this.database.executor
+      .insert(residentAccount)
+      .values({
+        id: account.id,
+        phone: account.phone,
+        displayName: account.displayName,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: residentAccount.phone })
+      .returning({ id: residentAccount.id })
+    return rows.length === 1
   }
 
   // scope-ok: see above

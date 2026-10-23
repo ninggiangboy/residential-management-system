@@ -823,3 +823,103 @@ describe('jobs (DOC-37 §11, §14)', () => {
     expect((await h.building.files.usage(BUILDING)).usedBytes).toBe(before)
   })
 })
+
+describe('read (the import reads its upload twice)', () => {
+  const importExpect = { module: 'residency', purpose: 'import' } as const
+
+  const OTHER_BUILDING = '018f0000-0000-7000-8000-000000000002' as typeof BUILDING
+
+  /** What the magic-byte check of `.xlsx` wants: a zip (`PK\x03\x04`) that names the workbook part. */
+  async function workbook(): Promise<Uint8Array> {
+    return new Uint8Array([
+      0x50,
+      0x4b,
+      0x03,
+      0x04,
+      ...textBytes('xl/workbook.xml'),
+      ...new Array(64).fill(7),
+    ])
+  }
+
+  async function importUpload(options: { verify?: boolean } = {}) {
+    const actor = h.actorOf(h.staff('manager'))
+    const body = await workbook()
+    const ticket = await h.building.files.register(actor, {
+      module: 'residency',
+      purpose: 'import',
+      mime: MIME_XLSX,
+      size: body.byteLength,
+    })
+    const status = await h.clientPut(ticket, body)
+    if (status !== 200) throw new Error(`the PUT answered ${status}`)
+    if (options.verify !== false) await h.building.files.verify(actor, ticket.fileId)
+    return { actor, ticket, body }
+  }
+
+  test('the registering account reads a verified file, byte for byte', async () => {
+    const { actor, ticket, body } = await importUpload()
+    expect(await h.building.files.read(actor, ticket.fileId, importExpect)).toEqual(body)
+  })
+
+  test('another account, another building and an unknown id are 404', async () => {
+    const { ticket } = await importUpload()
+    const colleague = h.actorOf(h.staff('manager'))
+    await expect(
+      h.building.files.read(colleague, ticket.fileId, importExpect),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    const stranger = {
+      ...colleague,
+      buildingId: OTHER_BUILDING,
+      scope: { buildingId: OTHER_BUILDING },
+    }
+    await expect(
+      h.building.files.read(stranger, ticket.fileId, importExpect),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(
+      h.building.files.read(colleague, crypto.randomUUID(), importExpect),
+    ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  test('a pending file, another purpose and another module are file_not_verified', async () => {
+    const pending = await importUpload({ verify: false })
+    await expect(
+      h.building.files.read(pending.actor, pending.ticket.fileId, importExpect),
+    ).rejects.toBeInstanceOf(FileNotVerifiedError)
+    const { actor, ticket } = await importUpload()
+    await expect(
+      h.building.files.read(actor, ticket.fileId, { module: 'finance', purpose: 'import' }),
+    ).rejects.toBeInstanceOf(FileNotVerifiedError)
+    await expect(
+      h.building.files.read(actor, ticket.fileId, { module: 'residency', purpose: 'logo' }),
+    ).rejects.toBeInstanceOf(FileNotVerifiedError)
+  })
+
+  test('an attached file is read by any account of the building that names its owner, and by nobody else', async () => {
+    const { actor, ticket, body } = await importUpload()
+    await h.database.run(() => h.building.files.attach(actor, ticket.fileId, 'import:job-1'))
+    const colleague = h.actorOf(h.staff('manager'))
+    expect(
+      await h.building.files.read(colleague, ticket.fileId, {
+        ...importExpect,
+        ownerRef: 'import:job-1',
+      }),
+    ).toEqual(body)
+    await expect(
+      h.building.files.read(colleague, ticket.fileId, {
+        ...importExpect,
+        ownerRef: 'import:job-2',
+      }),
+    ).rejects.toBeInstanceOf(FileNotVerifiedError)
+    await expect(
+      h.building.files.read(colleague, ticket.fileId, importExpect),
+    ).rejects.toBeInstanceOf(FileNotVerifiedError)
+  })
+
+  test('a deleted file is not read', async () => {
+    const { actor, ticket } = await importUpload()
+    await h.database.run(() => h.building.files.remove(actor, ticket.fileId))
+    await expect(h.building.files.read(actor, ticket.fileId, importExpect)).rejects.toBeInstanceOf(
+      FileNotVerifiedError,
+    )
+  })
+})

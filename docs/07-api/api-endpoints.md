@@ -2563,6 +2563,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Data source:** `FilesApi` reads the object; the file, row, set and db layers of DOC-18 §1 run in memory with three set queries (Q-U, Q-M, Q-P of DOC-18 §1.5) and one `IdentityApi.findResidentAccountsByPhones` call, never one query per row; then one `INSERT INTO residency.import_job` (`status` `validated` or `failed`, `result` = the preview, `expires_at = created_at + 24 h`). The service attaches the file to the job (`owner_ref` `import:<id>`) in the same transaction.
 - **Performance:** p95 ≤ 10 s for 2,000 rows with 40 errors from the accepted request to the response carrying the preview (NFR-12, IM-30). Planned 2 s (DOC-10); the measured read and rules alone were 77 to 83 ms (DOC-18 §1.1).
 - **Tests:** IM-01…IM-06, IM-29, IM-30, IM-31, IM-32; RM-42.
+- **As built (P1-13, 2026-10-23, DR-258):** `fileName` is `null` (`file_object` keeps no name and E-36 carries none); the body also carries `committed: null`; `Idempotency-Key` is accepted but not yet honoured (the plugin of DOC-50 §8, as for E-36); `kind: "fee_batch"` is 400 until `finance` serves it (P2-04). `message` is rendered from `Accept-Language` (`en`, else `vi`); a `column` or `field` in `params` is shown as the header of the template. Measured: 2,000 rows with 40 errors answer in 0.2 s.
 
 ### E-73 `GET /staff/imports/{id}` · `getImport`
 
@@ -2614,6 +2615,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Events:** `residency.owner_changed.v1` per owner added and no `membership_changed` (DOC-27 §2.3). Audit `residency.import.commit` (bulk form, counts in `details`).
 - **Performance:** planned under 5 s for the 2,000-row file (217 ms of statements server side plus about 3 s of round trips, DOC-27 §9.3); p95 ≤ 10 s.
 - **Tests:** IM-33…IM-39, IM-40; RM-42, RM-43, RM-44, RM-45.
+- **As built (P1-13, 2026-10-23, DR-258):** the 2,000-row commit takes 3.0 s (statements in batches of 500; the accounts one call per new phone). `details.rows` of `import_stale` is the number of rows of the file, and a file that no longer reads is `import_stale` too.
 
 ### E-169 `GET /staff/imports` · `listImports`
 
@@ -2664,6 +2666,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Cache:** `no-store`, the default of DOC-50 §12.
 - **Performance:** p95 ≤ 300 ms. At most a few dozen rows exist in 30 days; the plan is an index scan on `import_job_building_idx` (the same index as DLC-15).
 - **Tests:** IM-42, IM-43; UIWR-41, UIWR-42 (DOC-65).
+- **As built (P1-13, 2026-10-23, DR-258):** `createdBy.name` is the staff member's full name from `IdentityApi.getStaff`, one call per page; `kind=fee_batch` is 400 until P2-04; `limit` is a string of up to three digits checked to 1…100 (400 `validation_failed`), a cursor that does not decode is 400 `invalid_cursor`.
 
 
 ## 11. Later groups

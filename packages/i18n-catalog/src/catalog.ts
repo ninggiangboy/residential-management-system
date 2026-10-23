@@ -1,4 +1,6 @@
 import type { Language } from '@rms/shared-types'
+import { importEn } from './import/en'
+import { importVi } from './import/vi'
 import { mailEn } from './mail/en'
 import { mailVi } from './mail/vi'
 import { en as sharedEn } from './shared/en'
@@ -6,8 +8,8 @@ import { vi as sharedVi } from './shared/vi'
 import { smsEn } from './sms/en'
 import { smsVi } from './sms/vi'
 
-const en = { ...sharedEn, ...mailEn, ...smsEn } as const
-const vi: Record<keyof typeof en, string> = { ...sharedVi, ...mailVi, ...smsVi }
+const en = { ...sharedEn, ...mailEn, ...smsEn, ...importEn } as const
+const vi: Record<keyof typeof en, string> = { ...sharedVi, ...mailVi, ...smsVi, ...importVi }
 
 /**
  * The message catalog of the whole product (DR-71, DOC-68): one flat map of ICU messages per language, keyed by the

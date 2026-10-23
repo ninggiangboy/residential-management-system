@@ -786,7 +786,7 @@ CREATE TABLE residency.import_job (
   building_id  uuid NOT NULL,
   kind         text NOT NULL CHECK (kind IN ('unit_owner')),
   status       text NOT NULL CHECK (status IN ('validated', 'failed', 'committed', 'expired')),
-  file_key     text NOT NULL,                   -- object key of a file with purpose 'import' (DR-61, DR-86); deleted on commit or expiry
+  file_key     text NOT NULL,                   -- id of the file_object with purpose 'import' (DR-61, DR-86, DR-258); deleted on commit or expiry
   file_name    text,
   params       jsonb NOT NULL DEFAULT '{}',     -- request parameters (fee imports keep {"batchId": …} here)
   result       jsonb NOT NULL,                  -- counts, first 50 valid rows, up to 500 errors {row, column, code, message}
@@ -804,7 +804,7 @@ CREATE INDEX import_job_purge_idx ON residency.import_job (created_at);   -- imp
 | Column | Meaning |
 | --- | --- |
 | `status` | `validated` or `failed` (set by `POST /staff/imports` itself), then `committed` or `expired` (DR-21). There is no `validating` state: validation is synchronous. |
-| `file_key` | The key of the uploaded object, a `file_object` with `purpose = 'import'` (DR-61, DR-86; DR-21 wrote "under `imports/`"). It holds CCCD numbers, so it is deleted on commit or expiry (FR-18.2). |
+| `file_key` | The upload, a `file_object` with `purpose = 'import'` (DR-61, DR-86; DR-21 wrote "under `imports/`"). *Revised 2026-10-23 (DR-258):* the column holds the **`file_object.id`**, because `FilesApi` keeps the object key private (DR-86) and the job reads the file through `FilesApi.read`. It holds CCCD numbers, so it is deleted on commit or expiry (FR-18.2). |
 | `params` | The request parameters; `{}` for units, `{"batchId": …}` for fees (DR-109). |
 | `result` | Counts, the first 50 valid rows, up to 500 errors `{row, column, code, message}`. |
 | `expires_at` | `created_at + 24 h`. The commit endpoint refuses an older job with 409 `import_expired`. |

@@ -20,8 +20,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 /**
- * DOC-16 §5.1 to §5.4: the tables of `residency` that P1-12 builds, plus the outbox and inbox of the module. `import_job` (§5.5)
- * joins with the import (P1-13). An account of `identity` and a building are referenced by id, with no foreign key (ADR-0014).
+ * DOC-16 §5.1 to §5.5: the tables of `residency` and the outbox and inbox of the module. An account of `identity` and a building are referenced by id, with no foreign key (ADR-0014).
  */
 export const residency = pgSchema('residency')
 
@@ -168,6 +167,43 @@ export const unitHistory = residency.table(
     ),
     check('ck_unit_history_actor_kind', sql`${t.actorKind} IN ('staff', 'resident', 'system')`),
     check('unit_history_actor_id', sql`(${t.actorKind} = 'system') = (${t.actorId} IS NULL)`),
+  ],
+)
+
+/** One units-and-owners import: its preview, its file and its fate (DOC-16 §5.5, DR-21). */
+export const importJob = residency.table(
+  'import_job',
+  {
+    id: uuid('id').notNull(),
+    buildingId: uuid('building_id').notNull(),
+    kind: text('kind').notNull(),
+    status: text('status').notNull(),
+    // The `file_object.id` of the upload: `FilesApi` keeps the object key private (DR-86), so a job holds the id.
+    fileKey: text('file_key').notNull(),
+    fileName: text('file_name'),
+    params: jsonb('params').notNull().default({}),
+    result: jsonb('result').notNull(),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    committedAt: timestamp('committed_at', { withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_import_job', columns: [t.id] }),
+    // The import history of E-169.
+    index('import_job_building_idx').on(t.buildingId, sql`${t.createdAt} DESC`),
+    // `import_purge` keeps files and rows 30 days.
+    index('import_job_purge_idx').on(t.createdAt),
+    check('ck_import_job_kind', sql`${t.kind} IN ('unit_owner')`),
+    check(
+      'ck_import_job_status',
+      sql`${t.status} IN ('validated', 'failed', 'committed', 'expired')`,
+    ),
+    check(
+      'import_job_committed_at_iff_committed',
+      sql`(${t.status} = 'committed') = (${t.committedAt} IS NOT NULL)`,
+    ),
+    check('ck_import_job_expires_after_create', sql`${t.expiresAt} > ${t.createdAt}`),
   ],
 )
 

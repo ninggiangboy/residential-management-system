@@ -344,7 +344,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `fee_notice_run` | Claims queued bulk fee-notice requests (`finance.fee_notice_job`, DOC-15 §10.2, DR-245; per building), renders per-unit PDFs with `PDF_CONCURRENCY` (1 on staging, 2 on production), then the ZIP by streaming | `{"documents": n}` | DOC-34 (DR-56) |
 | `storage_quota` | Per building: the sum of `size` of non-deleted `file_object` rows; sets `storage_usage_ratio` | `{"buildings": n, "maxRatio": 0.37}` | DOC-37 |
 | `orphan_uploads` | Per building: marks `pending` and `verified` files older than 24 h `deleted` and writes `building.file_delete_requested.v1` for each, in batches of 1,000; deletes `deleted` rows older than 90 days | `{"orphaned": n, "purged": n}` | DOC-37, DOC-20 §5 |
-| `import_expire` | Turns `validated` import jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove` | `{"expired": n}` | DOC-18, DOC-20 §5 |
+| `import_expire` | Turns `validated` import jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove` (built in P1-13, one batch of 500 per transaction) | `{"expired": n}` | DOC-18, DOC-20 §5 |
 | `export_purge` | Deletes export rows and files older than 7 days | `{"deleted": n}` | DOC-33, DOC-20 §2.5 |
 | `realtime_purge` | Deletes `realtime.events` older than 24 hours | `{"deleted": n}` | DOC-17 §9, DOC-20 |
 | `invariant_check` | The 20 queries of DR-78 in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 20, "violations": n}` | DOC-22 (EXP-11) |
@@ -356,7 +356,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `integrity_weekly` | Looks for the memberships that break their rules (two owners, a member of a removed or deleted account, a membership of a missing unit) and uuid columns that point at nothing it can check | `{"findings": n}` | DOC-27 (EXP-11) |
 | `integrity_notices` | Notices stuck in `sending` for more than 1 hour, `scheduled` past their time by more than 1 hour, or with a recipient count that differs from the rows | `{"findings": n}` | DOC-31 (EXP-11) |
 | `inbox_purge` | Deletes `inbox_entry` rows older than 180 days in batches of 1,000 | `{"deleted": n}` | DOC-20 §5 |
-| `import_purge` | Deletes `residency.import_job` rows older than 30 days (and their files) | `{"deleted": n}` | DOC-20 §5 |
+| `import_purge` | Deletes `residency.import_job` rows older than 30 days (and their files: a `committed` job's file went with its commit; built in P1-13) | `{"deleted": n}` | DOC-20 §5 |
 | `finance_purge` | Deletes fee-batch `import_job` rows, `webhook_rejection` and `debt_reminder` rows older than 30 days, statement files older than 1 year (the lines stay) and `bulk_zip` files older than 7 days (through `FilesApi.remove`) | `{"deleted": {…}}` | DOC-20 §2.4, DOC-25, DOC-37 §14 |
 | `audit_purge` | `audit.purge(now(), 'finance')` and `(now(), 'standard')`; the function raises the cut-off to the floor itself | `{"deleted": {"finance": n, "standard": n}}` | DOC-17 §2, DOC-35 |
 

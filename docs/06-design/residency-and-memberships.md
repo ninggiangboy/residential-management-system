@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -533,6 +533,17 @@ A loop of the statements of steps 3 to 6 for 2,000 new owners (an account, a uni
 
 `import_expire` (hourly at :25) turns `validated` jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove`; `import_purge` (Sunday 04:00) deletes rows and files older than 30 days (DOC-38 §4, DOC-20 §5). The commit removes the file in its own transaction, so neither job finds it (DR-114 (13)).
 
+### 9.5 As built (P1-13, 2026-10-23, DR-258)
+
+The routes are `residency`'s own (`presentation/import-routes.ts`); the use cases are `ValidateUnitOwnerImport` and `CommitUnitOwnerImport`, the reads are `ImportQueries`, and the validation of DOC-18 §1 is split between the pure rules of `domain/import/` and the `ImportPlanner`, which the validation and the commit share. Where the build settled what the text left open:
+
+- **The file** is read by `FilesApi.read` (outside any transaction) and parsed before the commit transaction opens; the `db` layer runs inside it. `import_job.file_key` holds the file id (DOC-16 §5.5), and `file_name` is null until the upload flow carries a name.
+- **Step 4 and the batches.** The units, profiles, memberships, history rows and outbox events of steps 3, 5 and 6 are written in statements of at most 500 rows after one walk over the rows; only the accounts are one contract call per new phone. A person named by two rows has one profile entry (a statement cannot touch a row twice). The 2,000-row file commits in 3.0 s on the development machine and its preview takes 0.2 s.
+- **The claim** is one conditional `UPDATE … WHERE status = 'validated' AND expires_at > :now` (`now` from the `Clock`); of two presses of "Save" at once one claims and the other, on zero rows, reads the job again and answers the first result. A stale or failed commit rolls the claim back with everything else.
+- **DQ-60** compares what was written with the previewed counts and asks the database for a unit with two owners among those touched; the unique index makes the second unreachable, the first catches an account that appeared between the preview and the write.
+- **Jobs.** `import_expire` and `import_purge` (§9.4) are built; the purge removes the file of a job that was not committed.
+- **Not built yet:** the `Idempotency-Key` of E-72 (the plugin of DOC-50 §8), the `fee_batch` kind (P2-04), the metrics of §15 (P1-18).
+
 ## 10. Unit history
 
 `GET /staff/units/{id}/history?cursor=&limit=` (Manager, Admin) lists `unit_history` newest first, keyset on `(at, id)` through `unit_history_unit_idx`, 1…100 per page.
@@ -770,7 +781,7 @@ Not run: anything through `IdentityApi`, `FinanceApi`, the outbox, the HTTP guar
 
 ### 17.3 As built (P1-12, 2026-10-23, DR-257)
 
-Built and run on PostgreSQL 18.6: the tables of DOC-16 §5.1 to §5.4 (`import_job` waits for P1-13), `ResidencyApi` except `lookup`, `UnitGuard` as the `unit(capability)` guard in `apps/api` (§3.1), `can` (§3.2), the `Membership` aggregate and the use case `ChangeMembership` (§6.1, §6.3; no route yet), `UpdateProfile` (§5.3; no route yet) and the deletion handler (§12).
+Built and run on PostgreSQL 18.6: the tables of DOC-16 §5.1 to §5.4 (`import_job` came with P1-13, §17.4), `ResidencyApi` except `lookup`, `UnitGuard` as the `unit(capability)` guard in `apps/api` (§3.1), `can` (§3.2), the `Membership` aggregate and the use case `ChangeMembership` (§6.1, §6.3; no route yet), `UpdateProfile` (§5.3; no route yet) and the deletion handler (§12).
 
 | Test | Where | Note |
 | --- | --- | --- |
@@ -782,6 +793,18 @@ Built and run on PostgreSQL 18.6: the tables of DOC-16 §5.1 to §5.4 (`import_j
 | RM-01, 03, 04, 05, 08 | `apps/api/tests/integration/unit-guard.integration.test.ts` | the very next request after a lock, over HTTP; AD-32 and AD-33 with the real guard and `/me/terms` |
 
 Differences from the text above: `lookup` is not built (it needs `IdentityApi.findResidentAccountsByPhoneFragment` and `getResidentAccounts` for names, P1-14); `UnitContext` is a type of `@rms/shared-types` and `assertCan` is not in the contract (DOC-12 §11); `ownedUnitIds` counts a locked owner; a failed guarded statement is answered by loading again and deciding on the winner's state, which gives the `invalid_transition` of §6.1 without a separate `SELECT` (DR-255).
+
+### 17.4 As built (P1-13, 2026-10-23, DR-258)
+
+| Test | Where | Note |
+| --- | --- | --- |
+| RM-42 | `modules/residency/test/import.integration.test.ts` (IM-38) | the sample file: 3 units, 2 owners, 2 `owner_changed` rows and events, no SMS command, the file `deleted` |
+| RM-43 | the same (IM-30, IM-37) | 1,960 accounts created through the contract in one transaction in 3.0 s; a write that does not match the preview rolls back and leaves none |
+| RM-44 | the same (IM-34) | `import_stale`, nothing written, the job `validated` |
+| RM-45 | the same (IM-27, IM-28) | stored values unchanged, empty fields filled, `version` + 1 |
+| RM-41 | the same (IM-10, IM-40) | the import side only: `vacant → rented` writes `moved_in`; the Manager's edit is P1-14 |
+
+Differences from the text above: the statements of steps 3, 5 and 6 are batched (§9.5), `file_key` holds the file id, and `findResidentAccountsByPhones` answers `{phone, accountId, displayName, status}`.
 
 ### 17.2 Where DOC-16 and DOC-27 differed
 

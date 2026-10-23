@@ -39,10 +39,13 @@
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
     "@mod/identity": "workspace:*",
+    "@rms/i18n-catalog": "workspace:*",
     "@rms/shared-types": "workspace:*",
     "@sinclair/typebox": "0.34.52",
     "drizzle-orm": "0.45.4",
-    "elysia": "1.4.30"
+    "elysia": "1.4.30",
+    "exceljs": "4.4.0",
+    "libphonenumber-js": "1.13.15"
   },
   "devDependencies": {
     "@core/testing": "workspace:*",

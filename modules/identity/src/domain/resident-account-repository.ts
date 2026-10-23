@@ -1,4 +1,8 @@
-import type { ResidentAccountRecord, ResidentAccountTransition } from './resident-account'
+import type {
+  NewResidentAccount,
+  ResidentAccountRecord,
+  ResidentAccountTransition,
+} from './resident-account'
 
 /**
  * Resident accounts as the sign-in reads and moves them. A resident account has no building (DOC-16 §4.2), so nothing here is
@@ -9,6 +13,13 @@ export interface ResidentAccountRepository {
   findSignInByPhone(phone: string): Promise<ResidentAccountRecord | null>
   findById(id: string): Promise<ResidentAccountRecord | null>
   findByIds(ids: readonly string[]): Promise<ResidentAccountRecord[]>
+  /** The accounts of the numbers that are not `deleted`, one query. */
+  findByPhones(phones: readonly string[]): Promise<ResidentAccountRecord[]>
+  /**
+   * Inserts the account unless the phone has one: `true` when this call created it. The unique index on the phone decides a race
+   * (`ON CONFLICT DO NOTHING`), so two callers get one account.
+   */
+  insertIfAbsent(account: NewResidentAccount, now: Date): Promise<boolean>
   /** The ids of the flagged demo accounts, for the boot guard (DOC-16 §4.2). */
   demoAccountIds(): Promise<string[]>
   /** `false`: the row moved since it was loaded (another refresh stamped it first). */

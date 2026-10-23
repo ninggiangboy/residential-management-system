@@ -15,6 +15,13 @@ export interface ResidentAccountRecord {
   version: number
 }
 
+/** What a new account is born with; the language is the default (`vi`) and the account is active (DOC-16 §4.2). */
+export interface NewResidentAccount {
+  id: string
+  phone: string
+  displayName: string
+}
+
 export type ResidentAccountTransition = Transition<ResidentAccountRecord>
 
 const HOUR_MS = 3_600_000
