@@ -1,3 +1,6 @@
+import { NotFoundError } from '@core/kernel'
+import type { FileActor, FileExpectation } from '../../contracts'
+import { FileNotVerifiedError } from '../../domain/errors'
 import type { FileRepository } from '../../domain/file-repository'
 import type { BuildingDirectory } from '../directory'
 import type { FilesConfig } from '../files-config'
@@ -12,6 +15,22 @@ export class FileQueries {
     private readonly store: ObjectStore,
     private readonly config: FilesConfig,
   ) {}
+
+  /** `FilesApi.read`: the object's bytes once the row says the caller may have them. */
+  async read(actor: FileActor, fileId: string, expect: FileExpectation): Promise<Uint8Array> {
+    const file = await this.files.find(scopeOf(actor.buildingId), fileId)
+    if (!file) throw new NotFoundError()
+    const verified = file.status === 'verified'
+    const attached = file.status === 'attached' && expect.ownerRef !== undefined
+    // A `verified` file is the registering account's alone; an `attached` one is the owner's, named by `ownerRef`.
+    if (verified && !file.isOwnedBy(actor)) throw new NotFoundError()
+    const usable = verified || (attached && file.ownerRef === expect.ownerRef)
+    if (!usable || file.purpose !== expect.purpose || file.module !== expect.module)
+      throw new FileNotVerifiedError('not_verified')
+    const bytes = await this.store.read(file.objectKey)
+    if (!bytes) throw new FileNotVerifiedError('missing')
+    return bytes
+  }
 
   /** `FilesApi.usage` (DOC-37 §11): the bytes of the live files of a building against its quota. */
   async usage(buildingId: string) {

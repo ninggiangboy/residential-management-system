@@ -8,7 +8,7 @@ const dir = fileURLToPath(new URL('..', import.meta.url))
 /**
  * Static data, importable without building the container (DOC-12 §4.2). `residency` writes two facts to its own outbox, both of
  * the `default` retry class (DOC-09 §6.2), and declares the audit actions of DOC-27 §2.4 that its use cases write so far; the
- * unit, transfer, phone-change and import actions join with P1-13 and P1-14.
+ * import commit joins with P1-13; the unit, transfer and phone-change actions with P1-14.
  */
 export const residencyManifest = {
   name: 'residency',
@@ -27,5 +27,6 @@ export const residencyManifest = {
     'residency.membership.lock',
     'residency.membership.unlock',
     'residency.membership.remove',
+    'residency.import.commit',
   ],
 } as const satisfies ModuleManifest

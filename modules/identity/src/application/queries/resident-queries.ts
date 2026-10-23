@@ -1,6 +1,6 @@
 import { NotFoundError } from '@core/kernel'
 import type { ResidentSession } from '@rms/shared-types'
-import type { ResidentAccountDto } from '../../contracts'
+import type { ResidentAccountDto, ResidentPhoneMatch } from '../../contracts'
 import { UnauthenticatedError } from '../../domain/errors'
 import { ResidentAccount, type ResidentAccountRecord } from '../../domain/resident-account'
 import type { ResidentAccountRepository } from '../../domain/resident-account-repository'
@@ -8,6 +8,7 @@ import type { ActiveMembership, ActiveMemberships } from '../ports'
 import { type ResidentProfile, toResidentProfile } from '../use-cases/verify-otp'
 
 const MAX_IDS = 500
+const MAX_PHONES = 5000
 
 const toDto = (record: ResidentAccountRecord): ResidentAccountDto => ({
   accountId: record.id,
@@ -47,5 +48,23 @@ export class ResidentQueries {
     if (ids.length > MAX_IDS)
       throw new RangeError(`getResidentAccounts takes at most ${MAX_IDS} ids`)
     return (await this.residents.findByIds(ids)).map(toDto)
+  }
+
+  /** The `db` layer of the units-and-owners import (DOC-18 §1.5): one query for the whole file. */
+  async findByPhones(phones: readonly string[]): Promise<ResidentPhoneMatch[]> {
+    if (phones.length > MAX_PHONES)
+      throw new RangeError(`findResidentAccountsByPhones takes at most ${MAX_PHONES} numbers`)
+    return (await this.residents.findByPhones(phones)).flatMap((record) =>
+      record.status === 'deleted'
+        ? []
+        : [
+            {
+              phone: record.phone,
+              accountId: record.id,
+              displayName: record.displayName,
+              status: record.status,
+            },
+          ],
+    )
   }
 }

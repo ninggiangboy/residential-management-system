@@ -31,6 +31,7 @@ import { SessionEvents } from './application/session-events'
 import { SessionIssuer } from './application/session-issuer'
 import { SessionOwners } from './application/session-owners'
 import { SmsCommands } from './application/sms-commands'
+import { EnsureResidentAccount } from './application/use-cases/ensure-resident-account'
 import { RefreshSession } from './application/use-cases/refresh-session'
 import { RequestOtp } from './application/use-cases/request-otp'
 import { RequestPasswordReset } from './application/use-cases/request-password-reset'
@@ -319,7 +320,12 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
 
   return {
     name: 'identity',
-    api: new IdentityApiImpl(staffQueries, residentQueries, verifyStepUp),
+    api: new IdentityApiImpl(
+      staffQueries,
+      residentQueries,
+      verifyStepUp,
+      new EnsureResidentAccount(new LibphonenumberPhones(), residents, clock, ids),
+    ),
     useCases,
     queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },
     verifier: tokens,

@@ -57,6 +57,7 @@ interface FilesApi {
   verify(actor: FileActor, fileId: Uuid): Promise<FileDto>
   attach(actor: FileActor, fileId: Uuid, ownerRef: string): Promise<void>
   remove(actor: FileActor, fileId: Uuid): Promise<void>
+  read(actor: FileActor, fileId: Uuid, expect: { module: ModuleName; purpose: Purpose; ownerRef?: string }): Promise<Uint8Array>   // DR-258
   usage(buildingId: Uuid): Promise<{ usedBytes: number; quotaBytes: number; ratio: number }>
   signedUrl(fileId: Uuid, opts?: { variant?: 'original' | 'thumb'; downloadName?: string }): Promise<string | null>
   storeGenerated(input: { buildingId: Uuid; module: ModuleName; purpose: GeneratedPurpose; ownerRef: string;
@@ -72,6 +73,7 @@ interface FileDto { fileId: Uuid; purpose: Purpose; mime: string; size: number; 
 | `verify` | **Must be called outside any transaction**: it calls R2 and throws an invariant error if one is open | §6.3. Errors: 404 for a file of another account or building; 422 `file_not_verified` |
 | `attach` | **Requires the caller's open transaction** | One conditional `UPDATE` (§6.4). Zero rows (not verified, another account, another building, already attached) throws `FileNotVerifiedError` → 422 `file_not_verified`; the owner's transaction rolls back |
 | `remove` | Requires the caller's open transaction | `attached` or `verified` → `deleted`, its thumbnail too, and one `building.file_delete_requested.v1` per file (§14) |
+| `read` | **Outside any transaction**: it reads the bucket (DR-258) | The bytes of a file the server itself must read, the units-and-owners import (DOC-18, DOC-27 §9). A `verified` file must be the caller's; an `attached` one is read by any account of the building that names its `ownerRef` (the commit reads the upload again). Unknown, another building's or another account's file: 404; a file that is not `verified` or `attached` to that owner, or of another module or purpose: 422 `file_not_verified` (`missing` when the object is gone). It never gives out a URL |
 | `usage` | None | The quota sum of §11 |
 | `signedUrl` | None; no R2 call | §8. Returns `null` for an unknown or `deleted` file |
 | `storeGenerated` | Its own short transactions around the upload | §9 |
@@ -332,6 +334,8 @@ DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07
 
 Prefix `FS-` (files). They run against a local S3-compatible store and the real PostgreSQL, with a fake clock. DOC-88 indexes the prefix.
 
+**Run in P1-13 (2026-10-23, DR-258):** FS-17 over HTTP in `apps/api/tests/integration/import.integration.test.ts` (the upload of a committed import is `deleted` and has its delete command) and `FilesApi.read` in `modules/building/test/files.integration.test.ts`; the jobs `import_expire` and `import_purge` remove the file of a job that is not committed.
+
 **Run in P1-07 (2026-10-22, `modules/building/test/files.integration.test.ts`):** FS-01…16, FS-18, FS-20, FS-21 and FS-22, against SeaweedFS 4.48 and, when no store answers (CI has none yet), against `FakeStorage` of `@core/testing`, which refuses a `PUT` whose `Content-Type` is not the signed one. FS-17 (an import is consumed) waits for P1-13 and FS-19 (`finance_purge`) for P2. FS-11 asserts the lifetimes and the host of the URL; that no log line holds its query string is the logger's redaction (DOC-42 §8.3), not tested here.
 
 | ID | Given | When | Then |
@@ -403,6 +407,7 @@ stateDiagram-v2
 | ID | Decision | Where used |
 | --- | --- | --- |
 | DR-119 | `FilesApi.signedUrl` and `storeGenerated` | §3, §8, §9 |
+| DR-258 | `FilesApi.read`: the bytes of an import, for the file's owner (or the owner named by `ownerRef`), outside a transaction | §3 |
 | DR-122 | Removing an object from R2 and making a thumbnail are outbox commands of `building`; a thumbnail is a `file_object` row of purpose `thumbnail` with `owner_ref = 'thumb:<fileId>'`; the width is 480 px (512 px for the logo) | §10, §14 |
 | DR-123 | Verification is an endpoint (`POST /me\|staff/uploads/{id}/verify`); "MB" is the mebibyte; the limits per purpose of §4 (avatar as an image; no thumbnail for papers); generated files bypass the quota; `bulk_zip` lives 7 days; the residual risk of a reused `PUT` URL is accepted and `If-None-Match` is tried in P1-07 | §4, §6, §9, §11, §12 |
 

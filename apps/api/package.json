@@ -46,6 +46,8 @@
   },
   "devDependencies": {
     "@core/messaging": "workspace:*",
-    "@rms/test-support": "workspace:*"
+    "@core/testing": "workspace:*",
+    "@rms/test-support": "workspace:*",
+    "exceljs": "4.4.0"
   }
 }

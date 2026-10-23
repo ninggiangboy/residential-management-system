@@ -1,6 +1,7 @@
 import type {
   FileActor,
   FileDto,
+  FileExpectation,
   FilesApi,
   RegisterInput,
   StoreGeneratedInput,
@@ -42,6 +43,10 @@ export class FilesApiImpl implements FilesApi {
 
   remove(actor: FileActor, fileId: string): Promise<void> {
     return this.uc.removeFile.execute(actor, fileId)
+  }
+
+  read(actor: FileActor, fileId: string, expect: FileExpectation): Promise<Uint8Array> {
+    return this.queries.read(actor, fileId, expect)
   }
 
   usage(buildingId: string) {

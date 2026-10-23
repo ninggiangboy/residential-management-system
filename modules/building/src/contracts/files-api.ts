@@ -55,6 +55,14 @@ export interface StoreGeneratedInput {
   body: Uint8Array | ReadableStream<Uint8Array>
 }
 
+/** What the caller of `read` expects the file to be; anything else is `file_not_verified`. */
+export interface FileExpectation {
+  module: FileModule
+  purpose: Purpose
+  /** For a file already `attached`: the owner it must be attached to. A `verified` file has none and must be the caller's. */
+  ownerRef?: string
+}
+
 export interface FilesApi {
   /** Checks the audience, the purpose, the mime, the size, the rate bucket and the quota; inserts a `pending` row; presigns the `PUT`. */
   register(actor: FileActor, input: RegisterInput): Promise<UploadTicket>
@@ -64,6 +72,13 @@ export interface FilesApi {
   attach(actor: FileActor, fileId: string, ownerRef: string): Promise<void>
   /** Requires the caller's open transaction: the file and its thumbnail become `deleted` and a delete command per object is written. */
   remove(actor: FileActor, fileId: string): Promise<void>
+  /**
+   * The bytes of a file of the caller's building: a `verified` one registered by the caller, or an `attached` one whose owner is
+   * `expect.ownerRef` (the import reads its upload twice, at the preview and at the commit; DOC-18 §1.6). Unknown, another
+   * building's or another account's file is 404; any other state, purpose or module is 422 `file_not_verified`. Talks to the
+   * bucket, so it is called outside a transaction (DOC-12 §8.2).
+   */
+  read(actor: FileActor, fileId: string, expect: FileExpectation): Promise<Uint8Array>
   usage(buildingId: string): Promise<{ usedBytes: number; quotaBytes: number; ratio: number }>
   /** Presigns a `GET` locally; `null` for an unknown or `deleted` file. The module authorises first (DOC-37 §8). */
   signedUrl(

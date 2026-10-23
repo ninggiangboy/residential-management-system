@@ -2,7 +2,8 @@ import { applyTransition, type Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, eq } from 'drizzle-orm'
 import type { MembershipRecord, MembershipTransition } from '../../domain/membership'
-import type { MembershipRepository } from '../../domain/membership-repository'
+import type { MembershipRepository, NewMembership } from '../../domain/membership-repository'
+import { chunks } from './chunks'
 import { membership } from './schema'
 
 export const toMembershipRecord = (row: typeof membership.$inferSelect): MembershipRecord => ({
@@ -33,6 +34,27 @@ export class DrizzleMembershipRepository implements MembershipRepository {
       .from(membership)
       .where(and(eq(membership.id, id), eq(membership.buildingId, scope.buildingId)))
     return row ? toMembershipRecord(row) : null
+  }
+
+  async insertMany(
+    scope: BuildingScope,
+    memberships: readonly NewMembership[],
+    now: Date,
+  ): Promise<void> {
+    for (const chunk of chunks(memberships))
+      await this.database.executor.insert(membership).values(
+        chunk.map((new_) => ({
+          id: new_.id,
+          buildingId: scope.buildingId,
+          accountId: new_.accountId,
+          unitId: new_.unitId,
+          memberType: new_.memberType,
+          addedByKind: new_.addedByKind,
+          addedBy: new_.addedBy,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      )
   }
 
   async apply(

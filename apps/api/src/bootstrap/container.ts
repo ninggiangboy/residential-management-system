@@ -231,6 +231,9 @@ export function createContainer(
     ids,
     database,
     building: building.api,
+    files: building.files,
+    identity: identity.api,
+    guards,
     pii: () => {
       if (!secrets.PII_ENCRYPTION_KEYS) throw new Error('PII_ENCRYPTION_KEYS is required')
       piiBox ??= createSecretBox(keyRingFromBase64(secrets.PII_ENCRYPTION_KEYS))

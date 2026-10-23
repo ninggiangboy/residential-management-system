@@ -1,6 +1,6 @@
 # Data quality rules
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2–3 are owed to P2 and P3) · Updated: 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2–3 are owed to P2 and P3) · Updated: 2026-10-23 (P1-13 built §1: DR-258, §4 "Run in P1-13"); 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
 > Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
@@ -399,6 +399,8 @@ The prefix `IM-` is shared with DOC-21 and DOC-27 (master plan §0.2). This docu
 | IM-42 | `GET /staff/imports` (E-169) with 3 jobs created at different times, one `validated` past its `expires_at`, and a `limit` of 2 | newest first; the first page has 2 rows and a `nextCursor`, the second has 1 and `nextCursor` null; the stale `validated` job reads `expired`; `status=expired` finds it and `status=validated` does not; each row has `counts`, `createdBy.name` and no preview rows (DR-226) |
 | IM-43 | The same call as a Technician and as a Guard; as a Manager of building B when building A has jobs | 403 `forbidden`; building B sees none of building A's jobs (DOC-39) |
 
+**Run in P1-13 (2026-10-23, PostgreSQL 18.6; `modules/residency` and `apps/api`; DR-258):** IM-01…IM-43 (the second half of IM-39 through the use case `ExpireImports`, which the job `import_expire` loops over; `PurgeImports` likewise for `import_purge`). IM-01 in `exceljs-workbook.test.ts` (the reader) and `import.integration.test.ts` (the failed job); IM-02, 03, 04, 06 in `sheet.test.ts`; IM-05 in the reader test (5,000 read, 5,001 stops) and over HTTP (400 `too_many_rows`, no job stored); IM-07…17 in `row-rules.test.ts` with the tables of §1.3; IM-14 in `libphonenumber-phone-parser.test.ts`; IM-18 in the reader test (a `Date` with `styles: 'cache'`, the serial 31140 without); IM-19…25, 27, 29, 31, 32 in `plan.test.ts` and, against the database, `import.integration.test.ts` (IM-29 with the seeded sample building, IM-27 and IM-28 with a stored profile); IM-30 in both (preview 0.2 s, commit 3.0 s, the budget of NFR-12 is 10 s); IM-33 with two commits at once and a third after; IM-34 to IM-37 (IM-37 is forced by an identity call that links the account the preview said it would create); IM-38, IM-39, IM-40; IM-41 and IM-43 over HTTP and in the use cases; IM-42 in `ImportQueries` and over HTTP with the cursor. Points where the build settled what the text left open: `warnings` counts the warning issues of accepted rows and the file layer; the preview `notes` hold only the `info` codes; `import_stale` carries the number of rows of the file in `details.rows`; DQ-01 looks for the entry `xl/workbook.xml` in the archive; `import_job.file_key` holds the file id.
+
 ## 5. Decisions made while writing
 
 Every new decision here is a DR, decided by Claude under the Owner's delegation, and applied in the text above (the register has it in full).
@@ -406,6 +408,7 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | ID | Decision | Where used |
 | --- | --- | --- |
 | DR-114 | Units and owners import: unit codes are upper-case and matched case-insensitively; a blank cell never erases; owner cells are all-or-name-and-phone; phones use the `/max` metadata; ID numbers are 9 or 12 digits and short numeric cells are padded with a warning; "same person" is the same phone and folded name; an existing profile is only filled where empty; the commit reads the file again, re-validates and refuses with `import_stale` when the counts changed; the preview holds no ID number or date of birth; a new read contract `IdentityApi.findResidentAccountsByPhones`; an hourly `import_expire` job removes the file of an expired job | §1 |
+| DR-258 | The import as built: `FilesApi.read`, the job holds the file id, the two identity calls, the file read in two halves, the batched commit, the counts, the texts in the catalog | §1, §4 |
 
 ## 6. Not in this document
 
