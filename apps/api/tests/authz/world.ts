@@ -1,5 +1,6 @@
 import { createPrivateKey, sign } from 'node:crypto'
 import { createLogger } from '@core/telemetry'
+import { FakeStorage } from '@core/testing'
 import type { BuildingId, StaffContext, StaffId } from '@rms/shared-types'
 import { cloneTemplate, type TestDb } from '@rms/test-support'
 import { buildApp } from '../../src/app'
@@ -185,7 +186,11 @@ const worldEnv = (databaseUrl: string) => ({
 /** A container and its app over `databaseUrl`; `overrides` is the test composition root's seam (DR-99). */
 export function appOver(databaseUrl: string, overrides: ContainerOverrides = {}) {
   const config = loadAppConfig(worldEnv(databaseUrl) as Record<string, string | undefined>)
-  const container = createContainer(config, createLogger('silent'), overrides)
+  // The run needs no network (DOC-39 §4.5): the object store is a fake, so E-37 never waits for a store that CI does not run.
+  const container = createContainer(config, createLogger('silent'), {
+    storage: new FakeStorage(),
+    ...overrides,
+  })
   return { container, app: buildApp(container) }
 }
 
