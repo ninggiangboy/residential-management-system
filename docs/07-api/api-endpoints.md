@@ -2498,6 +2498,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | --- | --- | --- | --- | --- | --- |
   | `kind` | body | enum | yes | | `unit_owner`, `fee_batch` |
   | `fileId` | body | UUID | yes | | A `verified` file of purpose `import`, registered by the caller for the module of this kind; otherwise 422 `file_not_verified` |
+  | `fileName` | body | string | no | | 1…255 characters, the name of the file as the browser knows it (`file.name`); control characters are removed; answered as `fileName` here, in E-73 and in E-169 (DR-259) |
   | `params` | body | object | no | `{}` | Per kind; `unit_owner` takes none (unknown keys are 400) |
 
 - **Request example:**
@@ -2563,7 +2564,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Data source:** `FilesApi` reads the object; the file, row, set and db layers of DOC-18 §1 run in memory with three set queries (Q-U, Q-M, Q-P of DOC-18 §1.5) and one `IdentityApi.findResidentAccountsByPhones` call, never one query per row; then one `INSERT INTO residency.import_job` (`status` `validated` or `failed`, `result` = the preview, `expires_at = created_at + 24 h`). The service attaches the file to the job (`owner_ref` `import:<id>`) in the same transaction.
 - **Performance:** p95 ≤ 10 s for 2,000 rows with 40 errors from the accepted request to the response carrying the preview (NFR-12, IM-30). Planned 2 s (DOC-10); the measured read and rules alone were 77 to 83 ms (DOC-18 §1.1).
 - **Tests:** IM-01…IM-06, IM-29, IM-30, IM-31, IM-32; RM-42.
-- **As built (P1-13, 2026-10-23, DR-258):** `fileName` is `null` (`file_object` keeps no name and E-36 carries none); the body also carries `committed: null`; `Idempotency-Key` is accepted but not yet honoured (the plugin of DOC-50 §8, as for E-36); `kind: "fee_batch"` is 400 until `finance` serves it (P2-04). `message` is rendered from `Accept-Language` (`en`, else `vi`); a `column` or `field` in `params` is shown as the header of the template. Measured: 2,000 rows with 40 errors answer in 0.2 s.
+- **As built (P1-13, 2026-10-23, DR-258):** `fileName` is the optional field of the body (`null` when absent: `file_object` keeps no name, DR-259); the body also carries `committed: null`; the `Idempotency-Key` is honoured in the `external` mode of DOC-50 §8 (P1-28): a retry answers the first preview with `Location` and `Idempotent-Replayed: true`, a duplicate while the first is validating is 409 `request_in_progress`; `kind: "fee_batch"` is 400 until `finance` serves it (P2-04). `message` is rendered from `Accept-Language` (`en`, else `vi`); a `column` or `field` in `params` is shown as the header of the template. Measured: 2,000 rows with 40 errors answer in 0.2 s.
 
 ### E-73 `GET /staff/imports/{id}` · `getImport`
 

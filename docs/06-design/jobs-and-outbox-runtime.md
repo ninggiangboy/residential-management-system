@@ -293,7 +293,7 @@ The keys of a job's own work (`PDF_CONCURRENCY`, `EXPORT_CONCURRENCY`, the re-qu
 | --- | --- | --- | --- |
 | Relay poll and cleanup | worker | 500 ms; 10 min | Part of the relay (§2) |
 | Maintenance poll | every process | 1 s | Core runtime; a failed read keeps the last state (§5.3) |
-| Idempotency sweep | `api` | 1 h | Core HTTP plugin; `token_purge` is the second net (DOC-17 §3.4) |
+| Idempotency sweep | `api` | 1 h | A timer in `apps/api` over `SqlIdempotencyStore.purge` (built in P1-28, DR-259); `token_purge` is the second net (DOC-17 §3.4) |
 | SSE heartbeat | `api` | ≤ 30 s | `realtime` module (DR-75) |
 | Gauges that read the database | worker and `api` | each scrape (15 s) | Cheap indexed queries (§8) |
 | Backup | host cron | 02:00 | Not application code (DR-62, DR-66) |

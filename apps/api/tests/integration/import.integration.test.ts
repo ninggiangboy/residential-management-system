@@ -34,14 +34,21 @@ let technician: string
 let guard: string
 let strangerManager: string
 
-const call = (path: string, init: RequestInit & { token?: string; json?: unknown } = {}) => {
-  const { token, json, headers, ...rest } = init
+/** A `POST` carries a fresh `Idempotency-Key` unless the test says `key: null` (a route that takes none ignores it, DOC-50 §8.1). */
+const call = (
+  path: string,
+  init: RequestInit & { token?: string; json?: unknown; key?: string | null } = {},
+) => {
+  const { token, json, headers, key, ...rest } = init
   return app.handle(
     new Request(`http://localhost/api/v1${path}`, {
       ...rest,
       headers: {
         ...(json === undefined ? {} : { 'content-type': 'application/json' }),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(rest.method === 'POST' && key !== null
+          ? { 'idempotency-key': key ?? crypto.randomUUID() }
+          : {}),
         ...headers,
       },
       body: json === undefined ? undefined : JSON.stringify(json),
@@ -439,4 +446,190 @@ describe('NFR-12 IM-30 over the route', () => {
     expect(body.preview.issues).toHaveLength(40)
     expect(seconds).toBeLessThan(10)
   }, 60_000)
+})
+
+const jobCount = async () =>
+  Number((await db.sql`SELECT count(*)::int AS n FROM residency.import_job`)[0]?.n)
+
+describe('fileName (DOC-51 E-72)', () => {
+  test('the name the browser sends is kept, cleaned, and listed', async () => {
+    const fileId = await upload(manager, await workbook([['F-1']]))
+    const res = await call('/staff/imports', {
+      method: 'POST',
+      token: manager,
+      json: { kind: 'unit_owner', fileId, fileName: 'can-ho\u0007 10-2026.xlsx ' },
+    })
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as { importId: string; fileName: string }
+    expect(body.fileName).toBe('can-ho 10-2026.xlsx')
+    const read = (await (
+      await call(`/staff/imports/${body.importId}`, { token: manager })
+    ).json()) as {
+      fileName: string
+    }
+    expect(read.fileName).toBe('can-ho 10-2026.xlsx')
+    const list = (await (await call('/staff/imports?limit=100', { token: manager })).json()) as {
+      items: { importId: string; fileName: string | null }[]
+    }
+    expect(list.items.find((item) => item.importId === body.importId)?.fileName).toBe(
+      'can-ho 10-2026.xlsx',
+    )
+  })
+
+  test('without a name the job has none, and an empty or overlong name is 400', async () => {
+    const fileId = await upload(manager, await workbook([['F-2']]))
+    const post = (fileName: unknown) =>
+      call('/staff/imports', {
+        method: 'POST',
+        token: manager,
+        json: { kind: 'unit_owner', fileId, fileName },
+      })
+    expect((await post('')).status).toBe(400)
+    expect((await post('x'.repeat(256))).status).toBe(400)
+    const none = await create(manager, fileId)
+    expect(((await none.json()) as { fileName: string | null }).fileName).toBeNull()
+  })
+})
+
+describe('P1-28 the Idempotency-Key of E-72 (DOC-50 §8)', () => {
+  test('a retry with the same key answers the first preview with Location and makes no second job', async () => {
+    const fileId = await upload(
+      manager,
+      await workbook([['K-1', '', '', '', '', 'Lê Thị Cúc', phone(900)]]),
+    )
+    const key = crypto.randomUUID()
+    const before = await jobCount()
+    const first = await create(manager, fileId, { 'idempotency-key': key })
+    expect(first.status).toBe(201)
+    expect(first.headers.get('idempotent-replayed')).toBeNull()
+    const body = (await first.json()) as { importId: string }
+    const again = await create(manager, fileId, { 'idempotency-key': key })
+    expect(again.status).toBe(201)
+    expect(again.headers.get('idempotent-replayed')).toBe('true')
+    expect(again.headers.get('location')).toBe(`/api/v1/staff/imports/${body.importId}`)
+    expect(((await again.json()) as { importId: string }).importId).toBe(body.importId)
+    expect(await jobCount()).toBe(before + 1)
+    const [row] =
+      await db.sql`SELECT status, response_status FROM platform.idempotency_key WHERE key = ${key}`
+    expect(row).toEqual({ status: 'completed', response_status: 201 })
+  })
+
+  test('the same key for another file is 422 idempotency_key_reuse and nothing runs', async () => {
+    const one = await upload(manager, await workbook([['K-2']]))
+    const two = await upload(manager, await workbook([['K-3']]))
+    const key = crypto.randomUUID()
+    await create(manager, one, { 'idempotency-key': key })
+    const before = await jobCount()
+    const res = await create(manager, two, { 'idempotency-key': key })
+    expect(res.status).toBe(422)
+    expect((await errorOf(res)).code).toBe('idempotency_key_reuse')
+    expect(await jobCount()).toBe(before)
+  })
+
+  test('a missing key is 400 required, a malformed one 400', async () => {
+    const fileId = await upload(manager, await workbook([['K-4']]))
+    const post = (key: string | null) =>
+      call('/staff/imports', {
+        method: 'POST',
+        token: manager,
+        key,
+        json: { kind: 'unit_owner', fileId },
+      })
+    const missing = await post(null)
+    expect(missing.status).toBe(400)
+    expect(JSON.stringify((await errorOf(missing)).details)).toContain('header.Idempotency-Key')
+    expect((await post('short')).status).toBe(400)
+  })
+
+  test('a failed request stores nothing: the retry with the same key runs', async () => {
+    const pending = await upload(manager, await workbook([['K-5']]), false)
+    const key = crypto.randomUUID()
+    const failed = await create(manager, pending, { 'idempotency-key': key })
+    expect(failed.status).toBe(422)
+    expect(await db.sql`SELECT 1 FROM platform.idempotency_key WHERE key = ${key}`).toHaveLength(0)
+    const verified = await call(`/staff/uploads/${pending}/verify`, {
+      method: 'POST',
+      token: manager,
+    })
+    expect(verified.status).toBe(200)
+    expect((await create(manager, pending, { 'idempotency-key': key })).status).toBe(201)
+  })
+
+  test("two presses at once make one job; a later retry replays it; another account's key is unrelated", async () => {
+    const fileId = await upload(manager, await workbook([['K-6']]))
+    const key = crypto.randomUUID()
+    const before = await jobCount()
+    const [a, b] = await Promise.all([
+      create(manager, fileId, { 'idempotency-key': key }),
+      create(manager, fileId, { 'idempotency-key': key }),
+    ])
+    // One ran; the other replayed it or was told it is still in progress.
+    const statuses = [a.status, b.status].sort()
+    expect(statuses[0] === 201 && (statuses[1] === 201 || statuses[1] === 409)).toBe(true)
+    if (statuses[1] === 409) {
+      const loser = a.status === 409 ? a : b
+      expect((await errorOf(loser)).code).toBe('request_in_progress')
+      expect(loser.headers.get('retry-after')).toBe('1')
+    }
+    const later = await create(manager, fileId, { 'idempotency-key': key })
+    expect(later.status).toBe(201)
+    expect(later.headers.get('idempotent-replayed')).toBe('true')
+    expect(await jobCount()).toBe(before + 1)
+
+    // The Admin may use the same key for their own file: keys are scoped by account.
+    const adminFile = await upload(admin, await workbook([['K-7']]))
+    expect((await create(admin, adminFile, { 'idempotency-key': key })).status).toBe(201)
+  })
+})
+
+describe('P1-28 the Idempotency-Key of E-36', () => {
+  const body = { purpose: 'import', module: 'residency', mime: XLSX, size: 1000 }
+  const register = (token: string, key: string) =>
+    call('/staff/uploads', { method: 'POST', token, key, json: body })
+  const files = async () =>
+    Number((await db.sql`SELECT count(*)::int AS n FROM building.file_object`)[0]?.n)
+
+  test('a retry answers the first ticket; the file row is made once', async () => {
+    const key = crypto.randomUUID()
+    const before = await files()
+    const first = await register(manager, key)
+    const again = await register(manager, key)
+    expect([first.status, again.status]).toEqual([201, 201])
+    expect(again.headers.get('idempotent-replayed')).toBe('true')
+    expect(((await again.json()) as { fileId: string }).fileId).toBe(
+      ((await first.json()) as { fileId: string }).fileId,
+    )
+    expect(await files()).toBe(before + 1)
+  })
+
+  test('two registrations at once with one key make one file row, in the same transaction as the key', async () => {
+    const key = crypto.randomUUID()
+    const before = await files()
+    const [a, b] = await Promise.all([register(manager, key), register(manager, key)])
+    expect([a.status, b.status]).toEqual([201, 201])
+    expect(((await a.json()) as { fileId: string }).fileId).toBe(
+      ((await b.json()) as { fileId: string }).fileId,
+    )
+    expect(await files()).toBe(before + 1)
+  })
+
+  test('the key of E-36 is required, and the same key with another body is 422', async () => {
+    const missing = await call('/staff/uploads', {
+      method: 'POST',
+      token: manager,
+      key: null,
+      json: body,
+    })
+    expect(missing.status).toBe(400)
+    const key = crypto.randomUUID()
+    await register(manager, key)
+    const other = await call('/staff/uploads', {
+      method: 'POST',
+      token: manager,
+      key,
+      json: { ...body, size: 2000 },
+    })
+    expect(other.status).toBe(422)
+    expect((await errorOf(other)).code).toBe('idempotency_key_reuse')
+  })
 })

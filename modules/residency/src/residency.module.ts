@@ -1,4 +1,5 @@
 import type { Database } from '@core/db'
+import type { Idempotent } from '@core/http'
 import type { Clock, IdGenerator, Log, SecretBox } from '@core/kernel'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '@core/messaging'
 import type { AppModule } from '@core/runtime'
@@ -46,6 +47,8 @@ export interface ResidencyDeps {
     'findResidentAccountsByPhones' | 'findOrCreateResidentAccount' | 'getStaff'
   >
   guards: Guards
+  /** E-72 takes an `Idempotency-Key` (DOC-50 §8.1). */
+  idempotent: Idempotent
   /**
    * The PII key ring of DR-65 as a box, read on first use: a `worker` holds no ring and never seals (it only clears profiles).
    */
@@ -179,6 +182,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       validate: validateUnitOwnerImport,
       commit: commitUnitOwnerImport,
       guards: deps.guards,
+      idempotent: deps.idempotent,
     }),
     handlers: [
       new ClearProfileOnAccountDeletionHandler(

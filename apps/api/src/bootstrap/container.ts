@@ -1,4 +1,5 @@
-import { Database } from '@core/db'
+import { Database, SqlIdempotencyStore } from '@core/db'
+import { createIdempotent } from '@core/http'
 import {
   type Clock,
   createSecretBox,
@@ -52,6 +53,10 @@ export interface ContainerOverrides {
 
 /** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
 const noIntents: ActiveIntentProbe = { hasActive: async () => false }
+
+/** Keys live 24 hours (DR-74) and the sweep runs every hour (DOC-38 §4.2). */
+const IDEMPOTENCY_RETENTION_MS = 24 * 3_600_000
+const IDEMPOTENCY_SWEEP_MS = 3_600_000
 
 /** What the process says about its own life, read by `/health/ready` and by the shutdown. */
 interface Lifecycle {
@@ -121,7 +126,11 @@ export function createContainer(
     residency: { getMembership: (...args) => residency.api.getMembership(...args) },
     termsGate,
   })
+  // The wrapper of DOC-50 §8 for every route marked `R`; its store is `platform.idempotency_key` (DOC-17 §3).
+  const idempotencyStore = new SqlIdempotencyStore(database)
+  const idempotent = createIdempotent(idempotencyStore, clock)
   const building = installBuilding({
+    idempotent,
     logger,
     clock,
     ids,
@@ -234,6 +243,7 @@ export function createContainer(
     files: building.files,
     identity: identity.api,
     guards,
+    idempotent,
     pii: () => {
       if (!secrets.PII_ENCRYPTION_KEYS) throw new Error('PII_ENCRYPTION_KEYS is required')
       piiBox ??= createSecretBox(keyRingFromBase64(secrets.PII_ENCRYPTION_KEYS))
@@ -283,6 +293,14 @@ export function createContainer(
   })
   const lifecycle: Lifecycle = { stopping: false }
 
+  // The idempotency sweep of DOC-38 §4.2: hourly, in the process that answers requests; `token_purge` is the second net.
+  const sweep = setInterval(() => {
+    idempotencyStore
+      .purge(new Date(clock.now().getTime() - IDEMPOTENCY_RETENTION_MS))
+      .catch((error) => logger.warn({ err: error }, 'idempotency_sweep_failed'))
+  }, IDEMPOTENCY_SWEEP_MS)
+  sweep.unref()
+
   return {
     config,
     logger,
@@ -309,7 +327,10 @@ export function createContainer(
     maintenance: runtime.maintenance,
     lifecycle,
     /** Stops the timers and closes the pool. The HTTP servers and the worker are stopped first by the caller. */
-    close: () => runtime.close(),
+    close: () => {
+      clearInterval(sweep)
+      return runtime.close()
+    },
   }
 }
 

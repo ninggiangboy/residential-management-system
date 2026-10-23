@@ -537,12 +537,13 @@ A loop of the statements of steps 3 to 6 for 2,000 new owners (an account, a uni
 
 The routes are `residency`'s own (`presentation/import-routes.ts`); the use cases are `ValidateUnitOwnerImport` and `CommitUnitOwnerImport`, the reads are `ImportQueries`, and the validation of DOC-18 §1 is split between the pure rules of `domain/import/` and the `ImportPlanner`, which the validation and the commit share. Where the build settled what the text left open:
 
-- **The file** is read by `FilesApi.read` (outside any transaction) and parsed before the commit transaction opens; the `db` layer runs inside it. `import_job.file_key` holds the file id (DOC-16 §5.5), and `file_name` is null until the upload flow carries a name.
+- **The file** is read by `FilesApi.read` (outside any transaction) and parsed before the commit transaction opens; the `db` layer runs inside it. `import_job.file_key` holds the file id (DOC-16 §5.5), and `file_name` is the optional `fileName` of the request body (DR-259).
 - **Step 4 and the batches.** The units, profiles, memberships, history rows and outbox events of steps 3, 5 and 6 are written in statements of at most 500 rows after one walk over the rows; only the accounts are one contract call per new phone. A person named by two rows has one profile entry (a statement cannot touch a row twice). The 2,000-row file commits in 3.0 s on the development machine and its preview takes 0.2 s.
 - **The claim** is one conditional `UPDATE … WHERE status = 'validated' AND expires_at > :now` (`now` from the `Clock`); of two presses of "Save" at once one claims and the other, on zero rows, reads the job again and answers the first result. A stale or failed commit rolls the claim back with everything else.
 - **DQ-60** compares what was written with the previewed counts and asks the database for a unit with two owners among those touched; the unique index makes the second unreachable, the first catches an account that appeared between the preview and the write.
 - **Jobs.** `import_expire` and `import_purge` (§9.4) are built; the purge removes the file of a job that was not committed.
-- **Not built yet:** the `Idempotency-Key` of E-72 (the plugin of DOC-50 §8), the `fee_batch` kind (P2-04), the metrics of §15 (P1-18).
+- **The `Idempotency-Key` of E-72** is honoured in the `external` mode of DOC-50 §8 (P1-28, DR-259): the validation reads the bucket, so the key is committed `in_progress` first.
+- **Not built yet:** the `fee_batch` kind (P2-04), the metrics of §15 (P1-18).
 
 ## 10. Unit history
 
