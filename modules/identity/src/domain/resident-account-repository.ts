@@ -1,4 +1,5 @@
 import type {
+  DeletionRequest,
   NewResidentAccount,
   ResidentAccountRecord,
   ResidentAccountTransition,
@@ -20,6 +21,10 @@ export interface ResidentAccountRepository {
    * (`ON CONFLICT DO NOTHING`), so two callers get one account.
    */
   insertIfAbsent(account: NewResidentAccount, now: Date): Promise<boolean>
+  /** Accounts that are not `deleted` whose phone ends with `digits`, by the reversed-phone index, at most `limit`. */
+  findByPhoneSuffix(digits: string, limit: number): Promise<ResidentAccountRecord[]>
+  /** The accounts in `deletion_requested`, oldest id first, one more than `limit` is not read: the caller passes `limit + 1`. */
+  listDeletionRequests(after: string | undefined, limit: number): Promise<DeletionRequest[]>
   /** The ids of the flagged demo accounts, for the boot guard (DOC-16 §4.2). */
   demoAccountIds(): Promise<string[]>
   /** `false`: the row moved since it was loaded (another refresh stamped it first). */

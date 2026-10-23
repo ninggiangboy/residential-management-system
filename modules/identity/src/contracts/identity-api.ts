@@ -25,6 +25,15 @@ export interface ResidentAccountDto {
   language: Language
   pushEnabled: boolean
   status: ResidentStatus
+  /** ISO instant of the last app open (written at most once an hour, DOC-26 §5.2); `null` before the first one. */
+  lastAppOpenAt: string | null
+}
+
+/** One account in `deletion_requested` (DOC-35 §10.2): `approvedAt` is `null` until a Manager approves it. */
+export interface DeletionRequestDto {
+  accountId: string
+  requestedAt: string
+  approvedAt: string | null
 }
 
 /** One account found by its phone (DOC-18 §1.5): a `deleted` account has the phone `deleted:<id>` and never matches. */
@@ -74,6 +83,30 @@ export interface IdentityApi {
     phone: string,
     displayName: string,
   ): Promise<{ accountId: string; created: boolean }>
+  /**
+   * Changes the login phone (DOC-26 §2.2, FR-18.4): `NotFoundError` for an unknown or deleted account, 409 `phone_in_use` when the
+   * number has an account, `ValidationError` rule `phone_invalid` for a bad number; the same number is a no-op. Every refresh
+   * family is revoked (`phone_changed`) with one `identity.session_revoked.v1` each. The caller audits.
+   */
+  changeResidentPhone(accountId: string, newPhone: string): Promise<void>
+  /**
+   * Accounts whose phone ends with `fragment` (digits only, at least 4; the Vietnamese leading `0` is dropped by the caller), at
+   * most `limit` (≤ 50), deleted accounts excluded (DOC-27 §11.1).
+   */
+  findResidentAccountsByPhoneFragment(
+    fragment: string,
+    limit: number,
+  ): Promise<ResidentAccountDto[]>
+  /**
+   * Writes `identity.sms_requested.v1` kind `member_invitation` (expires in 5 minutes) after drawing one token of the phone's
+   * bucket `otp:phone:<e164>` in the caller's transaction: an empty bucket is `RateLimitedError` and the add rolls back.
+   */
+  queueMemberInvitation(accountId: string, params: { unitCode: string }): Promise<void>
+  /** The accounts in `deletion_requested`, oldest first, keyset on `accountId` (DOC-09 §7.3, DR-125). */
+  listDeletionRequests(page?: {
+    after?: string
+    limit?: number
+  }): Promise<{ items: DeletionRequestDto[]; next: string | null }>
   verifyStepUp(
     staff: StaffContext,
     action: StepUpAction,

@@ -64,9 +64,35 @@ export interface ScanMembershipDto {
   credentialVersion: number
 }
 
+export interface UnitHitDto {
+  unitId: string
+  code: string
+  floor: number | null
+  occupancy: Occupancy
+  owner: { accountId: string; fullName: string | null; phone: string } | null
+}
+
+export interface ResidentHitDto {
+  accountId: string
+  fullName: string | null
+  /** The full E.164 phone: the caller maps it to its audience (a Guard gets it masked, DOC-12 §10) and never logs the DTO. */
+  phone: string
+  memberships: Array<{
+    unitId: string
+    unitCode: string
+    memberType: MemberType
+    status: 'active' | 'locked'
+  }>
+}
+
+export interface LookupDto {
+  units: UnitHitDto[]
+  residents: ResidentHitDto[]
+}
+
 /**
  * What the other modules call (DOC-27 §2.1, DOC-09 §7.2): plain DTOs, no `Date`, a call joins the caller's transaction. `lookup`
- * (the union search of DOC-27 §11) joins with P1-14, which adds the phone and name calls it needs to `IdentityApi`.
+ * (the union search of DOC-27 §11) is the call of `access` (P5-05); it is built with P1-14 because the staff lists share its strategies.
  */
 export interface ResidencyApi {
   /** The row of `(accountId, unitId)` that is not `removed`, `locked` included, so the guard can answer `membership_inactive`. */
@@ -97,4 +123,9 @@ export interface ResidencyApi {
   buildingIdsOfAccounts(
     accountIds: string[],
   ): Promise<Array<{ accountId: string; buildingId: string }>>
+  /**
+   * The union search of DOC-27 §11 for units and residents: every strategy whose condition holds runs, each kind is capped at
+   * `limitPerKind` (1…20, default 20). The phone is the full one; the caller maps it to its audience.
+   */
+  lookup(buildingId: string, q: string, opts?: { limitPerKind?: number }): Promise<LookupDto>
 }

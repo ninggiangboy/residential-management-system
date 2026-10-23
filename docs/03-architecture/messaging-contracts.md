@@ -1150,7 +1150,8 @@ type StepUpAction = 'gateway_config' | 'admin_change' | 'staff_email'     // DR-
 interface StaffDto { staffId: Uuid; fullName: string; role: StaffRole; status: 'invited' | 'active' | 'locked' | 'disabled'
                      language: 'vi' | 'en'; pushEnabled: boolean }
 interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: string | null; language: 'vi' | 'en'
-                               pushEnabled: boolean; status: 'active' | 'deletion_requested' | 'deleted' }
+                               pushEnabled: boolean; status: 'active' | 'deletion_requested' | 'deleted'
+                               lastAppOpenAt: Instant | null }   // P1-14, DR-261: the "never signed in" filter of W-Residents
 ```
 
 | Call | Behavior |
@@ -1159,7 +1160,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `getResidentAccounts` | Up to 500 ids. The DTO has the phone (E.164) because `residency` shows it masked in the unit detail; a caller never logs it. A `deleted` account is returned with its `deleted:<id>` phone so a caller can tell. |
 | `findResidentAccountsByPhoneFragment` | Suffix match on the digits, at least 4 characters (FR-18.5, DR-41; the index is `resident_account_phone_suffix_idx`), `limit` up to 500 (the lookup uses 20 per kind). *Revised 2026-10-20 (DR-140):* DOC-09 said "contains, at least 3"; DR-41 and DOC-16 §4.2 say suffix, at least 4 digits. |
 | `findResidentAccountsByPhones` | Exact E.164 match, at most 5,000 numbers (more is a `RangeError`): the units import asks which owner phones already have an account (DR-114). A `deleted` account has the phone `deleted:<id>` and never matches. *As built (P1-13, DR-258):* the answer carries `displayName` and `status`, the shape DOC-18 §1.5 uses. |
-| `listDeletionRequests` | The accounts in `deletion_requested`, oldest first, keyset on `account_id`, with the two dates; `W-Residents` joins the names from its own profiles (DOC-35 §10.2). |
+| `listDeletionRequests` | The accounts in `deletion_requested`, oldest first, keyset on `account_id`, with the two dates; `W-Residents` joins the names from its own profiles (DOC-35 §10.2). *As built (P1-14, DR-261):* the page is `{items, next}` with `next` the last `accountId`, `limit` up to 500 (default 100). |
 | `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure; the failure counters are committed in an **autonomous transaction** before the throw, the one exception to rule 2 (DR-132, DOC-26 §4.5). On success it writes one `identity.mail_requested.v1` kind `step_up_notice` per active Admin of the building. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
 | `findOrCreateResidentAccount` | Parses the phone (`libphonenumber-js/max`, region VN); invalid: `ValidationError` rule `phone_invalid`. `INSERT … ON CONFLICT (phone) DO NOTHING`; an existing account is returned unchanged (its name is not overwritten) with `created: false`. Used by the household add, the owner creation and the units-import commit (DOC-26 §2.2, DOC-27). |
 | `changeResidentPhone` | One conditional `UPDATE` of the phone (`status` `active` or `deletion_requested`): none is `NotFoundError`, `23505` is 409 `phone_in_use`; revokes every refresh family with reason `phone_changed` and writes one `identity.session_revoked.v1` each. The audit row is the caller's (DOC-26 §2.2). |

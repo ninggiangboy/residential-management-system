@@ -17,6 +17,7 @@ import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
+import type { OpenTicketsProbe } from '@mod/identity/contracts'
 import { installResidency } from '@mod/residency'
 import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
@@ -49,10 +50,21 @@ export interface ContainerOverrides {
   accountBuildings?: AccountBuildings
   /** `finance`'s answer to "is an intent active?"; the real one comes with the finance module (DOC-36 §7.3). */
   probe?: ActiveIntentProbe
+  /** `tickets`' answer to "does this staff member hold open tickets?"; the real one comes with the tickets module (DOC-26 §2.1). */
+  tickets?: OpenTicketsProbe
 }
 
 /** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
 const noIntents: ActiveIntentProbe = { hasActive: async () => false }
+
+/**
+ * Until `tickets` is installed (P3) no ticket exists, so no staff member holds one. Like `noIntents` this is a stand-in the boot
+ * guard must refuse in production once the module exists (DOC-26 §2.1).
+ */
+const noTicketsYet: OpenTicketsProbe = {
+  openTicketsOf: async () => [],
+  reassignAll: async () => 0,
+}
 
 /** Keys live 24 hours (DR-74) and the sweep runs every hour (DOC-38 §4.2). */
 const IDEMPOTENCY_RETENTION_MS = 24 * 3_600_000
@@ -193,6 +205,9 @@ export function createContainer(
     building: building.api,
     audited: audit.audited,
     guards,
+    idempotent,
+    // `tickets` joins with P3 (DOC-28); until then no staff member has an open ticket, so nothing blocks a lock (DOC-26 §2.1).
+    tickets: overrides.tickets ?? noTicketsYet,
     config: {
       accessTtlSeconds: identityConfig.ACCESS_TOKEN_TTL_SECONDS,
       refreshTtlDaysStaff: identityConfig.REFRESH_TTL_DAYS_STAFF,

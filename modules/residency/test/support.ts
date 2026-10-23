@@ -1,9 +1,16 @@
 import { Database } from '@core/db'
 import { noIdempotency } from '@core/http'
-import { createSecretBox, NotFoundError, UuidV7Generator } from '@core/kernel'
+import {
+  ConflictError,
+  createSecretBox,
+  NotFoundError,
+  UuidV7Generator,
+  ValidationError,
+} from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { FakeClock } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
+import type { Audited } from '@mod/audit/contracts'
 import type { FileActor, FileExpectation, FilesApi } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
@@ -12,6 +19,7 @@ import { sql } from 'drizzle-orm'
 import ExcelJS from 'exceljs'
 import { installResidency, type ResidencyModule, residencyManifest } from '../src'
 import type { MembershipRecord } from '../src/domain/membership'
+import { LibphonenumberPhoneParser } from '../src/infrastructure/phone/libphonenumber-phone-parser'
 
 /**
  * The shared fixture of the `residency` tests (DOC-27 §17): a clone of the migrated template database, the real audit module and
@@ -93,11 +101,76 @@ export class MemoryFiles implements Pick<FilesApi, 'read' | 'attach' | 'remove'>
  * transaction: the real module needs the whole host, and this is the same two statements.
  */
 export function identityOn(database: Database, ids: UuidV7Generator, now: () => Date) {
+  const accountOf = (row: Record<string, unknown>) => ({
+    accountId: row.id as string,
+    phone: row.phone as string,
+    displayName: row.display_name as string | null,
+    language: row.language as 'vi' | 'en',
+    pushEnabled: row.push_enabled as boolean,
+    status: row.status as 'active' | 'deletion_requested' | 'deleted',
+    lastAppOpenAt: row.last_app_open_at
+      ? new Date(row.last_app_open_at as string).toISOString()
+      : null,
+  })
   const stand: Pick<
     IdentityApi,
-    'findResidentAccountsByPhones' | 'findOrCreateResidentAccount' | 'getStaff'
-  > & { calls: string[] } = {
+    | 'findResidentAccountsByPhones'
+    | 'findOrCreateResidentAccount'
+    | 'getStaff'
+    | 'getResidentAccounts'
+    | 'changeResidentPhone'
+    | 'findResidentAccountsByPhoneFragment'
+    | 'listDeletionRequests'
+  > & { calls: string[]; phoneChanges: string[] } = {
     calls: [],
+    phoneChanges: [],
+    async getResidentAccounts(accountIds) {
+      if (accountIds.length === 0) return []
+      const list = sql.join(
+        accountIds.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )
+      const rows = await database.executor.execute(
+        sql`SELECT * FROM identity.resident_account WHERE id IN (${list})`,
+      )
+      return [...rows].map(accountOf)
+    },
+    async changeResidentPhone(accountId, newPhone) {
+      stand.phoneChanges.push(newPhone)
+      try {
+        const rows = await database.executor.execute(
+          sql`UPDATE identity.resident_account SET phone = ${newPhone}
+               WHERE id = ${accountId}::uuid AND status IN ('active', 'deletion_requested') RETURNING id`,
+        )
+        if (rows.length === 0) throw new NotFoundError()
+      } catch (error) {
+        if (error instanceof NotFoundError) throw error
+        throw new ConflictError('phone_in_use', 'The number belongs to another account')
+      }
+    },
+    async findResidentAccountsByPhoneFragment(fragment, limit) {
+      const rows = await database.executor.execute(
+        sql`SELECT * FROM identity.resident_account
+             WHERE reverse(phone) LIKE reverse(${fragment}) || '%' AND status <> 'deleted' LIMIT ${limit}`,
+      )
+      return [...rows].map(accountOf)
+    },
+    async listDeletionRequests() {
+      const rows = await database.executor.execute(
+        sql`SELECT id, deletion_requested_at, deletion_approved_at FROM identity.resident_account
+             WHERE status = 'deletion_requested' ORDER BY id`,
+      )
+      return {
+        items: [...rows].map((row) => ({
+          accountId: row.id as string,
+          requestedAt: new Date(row.deletion_requested_at as string).toISOString(),
+          approvedAt: row.deletion_approved_at
+            ? new Date(row.deletion_approved_at as string).toISOString()
+            : null,
+        })),
+        next: null,
+      }
+    },
     async findResidentAccountsByPhones(phones) {
       if (phones.length === 0) return []
       const list = sql.join(
@@ -115,7 +188,14 @@ export function identityOn(database: Database, ids: UuidV7Generator, now: () => 
         status: row.status as 'active' | 'deletion_requested',
       }))
     },
-    async findOrCreateResidentAccount(phone, displayName) {
+    async findOrCreateResidentAccount(input, displayName) {
+      // As the real call does: parsed with the `max` metadata, region VN, and a number valid nowhere is `phone_invalid`.
+      const parsed = new LibphonenumberPhoneParser().parse(input)
+      if (!parsed)
+        throw new ValidationError([
+          { path: 'phone', code: 'phone_invalid', message: 'not a phone number' },
+        ])
+      const phone = parsed.e164
       stand.calls.push(phone)
       const inserted = await database.executor.execute(
         sql`INSERT INTO identity.resident_account (id, phone, display_name, created_at, updated_at)
@@ -146,7 +226,7 @@ export interface SeedMembership {
   addedBy?: string
 }
 
-export async function createHarness() {
+export async function createHarness(options: { audited?: Audited } = {}) {
   const db: TestDb = await cloneTemplate('empty')
   const database = new Database({ url: db.url, poolMax: 10, prepare: false })
   const clock = new FakeClock(new Date('2026-10-20T03:00:00Z'))
@@ -173,7 +253,7 @@ export async function createHarness() {
     idempotent: noIdempotency,
     guards: { staff: () => ({}), resident: () => ({}), unit: () => ({}) } as unknown as Guards,
     pii: () => pii,
-    audited: audit.audited,
+    audited: options.audited ?? audit.audited,
     outboxMaxPayloadBytes: 65536,
   })
   const admin = db.admin()
@@ -186,6 +266,14 @@ export async function createHarness() {
       INSERT INTO residency.unit (id, building_id, code, floor, occupancy)
       VALUES (${id}, ${buildingId}, ${code ?? `A-${1000 + unitCounter}`}, ${10 + (unitCounter % 20)}, 'occupied')`
     return { id, buildingId, code: code ?? `A-${1000 + unitCounter}` }
+  }
+
+  /** A resident account of `identity` the way `findOrCreateResidentAccount` would have made it. */
+  async function seedAccount(phone: string, displayName: string | null = null) {
+    const id = ids.next()
+    await admin`
+      INSERT INTO identity.resident_account (id, phone, display_name) VALUES (${id}, ${phone}, ${displayName})`
+    return id
   }
 
   async function seedProfile(
@@ -262,6 +350,7 @@ export async function createHarness() {
     seedUnit,
     seedMembership,
     seedProfile,
+    seedAccount,
     staff,
     row,
     events,

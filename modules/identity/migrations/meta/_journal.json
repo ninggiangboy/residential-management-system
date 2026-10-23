@@ -22,6 +22,13 @@
       "when": 1792726701990,
       "tag": "0002_resident_otp",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792746742886,
+      "tag": "0003_staff_disabled_without_password",
+      "breakpoints": true
     }
   ]
 }

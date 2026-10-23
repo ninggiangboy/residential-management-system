@@ -1,6 +1,7 @@
 import { applyTransition, type Database } from '@core/db'
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, ne, sql } from 'drizzle-orm'
 import type {
+  DeletionRequest,
   NewResidentAccount,
   ResidentAccountRecord,
   ResidentAccountTransition,
@@ -75,6 +76,50 @@ export class DrizzleResidentAccountRepository implements ResidentAccountReposito
         and(inArray(residentAccount.phone, [...phones]), ne(residentAccount.status, 'deleted')),
       )
     return rows.map(toRecord)
+  }
+
+  // scope-ok: see above
+  async findByPhoneSuffix(digits: string, limit: number): Promise<ResidentAccountRecord[]> {
+    // The caller passes digits only; the reversed pattern is a prefix match on `resident_account_phone_suffix_idx` (DR-41).
+    const reversed = digits.split('').reverse().join('')
+    // scope-ok: see above
+    const rows = await this.database.executor
+      .select()
+      .from(residentAccount)
+      .where(
+        and(
+          sql`reverse(${residentAccount.phone}) LIKE ${`${reversed}%`}`,
+          ne(residentAccount.status, 'deleted'),
+        ),
+      )
+      .orderBy(asc(residentAccount.id))
+      .limit(limit)
+    return rows.map(toRecord)
+  }
+
+  // scope-ok: see above
+  async listDeletionRequests(after: string | undefined, limit: number): Promise<DeletionRequest[]> {
+    // scope-ok: see above
+    const rows = await this.database.executor
+      .select({
+        accountId: residentAccount.id,
+        requestedAt: residentAccount.deletionRequestedAt,
+        approvedAt: residentAccount.deletionApprovedAt,
+      })
+      .from(residentAccount)
+      .where(
+        and(
+          eq(residentAccount.status, 'deletion_requested'),
+          after === undefined ? undefined : gt(residentAccount.id, after),
+        ),
+      )
+      .orderBy(asc(residentAccount.id))
+      .limit(limit)
+    return rows.map((row) => ({
+      accountId: row.accountId,
+      requestedAt: row.requestedAt as Date,
+      approvedAt: row.approvedAt,
+    }))
   }
 
   // scope-ok: see above

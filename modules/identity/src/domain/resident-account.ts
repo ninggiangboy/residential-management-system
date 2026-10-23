@@ -1,4 +1,4 @@
-import type { Transition } from '@core/kernel'
+import { NotFoundError, type Transition } from '@core/kernel'
 import type { Language, ResidentStatus } from '../contracts'
 
 export interface ResidentAccountRecord {
@@ -20,6 +20,13 @@ export interface NewResidentAccount {
   id: string
   phone: string
   displayName: string
+}
+
+/** One pending deletion (DOC-35 §10.2). */
+export interface DeletionRequest {
+  accountId: string
+  requestedAt: Date
+  approvedAt: Date | null
 }
 
 export type ResidentAccountTransition = Transition<ResidentAccountRecord>
@@ -53,5 +60,19 @@ export class ResidentAccount {
     const last = this.record.lastAppOpenAt
     if (last !== null && now.getTime() - last.getTime() < HOUR_MS) return null
     return { id: this.id, expect: { lastAppOpenAt: last }, set: { lastAppOpenAt: now } }
+  }
+
+  /**
+   * The login phone moves to `phone` (DOC-26 §2.2). A deleted account has no phone to change, so it looks missing; the same number
+   * decides nothing (`null`). The guard names the old phone, so a parallel change of the same account is decided again.
+   */
+  changePhone(phone: string): ResidentAccountTransition | null {
+    if (this.record.status === 'deleted') throw new NotFoundError()
+    if (this.record.phone === phone) return null
+    return {
+      id: this.id,
+      expect: { phone: this.record.phone, status: this.record.status },
+      set: { phone, version: this.record.version + 1 },
+    }
   }
 }

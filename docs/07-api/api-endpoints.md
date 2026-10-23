@@ -1394,6 +1394,8 @@ The failure answers (no change is made; the code is not consumed by a wrong pass
 
 The rules of DOC-26 §4.4 (DR-133) apply to every endpoint of this group: a Manager touches only Technician and Guard accounts (403 `forbidden` otherwise); nobody locks, disables or changes the role of their own account (403 `forbidden` with `details: { "reason": "self" }`); the last active Admin is protected (409 `last_admin`); open tickets block a lock, a disable and a role change (409 `staff_has_open_tickets`). Every mutation writes its audit row and its session events in its own transaction (DOC-35 §4.2). A staff account is addressed by its `id`; an id of another building is 404.
 
+*As built (P1-14, 2026-10-23, DR-261):* (1) one `stepUp` per request: a `PATCH` that is both a promotion to `admin` and an email change is 400 `validation_failed` rule `one_step_up_action`, and a body that names `role: "admin"` asks for `admin_change` even when the person is an Admin already; (2) a Manager who sends `reassignTo` (E-42, E-43) is 403 `forbidden`, and `reassignTo` without `role` on E-42 is 400 rule `requires_role`; (3) a lock, unlock, disable or enable that finds the row moved by another request decides again on the new state, so the loser is 409 `invalid_transition`; (4) E-45 accepts `invited` as a source state, so a disabled account may have no password and E-46 returns it to `invited`; (5) `page × pageSize > 10000` and `pageSize` above 50 are 400 on E-39; (6) the account object of a create carries `invite.expiresAt` and the route marks `idempotent` and `stepUp` in its audience metadata, which the generator of P1-15 reads.
+
 All responses of a single account use the object below; `ETag` is `version`.
 
 ```json
@@ -1976,6 +1978,8 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
 - **Tests:** BD-37…BD-43.
 
 ## 10. Residency, staff side (E-57…E-74, E-169)
+
+*Built in P1-14 (2026-10-23, DR-260):* E-57…E-67 and E-69, over HTTP in `apps/api/tests/integration/residency-staff.integration.test.ts`; E-71…E-74 and E-169 came with P1-13. Not built: E-68 (with the deletion task) and E-70 (with `access`, P5-05). Where the build differs from the text: E-65 writes its `pii.read` row after the read, in the same transaction, so a failed insert still returns no data; E-69 answers the `MembershipDto` after the change and `memberType` accepts only `family` or `tenant`; `neverSignedIn` and `deletion=requested` of E-63 restrict the page through `identity`.
 
 Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (DOC-12 §7); an id of another building answers 404 `not_found`, never 403. Every endpoint of this group is `staff: admin, manager` except E-70, which a Guard may call. A Manager and an Admin have the same rights here (DOC-27 §3.3). Personal data rules: a list or a search shows the full phone and a masked ID number (`•••• 1234`) and never a date of birth; only E-65 returns the full ID number and the date of birth, and it writes `pii.read` first (DOC-35 §6). Shared shapes used below:
 

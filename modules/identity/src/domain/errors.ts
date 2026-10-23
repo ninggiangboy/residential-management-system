@@ -1,4 +1,5 @@
 import {
+  ConflictError,
   DomainError,
   ForbiddenError,
   NotFoundError,
@@ -73,5 +74,51 @@ export class SmsUnavailableError extends UnavailableError {
 export class PhoneInvalidError extends ValidationError {
   constructor() {
     super([{ path: 'phone', code: 'phone_invalid', message: 'The phone number is not valid' }])
+  }
+}
+
+/** A staff member acting on their own account where the rule forbids it: lock, disable, role change (DOC-26 §4.4 rule 2, AU-18). */
+export class StaffSelfActionError extends ForbiddenError {
+  constructor() {
+    super('forbidden', 'This cannot be done to your own account', { details: { reason: 'self' } })
+  }
+}
+
+/** The last active Admin of the building may not be locked, disabled or demoted (DOC-26 §4.4 rule 3, AU-17). */
+export class LastAdminError extends ConflictError {
+  constructor() {
+    super('last_admin', 'The building must keep at least one active Admin')
+  }
+}
+
+/** A person with open tickets may not be locked, disabled or given another role unless an Admin reassigns them (FR-14.3). */
+export class StaffHasOpenTicketsError extends ConflictError {
+  constructor(tickets: readonly { ticketId: string; code: string; status: string }[]) {
+    super('staff_has_open_tickets', 'This person still has open requests. Reassign them first.', {
+      details: { tickets },
+    })
+  }
+}
+
+/** A work email that belongs to another account, in any building (`uq_staff_account_email`, FR-14.1). */
+export class EmailInUseError extends ConflictError {
+  constructor() {
+    super('email_in_use', 'This email address already has an account')
+  }
+}
+
+/** The account is in a state that does not allow the action (DR-147): the answer names the entity, the state and the action. */
+export class InvalidStaffTransitionError extends ConflictError {
+  constructor(status: string, action: string) {
+    super('invalid_transition', 'This can no longer be done in its current state', {
+      details: { entity: 'staff_account', status, action },
+    })
+  }
+}
+
+/** The number is another account's (FR-18.4): 409 `phone_in_use`, and nothing changed. */
+export class PhoneInUseError extends ConflictError {
+  constructor() {
+    super('phone_in_use', 'This phone number already has an account')
   }
 }

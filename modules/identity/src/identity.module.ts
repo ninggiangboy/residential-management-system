@@ -1,5 +1,5 @@
 import type { Database } from '@core/db'
-import { routePlugin } from '@core/http'
+import { type Idempotent, routePlugin } from '@core/http'
 import type { Clock, IdGenerator, Log, SecretBox } from '@core/kernel'
 import {
   DrizzleInboxGuard,
@@ -31,7 +31,15 @@ import { SessionEvents } from './application/session-events'
 import { SessionIssuer } from './application/session-issuer'
 import { SessionOwners } from './application/session-owners'
 import { SmsCommands } from './application/sms-commands'
+import { StaffSafeguards } from './application/staff-safeguards'
+import { StaffSessions } from './application/staff-sessions'
+import { ChangeResidentPhone } from './application/use-cases/change-resident-phone'
+import { CreateStaffAccount } from './application/use-cases/create-staff-account'
+import { DisableStaffAccount } from './application/use-cases/disable-staff-account'
+import { EnableStaffAccount } from './application/use-cases/enable-staff-account'
 import { EnsureResidentAccount } from './application/use-cases/ensure-resident-account'
+import { LockStaffAccount } from './application/use-cases/lock-staff-account'
+import { QueueMemberInvitation } from './application/use-cases/queue-member-invitation'
 import { RefreshSession } from './application/use-cases/refresh-session'
 import { RequestOtp } from './application/use-cases/request-otp'
 import { RequestPasswordReset } from './application/use-cases/request-password-reset'
@@ -42,9 +50,11 @@ import { RevokeStaffSession } from './application/use-cases/revoke-staff-session
 import { SetPassword } from './application/use-cases/set-password'
 import { SignInStaff } from './application/use-cases/sign-in-staff'
 import { SignOut } from './application/use-cases/sign-out'
+import { UnlockStaffAccount } from './application/use-cases/unlock-staff-account'
+import { UpdateStaffAccount } from './application/use-cases/update-staff-account'
 import { VerifyOtp } from './application/use-cases/verify-otp'
 import { VerifyStepUp } from './application/use-cases/verify-step-up'
-import type { AccessTokenVerifier, IdentityApi } from './contracts'
+import type { AccessTokenVerifier, IdentityApi, OpenTicketsProbe } from './contracts'
 import { DatabaseAutonomous } from './infrastructure/persistence/database-autonomous'
 import { DrizzleOtpChallengeRepository } from './infrastructure/persistence/drizzle-otp-challenge-repository'
 import { DrizzlePasswordTokenRepository } from './infrastructure/persistence/drizzle-password-token-repository'
@@ -84,6 +94,12 @@ export interface IdentityDeps {
   building: Pick<BuildingApi, 'getSettings'>
   audited: Audited
   guards: Guards
+  /** E-40 takes an `Idempotency-Key` (DOC-50 §8.1). */
+  idempotent: Idempotent
+  /**
+   * `tickets` answers it from `integrations/identity` (DOC-26 §2.1); until P3 the container binds a stand-in that finds no ticket.
+   */
+  tickets: OpenTicketsProbe
   /** `OUTBOX_MAX_PAYLOAD_BYTES`. */
   outboxMaxPayloadBytes: number
   /** Tests replace the hasher and the wait; production builds both. */
@@ -132,6 +148,18 @@ export interface IdentityUseCases {
   requestStepUp: RequestStepUp
   /** `DELETE /staff/sessions/{id}`. */
   revokeStaffSession: RevokeStaffSession
+  /** `POST /staff/accounts` (E-40). */
+  createStaffAccount: CreateStaffAccount
+  /** `PATCH /staff/accounts/{id}` (E-42). */
+  updateStaffAccount: UpdateStaffAccount
+  /** `POST /staff/accounts/{id}/lock` (E-43). */
+  lockStaffAccount: LockStaffAccount
+  /** `POST /staff/accounts/{id}/unlock` (E-44). */
+  unlockStaffAccount: UnlockStaffAccount
+  /** `POST /staff/accounts/{id}/disable` (E-45). */
+  disableStaffAccount: DisableStaffAccount
+  /** `POST /staff/accounts/{id}/enable` (E-46). */
+  enableStaffAccount: EnableStaffAccount
 }
 
 export interface IdentityModule extends AppModule<'identity', IdentityRoutes> {
@@ -284,6 +312,46 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     config,
   )
 
+  const safeguards = new StaffSafeguards(staffAccounts, deps.tickets)
+  const staffSessions = new StaffSessions(sessions, events)
+  const createStaffAccount = new CreateStaffAccount(
+    database,
+    staffAccounts,
+    inviteIssuer,
+    verifyStepUp,
+    deps.building,
+    ids,
+    clock,
+    deps.audited,
+  )
+  const updateStaffAccount = new UpdateStaffAccount(
+    database,
+    staffAccounts,
+    safeguards,
+    staffSessions,
+    verifyStepUp,
+    clock,
+    deps.audited,
+  )
+  const lockStaffAccount = new LockStaffAccount(
+    database,
+    staffAccounts,
+    safeguards,
+    staffSessions,
+    clock,
+    deps.audited,
+  )
+  const unlockStaffAccount = new UnlockStaffAccount(database, staffAccounts, clock, deps.audited)
+  const disableStaffAccount = new DisableStaffAccount(
+    database,
+    staffAccounts,
+    safeguards,
+    staffSessions,
+    clock,
+    deps.audited,
+  )
+  const enableStaffAccount = new EnableStaffAccount(database, staffAccounts, clock, deps.audited)
+
   const staffQueries = new StaffQueries(staffAccounts)
   const residentQueries = new ResidentQueries(residents, deps.memberships)
   const sessionQueries = new SessionQueries(sessions, clock)
@@ -316,6 +384,12 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     resendStaffInvite,
     requestStepUp,
     revokeStaffSession,
+    createStaffAccount,
+    updateStaffAccount,
+    lockStaffAccount,
+    unlockStaffAccount,
+    disableStaffAccount,
+    enableStaffAccount,
   }
 
   return {
@@ -325,6 +399,8 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       residentQueries,
       verifyStepUp,
       new EnsureResidentAccount(new LibphonenumberPhones(), residents, clock, ids),
+      new ChangeResidentPhone(new LibphonenumberPhones(), residents, sessions, events, clock),
+      new QueueMemberInvitation(residents, limiter, sms, clock, config),
     ),
     useCases,
     queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },
@@ -336,6 +412,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       residentQueries,
       sessionQueries,
       guards: deps.guards,
+      idempotent: deps.idempotent,
       clock,
     }),
     handlers,

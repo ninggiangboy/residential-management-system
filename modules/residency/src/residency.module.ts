@@ -11,12 +11,20 @@ import { ResidencyApiImpl } from './application/api/residency-api-impl'
 import { ClearProfileOnAccountDeletionHandler } from './application/handlers/clear-profile-on-account-deletion'
 import { ImportPlanner } from './application/import-planner'
 import { ImportQueries } from './application/queries/import-queries'
+import { LookupQueries } from './application/queries/lookup-queries'
 import { MembershipQueries } from './application/queries/membership-queries'
+import { ResidentQueries } from './application/queries/resident-queries'
+import { UnitQueries } from './application/queries/unit-queries'
+import { ChangeLoginPhone } from './application/use-cases/change-login-phone'
 import { ChangeMembership } from './application/use-cases/change-membership'
 import { CommitUnitOwnerImport } from './application/use-cases/commit-unit-owner-import'
+import { CreateResident } from './application/use-cases/create-resident'
+import { CreateUnit } from './application/use-cases/create-unit'
 import { ExpireImports } from './application/use-cases/expire-imports'
 import { PurgeImports } from './application/use-cases/purge-imports'
+import { TransferOwnership } from './application/use-cases/transfer-ownership'
 import { UpdateProfile } from './application/use-cases/update-profile'
+import { UpdateUnit } from './application/use-cases/update-unit'
 import { ValidateUnitOwnerImport } from './application/use-cases/validate-unit-owner-import'
 import type { ResidencyApi } from './contracts'
 import {
@@ -29,22 +37,34 @@ import { DrizzleImportJobRepository } from './infrastructure/persistence/drizzle
 import { DrizzleMembershipReader } from './infrastructure/persistence/drizzle-membership-reader'
 import { DrizzleMembershipRepository } from './infrastructure/persistence/drizzle-membership-repository'
 import { DrizzleResidentProfileRepository } from './infrastructure/persistence/drizzle-resident-profile-repository'
+import { DrizzleResidentReader } from './infrastructure/persistence/drizzle-resident-reader'
 import { DrizzleUnitHistoryRepository } from './infrastructure/persistence/drizzle-unit-history-repository'
 import { DrizzleUnitImportRepository } from './infrastructure/persistence/drizzle-unit-import-repository'
+import { DrizzleUnitReader } from './infrastructure/persistence/drizzle-unit-reader'
+import { DrizzleUnitRepository } from './infrastructure/persistence/drizzle-unit-repository'
 import { residencyInbox, residencyOutbox } from './infrastructure/persistence/schema'
 import { LibphonenumberPhoneParser } from './infrastructure/phone/libphonenumber-phone-parser'
 import { residencyManifest } from './manifest'
-import { importRoutes } from './presentation/import-routes'
+import { residencyRoutes } from './presentation/residency-routes'
 
 export interface ResidencyDeps {
   /** The time zone of the building for "today" (DR-09). */
   building: Pick<BuildingApi, 'getBuilding'>
   /** The files of an import: the upload is read, attached to its job and removed at the commit (DOC-37 §3). */
   files: Pick<FilesApi, 'read' | 'attach' | 'remove'>
-  /** The accounts of the import: looked up by phone for the preview, created at the commit (DOC-18 §1.5, DOC-27 §9.2). */
+  /**
+   * The accounts the module reads and writes: looked up by phone for the import preview and created at the commit (DOC-18 §1.5,
+   * DOC-27 §9.2), named and phoned in the staff lists, searched by phone fragment, moved to a new login phone (DOC-27 §2.2).
+   */
   identity: Pick<
     IdentityApi,
-    'findResidentAccountsByPhones' | 'findOrCreateResidentAccount' | 'getStaff'
+    | 'findResidentAccountsByPhones'
+    | 'findOrCreateResidentAccount'
+    | 'getStaff'
+    | 'getResidentAccounts'
+    | 'changeResidentPhone'
+    | 'findResidentAccountsByPhoneFragment'
+    | 'listDeletionRequests'
   >
   guards: Guards
   /** E-72 takes an `Idempotency-Key` (DOC-50 §8.1). */
@@ -65,12 +85,21 @@ export interface ResidencyModuleDeps extends ResidencyDeps {
   logger: Log
 }
 
-/** What the staff routes of P1-14 call (DOC-12 §4.5). */
+/** What the staff routes call (DOC-12 §4.5). */
 export interface ResidencyUseCases {
-  /** `PATCH /staff/memberships/{id}` (DOC-27 §6). */
+  /** `PATCH /staff/memberships/{id}` (E-69, DOC-27 §6). */
   changeMembership: ChangeMembership
-  /** `PATCH /staff/residents/{accountId}` (DOC-27 §5.3). */
+  /** `PATCH /staff/residents/{accountId}` (E-66, DOC-27 §5.3). */
   updateProfile: UpdateProfile
+  /** `POST /staff/units` (E-58) and `PATCH /staff/units/{id}` (E-60), DOC-27 §4. */
+  createUnit: CreateUnit
+  updateUnit: UpdateUnit
+  /** `POST /staff/residents` (E-64, DOC-27 §5.1). */
+  createResident: CreateResident
+  /** `POST /staff/units/{id}/owner` (E-61, DOC-27 §7). */
+  transferOwnership: TransferOwnership
+  /** `PATCH /staff/residents/{accountId}/phone` (E-67, DOC-27 §8). */
+  changeLoginPhone: ChangeLoginPhone
   /** `POST /staff/imports` with `kind = unit_owner` (E-72). */
   validateUnitOwnerImport: ValidateUnitOwnerImport
   /** `POST /staff/imports/{id}/commit` (E-74). */
@@ -83,13 +112,18 @@ export interface ResidencyUseCases {
 export interface ResidencyModule extends AppModule<'residency'> {
   readonly api: ResidencyApi
   readonly useCases: ResidencyUseCases
-  /** The reads behind the import routes (E-71, E-73, E-169). */
-  readonly queries: { imports: ImportQueries }
+  /** The reads behind the staff routes: the imports (E-71, E-73, E-169), the units, the residents and the lookup. */
+  readonly queries: {
+    imports: ImportQueries
+    units: UnitQueries
+    residents: ResidentQueries
+    lookups: LookupQueries
+  }
   readonly routes: ResidencyRoutes
 }
 
-/** The import routes; the other staff and household endpoints are P1-14 and P4-10. */
-export type ResidencyRoutes = ReturnType<typeof importRoutes>
+/** The staff routes; the household endpoints of the owner are P4-10. */
+export type ResidencyRoutes = ReturnType<typeof residencyRoutes>
 
 /** Builds the module from what it needs; `install.ts` narrows the host to this (DOC-12 §4.2, §4.3). */
 export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModule {
@@ -107,15 +141,24 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
   const inbox = new DrizzleInboxGuard(database, residencyInbox)
 
   const queries = new MembershipQueries(new DrizzleMembershipReader(database))
+  const units = new DrizzleUnitRepository(database)
+  const unitReader = new DrizzleUnitReader(database)
+  const residentReader = new DrizzleResidentReader(database)
+  const phones = new LibphonenumberPhoneParser()
+  const lookups = new LookupQueries(unitReader, residentReader, deps.identity)
+  const unitQueries = new UnitQueries(units, unitReader, memberships, residentReader, deps.identity)
+  const residentQueries = new ResidentQueries(
+    database,
+    residentReader,
+    lookups,
+    deps.identity,
+    deps.pii,
+    deps.audited,
+  )
 
   const importJobs = new DrizzleImportJobRepository(database)
   const unitImports = new DrizzleUnitImportRepository(database)
-  const planner = new ImportPlanner(
-    new ExceljsWorkbookReader(),
-    new LibphonenumberPhoneParser(),
-    unitImports,
-    deps.identity,
-  )
+  const planner = new ImportPlanner(new ExceljsWorkbookReader(), phones, unitImports, deps.identity)
   const validateUnitOwnerImport = new ValidateUnitOwnerImport(
     deps.files,
     planner,
@@ -150,37 +193,87 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     clock,
   )
 
+  const changeMembership = new ChangeMembership(
+    database,
+    memberships,
+    history,
+    outbox,
+    deps.audited,
+    clock,
+    ids,
+  )
+  const updateProfile = new UpdateProfile(
+    database,
+    profiles,
+    deps.building,
+    deps.pii,
+    deps.audited,
+    clock,
+  )
+  const createUnit = new CreateUnit(database, units, deps.audited, clock, ids)
+  const updateUnit = new UpdateUnit(database, units, history, deps.audited, clock, ids)
+  const createResident = new CreateResident(
+    database,
+    units,
+    memberships,
+    profiles,
+    history,
+    outbox,
+    deps.identity,
+    deps.audited,
+    clock,
+    ids,
+  )
+  const transferOwnership = new TransferOwnership(
+    database,
+    units,
+    memberships,
+    profiles,
+    history,
+    outbox,
+    deps.identity,
+    deps.audited,
+    clock,
+    ids,
+  )
+  const changeLoginPhone = new ChangeLoginPhone(
+    database,
+    profiles,
+    phones,
+    deps.identity,
+    deps.audited,
+  )
+
   return {
     name: 'residency',
-    api: new ResidencyApiImpl(queries),
+    api: new ResidencyApiImpl(queries, lookups),
     useCases: {
-      changeMembership: new ChangeMembership(
-        database,
-        memberships,
-        history,
-        outbox,
-        deps.audited,
-        clock,
-        ids,
-      ),
-      updateProfile: new UpdateProfile(
-        database,
-        profiles,
-        deps.building,
-        deps.pii,
-        deps.audited,
-        clock,
-      ),
+      changeMembership,
+      updateProfile,
+      createUnit,
+      updateUnit,
+      createResident,
+      transferOwnership,
+      changeLoginPhone,
       validateUnitOwnerImport,
       commitUnitOwnerImport,
       expireImports,
       purgeImports,
     },
-    queries: { imports: importQueries },
-    routes: importRoutes({
+    queries: { imports: importQueries, units: unitQueries, residents: residentQueries, lookups },
+    routes: residencyRoutes({
       queries: importQueries,
       validate: validateUnitOwnerImport,
       commit: commitUnitOwnerImport,
+      unitQueries,
+      createUnit,
+      updateUnit,
+      transferOwnership,
+      residentQueries,
+      createResident,
+      updateProfile,
+      changeLoginPhone,
+      changeMembership,
       guards: deps.guards,
       idempotent: deps.idempotent,
     }),
