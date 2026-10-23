@@ -23,6 +23,7 @@
     "check:scope": "bun scripts/check-scope.ts && bun test tools/scope-lint",
     "check:audit": "bun scripts/check-audit.ts && bun test tools/audit-lint",
     "check:layout": "bun scripts/check-layout.ts && bun test tools/layout-lint",
+    "check:authz-metadata": "bun run --cwd apps/api check:authz-metadata",
     "quality:unused": "knip",
     "quality:dup": "jscpd",
     "check:i18n": "bun test packages/i18n-catalog",
@@ -51,6 +52,8 @@
     "db:generate": "bun --env-file=.env.local scripts/db.ts generate",
     "db:reset": "bun --env-file=.env.local scripts/db.ts reset",
     "test:grants": "bun run --cwd apps/api test:grants",
+    "test:authz": "bun run --cwd apps/api test:authz",
+    "exp:10": "bun run --cwd apps/api exp:10",
     "config:example": "bun run --cwd apps/api config:example",
     "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
     "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"

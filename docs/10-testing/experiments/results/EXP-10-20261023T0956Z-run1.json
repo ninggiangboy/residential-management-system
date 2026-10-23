@@ -1,0 +1,90 @@
+{
+  "experiment": "EXP-10",
+  "run": 1,
+  "of": 5,
+  "commit": "5aab66b",
+  "dirty": true,
+  "startedAt": "2026-10-23T09:56:33.972Z",
+  "finishedAt": "2026-10-23T09:57:21.580Z",
+  "machine": {
+    "host": "developer machine",
+    "cpu": "8 × Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz",
+    "ramGb": 16,
+    "os": "linux 6.19.10-300.fc44.x86_64"
+  },
+  "runtime": {
+    "bun": "1.4.3",
+    "postgres": "18.6",
+    "api": "5aab66b"
+  },
+  "metrics": {
+    "routes": 51,
+    "routesWithMetadata": 51,
+    "catalogParity": {
+      "missing": 118,
+      "extra": []
+    },
+    "cellsOwn": 816,
+    "cellsForeign": 95,
+    "unexpected2xx": 0,
+    "unexpectedRefusals": 0,
+    "serverErrors": 0,
+    "leaks": 0,
+    "missingFixtures": 0,
+    "mutants": {
+      "run": 11,
+      "caught": 11,
+      "survivors": []
+    },
+    "stepUp": {
+      "cases": 54,
+      "failures": 0
+    },
+    "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+  },
+  "criteria": [
+    {
+      "id": "C1",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C2",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C3",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C4",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C5",
+      "expected": "100%, 0, 0",
+      "observed": "0 problems, 0 extra, 0 missing fixtures",
+      "pass": true
+    },
+    {
+      "id": "C7",
+      "expected": "11",
+      "observed": 11,
+      "pass": true
+    },
+    {
+      "id": "C8",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

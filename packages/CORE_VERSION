@@ -69,3 +69,7 @@ local-changes:
     after five minutes), with `requestHash` and `canonicalJson`; `staffRoute`'s `extra` carries `idempotent: true`; core-db: `SqlIdempotencyStore`,
     its adapter on `platform.idempotency_key`, matched to the core-http `IdempotencyStore` by shape because a core package may not import
     another that is not listed for it (P1-28, DR-259); tests in `idempotency.test.ts`
+  - core-http: every route helper takes a required `RouteInfo` (`endpoint` E-xx, `operationId`, `idempotent`, `stepUp`, `byPurpose`, `credential`) and writes it
+    as `operationId`, `x-endpoint-id`, `x-audience`, `x-idempotent` and `x-step-up` of the operation, so the authorization-matrix generator and test AG-02 join the
+    mounted routes with DOC-51 §2; `idempotent` and `stepUp` leave `x-audience`, where they were `extra` (P1-15); core-runtime: `readyRoute` carries the same
+    record for E-02

@@ -1,4 +1,11 @@
-import { type Idempotent, type RouteSet, routePlugin, staffRoute, strictObject } from '@core/http'
+import {
+  type Idempotent,
+  type RouteInfo,
+  type RouteSet,
+  routePlugin,
+  staffRoute,
+  strictObject,
+} from '@core/http'
 import { type Guards, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
 import { RESIDENT_READ_ROLES, type ResidentQueries } from '../application/queries/resident-queries'
@@ -144,22 +151,38 @@ export function residentRoutes(d: ResidentRouteDeps) {
     context.set.status = 204
   }
 
-  const read = staffRoute(d.guards, 'residency', RESIDENT_READ_ROLES)
+  const read = (info: RouteInfo) => staffRoute(d.guards, 'residency', RESIDENT_READ_ROLES, info)
 
   return routePlugin({ prefix: '/staff/residents' })
-    .get('/', list, { ...read, query: ListQuery })
+    .get('/', list, {
+      ...read({ endpoint: 'E-63', operationId: 'listResidents' }),
+      query: ListQuery,
+    })
     .post('/', d.idempotent({ account: staffAccount }, create), {
-      ...staffRoute(d.guards, 'residency', CREATE_RESIDENT_ROLES, { idempotent: true }),
+      ...staffRoute(d.guards, 'residency', CREATE_RESIDENT_ROLES, {
+        endpoint: 'E-64',
+        operationId: 'createResident',
+        idempotent: true,
+      }),
       body: CreateBody,
     })
-    .get('/:accountId', get, { ...read, params: AccountParams })
+    .get('/:accountId', get, {
+      ...read({ endpoint: 'E-65', operationId: 'getResident' }),
+      params: AccountParams,
+    })
     .patch('/:accountId', update, {
-      ...staffRoute(d.guards, 'residency', UPDATE_PROFILE_ROLES),
+      ...staffRoute(d.guards, 'residency', UPDATE_PROFILE_ROLES, {
+        endpoint: 'E-66',
+        operationId: 'updateResidentProfile',
+      }),
       params: AccountParams,
       body: UpdateBody,
     })
     .patch('/:accountId/phone', changePhone, {
-      ...staffRoute(d.guards, 'residency', CHANGE_LOGIN_PHONE_ROLES),
+      ...staffRoute(d.guards, 'residency', CHANGE_LOGIN_PHONE_ROLES, {
+        endpoint: 'E-67',
+        operationId: 'changeResidentPhone',
+      }),
       params: AccountParams,
       body: PhoneBody,
     })

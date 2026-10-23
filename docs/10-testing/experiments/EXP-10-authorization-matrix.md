@@ -1,7 +1,7 @@
 # EXP-10: Every route refuses every actor it should refuse, and serves every actor it should serve
 
-> Status: **Approved** (Owner, 2026-10-21, as the first version (run in P1-15); final in P6) · Updated: 2026-10-21 (DR-226: 74 routes in the first version, 169 in the final; earlier: P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
-> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151, DR-226), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
+> Status: **Approved** (Owner, 2026-10-21, as the first version (run in P1-15); final in P6) · Updated: 2026-10-23 (DR-262: the first version is built and run, 51 routes; §3, §5, §6, §8, §11, §12; earlier: 2026-10-21, DR-226: 74 routes in the first version, 169 in the final; earlier: P0-32; DR-173 decided; first version for P1-15, final in P6-08) · DOC-99 / EXP-10
+> Depends on: [common protocol](README.md) (DOC-89, not written yet), original SDD §19.5, §20.2, [DR](../../00-decision-register.md) (DR-39, 77, 78, 99, 132, 147, 151, DR-226, DR-262), [DOC-39](../../06-design/security.md) §4, §9, §13, §16, [DOC-26](../../06-design/identity-and-sessions.md) §4.5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-50](../../07-api/api-guidelines.md) §2, §7, [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-88](../test-strategy.md) §13
 > Main readers: P1-15 (first version), P6-08 (final); the evaluation of NFR-08
 
 The authorization matrix itself (the input, the sixteen actors, `expected()`, the run and the pass criterion) is designed in DOC-39 §4 (DR-151) and is **not repeated here**. This document adds what an experiment needs: the variables, the baseline that proves the generator can fail, the exact step-up and charge-void cases, what the first version covers, the formulas, the criteria and the result tables. It proves gates, not content (§10).
@@ -37,7 +37,7 @@ The authorization matrix itself (the input, the sixteen actors, `expected()`, th
 
 ## 3. Baseline
 
-The baseline of this experiment is not a slower algorithm but a **broken router**: the same generator run against applications with one guard deliberately defective. A matrix that stays green on these would also stay green on a real defect. Each mutant is built by the test composition root replacing one entry of `host.guards` (the injection seam of DR-99) or one repository, in `apps/api/test/authz/mutations.authz.test.ts`; its title starts `EXP-10 M<n>`. These are not test IDs of a registered prefix (DOC-88 §15).
+The baseline of this experiment is not a slower algorithm but a **broken router**: the same generator run against applications with one guard deliberately defective. A matrix that stays green on these would also stay green on a real defect. Each mutant is built by the test composition root replacing one entry of `host.guards` (the injection seam of DR-99) or one repository, in `apps/api/tests/authz/mutations.authz.test.ts`; its title starts `EXP-10 M<n>`. These are not test IDs of a registered prefix (DOC-88 §15).
 
 | Mutant | Defect | The run must fail with | Names |
 | --- | --- | --- | --- |
@@ -54,6 +54,8 @@ The baseline of this experiment is not a slower algorithm but a **broken router*
 | M11 | A `locked` membership is treated as `active` | `unexpected_2xx` for `res.locked` (expected 403 `membership_inactive`) | endpoint |
 
 M12, added when the webhook exists (P3-03): E-117 verifies no signature; expected `unexpected_2xx` for every actor (expected 401 `invalid_signature`).
+
+**As built (DR-262).** M1, M3, M6 and M7 run on the real routes. A widened guard (M2) never shows as a 2xx on a real route, because every use case checks the role again (DR-254): the generator is right to stay green there, so M2, M4, M5 and M9 to M11 build a *probe route* (`T-01…T-06`, in `apps/api/tests/authz/mutations.ts`) on the guards of the defective container and the run must report it. `ContainerOverrides.guards` is the seam (DR-172); M7 replaces `ContainerOverrides.stepUp`. E-03 and E-27 are not built yet, so the subset is E-13, E-40 and E-41 plus the route a mutant touches.
 
 A mutant run uses the five routes of DOC-39 §4.7 as its subset (E-03, E-13, E-27, E-40, E-41, plus the route a mutant touches), so the 11 mutant runs take about one minute in total. A surviving mutant fails the experiment (C7).
 
@@ -73,8 +75,8 @@ A mutant run uses the five routes of DOC-39 §4.7 as its subset (E-03, E-13, E-2
 ```bash
 bun run infra:up
 bun run test:authz                         # the full run: generator, step-up pass, charge-void pass (final), mutants
-bun run test:authz -- --routes E-27,E-40   # a subset by endpoint id
-bun run test:authz -- --mutations          # the mutants only
+AUTHZ_ROUTES=E-27,E-40 bun run test:authz  # a subset by endpoint id
+AUTHZ_MUTANTS=M2,M7 bun run test:authz     # some of the mutants (the other test files run as well)
 bun run exp:10                             # five runs of the full matrix; writes the five result files and the summary
 ```
 
@@ -102,7 +104,8 @@ The artifacts of a CI run (`authz-routes.json`, `authz-matrix.json`, `authz-matr
 | `cellsForeign` | the sum, over routes whose `scopeOfObject` is `unit` or `building`, of the actors that pass the gate (DOC-39 §4.3) |
 | `cells` | `cellsOwn + cellsForeign` |
 | `unexpected2xx` | cells whose status is 2xx or 3xx and whose `expected` is not `ALLOW` |
-| `unexpectedRefusals` | cells whose `expected` is `ALLOW` and whose status is 401, 403 or 404 |
+| `unexpectedRefusals` | cells whose `expected` is `ALLOW` and whose status is 401, 403 or 404, or anything but a 2xx or one of 400, 409, 412, 422, 428 (a route that takes a `refresh_token` answers 401 without it and is ALLOW at the gate) |
+| `wrongRefusals` | cells whose `expected` is a refusal and whose status or `error.code` is another refusal; counted with `unexpectedRefusals` in the result file (C2) |
 | `serverErrors` | cells with a 5xx |
 | `leaks` | list-route cells whose body holds an id of the other scope's fixtures |
 | `missingFixtures` | path parameters without a fixture (the run stops before sending) |
@@ -186,19 +189,15 @@ The race of a void against a settlement (exactly one wins) is `LG-` (P2-07), not
 - `authz-matrix.md`: one table per audience class (public, resident, resident with capability, staff, webhook), routes as rows, actors as columns, the actual status in each cell, a mismatch in **bold**. The reviewer reads the bold cells first (DOC-39 §4.6).
 - `bun run exp:10` writes the summary: per criterion the value of each run and `pass` when all five agree and pass; `deterministic` from the SHA-256 of the stripped matrices.
 - A **diff between versions**: the summary lists routes added and removed since the previous result file, so a route that appeared without a fixture or a row shows up in review.
-- Scripts: `apps/api/test/authz/` (the generator, DOC-88 §13), `apps/api/test/exp/exp10-authz-matrix.ts` (the five runs and the summary).
+- Scripts: `apps/api/tests/authz/` (the generator, DOC-88 §13), `apps/api/tests/exp/exp10-authz-matrix.ts` (the five runs and the summary).
 
 ## 9. Result table template
 
-Filled by the summary; empty until the run. First version (P1-15):
+Filled by the summary; the first version (P1-15) is filled from the run of 2026-10-23 (§11):
 
 | Run | Commit | Routes | With metadata | Cells own | Cells foreign | Unexpected 2xx | Unexpected refusals | 5xx | Leaks | Mutants caught | Step-up failures | Deterministic |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | | | | | | | | | | /11 | | |
-| 2 | | | | | | | | | | /11 | | |
-| 3 | | | | | | | | | | /11 | | |
-| 4 | | | | | | | | | | /11 | | |
-| 5 | | | | | | | | | | /11 | | |
+| 1 to 5 | `5aab66b` + P1-15 | 51 | 51 | 816 | 95 | 0 | 0 | 0 | 0 | 11/11 | 0 | yes |
 
 Final (P6-08) adds the columns `Charge-void failures` and `SC-12`, and the row `Routes` shows 169.
 
@@ -241,11 +240,19 @@ Result file (envelope of DOC-88 §12, `metrics` of this document):
 
 ## 11. Results
 
-Not run. The first version runs in P1-15 (after P1-14); the final run is P6-08. The results of record are the files under `docs/10-testing/experiments/results/` and the tables of §9.
+**First version (P1-15), run 2026-10-23 on a developer machine** (8 × Intel i7-4790, 16 GB, Linux 6.19, Bun 1.4.3, PostgreSQL 18.6; a working tree one step ahead of `5aab66b`, so the files say `dirty`). **Pass:** C1 to C5, C7, C8 and C10 hold in all five runs. C6 is the bold cells of `authz-matrix.md`, of which there are none; C9 and C11 belong to the final version. The results of record come from the CI job `integration` (DR-173) and replace these when it runs.
+
+| Run | Commit | Routes | With metadata | Cells own | Cells foreign | Unexpected 2xx | Unexpected refusals | 5xx | Leaks | Mutants caught | Step-up failures | Deterministic |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 to 5 | `5aab66b` + P1-15 | 51 | 51 | 816 | 95 | 0 | 0 | 0 | 0 | 11/11 | 0 of 54 | yes (one SHA-256, `f2d8ec2836d6…`) |
+
+The five runs take about 40 seconds each (the matrix 10 s, the step-up pass 20 s, the mutants 6 s). `catalogParity` lists no extra route and 118 catalog entries that are not mounted yet. The files are `results/EXP-10-20261023T0956Z-run1.json` to `-run5.json` and `-summary.json`.
+
+**What the first run found.** `PUT /staff/gateway` (E-50) answered a missing proof with `403 step_up_required` from inside its transaction and without `details.action`, where §7.1 S0 and DOC-51 §7 say the route decides before any database work and names the action. Fixed in `SaveGatewayConfig.execute`. Everything else matched on the first run; the generator's own mutants (M1 to M11) are what shows that this is not because the matrix cannot fail. M2, which the table of §3 expected to fail on a real admin route, cannot: every use case checks the role again, so the matrix is right to stay green there (DR-262).
 
 ## 12. Open questions
 
 - **DR-173 (decided, Owner, 2026-10-20; deviates from DR-78): EXP-10 does not run on the staging host.** *Problem:* DR-78 says all experiments run on the staging host, except EXP-03 and EXP-04. The matrix needs a fresh database per route batch (`CREATE DATABASE … TEMPLATE`), which needs a role with `CREATEDB` that the application roles do not have (DR-113) and that the staging cluster should not give; it has no timing criterion. *Decision:* the results of record come from the CI job `integration` at the commit under test (five repetitions by `bun run exp:10`), with the machine recorded; the staging deployment is checked by the smoke test and SC-16. *Consequences:* DOC-89 lists EXP-10 beside EXP-03 and EXP-04 as an experiment that does not need the staging host; DOC-71 keeps `test:authz` in `integration`. *Write to:* DOC-89, DOC-99, DOC-71.
 - **DR-172 (decided, Claude delegated): the generator's own checks are mutants injected through `host.guards`.** *Problem:* a matrix that cannot fail proves nothing, and DOC-39 §16 has only two negative tests (SC-04, SC-05). *Decision:* §3: eleven defective guards or repositories, built by the test composition root through the guard seam of DR-99, run in the same job; a surviving mutant fails the experiment. *Consequences:* the test composition root accepts guard overrides (test code only); about one more minute in `integration`. *Write to:* DOC-99, DOC-39 §16 (SC-04 and SC-05 are the first two of them), DOC-88 §13.
 - **E-100 error codes.** The cases of §7.2 assert the class of the answer until DOC-51 specifies E-100 (P2). The `charge.status` values come from DR-13 and DR-84; DOC-15 holds the DDL when it is written.
-- **The route count of the first version.** 74 is E-02…E-74 and E-169 as numbered today (E-169, `GET /staff/imports`, joined with DR-226 on 2026-10-21); P1-15 records the real count at its commit, and `catalogParity` reports a route that is mounted early or late (E-75…E-77, the SSE and inbox groups of P1-26).
+- **The route count of the first version (answered, DR-262).** The run at P1-15 counts **51** mounted routes (E-02 included; the household, SSE and inbox groups, `/public/*`, `/client-errors`, the rest of `/me/*` and E-51, E-54…E-56, E-68 and E-70 are not built), and `catalogParity` lists the 118 catalog entries that are not mounted yet. The line below stays as the original question. 74 is E-02…E-74 and E-169 as numbered today (E-169, `GET /staff/imports`, joined with DR-226 on 2026-10-21); P1-15 records the real count at its commit, and `catalogParity` reports a route that is mounted early or late (E-75…E-77, the SSE and inbox groups of P1-26).

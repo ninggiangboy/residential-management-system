@@ -1,6 +1,7 @@
 import {
   type Idempotent,
   IdParams,
+  type RouteInfo,
   type RouteSet,
   routePlugin,
   staffRoute,
@@ -212,16 +213,34 @@ export function importRoutes(d: ImportRouteDeps) {
     }
   }
 
-  const read = staffRoute(d.guards, 'residency', IMPORT_READ_ROLES)
-  const commit_ = staffRoute(d.guards, 'residency', COMMIT_UNIT_OWNER_IMPORT_ROLES)
+  const read = (info: RouteInfo) => staffRoute(d.guards, 'residency', IMPORT_READ_ROLES, info)
 
   return routePlugin({ prefix: '/staff/imports' })
-    .get('/templates/:kind', template, { ...read, params: KindParams })
+    .get('/templates/:kind', template, {
+      ...read({ endpoint: 'E-71', operationId: 'downloadImportTemplate' }),
+      params: KindParams,
+    })
     .post('/', d.idempotent({ account: staffAccount, mode: 'external' }, create), {
-      ...staffRoute(d.guards, 'residency', VALIDATE_UNIT_OWNER_IMPORT_ROLES, { idempotent: true }),
+      ...staffRoute(d.guards, 'residency', VALIDATE_UNIT_OWNER_IMPORT_ROLES, {
+        endpoint: 'E-72',
+        operationId: 'createImport',
+        idempotent: true,
+      }),
       body: CreateBody,
     })
-    .get('/', list, { ...read, query: ListQuery })
-    .get('/:id', get, { ...read, params: IdParams })
-    .post('/:id/commit', commit, { ...commit_, params: IdParams })
+    .get('/', list, {
+      ...read({ endpoint: 'E-169', operationId: 'listImports' }),
+      query: ListQuery,
+    })
+    .get('/:id', get, {
+      ...read({ endpoint: 'E-73', operationId: 'getImport' }),
+      params: IdParams,
+    })
+    .post('/:id/commit', commit, {
+      ...staffRoute(d.guards, 'residency', COMMIT_UNIT_OWNER_IMPORT_ROLES, {
+        endpoint: 'E-74',
+        operationId: 'commitImport',
+      }),
+      params: IdParams,
+    })
 }

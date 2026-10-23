@@ -21,6 +21,9 @@
     "outbox:requeue": "bun --env-file=../../.env.local scripts/outbox.ts requeue",
     "outbox:discard": "bun --env-file=../../.env.local scripts/outbox.ts discard",
     "jobs:run": "bun --env-file=../../.env.local scripts/jobs.ts",
+    "check:authz-metadata": "bun tests/authz/check-metadata.ts",
+    "test:authz": "bun --env-file=../../.env.local test tests/authz --timeout 300000 --pass-with-no-tests",
+    "exp:10": "bun --env-file=../../.env.local tests/exp/exp10-authz-matrix.ts",
     "test:grants": "bun --env-file=../../.env.local test tests/grants --timeout 60000 --pass-with-no-tests"
   },
   "dependencies": {

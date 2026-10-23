@@ -124,7 +124,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `*.contract.test.ts` | contract | `modules/building/test/contract/storage.contract.test.ts` |
 | `*.int.test.ts` | integration | `modules/identity/test/otp.int.test.ts` |
 | `*.race.test.ts` | race | `modules/finance/test/race/allocate.race.test.ts` |
-| `*.authz.test.ts` | authorization | `apps/api/test/authz/matrix.authz.test.ts` |
+| `*.authz.test.ts` | authorization | `apps/api/tests/authz/matrix.authz.test.ts` |
 | `*.spec.ts` | Playwright | `apps/cms-web/e2e/fee-batch.spec.ts` |
 | `*.yaml` | Maestro | `apps/resident-app/.maestro/otp-sign-in.yaml` |
 | `exp<NN>-<name>.ts` | experiment script | `apps/api/test/exp/exp09-otp-abuse.ts` |
@@ -484,16 +484,16 @@ The design is DOC-39 §4 and DR-151: the input (route metadata read in process),
 
 | Item | Value |
 | --- | --- |
-| Where it lives | `apps/api/test/authz/`: `generator.ts` (routes → cells), `expected.ts` (the pure function), `actors.ts`, `authz.fixtures.ts` (path parameters per scope), `authz.hand-table.ts` (the hand-typed copy of the DOC-27 §3.2 capability table), `mutations.authz.test.ts` (the checks of the generator itself, DOC-99 §3) |
-| Command | `bun run test:authz` |
-| Stage | `integration` on every pull request (about 2,700 cells); the same run in `nightly` |
-| Database | the `sample` template (§7.1), restored from the template between routes |
+| Where it lives | `apps/api/tests/authz/` (DR-262): `route-records.ts` (routes joined with their metadata and the catalog), `matrix.ts` (cells and the run), `expected.ts` (the pure function and the hand-typed copy of the DOC-27 §3.2 capability table), `actors.ts`, `fixtures.ts` (path parameters per scope, bodies), `world.ts` (the seeded building and the 16 tokens), `stepup.ts` (EXP-10 §7.1), `mutations.ts` and `mutations.authz.test.ts` (the checks of the generator itself, DOC-99 §3), `report.ts` |
+| Command | `bun run test:authz`; `bun run check:authz-metadata` (AG-01, AG-02) in `verify`; `bun run exp:10` (five runs and the result files) |
+| Stage | `integration` on every pull request (about 900 cells at P1-15 and about a minute; about 2,700 in the final version); the same run in `nightly` |
+| Database | one seeded copy of the `empty` template (the sample builders of §7 are not written yet), copied for each route with `cloneDatabase` so a route that changes data never changes what the next one sees |
 | Artifacts | `authz-routes.json`, `authz-matrix.json`, `authz-matrix.md`, uploaded by the job and **not committed** |
 | Fails on | an unexpected 2xx or 3xx, an unexpected refusal, any 5xx, a leak, a route without metadata, a missing fixture (DOC-39 §4.6) |
 | Results of record | EXP-10, DOC-99 §11 |
 | Owner task | P1-15 (first version), P6-08 (final) |
 
-A route added to the catalog (DOC-51) with a new path parameter needs its fixture in `authz.fixtures.ts` in the same pull request; the generator fails before sending a request otherwise (SC-13).
+A route added to the catalog (DOC-51) with a new path parameter needs its fixture in `fixtures.ts` in the same pull request; the generator fails before sending a request otherwise (SC-13).
 
 ## 14. Contract, architecture and catalog checks
 

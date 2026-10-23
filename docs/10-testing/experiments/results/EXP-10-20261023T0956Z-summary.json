@@ -1,0 +1,162 @@
+{
+  "experiment": "EXP-10",
+  "commit": "5aab66b",
+  "runs": [
+    {
+      "run": 1,
+      "metrics": {
+        "routes": 51,
+        "routesWithMetadata": 51,
+        "catalogParity": {
+          "missing": 118,
+          "extra": []
+        },
+        "cellsOwn": 816,
+        "cellsForeign": 95,
+        "unexpected2xx": 0,
+        "unexpectedRefusals": 0,
+        "serverErrors": 0,
+        "leaks": 0,
+        "missingFixtures": 0,
+        "mutants": {
+          "run": 11,
+          "caught": 11,
+          "survivors": []
+        },
+        "stepUp": {
+          "cases": 54,
+          "failures": 0
+        },
+        "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+      },
+      "pass": true
+    },
+    {
+      "run": 2,
+      "metrics": {
+        "routes": 51,
+        "routesWithMetadata": 51,
+        "catalogParity": {
+          "missing": 118,
+          "extra": []
+        },
+        "cellsOwn": 816,
+        "cellsForeign": 95,
+        "unexpected2xx": 0,
+        "unexpectedRefusals": 0,
+        "serverErrors": 0,
+        "leaks": 0,
+        "missingFixtures": 0,
+        "mutants": {
+          "run": 11,
+          "caught": 11,
+          "survivors": []
+        },
+        "stepUp": {
+          "cases": 54,
+          "failures": 0
+        },
+        "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+      },
+      "pass": true
+    },
+    {
+      "run": 3,
+      "metrics": {
+        "routes": 51,
+        "routesWithMetadata": 51,
+        "catalogParity": {
+          "missing": 118,
+          "extra": []
+        },
+        "cellsOwn": 816,
+        "cellsForeign": 95,
+        "unexpected2xx": 0,
+        "unexpectedRefusals": 0,
+        "serverErrors": 0,
+        "leaks": 0,
+        "missingFixtures": 0,
+        "mutants": {
+          "run": 11,
+          "caught": 11,
+          "survivors": []
+        },
+        "stepUp": {
+          "cases": 54,
+          "failures": 0
+        },
+        "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+      },
+      "pass": true
+    },
+    {
+      "run": 4,
+      "metrics": {
+        "routes": 51,
+        "routesWithMetadata": 51,
+        "catalogParity": {
+          "missing": 118,
+          "extra": []
+        },
+        "cellsOwn": 816,
+        "cellsForeign": 95,
+        "unexpected2xx": 0,
+        "unexpectedRefusals": 0,
+        "serverErrors": 0,
+        "leaks": 0,
+        "missingFixtures": 0,
+        "mutants": {
+          "run": 11,
+          "caught": 11,
+          "survivors": []
+        },
+        "stepUp": {
+          "cases": 54,
+          "failures": 0
+        },
+        "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+      },
+      "pass": true
+    },
+    {
+      "run": 5,
+      "metrics": {
+        "routes": 51,
+        "routesWithMetadata": 51,
+        "catalogParity": {
+          "missing": 118,
+          "extra": []
+        },
+        "cellsOwn": 816,
+        "cellsForeign": 95,
+        "unexpected2xx": 0,
+        "unexpectedRefusals": 0,
+        "serverErrors": 0,
+        "leaks": 0,
+        "missingFixtures": 0,
+        "mutants": {
+          "run": 11,
+          "caught": 11,
+          "survivors": []
+        },
+        "stepUp": {
+          "cases": 54,
+          "failures": 0
+        },
+        "matrixSha256": "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+      },
+      "pass": true
+    }
+  ],
+  "deterministic": {
+    "pass": true,
+    "hashes": [
+      "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab",
+      "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab",
+      "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab",
+      "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab",
+      "f2d8ec2836d6ac861ae04b23e5514bc1c779fc2c49956e0dc71da62c308bc4ab"
+    ]
+  },
+  "pass": true
+}

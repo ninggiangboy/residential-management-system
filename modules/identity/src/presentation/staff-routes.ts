@@ -2,6 +2,7 @@ import {
   API_PREFIX,
   type Idempotent,
   IdParams,
+  type RouteInfo,
   type RouteSet,
   routePlugin,
   staffRoute,
@@ -261,44 +262,81 @@ export function staffRoutes(d: StaffRouteDeps) {
       await d.enableStaffAccount.execute(staffOf(context), context.params.id),
     )
 
-  const route = (roles: Parameters<Guards['staff']>[0], extra: object = {}) =>
-    staffRoute(d.guards, 'staff', roles, extra)
+  const route = (roles: Parameters<Guards['staff']>[0], info: RouteInfo) =>
+    staffRoute(d.guards, 'staff', roles, info)
 
   return routePlugin({ prefix: '/staff' })
-    .get('/me', me, route(GET_STAFF_ME_ROLES))
-    .get('/sessions', listSessions, route(LIST_STAFF_SESSIONS_ROLES))
+    .get('/me', me, route(GET_STAFF_ME_ROLES, { endpoint: 'E-30', operationId: 'getStaffMe' }))
+    .get(
+      '/sessions',
+      listSessions,
+      route(LIST_STAFF_SESSIONS_ROLES, { endpoint: 'E-32', operationId: 'listStaffSessions' }),
+    )
     .delete('/sessions/:id', revokeSession, {
-      ...route(REVOKE_STAFF_SESSION_ROLES),
+      ...route(REVOKE_STAFF_SESSION_ROLES, {
+        endpoint: 'E-33',
+        operationId: 'revokeStaffSession',
+      }),
       params: IdParams,
     })
-    .post('/step-up', requestStepUp, { ...route(REQUEST_STEP_UP_ROLES), body: StepUpBody })
-    .get('/accounts', listAccounts, { ...route(LIST_STAFF_ACCOUNTS_ROLES), query: ListQuery })
+    .post('/step-up', requestStepUp, {
+      ...route(REQUEST_STEP_UP_ROLES, { endpoint: 'E-38', operationId: 'requestStepUp' }),
+      body: StepUpBody,
+    })
+    .get('/accounts', listAccounts, {
+      ...route(LIST_STAFF_ACCOUNTS_ROLES, {
+        endpoint: 'E-39',
+        operationId: 'listStaffAccounts',
+      }),
+      query: ListQuery,
+    })
     .post('/accounts', d.idempotent({ account: staffAccountKey }, createAccount), {
-      ...route(CREATE_STAFF_ACCOUNT_ROLES, { idempotent: true, stepUp: 'admin_change' }),
+      ...route(CREATE_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-40',
+        operationId: 'createStaffAccount',
+        idempotent: true,
+        stepUp: 'admin_change',
+      }),
       body: CreateBody,
     })
-    .get('/accounts/:id', getAccount, { ...route(GET_STAFF_ACCOUNT_ROLES), params: IdParams })
+    .get('/accounts/:id', getAccount, {
+      ...route(GET_STAFF_ACCOUNT_ROLES, { endpoint: 'E-41', operationId: 'getStaffAccount' }),
+      params: IdParams,
+    })
     .patch('/accounts/:id', updateAccount, {
-      ...route(UPDATE_STAFF_ACCOUNT_ROLES, { stepUp: ['admin_change', 'staff_email'] }),
+      ...route(UPDATE_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-42',
+        operationId: 'updateStaffAccount',
+        stepUp: ['admin_change', 'staff_email'],
+      }),
       params: IdParams,
       body: UpdateBody,
     })
     .post('/accounts/:id/lock', lockAccount, {
-      ...route(LOCK_STAFF_ACCOUNT_ROLES),
+      ...route(LOCK_STAFF_ACCOUNT_ROLES, { endpoint: 'E-43', operationId: 'lockStaffAccount' }),
       params: IdParams,
       body: ReassignBody,
     })
     .post('/accounts/:id/unlock', unlockAccount, {
-      ...route(UNLOCK_STAFF_ACCOUNT_ROLES),
+      ...route(UNLOCK_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-44',
+        operationId: 'unlockStaffAccount',
+      }),
       params: IdParams,
     })
     .post('/accounts/:id/disable', disableAccount, {
-      ...route(DISABLE_STAFF_ACCOUNT_ROLES),
+      ...route(DISABLE_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-45',
+        operationId: 'disableStaffAccount',
+      }),
       params: IdParams,
       body: ReassignBody,
     })
     .post('/accounts/:id/enable', enableAccount, {
-      ...route(ENABLE_STAFF_ACCOUNT_ROLES),
+      ...route(ENABLE_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-46',
+        operationId: 'enableStaffAccount',
+      }),
       params: IdParams,
     })
 }

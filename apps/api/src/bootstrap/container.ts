@@ -19,9 +19,10 @@ import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
 import type { OpenTicketsProbe } from '@mod/identity/contracts'
 import { installResidency } from '@mod/residency'
+import type { Guards } from '@rms/shared-types'
 import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
-import { createGuards } from './guards'
+import { createGuards, type GuardDeps } from './guards'
 import { createMailerFor } from './mailer'
 import { MODULE_CATALOG } from './module-catalog'
 import { createSmsSenderFor } from './sms'
@@ -50,6 +51,11 @@ export interface ContainerOverrides {
   accountBuildings?: AccountBuildings
   /** `finance`'s answer to "is an intent active?"; the real one comes with the finance module (DOC-36 §7.3). */
   probe?: ActiveIntentProbe
+  /**
+   * The guards every module receives (DR-99, DR-172): the mutants of the authorization matrix replace one of them with a
+   * defective one (EXP-10 §3). Test code only; production never passes it.
+   */
+  guards?: (real: Guards, deps: GuardDeps) => Guards
   /** `tickets`' answer to "does this staff member hold open tickets?"; the real one comes with the tickets module (DOC-26 §2.1). */
   tickets?: OpenTicketsProbe
 }
@@ -132,12 +138,14 @@ export function createContainer(
   const termsGate = createTermsGate({
     missingTerms: (...args) => building.api.missingTerms(...args),
   })
-  const guards = createGuards({
+  const guardDeps: GuardDeps = {
     verifier: { verify: (token) => identity.verifier.verify(token) },
     identity: { getStaff: (ids) => identity.api.getStaff(ids) },
     residency: { getMembership: (...args) => residency.api.getMembership(...args) },
     termsGate,
-  })
+  }
+  const realGuards = createGuards(guardDeps)
+  const guards = overrides.guards ? overrides.guards(realGuards, guardDeps) : realGuards
   // The wrapper of DOC-50 §8 for every route marked `R`; its store is `platform.idempotency_key` (DOC-17 §3).
   const idempotencyStore = new SqlIdempotencyStore(database)
   const idempotent = createIdempotent(idempotencyStore, clock)
