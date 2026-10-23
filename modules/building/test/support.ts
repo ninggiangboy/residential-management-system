@@ -99,6 +99,8 @@ export async function createHarness(options: HarnessOptions = {}) {
     stepUp,
     probe,
     audited: audit.audited,
+    guards: { staff: () => ({ transform: async () => {} }) },
+    staffNames: { names: async () => ({}) },
     files: {
       env: 'test',
       uploadUrlTtlSeconds: 900,

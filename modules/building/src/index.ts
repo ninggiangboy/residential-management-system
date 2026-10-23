@@ -4,7 +4,13 @@ export type { GatewayView } from './application/gateway-config-reader'
 export type { UsageReporter } from './application/ports'
 export type { BuildingQueries } from './application/queries/building-queries'
 export type { SaveGatewayInput } from './application/use-cases/save-gateway-config'
-export type { BuildingDeps, BuildingModule, BuildingUseCases } from './building.module'
+export type {
+  BuildingDeps,
+  BuildingModule,
+  BuildingRoutes,
+  BuildingUseCases,
+} from './building.module'
 export type { BuildingHost } from './install'
 export { installBuilding } from './install'
 export { buildingManifest } from './manifest'
+export type { StaffNames } from './presentation/building-routes'

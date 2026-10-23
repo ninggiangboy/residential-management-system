@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@core/db": "workspace:*",
+    "@core/http": "workspace:*",
     "@core/kernel": "workspace:*",
     "@core/messaging": "workspace:*",
     "@core/runtime": "workspace:*",
@@ -40,6 +41,7 @@
     "@rms/shared-types": "workspace:*",
     "@sinclair/typebox": "0.34.52",
     "drizzle-orm": "0.45.4",
+    "elysia": "1.4.30",
     "sharp": "0.35.5"
   },
   "devDependencies": {

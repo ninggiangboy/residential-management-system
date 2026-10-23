@@ -4,6 +4,7 @@ import {
   PreconditionRequiredError,
   RuleViolationError,
   requireRole,
+  ValidationError,
   VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
@@ -37,10 +38,14 @@ export interface SaveGatewayInput {
   version?: number
 }
 
+/** The body of E-50: on a row that exists, `driver`, `status` and `receivingAccount` that are absent keep their stored value (DOC-36 §7.2). */
+export type SaveGatewayRequest = Omit<SaveGatewayInput, 'driver' | 'status' | 'receivingAccount'> &
+  Partial<Pick<SaveGatewayInput, 'driver' | 'status' | 'receivingAccount'>>
+
 type Saved = { created: boolean; config: GatewayView }
 
 /** The gateway is the Admin's alone (DOC-36 §7). The route reads this list for its `audience` (DOC-12 §5.3). */
-const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+export const SAVE_GATEWAY_CONFIG_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /**
  * The Admin's save of the payment-gateway configuration (DOC-36 §7, DR-33): a step-up proof, the version the form read, the
@@ -64,9 +69,9 @@ export class SaveGatewayConfig {
     this.auditedSave = this.buildAuditedSave()
   }
 
-  async execute(staff: StaffContext, input: SaveGatewayInput): Promise<Saved> {
+  async execute(staff: StaffContext, input: SaveGatewayRequest): Promise<Saved> {
     requireRole(staff, SAVE_GATEWAY_CONFIG_ROLES)
-    GatewayConfig.assertAccount(input.receivingAccount)
+    if (input.receivingAccount) GatewayConfig.assertAccount(input.receivingAccount)
     const result = await this.uow.run(() => this.auditedSave(staff, input))
     this.reader.invalidate(staff.buildingId, input.provider)
     return result
@@ -79,13 +84,15 @@ export class SaveGatewayConfig {
         object: (r: Saved) => ({ type: 'gateway_config', id: r.config.id }),
         details: () => ({ stepUp: true }),
       },
-      async (staff: StaffContext, input: SaveGatewayInput) => {
+      async (staff: StaffContext, request: SaveGatewayRequest) => {
         const { gateways, directory, stepUp } = this
         // A save asks for a second proof, even one that only re-saves; the verifier counts a wrong password toward the lockout.
-        if (!input.stepUp)
+        if (!request.stepUp)
           throw new ForbiddenError('step_up_required', 'A step-up proof is required')
-        await stepUp.verifyStepUp(staff, 'gateway_config', input.stepUp)
+        await stepUp.verifyStepUp(staff, 'gateway_config', request.stepUp)
 
+        const existing = await gateways.findActive(staff.scope, request.provider)
+        const input = this.resolve(request, existing)
         GatewayConfig.assertKnownSecrets(input)
         // `fake` pretends to be a provider and belongs to a demo building only (DR-26).
         if (input.driver === 'fake' && !(await directory.isDemo(staff.buildingId)))
@@ -95,12 +102,34 @@ export class SaveGatewayConfig {
             'driver',
           )
 
-        const existing = await gateways.findActive(staff.scope, input.provider)
         return existing
           ? this.update(staff, input, new GatewayConfig(existing))
           : this.create(staff, input)
       },
     )
+  }
+
+  /** Fills what the request left out: from the stored row, or on a first configuration with the defaults; a missing required field is 400. */
+  private resolve(
+    request: SaveGatewayRequest,
+    existing: GatewayConfigRecord | null,
+  ): SaveGatewayInput {
+    const driver = request.driver ?? existing?.driver
+    const receivingAccount = request.receivingAccount ?? existing?.receivingAccount
+    const missing = [
+      ...(driver ? [] : ['driver']),
+      ...(receivingAccount ? [] : ['receivingAccount']),
+    ]
+    if (!driver || !receivingAccount)
+      throw new ValidationError(
+        missing.map((path) => ({ path, code: 'required', message: 'required' })),
+      )
+    return {
+      ...request,
+      driver,
+      receivingAccount,
+      status: request.status ?? existing?.status ?? 'active',
+    }
   }
 
   /** The save of a row that exists: the version the form read, the lock, the intent probe, the merge of the secrets (DOC-36 §7.3). */

@@ -8,7 +8,19 @@ export interface TermsVersionRecord {
   text: Bilingual
 }
 
+/** A published version with who published it and how many accounts accepted it (E-52). */
+export interface TermsVersionListing extends TermsVersionRecord {
+  publishedBy: string
+  publishedAt: Date
+  acceptedCount: number
+}
+
 export interface TermsRepository {
+  /** Every version of the kind (both when `null`), newest first, with the number of acceptances. */
+  list(
+    scope: BuildingScope,
+    kind: TermsVersionRecord['kind'] | null,
+  ): Promise<TermsVersionListing[]>
   /** The rows of the gate of DOC-35 §9.2: the latest version of each kind that the account has not accepted. */
   missing(
     scope: BuildingScope,

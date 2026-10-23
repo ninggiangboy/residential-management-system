@@ -1,7 +1,11 @@
 import type { Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { sql } from 'drizzle-orm'
-import type { TermsRepository, TermsVersionRecord } from '../../domain/terms-repository'
+import type {
+  TermsRepository,
+  TermsVersionListing,
+  TermsVersionRecord,
+} from '../../domain/terms-repository'
 
 type Row = { id: string; kind: TermsVersionRecord['kind']; version: number }
 
@@ -11,6 +15,36 @@ type Row = { id: string; kind: TermsVersionRecord['kind']; version: number }
  */
 export class DrizzleTermsRepository implements TermsRepository {
   constructor(private readonly database: Database) {}
+
+  async list(
+    scope: BuildingScope,
+    kind: TermsVersionRecord['kind'] | null,
+  ): Promise<TermsVersionListing[]> {
+    const rows = await this.database.executor.execute<{
+      id: string
+      kind: TermsVersionRecord['kind']
+      version: number
+      text: TermsVersionRecord['text']
+      published_by: string
+      published_at: Date
+      accepted_count: number
+    }>(sql`
+      SELECT v.id, v.kind, v.version, v.text, v.published_by, v.published_at,
+             (SELECT count(*)::int FROM building.terms_acceptance a
+               WHERE a.building_id = v.building_id AND a.version_id = v.id) AS accepted_count
+        FROM building.terms_version v
+       WHERE v.building_id = ${scope.buildingId} AND (${kind}::text IS NULL OR v.kind = ${kind})
+       ORDER BY v.published_at DESC, v.kind, v.version DESC`)
+    return [...rows].map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      version: Number(row.version),
+      text: row.text,
+      publishedBy: row.published_by,
+      publishedAt: new Date(row.published_at),
+      acceptedCount: Number(row.accepted_count),
+    }))
+  }
 
   async missing(scope: BuildingScope, accountId: string): Promise<Row[]> {
     return [

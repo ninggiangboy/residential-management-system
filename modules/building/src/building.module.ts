@@ -1,4 +1,5 @@
 import type { Database } from '@core/db'
+import { routePlugin } from '@core/http'
 import type { Clock, IdGenerator, Log, SecretBox } from '@core/kernel'
 import {
   DrizzleInboxGuard,
@@ -8,6 +9,7 @@ import {
 import type { AppModule } from '@core/runtime'
 import type { ObjectStorage } from '@core/storage'
 import type { Audited } from '@mod/audit/contracts'
+import type { Guards } from '@rms/shared-types'
 import { BuildingApiImpl } from './application/api/building-api-impl'
 import { FilesApiImpl } from './application/api/files-api-impl'
 import { BuildingDocumentLoader } from './application/building-document'
@@ -50,8 +52,18 @@ import { DrizzleSettingsRepository } from './infrastructure/persistence/drizzle-
 import { DrizzleTermsRepository } from './infrastructure/persistence/drizzle-terms-repository'
 import { buildingInbox, buildingOutbox } from './infrastructure/persistence/schema'
 import { buildingManifest } from './manifest'
+import {
+  type BuildingRouteDeps,
+  buildingRoutes,
+  type StaffNames,
+} from './presentation/building-routes'
+import { type UploadRouteDeps, uploadRoutes } from './presentation/upload-routes'
 
 export interface BuildingDeps {
+  /** The guards of DOC-12 §5.3, built by the composition root from the contracts of `identity`. */
+  guards: Guards
+  /** The names of the staff who published a terms version, from `identity`. */
+  staffNames: StaffNames
   storage: ObjectStorage
   /** The `SETTINGS_ENCRYPTION_KEYS` ring (DOC-36 §6). */
   secretBox: SecretBox
@@ -80,7 +92,7 @@ export interface BuildingModuleDeps extends BuildingDeps {
   logger: Log
 }
 
-/** What the staff and resident routes call (the routes come with the `staff` guard, P1-10; DOC-12 §4.5). */
+/** What the staff and resident routes call (DOC-12 §4.5). */
 export interface BuildingUseCases {
   /** `PATCH /staff/settings`. */
   updateBuildingSettings: UpdateBuildingSettings
@@ -99,6 +111,14 @@ export interface BuildingModule extends AppModule<'building'> {
   /** The reads behind `GET /staff/settings` and `GET /staff/gateway` (DOC-36 §4, §7.1). */
   readonly queries: BuildingQueries
   readonly useCases: BuildingUseCases
+  /** `/staff/settings`, `/gateway`, `/terms` and `/uploads` (E-36, E-37, E-47…E-50, E-52, E-53). */
+  readonly routes: BuildingRoutes
+}
+
+export type BuildingRoutes = ReturnType<typeof createRoutes>
+
+function createRoutes(d: BuildingRouteDeps & UploadRouteDeps) {
+  return routePlugin().use(buildingRoutes(d)).use(uploadRoutes(d))
 }
 
 const NO_USAGE: UsageReporter = { report() {} }
@@ -219,6 +239,13 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
     files,
     queries,
     useCases,
+    routes: createRoutes({
+      queries,
+      files,
+      ...useCases,
+      staffNames: deps.staffNames,
+      guards: deps.guards,
+    }),
     handlers,
     outbox: { name: 'building', table: buildingOutbox, inboxTable: buildingInbox },
     jobs: [
