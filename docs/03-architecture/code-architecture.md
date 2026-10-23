@@ -1,6 +1,6 @@
 # Code architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-254: the layout of a module, §3, §4.1, §4.5, §6.4, §14 item 17; P1-07 and P1-08: the first two modules, `check:scope` and its parser, `audited` as built, `inBuilding`, DR-252, DR-253; P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (DR-255: the aggregate decides and one guarded statement applies, §3, §4.5 rules 6 and 9, §9.1; earlier: 2026-10-22, DR-254: the layout of a module, §3, §4.1, §4.5, §6.4, §14 item 17; P1-07 and P1-08: the first two modules, `check:scope` and its parser, `audited` as built, `inBuilding`, DR-252, DR-253; P1-05: `Database.transaction` options, jobs and the writer rules; P1-04: §5.1 layout as built, §6 excludes, §12 classes, `routePlugin`, DR-247, DR-248; DR-02: `core-kernel` → `core-kernel`, `core-web` → `core-web`; earlier: 2026-10-21, P1-02: the core packages are vendored, §13 holds the result, §8.1 behaviors confirmed; earlier: 2026-10-20, DR-188: `packages/client-core`; earlier: DR-158, DR-169: `ops/` and `test-support` in the layout; DR-126, DR-127) · DOC-12
 > Depends on: original SDD §4, §7.4, §19.4, §23, [DR](../00-decision-register.md) (DR-02, 03, 04, 09, 10, 11, 12, 14, 36, 40, 42, 55, 57, 62, 74, 77, 85, 87, 188, 254), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md); versions are in [DOC-11](tech-stack-and-versions.md)
 > Main readers: P1-01, P1-02, P1-03, P1-04…P1-13 (every task that creates a module or a repository), P2-xx (finance), DOC-14…17 (tables), DOC-26, DOC-27, DOC-39, DOC-42, DOC-88; every code review
 
@@ -111,7 +111,7 @@ Five habits keep the layers honest:
 
 1. A use case receives its ports in the constructor and never builds them. The module factory (§4.3) builds them once.
 2. A route handler is three lines: read the validated input, call one use case, map the result to a response DTO. A branch on a business rule in a route is a defect.
-3. An aggregate carries its own rules. A use case loads it, calls a method (`file.verify(...)`, `terms.publish(...)`) and saves it; the transition rule is not copied into the use case. A class that owns many operations and edits rows (`FilesService`, `GatewayService`) is the mistake this prevents: each operation is a use case, each rule is on the aggregate (DR-254).
+3. An aggregate carries its own rules. A use case loads it, calls a method (`file.verify(...)`, `terms.publish(...)`) and saves it; the transition rule is not copied into the use case. A method that moves a row returns a `Transition` (`{ id, expect, set }`, DR-255) and the repository applies it in one guarded statement, so the aggregate owns the rule and the database owns the race (§9.1). A class that owns many operations and edits rows (`FilesService`, `GatewayService`) is the mistake this prevents: each operation is a use case, each rule is on the aggregate (DR-254).
 4. The domain computes with values it is given. "Today" arrives as `LocalDate`, "now" as `Date` from the `Clock` port, ids from the `IdGenerator` port (UUIDv7, DR-10). A domain file that calls `new Date()` fails review.
 5. A name says what a class is for. `*Service` and `*Manager` are not allowed in `application/`; a helper shared by use cases is named by its role (`BuildingDirectory`, `FileLoader`) and is not a use case (it has no `execute`).
 
@@ -236,9 +236,10 @@ The tree of §4.1 is the shape; these rules make it binding. `bun run check:layo
 | 3 | A read is not a use case. Reads are methods of a query service, `application/queries/<name>-queries.ts` (`BuildingQueries`, `FileQueries`: one class per area, a few per module, a method per read, no `execute`, no transaction, no state change). `queries/` holds that. `api/<name>-api-impl.ts` is the implementation of the module's contract: it delegates its reads to the query services and its writes to the use cases, and has no rule of its own. A file of `use-cases/` named `get-`, `list-`, `view-`, `find-`, `search-` or `count-` is a read in the wrong place | ✔ (the names and the folder) |
 | 4 | No class named `*Service` or `*Manager` in `application/`; no `execute` outside `use-cases/` | ✔ |
 | 5 | A repository interface (`*Repository`) lives in `domain/<aggregate>-repository.ts`; `application/ports.ts` holds ports to the outside only | ✔ |
-| 6 | An entity with a status or an invariant is an aggregate in `domain/` with methods that change its state and throw a domain error; it may extend `AggregateRoot`. A rule without identity (magic bytes, purpose limits, settings validation) stays a function or a value object | review |
+| 6 | An entity with a status or an invariant is an aggregate in `domain/` with methods that change its state (a method returns a `Transition`, §9.1) and throw a domain error; it may extend `AggregateRoot`. A rule without identity (magic bytes, purpose limits, settings validation) stays a function or a value object | review |
 | 7 | `<name>.module.ts` exports `create<Name>Module`, `install.ts` exports `install<Name>` and the host type, `index.ts` only re-exports, `config.ts` exists when the module has a configuration slice | ✔ (the two files) |
 | 8 | A helper shared by use cases is named by its role and has no `execute` | review |
+| 9 | Prefer a repository in `infrastructure/` that holds no business rule and applies a `Transition` or inserts. It is a preference, not a ban: a statement with a `CASE`, a comparison with `now` or counter arithmetic is allowed when it is the simpler or the safer way, if a comment names the rule it carries and a test covers it. A set-based statement (a bulk revocation, an eviction) does the same (DR-255 items 2 and 5) | review (no automatic check) |
 
 A module task is **done** when: the layout rules hold; every endpoint of the task's acceptance has a route in `presentation/` with its `audience` (§5.3), or the task names the routes still open and the task that closes them (the use cases already take the actor as their first argument, §8.3); the tests of the task pass; the documents of §14 item 16 are updated.
 
@@ -635,6 +636,29 @@ Side effects outside the database (mail, push, files) must tolerate a retry: the
 ### 9.1 The database decides, the code asks
 
 Every transition two actors can race on is one statement of the form `UPDATE … SET <new state> WHERE <id and building> AND <expected state> RETURNING id`. Zero rows means someone else won; the use case turns that into a typed 409, never into a silent overwrite. The shape is in §7.2 (`markPaidIfOpen`). The forbidden shape is "read the status, decide in code, write without the predicate": the EXP-03 baseline is exactly that code, written to be beaten. When several rows are updated in one transaction they are updated in ascending id order so that two overlapping transactions cannot deadlock (DR-14).
+
+**The aggregate decides, one statement applies (DR-255).** The two rules above and the aggregate of §3 are one mechanism. A method of the aggregate reads the state it was loaded with and `now`, throws a domain error when the rule forbids, and returns a `Transition` (`@core/kernel`: `{ id, expect, set }`). `expect` holds the fields the decision read, `set` the new values. The repository's `apply(transition)` is the one statement `UPDATE … SET <set> WHERE id = :id AND <expect> RETURNING …`, where a `null` in `expect` is `IS NULL`; the statement computes nothing.
+
+```ts
+// domain: the rule, no I/O
+recordFailure(lockout: Lockout, now: Date): FailureOutcome {
+  if (this.lockedSeconds(now) > 0) return { kind: 'locked', seconds: this.lockedSeconds(now) }
+  const failedAttempts = this.lockExpired(now) ? 1 : this.record.failedAttempts + 1
+  const lockedUntil = failedAttempts >= lockout.maxAttempts ? addMinutes(now, lockout.minutes) : null
+  return { kind: 'counted', failedAttempts, lockedUntil, transition: { id: this.id,
+    expect: { failedAttempts: this.record.failedAttempts, lockedUntil: this.record.lockedUntil },
+    set: { failedAttempts, lockedUntil } } }
+}
+// application: a wrong password counts for every actor, so a lost race loads again and decides again
+await decide(async () => {
+  const account = await accounts.find(id)
+  const outcome = account.recordFailure(lockout, now)
+  if (outcome.kind === 'locked') return { done: true, value: outcome }
+  return (await accounts.apply(outcome.transition)) ? { done: true, value: outcome } : { done: false }
+})
+```
+
+When the actors are rivals (a link used twice, two approvals), the use case does not repeat: `apply` returning `null` becomes the typed 409 or `token_invalid`. `decide` is for a change that every actor must get counted (a wrong password, a step-up attempt); it stops after `MAX_DECIDE_ATTEMPTS` and answers 409 `conflict`. A counter does not guard on `version` (§9.2): a failed sign-in must not stale an open edit form. Every transition keeps its barrier race test (master plan §7.2): 20 parallel wrong passwords leave 5 failures, two parallel refreshes of one token give one rotation. A rule that moved into an aggregate also gets a unit test with no database.
 
 ### 9.2 Optimistic version for edited aggregates
 
