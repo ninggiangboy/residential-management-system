@@ -1,6 +1,12 @@
 import { requireRole } from '@core/kernel'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
-import type { GatewayConfigDto, GatewayDriver, GatewayProvider, MissingTerm } from '../../contracts'
+import type {
+  GatewayConfigDto,
+  GatewayDriver,
+  GatewayProvider,
+  MissingTerm,
+  TermsKind,
+} from '../../contracts'
 import { GATEWAY_DRIVERS } from '../../domain/gateway-config'
 import type { GatewayConfigRepository } from '../../domain/gateway-config-repository'
 import type { TermsRepository } from '../../domain/terms-repository'
@@ -10,8 +16,9 @@ import type { GatewayConfigReader, GatewayView } from '../gateway-config-reader'
 import { scopeOf } from '../scope-of'
 
 /** `GET /staff/settings` and `GET /staff/gateway` are the Admin's alone (DOC-36 §4, §7.1). The routes read these lists for their `audience`. */
-const READ_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
-const READ_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+export const GET_SETTINGS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+export const GET_GATEWAY_ROLES = ['admin'] as const satisfies readonly StaffRole[]
+export const LIST_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
 /** The reads of the building: settings, gateway configuration and terms. No state change, no transaction, no rule of its own (DOC-12 §4.5 rule 3). */
 export class BuildingQueries {
@@ -25,13 +32,13 @@ export class BuildingQueries {
 
   /** `GET /staff/settings` (DOC-36 §4): the building row and the settings in one document, with its `ETag`. */
   async settings(staff: StaffContext): Promise<BuildingDocument> {
-    requireRole(staff, READ_SETTINGS_ROLES)
+    requireRole(staff, GET_SETTINGS_ROLES)
     return this.documents.load(staff.buildingId)
   }
 
   /** `GET /staff/gateway`: the active configurations with masked secrets and the drivers this building may use (DOC-36 §7.1). */
   async gatewayView(staff: StaffContext) {
-    requireRole(staff, READ_GATEWAY_ROLES)
+    requireRole(staff, GET_GATEWAY_ROLES)
     const { gateways, directory, reader } = this
     const isDemo = await directory.isDemo(staff.buildingId)
     const configs: GatewayView[] = []
@@ -55,6 +62,12 @@ export class BuildingQueries {
     opts: { lock?: 'share' } = {},
   ): Promise<GatewayConfigDto | null> {
     return this.reader.config(buildingId, provider, opts)
+  }
+
+  /** `GET /staff/terms` (E-52): every published version, newest first, with the number of accounts that accepted it. */
+  async termsVersions(staff: StaffContext, kind: TermsKind | null) {
+    requireRole(staff, LIST_TERMS_ROLES)
+    return this.terms.list(staff.scope, kind)
   }
 
   /**

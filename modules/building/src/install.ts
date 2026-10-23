@@ -15,6 +15,8 @@ export function installBuilding(host: BuildingHost): BuildingModule {
     stepUp: host.stepUp,
     probe: host.probe,
     audited: host.audited,
+    guards: host.guards,
+    staffNames: host.staffNames,
     files: host.files,
     settingsCacheSeconds: host.settingsCacheSeconds,
     uploadRatePerHour: host.uploadRatePerHour,

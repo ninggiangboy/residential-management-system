@@ -98,6 +98,12 @@ export function createContainer(
     })
   if (!secrets.SETTINGS_ENCRYPTION_KEYS) throw new Error('SETTINGS_ENCRYPTION_KEYS is required')
   const secretBox = createSecretBox(keyRingFromBase64(secrets.SETTINGS_ENCRYPTION_KEYS))
+  // The guards are built from the contracts of `identity`, which is installed after `building` and with the routes that use
+  // them: forwarders close the loop. They are read per request, long after `identity` exists.
+  const guards = createGuards({
+    verifier: { verify: (token) => identity.verifier.verify(token) },
+    identity: { getStaff: (ids) => identity.api.getStaff(ids) },
+  })
   const building = installBuilding({
     logger,
     clock,
@@ -109,6 +115,13 @@ export function createContainer(
     stepUp: overrides.stepUp ?? { verifyStepUp: (...args) => identity.api.verifyStepUp(...args) },
     probe: overrides.probe ?? noIntents,
     audited: audit.audited,
+    guards,
+    staffNames: {
+      names: async (ids) =>
+        Object.fromEntries(
+          (await identity.api.getStaff([...ids])).map((row) => [row.staffId, row.fullName]),
+        ),
+    },
     files: {
       env: core.APP_ENV,
       uploadUrlTtlSeconds: filesConfig.FILES_UPLOAD_URL_TTL_SECONDS,
@@ -134,11 +147,6 @@ export function createContainer(
   })
   installed.push(building)
 
-  // The guards are built from the contracts of `identity`, which is installed with the routes that use them: forwarders close the loop.
-  const guards = createGuards({
-    verifier: { verify: (token) => identity.verifier.verify(token) },
-    identity: { getStaff: (ids) => identity.api.getStaff(ids) },
-  })
   const { identity: identityConfig } = config
   const identity = installIdentity({
     logger,
@@ -223,6 +231,7 @@ export function createContainer(
     clock,
     ids,
     database,
+    building,
     identity,
     /** The installed modules, in install order. */
     modules: installed as readonly AppModule[],
