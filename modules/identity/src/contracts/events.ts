@@ -1,12 +1,14 @@
 /**
  * The events `identity` writes to its own outbox (DOC-09 §6.3). `mail_requested` is a command for the worker (retry class
  * `default`); `session_revoked` is a fact that `realtime` and `notification` consume. `sms_requested` is the resident command
- * for the worker (retry class `sms`, P1-11). `account_deletion_executed` joins with P6-04.
+ * for the worker (retry class `sms`, P1-11). `account_deletion_executed` is declared here because `residency` consumes it
+ * (P1-12); `identity` starts writing it, and lists it in its manifest, with the deletion job (P6-04).
  */
 export const IDENTITY_EVENTS = {
   mailRequested: 'identity.mail_requested.v1',
   smsRequested: 'identity.sms_requested.v1',
   sessionRevoked: 'identity.session_revoked.v1',
+  accountDeletionExecuted: 'identity.account_deletion_executed.v1',
 } as const
 
 /** The ten words of DOC-26 §3.8, shared by `refresh_family.revoked_reason` and the event. */
@@ -60,4 +62,11 @@ export interface SmsRequestedPayload {
   params: Record<string, string>
   secretEnc: string | null
   expiresAt: string
+}
+
+/** What the deletion job clears is the account of `accountId`; `buildingId` is `null` because an account has no single building. */
+export interface AccountDeletionExecutedPayload {
+  buildingId: string | null
+  accountId: string
+  executedAt: string
 }

@@ -78,4 +78,9 @@ export class BuildingQueries {
     const rows = await this.terms.missing(scopeOf(buildingId), accountId)
     return rows.map((row) => ({ kind: row.kind, version: row.version, versionId: row.id }))
   }
+
+  /** `GET /me/terms` (E-16, DOC-35 §9.3): the latest version of each kind for one building, with the account's acceptance. */
+  termsOf(accountId: string, buildingId: string) {
+    return this.terms.latestFor(scopeOf(buildingId), accountId)
+  }
 }

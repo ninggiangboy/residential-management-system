@@ -93,6 +93,7 @@ export interface SentMail {
 const NO_GUARDS: Guards = {
   staff: () => ({ transform: async () => {} }),
   resident: () => ({ transform: async () => {} }),
+  unit: () => ({ transform: async () => {} }),
 }
 
 export async function createHarness(options: HarnessOptions = {}) {

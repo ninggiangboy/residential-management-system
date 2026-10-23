@@ -4,6 +4,7 @@ import {
   createSecretBox,
   type IdGenerator,
   keyRingFromBase64,
+  type SecretBox,
   SystemClock,
   UuidV7Generator,
 } from '@core/kernel'
@@ -15,6 +16,7 @@ import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
+import { installResidency } from '@mod/residency'
 import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
 import { createGuards } from './guards'
@@ -40,9 +42,9 @@ export interface ContainerOverrides {
   stepUp?: StepUpVerifier
   /** The SMS sender (tests: one that records); by default the driver `SMS_DRIVER` names. */
   sms?: SmsSender
-  /** `residency`'s `listActiveMemberships` for the sign-in answer; the real one comes with P1-12. */
+  /** `ResidencyApi.listActiveMemberships` for the sign-in answer (tests: a stand-in); by default `residency`'s own. */
   memberships?: ActiveMemberships
-  /** `ResidencyApi.buildingIdsOfAccounts` for boot guard check 1; the real one comes with P1-12. */
+  /** `ResidencyApi.buildingIdsOfAccounts` for boot guard check 1 (tests: a stand-in); by default `residency`'s own. */
   accountBuildings?: AccountBuildings
   /** `finance`'s answer to "is an intent active?"; the real one comes with the finance module (DOC-36 §7.3). */
   probe?: ActiveIntentProbe
@@ -50,15 +52,6 @@ export interface ContainerOverrides {
 
 /** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
 const noIntents: ActiveIntentProbe = { hasActive: async () => false }
-
-/**
- * Until `residency` is installed (P1-12) no account has a unit, so none is active: the sign-in answers `memberships: []` and the
- * app shows "no unit is linked" (UC-14 E7). P1-12 replaces this with `ResidencyApi.listActiveMemberships`.
- */
-const noMemberships: ActiveMemberships = { listActive: async () => [] }
-
-/** The same for boot guard check 1: with no `residency` there is no membership, so no flagged account is anywhere (P1-12 binds the real call). */
-const noAccountBuildings: AccountBuildings = { buildingIdsOfAccounts: async () => [] }
 
 /** What the process says about its own life, read by `/health/ready` and by the shutdown. */
 interface Lifecycle {
@@ -118,13 +111,15 @@ export function createContainer(
   const secretBox = createSecretBox(keyRingFromBase64(secrets.SETTINGS_ENCRYPTION_KEYS))
   // The guards are built from the contracts of `identity`, which is installed after `building` and with the routes that use
   // them: forwarders close the loop. They are read per request, long after `identity` exists.
+  // The gate of DOC-35 §9.2 reads `building`; the `unit(capability)` guard calls it once it knows the building.
+  const termsGate = createTermsGate({
+    missingTerms: (...args) => building.api.missingTerms(...args),
+  })
   const guards = createGuards({
     verifier: { verify: (token) => identity.verifier.verify(token) },
     identity: { getStaff: (ids) => identity.api.getStaff(ids) },
-  })
-  // The gate of DOC-35 §9.2 reads `building`; the `unit(capability)` guard of P1-12 calls it once it knows the building.
-  const termsGate = createTermsGate({
-    missingTerms: (...args) => building.api.missingTerms(...args),
+    residency: { getMembership: (...args) => residency.api.getMembership(...args) },
+    termsGate,
   })
   const building = installBuilding({
     logger,
@@ -138,6 +133,10 @@ export function createContainer(
     probe: overrides.probe ?? noIntents,
     audited: audit.audited,
     guards,
+    residentBuildings: {
+      buildingIdsOf: async (accountId) =>
+        (await residency.api.buildingIdsOfAccounts([accountId])).map((row) => row.buildingId),
+    },
     staffNames: {
       names: async (ids) =>
         Object.fromEntries(
@@ -177,7 +176,10 @@ export function createContainer(
     database,
     mailer: overrides.mailer ?? createMailerFor(config, logger),
     sms: overrides.sms ?? createSmsSenderFor(config, logger),
-    memberships: overrides.memberships ?? noMemberships,
+    // `residency` is installed after `identity` (it asks for accounts), so the sign-in answer is forwarded to it.
+    memberships: overrides.memberships ?? {
+      listActive: (accountId) => residency.api.listActiveMemberships(accountId),
+    },
     secretBox,
     building: building.api,
     audited: audit.audited,
@@ -220,6 +222,24 @@ export function createContainer(
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
   })
   installed.push(identity)
+
+  // The PII ring (DR-65) is required by the `api` role only: a `worker` clears profiles and never seals, so the box is built on first use.
+  let piiBox: SecretBox | undefined
+  const residency = installResidency({
+    logger,
+    clock,
+    ids,
+    database,
+    building: building.api,
+    pii: () => {
+      if (!secrets.PII_ENCRYPTION_KEYS) throw new Error('PII_ENCRYPTION_KEYS is required')
+      piiBox ??= createSecretBox(keyRingFromBase64(secrets.PII_ENCRYPTION_KEYS))
+      return piiBox
+    },
+    audited: audit.audited,
+    outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+  })
+  installed.push(residency)
 
   const runtime = createRuntime({
     modules: installed,
@@ -268,12 +288,16 @@ export function createContainer(
     database,
     building,
     identity,
+    residency,
     guards,
     termsGate,
     /** What `bootGuard` reads (DOC-36 §10.1). */
     bootGuard: {
       identity: identity.api,
-      accountBuildings: overrides.accountBuildings ?? noAccountBuildings,
+      accountBuildings: overrides.accountBuildings ?? {
+        buildingIdsOfAccounts: async (accountIds) =>
+          (await residency.api.buildingIdsOfAccounts([...accountIds])).map((row) => row.buildingId),
+      },
       building: building.api,
     },
     /** The installed modules, in install order. */

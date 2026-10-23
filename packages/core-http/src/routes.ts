@@ -44,3 +44,16 @@ export const residentRoute = <Guard extends object>(
   ...guards.resident(),
   ...routeMeta(tag, { kind: 'resident' }),
 })
+
+/**
+ * A route of one unit: the `unit(capability)` guard (token, `X-Unit-Id`, membership, terms gate, policy) and the audience from the
+ * same `capability`, so the two cannot differ (DOC-12 §5.3).
+ */
+export const unitRoute = <Guard extends object, Capability extends string>(
+  guards: { unit(capability: Capability): Guard },
+  tag: string,
+  capability: Capability,
+) => ({
+  ...guards.unit(capability),
+  ...routeMeta(tag, { kind: 'resident', capability }),
+})

@@ -31,6 +31,7 @@
     "test:integration": "bun --env-file=../../.env.local test ./test --timeout 60000 --pass-with-no-tests"
   },
   "dependencies": {
+    "@core/context": "workspace:*",
     "@core/db": "workspace:*",
     "@core/http": "workspace:*",
     "@core/kernel": "workspace:*",

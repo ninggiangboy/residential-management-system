@@ -53,7 +53,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
 
 - `@app/api` (`apps/api`) is the composition root: it holds the HTTP server and the worker role. It imports modules only through their exports map (`.`, `./contracts`, `./config`, `./manifest`, `./schema`, `./integrations/<consumer>`) and never imports a driver directly. Only `main.ts` and `app.ts` may import the container.
 - `@app/cms-web` (Vite, React 19, TanStack Router, Tailwind 4), `@app/resident-app` and `@app/staff-app` (Expo Router, NativeWind on Tailwind 3) are the clients. They import `@app/api` **only as `import type { App }`** for the Eden treaty client, and never import server code (`modules/*` or the server-side `@core/*`).
-- `@mod/<name>` (`modules/`: `audit` and `building` so far) is a business module that owns one PostgreSQL schema. Modules talk to each other **only through `./contracts`**. Inside a module the layers are `domain` → `application` → `infrastructure`/`presentation`:
+- `@mod/<name>` (`modules/`: `audit`, `building`, `identity` and `residency` so far) is a business module that owns one PostgreSQL schema. Modules talk to each other **only through `./contracts`**. Inside a module the layers are `domain` → `application` → `infrastructure`/`presentation`:
   - `domain` is pure. It imports only `@core/kernel` and `@rms/shared-types`; no `new Date()` and no I/O. Time comes from the `Clock` port and ids from `IdGenerator`.
   - `application` holds the use cases and ports. It must not touch Elysia, Drizzle or `process.env`.
   - `presentation` holds Elysia routes. A route handler is about three lines and receives use cases, never repositories.
