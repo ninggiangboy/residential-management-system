@@ -52,15 +52,15 @@ export class MakeThumbnailHandler implements IntegrationEventHandler {
     const id = this.ids.next()
     const now = this.clock.now()
     const thumbnail = original.thumbnail({ id, env: this.config.env, now })
-    await this.uow.run(() => this.files.insert(scope, thumbnail, now))
+    const inserted = await this.uow.run(() => this.files.insert(scope, thumbnail, now))
     const written = await this.store.put(thumbnail.objectKey, resized, 'image/webp')
-    await this.uow.run(() =>
-      this.files.completeGenerated(
-        scope,
-        id,
+    await this.uow.run(async () => {
+      const done = this.clock.now()
+      const change = inserted.completeGenerated(
         { size: written.size, checksum: written.sha256 },
-        this.clock.now(),
-      ),
-    )
+        done,
+      )
+      if (change) await this.files.apply(scope, change, done)
+    })
   }
 }

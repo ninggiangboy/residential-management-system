@@ -30,17 +30,6 @@ export interface UpdateSettingsInput {
   etag: string | undefined
 }
 
-export interface UpdateBuildingSettingsDeps {
-  uow: UnitOfWork
-  buildings: BuildingRepository
-  settings: SettingsRepository
-  files: FileRepository
-  filesApi: FilesApi
-  directory: BuildingDirectory
-  documents: BuildingDocumentLoader
-  audited: Audited
-}
-
 const fieldsOf = (record: BuildingRecord): BuildingFields => ({
   name: record.name,
   company: record.company,
@@ -69,7 +58,16 @@ export class UpdateBuildingSettings {
   private readonly auditedBuilding: ReturnType<UpdateBuildingSettings['buildAuditedBuilding']>
   private readonly auditedSettings: ReturnType<UpdateBuildingSettings['buildAuditedSettings']>
 
-  constructor(private readonly deps: UpdateBuildingSettingsDeps) {
+  constructor(
+    private readonly uow: UnitOfWork,
+    private readonly buildings: BuildingRepository,
+    private readonly settings: SettingsRepository,
+    private readonly files: FileRepository,
+    private readonly filesApi: FilesApi,
+    private readonly directory: BuildingDirectory,
+    private readonly documents: BuildingDocumentLoader,
+    private readonly audited: Audited,
+  ) {
     this.auditedBuilding = this.buildAuditedBuilding()
     this.auditedSettings = this.buildAuditedSettings()
   }
@@ -81,11 +79,11 @@ export class UpdateBuildingSettings {
     if (input.settings) assertPatchInRange(input.settings)
     if (input.building) assertBuildingPatch(input.building)
 
-    const { uow, directory, documents } = this.deps
+    const { uow, directory, documents } = this
     await uow.run(async () => {
-      const current = await this.deps.buildings.find(staff.buildingId)
+      const current = await this.buildings.find(staff.buildingId)
       if (!current) throw new NotFoundError()
-      const saved = await this.deps.settings.find(staff.scope)
+      const saved = await this.settings.find(staff.scope)
       // A stale form fails even when nothing raced in between (DOC-12 §9.2).
       const stale =
         !versions ||
@@ -108,7 +106,7 @@ export class UpdateBuildingSettings {
   }
 
   private buildAuditedBuilding() {
-    const { audited, buildings, directory } = this.deps
+    const { audited, buildings, directory } = this
     return audited(
       {
         action: 'building.building.update',
@@ -141,7 +139,7 @@ export class UpdateBuildingSettings {
 
   /** The new logo is attached and the old one removed, in the transaction of the update: a rollback keeps the old (BD-10). */
   private async swapLogo(staff: StaffContext, current: BuildingRecord, next: string | null) {
-    const { files, filesApi } = this.deps
+    const { files, filesApi } = this
     const actor = {
       accountKind: 'staff' as const,
       accountId: staff.staffId,
@@ -159,7 +157,7 @@ export class UpdateBuildingSettings {
   }
 
   private buildAuditedSettings() {
-    const { audited, settings, directory } = this.deps
+    const { audited, settings, directory } = this
     return audited(
       {
         action: 'building.settings.update',

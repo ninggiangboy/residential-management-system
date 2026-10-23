@@ -357,6 +357,25 @@ describe('verify (DOC-37 §6.3)', () => {
     expect(await h.building.files.verify(actor, ticket.fileId)).toEqual(first)
   })
 
+  test('FS-06b verifying one file 4 times in parallel answers 200 each and requests one thumbnail', async () => {
+    const before = (await h.commands('building.thumbnail_requested.v1')).length
+    const actor = h.resident()
+    const body = await jpeg(640, 480)
+    const ticket = await h.building.files.register(actor, {
+      module: 'identity',
+      purpose: 'avatar',
+      mime: 'image/jpeg',
+      size: body.byteLength,
+    })
+    await h.clientPut(ticket, body)
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () => h.building.files.verify(actor, ticket.fileId)),
+    )
+    for (const dto of results) expect(dto).toEqual(results[0] as typeof dto)
+    expect((await h.fileRow(ticket.fileId))?.status).toBe('verified')
+    expect((await h.commands('building.thumbnail_requested.v1')).length).toBe(before + 1)
+  })
+
   test('FS-07 verify before the PUT is 422 missing and the row stays pending; after the PUT it passes', async () => {
     const actor = h.resident()
     const body = await jpeg(640, 480)
@@ -442,6 +461,31 @@ describe('attach and remove (DOC-37 §6.4, §14)', () => {
     await expect(
       h.database.run(() => h.building.files.attach(actor, ticket.fileId, 'ticket:other')),
     ).rejects.toBeInstanceOf(FileNotVerifiedError)
+  })
+
+  test('FS-09b two owners attach one verified file in parallel: one wins, the other is not_verified', async () => {
+    const { actor, ticket } = await upload(await jpeg(640, 480))
+    const results = await Promise.allSettled(
+      ['ticket:a', 'ticket:b'].map((owner) =>
+        h.database.run(() => h.building.files.attach(actor, ticket.fileId, owner)),
+      ),
+    )
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    const lost = results.find((result) => result.status === 'rejected')
+    expect(lost?.status === 'rejected' && lost.reason).toBeInstanceOf(FileNotVerifiedError)
+    expect((await h.fileRow(ticket.fileId))?.status).toBe('attached')
+  })
+
+  test('FS-13b removing one file in 3 parallel transactions writes one delete command', async () => {
+    const { actor, ticket } = await upload(await jpeg(640, 480))
+    const before = (await h.commands('building.file_delete_requested.v1')).length
+    await Promise.all(
+      Array.from({ length: 3 }, () =>
+        h.database.run(() => h.building.files.remove(actor, ticket.fileId)),
+      ),
+    )
+    expect((await h.fileRow(ticket.fileId))?.status).toBe('deleted')
+    expect((await h.commands('building.file_delete_requested.v1')).length).toBe(before + 1)
   })
 
   test('attach outside the owner transaction is refused', async () => {

@@ -13,14 +13,6 @@ export interface PublishTermsInput {
   text: Bilingual
 }
 
-export interface PublishTermsDeps {
-  uow: UnitOfWork
-  terms: TermsRepository
-  directory: BuildingDirectory
-  audited: Audited
-  ids: IdGenerator
-}
-
 /** The terms are the Admin's alone (DOC-35 §9). The route reads this list for its `audience` (DOC-12 §5.3). */
 const PUBLISH_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 
@@ -31,19 +23,25 @@ const PUBLISH_TERMS_ROLES = ['admin'] as const satisfies readonly StaffRole[]
 export class PublishTerms {
   private readonly auditedPublish: ReturnType<PublishTerms['buildAuditedPublish']>
 
-  constructor(private readonly deps: PublishTermsDeps) {
+  constructor(
+    private readonly uow: UnitOfWork,
+    private readonly terms: TermsRepository,
+    private readonly directory: BuildingDirectory,
+    private readonly audited: Audited,
+    private readonly ids: IdGenerator,
+  ) {
     this.auditedPublish = this.buildAuditedPublish()
   }
 
   async execute(staff: StaffContext, input: PublishTermsInput) {
     requireRole(staff, PUBLISH_TERMS_ROLES)
-    const isDemo = await this.deps.directory.isDemo(staff.buildingId)
+    const isDemo = await this.directory.isDemo(staff.buildingId)
     const draft = TermsVersion.draft(input, { isDemo })
-    return this.deps.uow.run(() => this.auditedPublish(staff, draft))
+    return this.uow.run(() => this.auditedPublish(staff, draft))
   }
 
   private buildAuditedPublish() {
-    const { audited, terms, ids } = this.deps
+    const { audited, terms, ids } = this
     return audited(
       {
         action: 'building.terms.publish',

@@ -8,36 +8,34 @@ import type { FilesConfig } from '../files-config'
 import type { ObjectStore } from '../ports'
 import { scopeOf } from '../scope-of'
 
-export interface StoreGeneratedFileDeps {
-  files: FileRepository
-  store: ObjectStore
-  uow: UnitOfWork
-  clock: Clock
-  ids: IdGenerator
-  config: FilesConfig
-}
-
 /** `FilesApi.storeGenerated` (DOC-37 §9): the worker stores a PDF, a ZIP or an export; it bypasses the quota (DR-123). */
 export class StoreGeneratedFile {
-  constructor(private readonly deps: StoreGeneratedFileDeps) {}
+  constructor(
+    private readonly files: FileRepository,
+    private readonly store: ObjectStore,
+    private readonly uow: UnitOfWork,
+    private readonly clock: Clock,
+    private readonly ids: IdGenerator,
+    private readonly config: FilesConfig,
+  ) {}
 
   async execute(input: StoreGeneratedInput): Promise<FileDto> {
-    const { files, store, uow, clock, ids, config } = this.deps
+    const { files, store, uow, clock, ids, config } = this
     const id = ids.next()
     const file = FileObject.generated({ id, input, env: config.env, now: clock.now() })
     const scope = scopeOf(input.buildingId)
     // Quota is not checked: a receipt must render even when the building is at its limit (DR-123).
-    await uow.run(() => files.insert(scope, file, clock.now()))
+    const inserted = await uow.run(() => files.insert(scope, file, clock.now()))
     // A failure here leaves the row pending; the orphan job removes it after 24 hours (DOC-37 §9 step 4).
     const written = await store.put(file.objectKey, input.body, input.mime)
-    const stored = await uow.run(() =>
-      files.completeGenerated(
-        scope,
-        id,
+    const stored = await uow.run(async () => {
+      const now = clock.now()
+      const change = inserted.completeGenerated(
         { size: written.size, checksum: written.sha256 },
-        clock.now(),
-      ),
-    )
+        now,
+      )
+      return change ? files.apply(scope, change, now) : null
+    })
     if (!stored) throw new FileNotVerifiedError('not_verified')
     return toFileDto(stored)
   }

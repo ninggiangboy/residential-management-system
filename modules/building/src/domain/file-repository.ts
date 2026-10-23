@@ -1,6 +1,5 @@
 import type { BuildingScope } from '@rms/shared-types'
-import type { FileAccountKind } from '../contracts'
-import type { FileObject, NewFile } from './file-object'
+import type { FileObject, FileTransition, NewFile } from './file-object'
 
 export interface FileRepository {
   insert(scope: BuildingScope, file: NewFile, now: Date): Promise<FileObject>
@@ -12,28 +11,11 @@ export interface FileRepository {
   findAnyBuilding(id: string): Promise<FileObject | null>
   /** The thumbnail row of an original (`owner_ref = 'thumb:<id>'`, live), through `ix_file_object_building_owner`. */
   findThumbnail(scope: BuildingScope, originalId: string): Promise<FileObject | null>
-  /** `pending → verified` with the real size and the measured mime; `null` when the row is not `pending` any more. */
-  markVerified(
-    scope: BuildingScope,
-    id: string,
-    size: number,
-    now: Date,
-  ): Promise<FileObject | null>
-  /** Any live status → `deleted`; `null` when it was already deleted. */
-  markDeleted(scope: BuildingScope, id: string, now: Date): Promise<FileObject | null>
-  /** The conditional `UPDATE` of DOC-37 §6.4: one row or none. */
-  attach(
-    scope: BuildingScope,
-    row: { id: string; ownerRef: string; accountKind: FileAccountKind; accountId: string },
-    now: Date,
-  ): Promise<boolean>
-  /** A generated file is `attached` at once, with the real size and the SHA-256 (DOC-37 §9 step 3); `null` when the row is gone. */
-  completeGenerated(
-    scope: BuildingScope,
-    id: string,
-    result: { size: number; checksum: string },
-    now: Date,
-  ): Promise<FileObject | null>
+  /**
+   * Applies the change the aggregate decided (DR-255): one conditional `UPDATE` inside the building, the row after it, or `null`
+   * when the state moved since the file was loaded (DOC-37 §6).
+   */
+  apply(scope: BuildingScope, transition: FileTransition, now: Date): Promise<FileObject | null>
   /** Σ size of the rows that are not `deleted` (DOC-37 §11). */
   usedBytes(scope: BuildingScope): Promise<number>
   /** `pending` and `verified` rows created before `cutoff`, oldest first, one batch. */

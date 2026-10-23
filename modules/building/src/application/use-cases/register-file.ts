@@ -8,26 +8,24 @@ import type { FilesConfig } from '../files-config'
 import type { ObjectStore, UploadRateLimiter } from '../ports'
 import { scopeOf } from '../scope-of'
 
-export interface RegisterFileDeps {
-  files: FileRepository
-  store: ObjectStore
-  uow: UnitOfWork
-  rateLimiter: UploadRateLimiter
-  directory: BuildingDirectory
-  clock: Clock
-  ids: IdGenerator
-  config: FilesConfig
-}
-
 /**
  * `FilesApi.register` (DOC-37 §6.1): checks the audience, the purpose, the type, the size, the rate bucket and the quota,
  * inserts a `pending` row and presigns the `PUT`. No upload byte passes through the API.
  */
 export class RegisterFile {
-  constructor(private readonly deps: RegisterFileDeps) {}
+  constructor(
+    private readonly files: FileRepository,
+    private readonly store: ObjectStore,
+    private readonly uow: UnitOfWork,
+    private readonly rateLimiter: UploadRateLimiter,
+    private readonly directory: BuildingDirectory,
+    private readonly clock: Clock,
+    private readonly ids: IdGenerator,
+    private readonly config: FilesConfig,
+  ) {}
 
   async execute(actor: FileActor, input: RegisterInput): Promise<UploadTicket> {
-    const { config, directory, rateLimiter, files, uow, clock, ids, store } = this.deps
+    const { config, directory, rateLimiter, files, uow, clock, ids, store } = this
     const now = clock.now()
     const id = ids.next()
     const { file, maxBytes } = FileObject.register({
