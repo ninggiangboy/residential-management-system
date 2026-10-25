@@ -53,6 +53,17 @@ export interface StaffEdit {
   email?: string
 }
 
+/**
+ * What `PATCH /staff/me` may change (E-31); an absent key is kept. `avatarKey` is the `file_object` id as text (DR-146), `null`
+ * removes the avatar. The email, the role and the status are never here.
+ */
+export interface StaffSelfEdit {
+  fullName?: string
+  language?: Language
+  pushEnabled?: boolean
+  avatarKey?: string | null
+}
+
 /** A Manager creates and touches only these two roles (DR-133, FR-14.1). */
 const MANAGER_MAY_TOUCH: readonly StaffRole[] = ['technician', 'guard']
 
@@ -197,6 +208,24 @@ export class StaffAccount {
     if (changes.role !== undefined && changes.role !== role) set.role = changes.role
     if (changes.email !== undefined && changes.email.toLowerCase() !== email.toLowerCase())
       set.email = changes.email
+    return Object.keys(set).length === 0 ? null : this.move(set)
+  }
+
+  /**
+   * The member edits their own profile (E-31, DOC-26 §7): name, language, push setting and avatar. No role rule applies, since
+   * the caller is the row's owner. `null` when nothing would change. The guard is the version the caller read.
+   */
+  editSelf(changes: StaffSelfEdit): StaffAccountTransition | null {
+    const { fullName, language, pushEnabled, avatarKey } = this.record
+    const set: Partial<StaffAccountRecord> = {}
+    if (changes.fullName !== undefined && changes.fullName !== fullName)
+      set.fullName = changes.fullName
+    if (changes.language !== undefined && changes.language !== language)
+      set.language = changes.language
+    if (changes.pushEnabled !== undefined && changes.pushEnabled !== pushEnabled)
+      set.pushEnabled = changes.pushEnabled
+    if (changes.avatarKey !== undefined && changes.avatarKey !== avatarKey)
+      set.avatarKey = changes.avatarKey
     return Object.keys(set).length === 0 ? null : this.move(set)
   }
 

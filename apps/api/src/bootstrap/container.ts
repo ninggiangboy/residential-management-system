@@ -190,6 +190,22 @@ export function createContainer(
       orphanAfterHours: filesConfig.FILES_ORPHAN_AFTER_HOURS,
       deletedRowRetentionDays: filesConfig.FILES_DELETED_ROW_RETENTION_DAYS,
     },
+    publicConfig: {
+      resident: {
+        minVersion: http.MIN_APP_VERSION_RESIDENT,
+        storeUrl: {
+          ios: http.STORE_URL_RESIDENT_IOS ?? null,
+          android: http.STORE_URL_RESIDENT_ANDROID ?? null,
+        },
+      },
+      staff: {
+        minVersion: http.MIN_APP_VERSION_STAFF,
+        storeUrl: {
+          ios: http.STORE_URL_STAFF_IOS ?? null,
+          android: http.STORE_URL_STAFF_ANDROID ?? null,
+        },
+      },
+    },
     settingsCacheSeconds: http.SETTINGS_CACHE_SECONDS,
     uploadRatePerHour: filesConfig.UPLOAD_RATE_PER_HOUR,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
@@ -211,6 +227,7 @@ export function createContainer(
     },
     secretBox,
     building: building.api,
+    files: building.files,
     audited: audit.audited,
     guards,
     idempotent,

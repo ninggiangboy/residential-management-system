@@ -12,6 +12,7 @@ const toBuildingDto = (record: BuildingRecord): BuildingDto => ({
   name: record.name,
   timeZone: record.timeZone,
   isDemo: record.isDemo,
+  contact: { hotline: record.hotline, workingHours: record.workingHours, email: record.email },
 })
 
 /**

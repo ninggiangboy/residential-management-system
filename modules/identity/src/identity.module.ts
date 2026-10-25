@@ -8,7 +8,7 @@ import {
 } from '@core/messaging'
 import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
-import type { BuildingApi } from '@mod/building/contracts'
+import type { BuildingApi, FilesApi } from '@mod/building/contracts'
 import type { Guards } from '@rms/shared-types'
 import { IdentityApiImpl } from './application/api/identity-api-impl'
 import type { IdentityConfig } from './application/config'
@@ -52,6 +52,7 @@ import { SignInStaff } from './application/use-cases/sign-in-staff'
 import { SignOut } from './application/use-cases/sign-out'
 import { UnlockStaffAccount } from './application/use-cases/unlock-staff-account'
 import { UpdateStaffAccount } from './application/use-cases/update-staff-account'
+import { UpdateStaffMe } from './application/use-cases/update-staff-me'
 import { VerifyOtp } from './application/use-cases/verify-otp'
 import { VerifyStepUp } from './application/use-cases/verify-step-up'
 import type { AccessTokenVerifier, IdentityApi, OpenTicketsProbe } from './contracts'
@@ -92,6 +93,8 @@ export interface IdentityDeps {
   memberships: ActiveMemberships
   /** Only the lockout settings of the staff member's building are read (DOC-26 §4.1). */
   building: Pick<BuildingApi, 'getSettings'>
+  /** The avatar of E-30 and E-31: verified, attached and removed with the member's update, and presigned for the answer. */
+  files: Pick<FilesApi, 'verify' | 'attach' | 'remove' | 'signedUrl'>
   audited: Audited
   guards: Guards
   /** E-40 takes an `Idempotency-Key` (DOC-50 §8.1). */
@@ -148,6 +151,8 @@ export interface IdentityUseCases {
   requestStepUp: RequestStepUp
   /** `DELETE /staff/sessions/{id}`. */
   revokeStaffSession: RevokeStaffSession
+  /** `PATCH /staff/me` (E-31). */
+  updateStaffMe: UpdateStaffMe
   /** `POST /staff/accounts` (E-40). */
   createStaffAccount: CreateStaffAccount
   /** `PATCH /staff/accounts/{id}` (E-42). */
@@ -333,6 +338,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     clock,
     deps.audited,
   )
+  const updateStaffMe = new UpdateStaffMe(database, staffAccounts, deps.files, clock, deps.audited)
   const lockStaffAccount = new LockStaffAccount(
     database,
     staffAccounts,
@@ -352,7 +358,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
   )
   const enableStaffAccount = new EnableStaffAccount(database, staffAccounts, clock, deps.audited)
 
-  const staffQueries = new StaffQueries(staffAccounts)
+  const staffQueries = new StaffQueries(staffAccounts, deps.files)
   const residentQueries = new ResidentQueries(residents, deps.memberships)
   const sessionQueries = new SessionQueries(sessions, clock)
 
@@ -386,6 +392,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     revokeStaffSession,
     createStaffAccount,
     updateStaffAccount,
+    updateStaffMe,
     lockStaffAccount,
     unlockStaffAccount,
     disableStaffAccount,

@@ -57,6 +57,7 @@ import {
   buildingRoutes,
   type StaffNames,
 } from './presentation/building-routes'
+import { type PublicRouteDeps, publicRoutes } from './presentation/public-routes'
 import {
   type ResidentBuildings,
   type ResidentTermsRouteDeps,
@@ -82,6 +83,8 @@ export interface BuildingDeps {
   probe: ActiveIntentProbe
   audited: Audited
   files: FilesConfig
+  /** The release block of `GET /public/config` (E-03). */
+  publicConfig: PublicRouteDeps['publicConfig']
   /** `SETTINGS_CACHE_SECONDS`. */
   settingsCacheSeconds: number
   /** `UPLOAD_RATE_PER_HOUR`. */
@@ -126,8 +129,14 @@ export interface BuildingModule extends AppModule<'building'> {
 
 export type BuildingRoutes = ReturnType<typeof createRoutes>
 
-function createRoutes(d: BuildingRouteDeps & UploadRouteDeps & ResidentTermsRouteDeps) {
-  return routePlugin().use(buildingRoutes(d)).use(uploadRoutes(d)).use(residentTermsRoutes(d))
+function createRoutes(
+  d: BuildingRouteDeps & UploadRouteDeps & ResidentTermsRouteDeps & PublicRouteDeps,
+) {
+  return routePlugin()
+    .use(buildingRoutes(d))
+    .use(uploadRoutes(d))
+    .use(residentTermsRoutes(d))
+    .use(publicRoutes(d))
 }
 
 const NO_USAGE: UsageReporter = { report() {} }
@@ -241,9 +250,11 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
     ),
   ]
 
+  const api = new BuildingApiImpl(directory, queries)
+
   return {
     name: 'building',
-    api: new BuildingApiImpl(directory, queries),
+    api,
     features: { get: async () => ({ ...deps.features }) },
     files,
     queries,
@@ -256,6 +267,9 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       residentBuildings: deps.residentBuildings,
       guards: deps.guards,
       idempotent: deps.idempotent,
+      buildings: api,
+      clock,
+      publicConfig: deps.publicConfig,
     }),
     handlers,
     outbox: { name: 'building', table: buildingOutbox, inboxTable: buildingInbox },

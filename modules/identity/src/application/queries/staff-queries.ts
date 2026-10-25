@@ -1,9 +1,12 @@
 import { NotFoundError, requireRole } from '@core/kernel'
+import type { FilesApi } from '@mod/building/contracts'
 import type { BuildingId, StaffContext, StaffRole } from '@rms/shared-types'
 import type { StaffDto } from '../../contracts'
+import type { StaffAccountRecord } from '../../domain/staff-account'
 import type { StaffAccountRepository, StaffSearch } from '../../domain/staff-account-repository'
 import { type StaffAccountView, toStaffAccountView } from '../staff-account-view'
-import { type StaffProfile, toStaffDto, toStaffProfile } from '../staff-dto'
+import { toStaffDto } from '../staff-dto'
+import { type StaffMeView, toStaffMeView } from '../staff-me-view'
 
 /** Every staff role reads its own profile (DOC-26 §7). The route reads this list for its `audience`. */
 export const GET_STAFF_ME_ROLES = [
@@ -33,13 +36,25 @@ const MAX_PAGE = 500
 
 /** The reads of staff accounts: the profile behind `GET /staff/me` and the two calls of `IdentityApi` (DOC-09 §7.3). */
 export class StaffQueries {
-  constructor(private readonly staffAccounts: StaffAccountRepository) {}
+  constructor(
+    private readonly staffAccounts: StaffAccountRepository,
+    private readonly files: Pick<FilesApi, 'signedUrl'>,
+  ) {}
 
-  async me(staff: StaffContext): Promise<StaffProfile> {
+  /** E-30: the row of this request, not the token's claims (DOC-26 §3.1); `role` and `status` are current. */
+  async me(staff: StaffContext): Promise<StaffMeView> {
     requireRole(staff, GET_STAFF_ME_ROLES)
     const record = await this.staffAccounts.findById(staff.staffId)
     if (!record) throw new NotFoundError()
-    return toStaffProfile(record)
+    return this.meView(record)
+  }
+
+  /** The thumbnail of the avatar when it exists (DOC-37 §8); a deleted or unknown file gives no URL. */
+  async meView(record: StaffAccountRecord): Promise<StaffMeView> {
+    const url = record.avatarKey
+      ? await this.files.signedUrl(record.avatarKey, { variant: 'thumb' })
+      : null
+    return toStaffMeView(record, url)
   }
 
   async list(

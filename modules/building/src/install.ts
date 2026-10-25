@@ -20,6 +20,7 @@ export function installBuilding(host: BuildingHost): BuildingModule {
     staffNames: host.staffNames,
     residentBuildings: host.residentBuildings,
     files: host.files,
+    publicConfig: host.publicConfig,
     settingsCacheSeconds: host.settingsCacheSeconds,
     uploadRatePerHour: host.uploadRatePerHour,
     outboxMaxPayloadBytes: host.outboxMaxPayloadBytes,

@@ -183,6 +183,15 @@ export async function createHarness(options: HarnessOptions = {}) {
     },
     memberships: { listActive: async (accountId) => memberships.get(accountId) ?? [] },
     building: { getSettings: async () => ({ ...DEFAULT_SETTINGS, lockout }) },
+    // The avatar is checked by the HTTP tests of `apps/api`, which run the real `FilesApi`.
+    files: {
+      async verify() {
+        throw new Error('files are not wired in this harness')
+      },
+      async attach() {},
+      async remove() {},
+      signedUrl: async () => null,
+    },
     audited: audit.audited,
     guards: NO_GUARDS,
     // The routes are not mounted here: the use cases are called directly.
