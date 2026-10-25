@@ -10,33 +10,250 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as InviteRouteImport } from './routes/invite'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetRouteImport } from './routes/reset'
+import { Route as WrongAppRouteImport } from './routes/wrong-app'
+import { Route as AppBuildingRouteImport } from './routes/_app/building'
+import { Route as AppImportRouteImport } from './routes/_app/import'
+import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppResidentsRouteImport } from './routes/_app/residents'
+import { Route as AppStaffRouteImport } from './routes/_app/staff'
+import { Route as ForgotSentRouteImport } from './routes/forgot.sent'
+import { Route as AppResidentsIndexRouteImport } from './routes/_app/residents.index'
+import { Route as AppResidentsNewRouteImport } from './routes/_app/residents.new'
+import { Route as AppStaffIndexRouteImport } from './routes/_app/staff.index'
+import { Route as AppStaffNewRouteImport } from './routes/_app/staff.new'
+import { Route as AppUnitsIndexRouteImport } from './routes/_app/units.index'
+import { Route as AppUnitsUnitIdRouteImport } from './routes/_app/units.$unitId'
+import { Route as AppStaffStaffIdEditRouteImport } from './routes/_app/staff.$staffId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetRoute = ResetRouteImport.update({
+  id: '/reset',
+  path: '/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WrongAppRoute = WrongAppRouteImport.update({
+  id: '/wrong-app',
+  path: '/wrong-app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppBuildingRoute = AppBuildingRouteImport.update({
+  id: '/building',
+  path: '/building',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportRoute = AppImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppResidentsRoute = AppResidentsRouteImport.update({
+  id: '/residents',
+  path: '/residents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const ForgotSentRoute = ForgotSentRouteImport.update({
+  id: '/forgot/sent',
+  path: '/forgot/sent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppResidentsIndexRoute = AppResidentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppResidentsRoute,
+} as any)
+const AppResidentsNewRoute = AppResidentsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppResidentsRoute,
+} as any)
+const AppStaffIndexRoute = AppStaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffNewRoute = AppStaffNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppUnitsIndexRoute = AppUnitsIndexRouteImport.update({
+  id: '/units/',
+  path: '/units/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUnitsUnitIdRoute = AppUnitsUnitIdRouteImport.update({
+  id: '/units/$unitId',
+  path: '/units/$unitId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffStaffIdEditRoute = AppStaffStaffIdEditRouteImport.update({
+  id: '/$staffId/edit',
+  path: '/$staffId/edit',
+  getParentRoute: () => AppStaffRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/wrong-app': typeof WrongAppRoute
+  '/building': typeof AppBuildingRoute
+  '/import': typeof AppImportRoute
+  '/profile': typeof AppProfileRoute
+  '/residents': typeof AppResidentsRouteWithChildren
+  '/staff': typeof AppStaffRouteWithChildren
+  '/forgot/sent': typeof ForgotSentRoute
+  '/residents/new': typeof AppResidentsNewRoute
+  '/staff/new': typeof AppStaffNewRoute
+  '/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/residents/': typeof AppResidentsIndexRoute
+  '/staff/': typeof AppStaffIndexRoute
+  '/units/': typeof AppUnitsIndexRoute
+  '/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/wrong-app': typeof WrongAppRoute
+  '/building': typeof AppBuildingRoute
+  '/import': typeof AppImportRoute
+  '/profile': typeof AppProfileRoute
+  '/forgot/sent': typeof ForgotSentRoute
+  '/residents/new': typeof AppResidentsNewRoute
+  '/staff/new': typeof AppStaffNewRoute
+  '/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/residents': typeof AppResidentsIndexRoute
+  '/staff': typeof AppStaffIndexRoute
+  '/units': typeof AppUnitsIndexRoute
+  '/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/wrong-app': typeof WrongAppRoute
+  '/_app/building': typeof AppBuildingRoute
+  '/_app/import': typeof AppImportRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/residents': typeof AppResidentsRouteWithChildren
+  '/_app/staff': typeof AppStaffRouteWithChildren
+  '/forgot/sent': typeof ForgotSentRoute
+  '/_app/residents/new': typeof AppResidentsNewRoute
+  '/_app/staff/new': typeof AppStaffNewRoute
+  '/_app/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/_app/residents/': typeof AppResidentsIndexRoute
+  '/_app/staff/': typeof AppStaffIndexRoute
+  '/_app/units/': typeof AppUnitsIndexRoute
+  '/_app/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/invite'
+    | '/login'
+    | '/reset'
+    | '/wrong-app'
+    | '/building'
+    | '/import'
+    | '/profile'
+    | '/residents'
+    | '/staff'
+    | '/forgot/sent'
+    | '/residents/new'
+    | '/staff/new'
+    | '/units/$unitId'
+    | '/residents/'
+    | '/staff/'
+    | '/units/'
+    | '/staff/$staffId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/invite'
+    | '/login'
+    | '/reset'
+    | '/wrong-app'
+    | '/building'
+    | '/import'
+    | '/profile'
+    | '/forgot/sent'
+    | '/residents/new'
+    | '/staff/new'
+    | '/units/$unitId'
+    | '/residents'
+    | '/staff'
+    | '/units'
+    | '/staff/$staffId/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/invite'
+    | '/login'
+    | '/reset'
+    | '/wrong-app'
+    | '/_app/building'
+    | '/_app/import'
+    | '/_app/profile'
+    | '/_app/residents'
+    | '/_app/staff'
+    | '/forgot/sent'
+    | '/_app/residents/new'
+    | '/_app/staff/new'
+    | '/_app/units/$unitId'
+    | '/_app/residents/'
+    | '/_app/staff/'
+    | '/_app/units/'
+    | '/_app/staff/$staffId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  InviteRoute: typeof InviteRoute
+  LoginRoute: typeof LoginRoute
+  ResetRoute: typeof ResetRoute
+  WrongAppRoute: typeof WrongAppRoute
+  ForgotSentRoute: typeof ForgotSentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +265,195 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset': {
+      id: '/reset'
+      path: '/reset'
+      fullPath: '/reset'
+      preLoaderRoute: typeof ResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wrong-app': {
+      id: '/wrong-app'
+      path: '/wrong-app'
+      fullPath: '/wrong-app'
+      preLoaderRoute: typeof WrongAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/building': {
+      id: '/_app/building'
+      path: '/building'
+      fullPath: '/building'
+      preLoaderRoute: typeof AppBuildingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/import': {
+      id: '/_app/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AppImportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/residents': {
+      id: '/_app/residents'
+      path: '/residents'
+      fullPath: '/residents'
+      preLoaderRoute: typeof AppResidentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/staff': {
+      id: '/_app/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/forgot/sent': {
+      id: '/forgot/sent'
+      path: '/forgot/sent'
+      fullPath: '/forgot/sent'
+      preLoaderRoute: typeof ForgotSentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/residents/': {
+      id: '/_app/residents/'
+      path: '/'
+      fullPath: '/residents/'
+      preLoaderRoute: typeof AppResidentsIndexRouteImport
+      parentRoute: typeof AppResidentsRoute
+    }
+    '/_app/residents/new': {
+      id: '/_app/residents/new'
+      path: '/new'
+      fullPath: '/residents/new'
+      preLoaderRoute: typeof AppResidentsNewRouteImport
+      parentRoute: typeof AppResidentsRoute
+    }
+    '/_app/staff/': {
+      id: '/_app/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof AppStaffIndexRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/_app/staff/new': {
+      id: '/_app/staff/new'
+      path: '/new'
+      fullPath: '/staff/new'
+      preLoaderRoute: typeof AppStaffNewRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/_app/units/': {
+      id: '/_app/units/'
+      path: '/units'
+      fullPath: '/units/'
+      preLoaderRoute: typeof AppUnitsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/units/$unitId': {
+      id: '/_app/units/$unitId'
+      path: '/units/$unitId'
+      fullPath: '/units/$unitId'
+      preLoaderRoute: typeof AppUnitsUnitIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/staff/$staffId/edit': {
+      id: '/_app/staff/$staffId/edit'
+      path: '/$staffId/edit'
+      fullPath: '/staff/$staffId/edit'
+      preLoaderRoute: typeof AppStaffStaffIdEditRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
   }
 }
 
+interface AppResidentsRouteChildren {
+  AppResidentsNewRoute: typeof AppResidentsNewRoute
+  AppResidentsIndexRoute: typeof AppResidentsIndexRoute
+}
+
+const AppResidentsRouteChildren: AppResidentsRouteChildren = {
+  AppResidentsNewRoute: AppResidentsNewRoute,
+  AppResidentsIndexRoute: AppResidentsIndexRoute,
+}
+
+const AppResidentsRouteWithChildren = AppResidentsRoute._addFileChildren(
+  AppResidentsRouteChildren,
+)
+
+interface AppStaffRouteChildren {
+  AppStaffNewRoute: typeof AppStaffNewRoute
+  AppStaffIndexRoute: typeof AppStaffIndexRoute
+  AppStaffStaffIdEditRoute: typeof AppStaffStaffIdEditRoute
+}
+
+const AppStaffRouteChildren: AppStaffRouteChildren = {
+  AppStaffNewRoute: AppStaffNewRoute,
+  AppStaffIndexRoute: AppStaffIndexRoute,
+  AppStaffStaffIdEditRoute: AppStaffStaffIdEditRoute,
+}
+
+const AppStaffRouteWithChildren = AppStaffRoute._addFileChildren(
+  AppStaffRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppBuildingRoute: typeof AppBuildingRoute
+  AppImportRoute: typeof AppImportRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppResidentsRoute: typeof AppResidentsRouteWithChildren
+  AppStaffRoute: typeof AppStaffRouteWithChildren
+  AppUnitsUnitIdRoute: typeof AppUnitsUnitIdRoute
+  AppUnitsIndexRoute: typeof AppUnitsIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppBuildingRoute: AppBuildingRoute,
+  AppImportRoute: AppImportRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppResidentsRoute: AppResidentsRouteWithChildren,
+  AppStaffRoute: AppStaffRouteWithChildren,
+  AppUnitsUnitIdRoute: AppUnitsUnitIdRoute,
+  AppUnitsIndexRoute: AppUnitsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  InviteRoute: InviteRoute,
+  LoginRoute: LoginRoute,
+  ResetRoute: ResetRoute,
+  WrongAppRoute: WrongAppRoute,
+  ForgotSentRoute: ForgotSentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

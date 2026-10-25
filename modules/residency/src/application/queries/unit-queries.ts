@@ -52,8 +52,14 @@ export interface MemberView {
   startedAt: string
 }
 
+/** The owner of a unit in the detail: the same row as a member, so the page can lock or unlock them (UIWR-07). */
+export interface OwnerDetailView extends OwnerView {
+  status: 'active' | 'locked'
+  lockedBy: MembershipRecord['lockedBy']
+}
+
 export interface UnitDetail extends ReturnType<typeof unitBody> {
-  owner: OwnerView | null
+  owner: OwnerDetailView | null
   members: MemberView[]
   /** Until `finance` exists (P2) nothing is owed (DOC-51 §10). */
   debt: { openChargeCount: number; openAmount: number; oldestDueDate: string | null }
@@ -131,7 +137,9 @@ export class UnitQueries {
     const [owner] = rows.filter((row) => row.memberType === 'owner')
     return {
       ...unitBody(unit),
-      owner: owner ? view(owner) : null,
+      owner: owner
+        ? { ...view(owner), status: owner.status as 'active' | 'locked', lockedBy: owner.lockedBy }
+        : null,
       members: rows
         .filter((row) => row.memberType !== 'owner')
         .map((row) => ({

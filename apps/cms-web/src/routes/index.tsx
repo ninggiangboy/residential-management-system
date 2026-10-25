@@ -1,13 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { api } from '../api'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { LANDING } from '../features/auth/landing'
 
-export const Route = createFileRoute('/')({ component: Home })
-
-function Home() {
-  const [status, setStatus] = useState('…')
-  useEffect(() => {
-    api.api.v1.health.ready.get().then(({ data }) => setStatus(data?.status ?? 'down'))
-  }, [])
-  return <p className="p-4 text-body-strong">API: {status}</p>
-}
+/** `/` is the landing page (`/units` until the dashboard ships, P6). The `_app` layout decides about a missing session. */
+export const Route = createFileRoute('/')({
+  beforeLoad: () => {
+    throw redirect({ href: LANDING })
+  },
+})
