@@ -18,4 +18,10 @@ export const env = {
   apiBaseUrl: validBaseUrl(raw.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'),
   /** Shown as a badge on a build that is not production; behavior never reads it (the API decides by `APP_ENV`). */
   appEnv: raw.VITE_APP_ENV ?? 'local',
+  /** `x.y.z`, sent with a crash report (E-04 `appVersion`); a build that does not set it reports `0.0.0`. */
+  appVersion: /^\d+\.\d+\.\d+/.test(raw.VITE_APP_VERSION ?? '')
+    ? (raw.VITE_APP_VERSION as string)
+    : '0.0.0',
+  /** A development server logs an error to the console and reports none (DOC-55 §15); the end-to-end run is a dev server that reports. */
+  isDev: import.meta.env.DEV && raw.VITE_APP_ENV !== 'e2e',
 } as const

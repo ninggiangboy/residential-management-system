@@ -390,6 +390,7 @@ The apps log through one public endpoint, `POST /client-errors` (DR-63, DR-127; 
 | Body | `{ app, appVersion, platform, kind, screen, errorName, message, stack?, requestId? }`; `kind` ∈ `crash`, `unhandled_rejection`, `render`, `network`; `message` ≤ 500 characters, `stack` ≤ 4 KB; the whole body ≤ 8 KB; unknown keys are refused |
 | Limits | 10 per minute per IP and 30 per hour per account (PostgreSQL buckets, DR-64); beyond that 429, silently dropped by the app |
 | Handling | Answers 204. Writes one `warn` line `client_error` with the fields above, the account id when known, and the route-free `screen`; increments `client_errors_total{app,kind}`. The `message` and `stack` pass through `maskPhone` and the redact list of §8.3. Nothing is stored in the database |
+| As built (P1-16, DR-264) | The web CMS reports (`packages/client-core/src/reporter.ts`, `apps/cms-web/src/lib/report-error.ts`); the apps report through EAS Observe (DOC-55 §15). The tests ER-43 and ER-44 run in `apps/api/tests/integration/client-errors.integration.test.ts` |
 | The app's duty | Never send user input, form values, tokens, URLs with a query string or a response body; send the error class, the message of the error and the stack |
 
 ## 11. Decisions made while writing

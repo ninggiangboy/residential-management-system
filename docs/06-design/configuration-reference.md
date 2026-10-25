@@ -240,7 +240,8 @@ These variables are read at build time and baked into the bundle. They hold no s
 | App | Key | Type | Default | Profiles | Description (source) |
 | --- | --- | --- | --- | --- | --- |
 | Web CMS (Vite) | `VITE_API_BASE_URL` | url | `http://localhost:3000/api/v1` | `staging` `https://api-staging.<domain>/api/v1`; `production` `https://api.<domain>/api/v1` | API base (DR-07, DR-83) |
-| Web CMS | `VITE_APP_ENV` | enum as `APP_ENV` | `local` | by the Pages build | Shown in the footer of non-production builds |
+| Web CMS | `VITE_APP_ENV` | enum as `APP_ENV` | `local` | by the Pages build | Shown in the footer of non-production builds; `e2e` (the Playwright run) makes the dev server send error reports |
+| Web CMS | `VITE_APP_VERSION` | semver `x.y.z` | `0.0.0` | by the Pages build (the release tag) | The `appVersion` of `POST /client-errors` (DOC-55 §15) |
 | Resident app, staff app (Expo) | `API_BASE_URL` | url | `http://localhost:3000/api/v1` | EAS profile `staging`, `production` as above | Read in `app.config.ts`, exposed as `extra` (DR-69, DOC-73) |
 | Resident app, staff app | `APP_ENV` | enum | `local` | EAS profile `development`, `staging`, `production` | Never `NODE_ENV` (DOC-11 §6.4) |
 
