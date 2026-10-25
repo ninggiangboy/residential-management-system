@@ -10,15 +10,7 @@ import { Card } from '../../components/ui/card'
 import { Icon } from '../../components/ui/icon'
 import { TextField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
-
-/** The rules of DOC-26 §4.2, checked first on the device: 8 to 128 characters, a letter and a digit, both fields equal. */
-export function passwordRules(password: string, confirm: string) {
-  return {
-    length: password.length >= 8 && password.length <= 128,
-    mix: /\p{L}/u.test(password) && /\d/.test(password),
-    match: password !== '' && password === confirm,
-  }
-}
+import { passwordRules } from './password-rules'
 
 /** Reset links must not leak through the `Referer` header (DR-209): the page opts out for as long as it is shown. */
 function useNoReferrer() {

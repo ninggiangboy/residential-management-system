@@ -5,7 +5,7 @@ import { api } from '../../api/client'
 import { ifMatch, unwrap, unwrapEmpty } from '../../api/errors'
 import type { Proof } from '../../auth/step-up'
 
-export type StaffStatus = 'invited' | 'active' | 'locked' | 'disabled'
+type StaffStatus = 'invited' | 'active' | 'locked' | 'disabled'
 
 export interface StaffFilters {
   role?: StaffRole

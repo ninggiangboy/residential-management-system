@@ -64,7 +64,7 @@ export function Button({
   )
 }
 
-export function Spinner({ className }: { className?: string }) {
+function Spinner({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"

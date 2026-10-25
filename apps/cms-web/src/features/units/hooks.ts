@@ -31,7 +31,7 @@ export const unitsQuery = (filters: UnitFilters) =>
 export type UnitListItem = NonNullable<
   Awaited<ReturnType<typeof api.staff.units.get>>['data']
 >['items'][number]
-export type UnitBody = NonNullable<Awaited<ReturnType<typeof api.staff.units.post>>['data']>
+type UnitBody = NonNullable<Awaited<ReturnType<typeof api.staff.units.post>>['data']>
 
 /** E-59. The read has a 304 branch, so the type is assembled from the write that answers the same unit and the list item. */
 export interface UnitMember {

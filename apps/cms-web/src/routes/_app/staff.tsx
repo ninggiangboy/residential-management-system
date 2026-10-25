@@ -16,7 +16,7 @@ const Status = Type.Union([
   Type.Literal('locked'),
   Type.Literal('disabled'),
 ])
-export const StaffSearchSchema = Type.Object({
+const StaffSearchSchema = Type.Object({
   role: Type.Optional(Role),
   status: Type.Optional(Status),
   q: Type.Optional(Type.String({ maxLength: 100 })),

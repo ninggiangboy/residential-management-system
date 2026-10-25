@@ -1,4 +1,4 @@
-import { type Static, type TObject, type TSchema, Type } from '@sinclair/typebox'
+import type { Static, TObject, TSchema } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
 import type { SearchSchemaInput } from '@tanstack/react-router'
 
@@ -42,5 +42,3 @@ export function safeRedirect(value: string | undefined): string | undefined {
   const known = KNOWN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
   return known ? value : undefined
 }
-
-export const optional = <T extends TSchema>(schema: T) => Type.Optional(schema)

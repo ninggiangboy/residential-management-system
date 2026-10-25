@@ -25,6 +25,7 @@ import {
   buildPatch,
   fieldOfPath,
   isEmptyPatch,
+  outOfRange,
   valuesOf,
 } from './model'
 import { TermsPanel } from './terms-panel'
@@ -107,7 +108,15 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
     for (const detail of details) {
       const field = fieldOfPath(detail.path)
       if (field) {
-        form.setError(field, { type: detail.code, message: detail.message }, { shouldFocus: first })
+        form.setError(
+          field,
+          {
+            type: detail.code,
+            message:
+              detail.code === 'setting_invalid' ? t('error.setting_invalid') : detail.message,
+          },
+          { shouldFocus: first },
+        )
         first = false
       }
     }
@@ -118,6 +127,16 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
     setConflict(false)
     const patch = buildPatch(values, original, logo ? { fileId: logo.fileId } : null)
     if (isEmptyPatch(patch)) return
+    const invalid = outOfRange(values)
+    if (invalid.length > 0) {
+      for (const [index, name] of invalid.entries())
+        form.setError(
+          name,
+          { type: 'setting_invalid', message: t('error.setting_invalid') },
+          { shouldFocus: index === 0 },
+        )
+      return
+    }
     save.mutate(
       { etag: settings.data?.etag ?? '', patch },
       {

@@ -51,6 +51,8 @@ try {
       MAIL_DRIVER: 'smtp',
       SMTP_HOST: 'localhost',
       SMTP_PORT: process.env.RMS_MAIL_PORT ?? '1025',
+      // Every spec signs in from one address: the real limit (30 per 15 minutes, DOC-26 §6) is the API's own test, not this run's.
+      STAFF_LOGIN_PER_IP: '1000',
       SMTP_USER: 'rms',
       MAIL_FROM: 'no-reply@sunrise.example',
     },

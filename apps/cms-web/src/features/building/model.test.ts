@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type BuildingFormValues, buildPatch, fieldOfPath, isEmptyPatch } from './model'
+import { type BuildingFormValues, buildPatch, fieldOfPath, isEmptyPatch, outOfRange } from './model'
 
 const original: BuildingFormValues = {
   nameVi: 'Chung cư Sunrise A',
@@ -75,4 +75,16 @@ test('a path of the API lands on its field', () => {
   expect(fieldOfPath('building.name.vi')).toBe('nameVi')
   expect(fieldOfPath('defaultDueDays')).toBe('defaultDueDays')
   expect(fieldOfPath('nothing')).toBeUndefined()
+})
+
+test('UIWS-18: every field outside its range is named at once', () => {
+  expect(outOfRange(original)).toEqual([])
+  expect(outOfRange({ ...original, defaultDueDays: '0', lockMinutes: '4' })).toEqual([
+    'defaultDueDays',
+    'lockMinutes',
+  ])
+  expect(
+    outOfRange({ ...original, maxAttempts: '11', quotaGb: '2000', maxCarsPerUnit: '' }),
+  ).toEqual(['maxAttempts', 'maxCarsPerUnit', 'quotaGb'])
+  expect(outOfRange({ ...original, accountDeletionDays: 'abc' })).toEqual(['accountDeletionDays'])
 })

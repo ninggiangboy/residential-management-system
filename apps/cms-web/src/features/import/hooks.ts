@@ -11,12 +11,8 @@ import { env } from '../../env'
 import { languageStore } from '../../lib/i18n'
 
 export type ImportJob = NonNullable<Awaited<ReturnType<typeof api.staff.imports.post>>['data']>
-export type ImportIssue = ImportJob['preview']['issues'][number]
-export type ImportListItem = NonNullable<
-  Awaited<ReturnType<typeof api.staff.imports.get>>['data']
->['items'][number]
 
-export const importKey = (importId: string) => staffKey('imports', importId)
+const importKey = (importId: string) => staffKey('imports', importId)
 
 /** E-73: the stored preview, read again after a reload or from the recent-imports table (DR-21, DR-226). */
 export const importQuery = (importId: string) =>
