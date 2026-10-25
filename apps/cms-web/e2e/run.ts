@@ -3,12 +3,13 @@ import { cloneTemplate } from '@rms/test-support'
 import { seed } from './support/seed'
 
 /**
- * The end-to-end run (DOC-88, P1-16): a cloned and seeded database, the real API on port 3100, Vite on 5174 and Playwright in this
+ * The end-to-end run (DOC-88, P1-16): a cloned and seeded database, the real API on port 3100, Vite on 5173 and Playwright in this
  * order, torn down in reverse. `bun --env-file=../../.env.local e2e/run.ts [playwright args]` from `apps/cms-web`. The stack
  * (PostgreSQL, the object store, Mailpit) must be up: `bun run infra:up`.
  */
 const API_PORT = 3100
-const WEB_PORT = 5174
+// 5173: the CORS rule of the local bucket allows this origin only (docker/compose.local.yml), and the browser `PUT` of an upload needs it.
+const WEB_PORT = 5173
 const root = resolve(import.meta.dir, '../../..')
 const web = resolve(import.meta.dir, '..')
 const apiUrl = `http://localhost:${API_PORT}/api/v1`
@@ -27,6 +28,9 @@ async function waitFor(url: string, label: string, ms = 60_000): Promise<void> {
     await Bun.sleep(300)
   }
 }
+
+// A run starts with an empty mailbox: the seeded addresses are the same every time.
+await fetch(`${mailUi}/api/v1/messages`, { method: 'DELETE' }).catch(() => undefined)
 
 const db = await cloneTemplate('empty')
 const children: { kill(): void }[] = []

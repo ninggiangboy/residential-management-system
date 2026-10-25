@@ -121,19 +121,15 @@ export function unitRoutes(d: UnitRouteDeps) {
     return unitBody(unit)
   }
 
-  const get = async (context: {
-    params: Static<typeof IdParams>
-    request: Request
-    set: RouteSet
-  }) => {
+  /**
+   * The `ETag` is the unit's `version`, the value an edit sends back as `If-Match`. It is not a validator of the whole answer: the
+   * owner, the members and the debt change without moving it, so `If-None-Match` is never answered 304 (a browser that cached the
+   * first answer would show a stale household, P1-16).
+   */
+  const get = async (context: { params: Static<typeof IdParams>; set: RouteSet }) => {
     const { version, ...detail } = await d.unitQueries.get(staffOf(context), context.params.id)
-    const etag = quoted(version)
-    context.set.headers.etag = etag
+    context.set.headers.etag = quoted(version)
     context.set.headers['cache-control'] = 'private, no-cache'
-    if (context.request.headers.get('if-none-match') === etag) {
-      context.set.status = 304
-      return undefined
-    }
     return { ...detail, version }
   }
 

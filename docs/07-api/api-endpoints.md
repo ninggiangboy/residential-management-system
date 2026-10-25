@@ -2099,9 +2099,9 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   ```
 
   `members` lists the non-removed memberships other than the owner's, oldest first. `fullName` is the profile's name, `phone` the account's.
-- **Errors:** 404 `not_found` (unknown id, or a unit of another building), 304 with `If-None-Match`.
+- **Errors:** 404 `not_found` (unknown id, or a unit of another building).
 - **Data source:** `residency.unit` by primary key; `residency.membership` by `membership_unit_idx` (unit, non-removed); names from `resident_profile`; phones from `IdentityApi.getResidentAccounts`; `FinanceApi.getOutstandingByUnit([id])`.
-- **Cache:** `ETag: "<unit.version>"`, `Cache-Control: private, no-cache`.
+- **Cache:** `ETag: "<unit.version>"`, `Cache-Control: private, no-cache`. The `ETag` is the value for `If-Match`, not a validator of the whole answer (the owner, the members and the debt change without moving the version), so `If-None-Match` is never answered 304 (P1-16: a browser that kept the first answer showed an old household).
 - **Performance:** p95 ≤ 300 ms (four reads, one call to `identity`, one to `finance`).
 - **Tests:** RM-36.
 

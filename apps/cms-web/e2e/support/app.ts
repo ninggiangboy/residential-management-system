@@ -21,15 +21,19 @@ export async function signInAndWait(page: Page, who: Who): Promise<void> {
 
 interface MailMessage {
   ID: string
+  Created: string
   To: { Address: string }[]
   Subject: string
-  Snippet: string
 }
 
-/** The newest message for `to`, polled for up to 20 s: the outbox relay sends mail within a second or two. */
+/**
+ * The newest message for `to` that arrived at or after `since` (`Date.now()` taken before the action that sends it), polled for up
+ * to 20 s: the outbox relay sends mail within a second or two, and the same address gets many mails in one run.
+ */
 export async function mailTo(
   to: string,
   matching?: RegExp,
+  since = 0,
 ): Promise<{ subject: string; text: string }> {
   const until = Date.now() + 20_000
   for (;;) {
@@ -39,6 +43,7 @@ export async function mailTo(
       messages?: MailMessage[]
     }
     for (const message of list.messages ?? []) {
+      if (Date.parse(message.Created) < since) continue
       const detail = (await (await fetch(`${MAIL_URL}/api/v1/message/${message.ID}`)).json()) as {
         Text: string
         Subject: string

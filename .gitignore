@@ -10,3 +10,7 @@ coverage/
 ios/
 android/
 apps/api/tests/authz/out/
+
+# Playwright output (P1-16)
+test-results/
+playwright-report/
