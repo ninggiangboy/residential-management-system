@@ -146,6 +146,8 @@ export async function createHarness(options: HarnessOptions = {}) {
     otpPerPhonePerHour: 5,
     otpPerIpPerHour: 20,
     otpDailyCap: 3000,
+    clientErrorsPerMinutePerIp: 10,
+    clientErrorsPerHourPerAccount: 30,
     smsDownFailures: 3,
     smsBrand: 'SUNRISE',
     appDownloadUrl: 'https://rms.example/app',

@@ -1,4 +1,4 @@
-import { createLogger } from '@core/telemetry'
+import { createLogger, type Logger } from '@core/telemetry'
 import { buildApp, buildOpsApp } from '../../src/app'
 import { loadAppConfig } from '../../src/bootstrap/config'
 import { type ContainerOverrides, createContainer } from '../../src/bootstrap/container'
@@ -15,9 +15,10 @@ export function containerFor(
   databaseUrl: string,
   overrides: ContainerOverrides = {},
   env: Record<string, string> = {},
+  logger: Logger = createLogger('silent'),
 ) {
   const config = loadAppConfig(testEnv({ DATABASE_URL: databaseUrl, ...env }))
-  const container = createContainer(config, createLogger('silent'), overrides)
+  const container = createContainer(config, logger, overrides)
   return { container, app: buildApp(container), ops: buildOpsApp(container) }
 }
 
