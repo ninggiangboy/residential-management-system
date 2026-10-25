@@ -126,6 +126,10 @@ export async function createHarness(options: HarnessOptions = {}) {
       orphanAfterHours: 24,
       deletedRowRetentionDays: 90,
     },
+    publicConfig: {
+      resident: { minVersion: '1.0.0', storeUrl: { ios: null, android: null } },
+      staff: { minVersion: '1.0.0', storeUrl: { ios: null, android: null } },
+    },
     settingsCacheSeconds: options.settingsCacheSeconds ?? 60,
     uploadRatePerHour: options.uploadRatePerHour ?? 60,
     outboxMaxPayloadBytes: 65536,

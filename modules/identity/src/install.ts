@@ -19,6 +19,7 @@ export function installIdentity(host: IdentityHost): IdentityModule {
     sms: host.sms,
     memberships: host.memberships,
     building: host.building,
+    files: host.files,
     audited: host.audited,
     guards: host.guards,
     idempotent: host.idempotent,

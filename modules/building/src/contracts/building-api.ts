@@ -13,6 +13,14 @@ export interface BuildingDto {
   name: Bilingual
   timeZone: string
   isDemo: boolean
+  /** The contact block of `GET /public/config` (DOC-36 §4); nothing else of the row leaves the module. */
+  contact: BuildingContact
+}
+
+export interface BuildingContact {
+  hotline: string | null
+  workingHours: Bilingual | null
+  email: string | null
 }
 
 export type GatewayProvider = 'payos' | 'vietqr'

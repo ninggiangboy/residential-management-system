@@ -51,8 +51,10 @@ import {
   UPDATE_STAFF_ACCOUNT_ROLES,
   type UpdateStaffAccount,
 } from '../application/use-cases/update-staff-account'
+import { UPDATE_STAFF_ME_ROLES, type UpdateStaffMe } from '../application/use-cases/update-staff-me'
 
 export interface StaffRouteDeps {
+  updateStaffMe: UpdateStaffMe
   requestStepUp: RequestStepUp
   revokeStaffSession: RevokeStaffSession
   createStaffAccount: CreateStaffAccount
@@ -95,6 +97,13 @@ const ProofBody = strictObject({
 })
 const FullName = Type.String({ minLength: 1, maxLength: 120 })
 const Email = Type.String({ format: 'email', maxLength: 254 })
+
+const UpdateMeBody = strictObject({
+  fullName: Type.Optional(Type.String({ minLength: 1 })),
+  language: Type.Optional(Language),
+  pushEnabled: Type.Optional(Type.Boolean()),
+  avatarFileId: Type.Optional(Type.Union([Type.String({ format: 'uuid' }), Type.Null()])),
+})
 
 const ListQuery = strictObject({
   page: Type.Optional(Type.String({ pattern: '^[0-9]{1,5}$' })),
@@ -147,7 +156,30 @@ const staffAccountKey = (context: object) => ({
  * accounts (E-39…E-46, DOC-51 §8). Every handler is the call of a use case or a query; the rules are theirs.
  */
 export function staffRoutes(d: StaffRouteDeps) {
-  const me = (context: object) => d.staffQueries.me(staffOf(context))
+  const me = async (context: { request: Request; set: RouteSet }) => {
+    const profile = await d.staffQueries.me(staffOf(context))
+    const etag = quoted(profile.version)
+    context.set.headers.etag = etag
+    context.set.headers['cache-control'] = 'private, no-cache'
+    if (context.request.headers.get('if-none-match') === etag) {
+      context.set.status = 304
+      return undefined
+    }
+    return profile
+  }
+
+  const updateMe = async (context: {
+    body: Static<typeof UpdateMeBody>
+    request: Request
+    set: RouteSet
+  }) => {
+    const profile = await d.updateStaffMe.execute(staffOf(context), {
+      ...context.body,
+      version: versionOf(context.request.headers.get('if-match')),
+    })
+    context.set.headers.etag = quoted(profile.version)
+    return profile
+  }
 
   const listSessions = async (context: object) => {
     const staff = staffOf(context)
@@ -267,6 +299,10 @@ export function staffRoutes(d: StaffRouteDeps) {
 
   return routePlugin({ prefix: '/staff' })
     .get('/me', me, route(GET_STAFF_ME_ROLES, { endpoint: 'E-30', operationId: 'getStaffMe' }))
+    .patch('/me', updateMe, {
+      ...route(UPDATE_STAFF_ME_ROLES, { endpoint: 'E-31', operationId: 'updateStaffMe' }),
+      body: UpdateMeBody,
+    })
     .get(
       '/sessions',
       listSessions,
