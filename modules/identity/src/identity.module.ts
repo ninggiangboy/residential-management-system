@@ -33,6 +33,7 @@ import { SessionOwners } from './application/session-owners'
 import { SmsCommands } from './application/sms-commands'
 import { StaffSafeguards } from './application/staff-safeguards'
 import { StaffSessions } from './application/staff-sessions'
+import { ApproveResidentDeletion } from './application/use-cases/approve-resident-deletion'
 import { ChangeResidentPhone } from './application/use-cases/change-resident-phone'
 import { CreateStaffAccount } from './application/use-cases/create-staff-account'
 import { DisableStaffAccount } from './application/use-cases/disable-staff-account'
@@ -410,6 +411,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       new EnsureResidentAccount(new LibphonenumberPhones(), residents, clock, ids),
       new ChangeResidentPhone(new LibphonenumberPhones(), residents, sessions, events, clock),
       new QueueMemberInvitation(residents, limiter, sms, clock, config),
+      new ApproveResidentDeletion(residents, clock, deps.audited),
     ),
     useCases,
     queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },

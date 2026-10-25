@@ -11,7 +11,12 @@ import type { Envelope } from '@core/messaging'
 import { FakeClock } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
 import type { Audited } from '@mod/audit/contracts'
-import type { FileActor, FileExpectation, FilesApi } from '@mod/building/contracts'
+import {
+  DEFAULT_SETTINGS,
+  type FileActor,
+  type FileExpectation,
+  type FilesApi,
+} from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
 import { cloneTemplate, type TestDb } from '@rms/test-support'
@@ -121,6 +126,7 @@ export function identityOn(database: Database, ids: UuidV7Generator, now: () => 
     | 'changeResidentPhone'
     | 'findResidentAccountsByPhoneFragment'
     | 'listDeletionRequests'
+    | 'approveResidentDeletion'
   > & { calls: string[]; phoneChanges: string[] } = {
     calls: [],
     phoneChanges: [],
@@ -154,6 +160,22 @@ export function identityOn(database: Database, ids: UuidV7Generator, now: () => 
              WHERE reverse(phone) LIKE reverse(${fragment}) || '%' AND status <> 'deleted' LIMIT ${limit}`,
       )
       return [...rows].map(accountOf)
+    },
+    async approveResidentDeletion(_staff, accountId, cooloffDays) {
+      stand.calls.push(`approve:${accountId}`)
+      const rows = await database.executor.execute(
+        sql`UPDATE identity.resident_account SET deletion_approved_at = ${now().toISOString()}::timestamptz
+             WHERE id = ${accountId}::uuid AND status = 'deletion_requested' RETURNING deletion_requested_at, deletion_approved_at`,
+      )
+      const row = rows[0]
+      if (!row) throw new ConflictError('deletion_not_requested', 'No deletion request')
+      const approvedAt = new Date(row.deletion_approved_at as string)
+      return {
+        accountId,
+        deletionRequestedAt: new Date(row.deletion_requested_at as string).toISOString(),
+        deletionApprovedAt: approvedAt.toISOString(),
+        executeAfter: new Date(approvedAt.getTime() + cooloffDays * 86_400_000).toISOString(),
+      }
     },
     async listDeletionRequests() {
       const rows = await database.executor.execute(
@@ -246,7 +268,7 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     clock,
     ids,
     database,
-    building: { getBuilding: async () => null },
+    building: { getBuilding: async () => null, getSettings: async () => DEFAULT_SETTINGS },
     files,
     identity,
     // The import routes are not mounted in these tests: the guards are the host's.

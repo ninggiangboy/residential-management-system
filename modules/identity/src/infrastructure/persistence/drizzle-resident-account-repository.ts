@@ -1,7 +1,8 @@
 import { applyTransition, type Database } from '@core/db'
-import { and, asc, eq, gt, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm'
 import type {
   DeletionRequest,
+  DeletionState,
   NewResidentAccount,
   ResidentAccountRecord,
   ResidentAccountTransition,
@@ -120,6 +121,41 @@ export class DrizzleResidentAccountRepository implements ResidentAccountReposito
       requestedAt: row.requestedAt as Date,
       approvedAt: row.approvedAt,
     }))
+  }
+
+  // scope-ok: see above
+  async findDeletionState(id: string): Promise<DeletionState | null> {
+    // scope-ok: see above
+    const [row] = await this.database.executor
+      .select({
+        status: residentAccount.status,
+        requestedAt: residentAccount.deletionRequestedAt,
+        approvedAt: residentAccount.deletionApprovedAt,
+      })
+      .from(residentAccount)
+      .where(eq(residentAccount.id, id))
+    return row ? { ...row, status: row.status as DeletionState['status'] } : null
+  }
+
+  // scope-ok: see above
+  async approveDeletion(id: string, now: Date): Promise<Date | null> {
+    // scope-ok: see above
+    const [row] = await this.database.executor
+      .update(residentAccount)
+      .set({
+        deletionApprovedAt: now,
+        updatedAt: now,
+        version: sql`${residentAccount.version} + 1`,
+      })
+      .where(
+        and(
+          eq(residentAccount.id, id),
+          eq(residentAccount.status, 'deletion_requested'),
+          isNull(residentAccount.deletionApprovedAt),
+        ),
+      )
+      .returning({ approvedAt: residentAccount.deletionApprovedAt })
+    return row?.approvedAt ?? null
   }
 
   // scope-ok: see above

@@ -36,6 +36,14 @@ export interface DeletionRequestDto {
   approvedAt: string | null
 }
 
+/** The answer of the approval (E-68): the earliest execution is the approval plus `accountDeletionDays` (DOC-35 §10.1). */
+export interface DeletionApprovalDto {
+  accountId: string
+  deletionRequestedAt: string
+  deletionApprovedAt: string
+  executeAfter: string
+}
+
 /** One account found by its phone (DOC-18 §1.5): a `deleted` account has the phone `deleted:<id>` and never matches. */
 export interface ResidentPhoneMatch {
   phone: string
@@ -107,6 +115,17 @@ export interface IdentityApi {
     after?: string
     limit?: number
   }): Promise<{ items: DeletionRequestDto[]; next: string | null }>
+  /**
+   * Approves the deletion request of the account (E-68, DOC-35 §10.1) in the caller's transaction and audits it as
+   * `identity.account.deletion_approve`. 404 for an unknown or deleted account, 409 `deletion_not_requested` for an `active`
+   * one; a second approval answers the existing dates and writes nothing. `cooloffDays` is the building's `accountDeletionDays`.
+   * The caller checks the staff scope and the ownership (`owner_must_transfer`) first.
+   */
+  approveResidentDeletion(
+    staff: StaffContext,
+    accountId: string,
+    cooloffDays: number,
+  ): Promise<DeletionApprovalDto>
   verifyStepUp(
     staff: StaffContext,
     action: StepUpAction,

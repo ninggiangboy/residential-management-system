@@ -10,6 +10,10 @@ import { type Guards, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
 import { RESIDENT_READ_ROLES, type ResidentQueries } from '../application/queries/resident-queries'
 import {
+  APPROVE_ACCOUNT_DELETION_ROLES,
+  type ApproveAccountDeletion,
+} from '../application/use-cases/approve-account-deletion'
+import {
   CHANGE_LOGIN_PHONE_ROLES,
   type ChangeLoginPhone,
 } from '../application/use-cases/change-login-phone'
@@ -26,6 +30,7 @@ export interface ResidentRouteDeps {
   createResident: CreateResident
   updateProfile: UpdateProfile
   changeLoginPhone: ChangeLoginPhone
+  approveAccountDeletion: ApproveAccountDeletion
   guards: Guards
   idempotent: Idempotent
 }
@@ -82,8 +87,8 @@ const profileBody = (profile: ResidentProfileRecord) => ({
 })
 
 /**
- * `/staff/residents` (E-63…E-67; DOC-27 §5, §8, §11): the list and search, the detail (the one `pii.read` view), the add, the
- * profile edit and the login phone change. Every handler is the call of a use case or a query service and holds no rule.
+ * `/staff/residents` (E-63…E-68; DOC-27 §5, §8, §11, DOC-35 §10): the list and search, the detail (the one `pii.read` view), the add, the
+ * profile edit, the login phone change and the approval of a deletion request. Every handler is the call of a use case or a query service and holds no rule.
  */
 export function residentRoutes(d: ResidentRouteDeps) {
   const list = async (context: { query: Static<typeof ListQuery> }) => {
@@ -151,6 +156,9 @@ export function residentRoutes(d: ResidentRouteDeps) {
     context.set.status = 204
   }
 
+  const approveDeletion = (context: { params: Static<typeof AccountParams> }) =>
+    d.approveAccountDeletion.execute(staffOf(context), context.params.accountId)
+
   const read = (info: RouteInfo) => staffRoute(d.guards, 'residency', RESIDENT_READ_ROLES, info)
 
   return routePlugin({ prefix: '/staff/residents' })
@@ -185,5 +193,12 @@ export function residentRoutes(d: ResidentRouteDeps) {
       }),
       params: AccountParams,
       body: PhoneBody,
+    })
+    .post('/:accountId/deletion/approve', approveDeletion, {
+      ...staffRoute(d.guards, 'residency', APPROVE_ACCOUNT_DELETION_ROLES, {
+        endpoint: 'E-68',
+        operationId: 'approveAccountDeletion',
+      }),
+      params: AccountParams,
     })
 }

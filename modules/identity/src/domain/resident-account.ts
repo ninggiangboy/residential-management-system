@@ -29,6 +29,13 @@ export interface DeletionRequest {
   approvedAt: Date | null
 }
 
+/** The dates of the deletion workflow of one account, read for the approval (DOC-35 §10.1). */
+export interface DeletionState {
+  status: ResidentStatus
+  requestedAt: Date | null
+  approvedAt: Date | null
+}
+
 export type ResidentAccountTransition = Transition<ResidentAccountRecord>
 
 const HOUR_MS = 3_600_000

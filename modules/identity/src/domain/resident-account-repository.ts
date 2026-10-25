@@ -1,5 +1,6 @@
 import type {
   DeletionRequest,
+  DeletionState,
   NewResidentAccount,
   ResidentAccountRecord,
   ResidentAccountTransition,
@@ -25,6 +26,13 @@ export interface ResidentAccountRepository {
   findByPhoneSuffix(digits: string, limit: number): Promise<ResidentAccountRecord[]>
   /** The accounts in `deletion_requested`, oldest id first, one more than `limit` is not read: the caller passes `limit + 1`. */
   listDeletionRequests(after: string | undefined, limit: number): Promise<DeletionRequest[]>
+  /** The status and the two dates of one account, `null` when it does not exist. */
+  findDeletionState(id: string): Promise<DeletionState | null>
+  /**
+   * The approval of DOC-35 §10.1 as one statement: `deletion_approved_at = now` where the account is `deletion_requested` and
+   * not yet approved. The approval date, or `null` when no row matched (cancelled, deleted or approved by another request).
+   */
+  approveDeletion(id: string, now: Date): Promise<Date | null>
   /** The ids of the flagged demo accounts, for the boot guard (DOC-16 §4.2). */
   demoAccountIds(): Promise<string[]>
   /** `false`: the row moved since it was loaded (another refresh stamped it first). */
