@@ -406,7 +406,7 @@ Do not copy:
 | Pencil / member name from `W-Unit-Detail` | E-65 | profile dialog fills | 404 `not_found` → close with the message; 500 `internal_error` (the audit insert failed, no data returned) → the generic error with a retry |
 | Profile → save | E-66 `PATCH /staff/residents/{accountId}` with `If-Match` = `profile.version` | dialog closes, toast "Đã lưu hồ sơ"; the answer is masked, so the page does not call E-65 again | 409 `version_conflict` → close the dialog, show the message, the user reopens it (a reopen is a new `pii.read`); 400 `validation_failed` rule `format` on the ID number → field error |
 | Profile → "Cập nhật SĐT đăng nhập" | E-67 | as in `W-Unit-Detail` (shared dialog) | `phone_in_use`, `phone_invalid` as there |
-| Profile → "Duyệt yêu cầu xóa" (shown only for `deletion_requested`) → confirm | E-68 `POST /staff/residents/{accountId}/deletion/approve` | banner becomes "Đã duyệt, sẽ xóa vào {executeAfter}"; the row tag changes | 409 `owner_must_transfer` → message "Chuyển chủ hộ của căn {codes} trước." with links to `/units/$id` from `details.unitIds`; 409 `deletion_not_requested` → refetch the list |
+| Profile → "Duyệt yêu cầu xóa" (shown only for `deletion_requested`) → confirm | E-68 `POST /staff/residents/{accountId}/deletion/approve` | banner becomes "Đã duyệt, sẽ xóa vào {executeAfter}" and the button goes; the lists refetch and the row keeps its one tag "Yêu cầu xóa tài khoản" (*as built, P1-16:* the detail E-65 `deletion` carries `executeAfter`, so a reopened profile shows the same date; the list has no tag for "approved") | 409 `owner_must_transfer` → message "Chuyển chủ hộ của căn {codes} trước." with links to `/units/$id` from `details.unitIds`; 409 `deletion_not_requested` → refetch the list |
 
 Profile dialog (not drawn):
 
@@ -472,6 +472,7 @@ Loading: skeleton rows. Empty with no filter: "Chưa có cư dân nào" and the 
 | `web.residents.dialog.approve-deletion.title` | Duyệt xóa tài khoản của {name}? | Approve deleting {name}'s account? |
 | `web.residents.dialog.approve-deletion.body` | Sau thời gian chờ của tòa nhà, tài khoản và dữ liệu cá nhân của người này sẽ bị xóa. Không hoàn tác được. | After the building's waiting period the account and personal data are deleted. This cannot be undone. |
 | `web.residents.dialog.approve-deletion.confirm` | Duyệt xóa | Approve deletion |
+| `web.residents.dialog.approve-deletion.owner` | Chuyển chủ hộ của căn {codes} trước. | Transfer ownership of unit {codes} first. |
 | `web.residents.toast.saved` | Đã lưu hồ sơ | Profile saved |
 
 Errors use `error.version_conflict`, `error.owner_must_transfer`, `error.deletion_not_requested`, `error.phone_in_use`, `error.invalid_cursor`.
@@ -487,7 +488,7 @@ Errors use `error.version_conflict`, `error.owner_must_transfer`, `error.deletio
 | UIWR-20 | **Given** the pencil on a row **When** it is clicked **Then** E-65 is called once and the dialog shows the full ID number and the date of birth; closing and reopening calls E-65 again (a new `pii.read`); the focus refetch never calls it | web-e2e |
 | UIWR-21 | **Given** the profile dialog **When** only the email is edited and saved **Then** E-66 sends `If-Match` = the profile version and only `email`, and the answer is not followed by an E-65 call | web-e2e |
 | UIWR-22 | **Given** a `deletion_requested` account that owns A-0703 **When** the Manager approves **Then** E-68 answers 409 `owner_must_transfer`, the dialog names A-0703 with a link to its detail, and the row is unchanged | web-e2e |
-| UIWR-23 | **Given** a `deletion_requested` account that owns no unit **When** the Manager approves **Then** the banner shows the execution date from `executeAfter` and the row tag changes after the refetch | web-e2e |
+| UIWR-23 | **Given** a `deletion_requested` account that owns no unit **When** the Manager approves **Then** the banner shows the execution date from `executeAfter`, the button goes, and the row keeps the deletion tag after the refetch | web-e2e |
 
 ### 10. E2E cases
 

@@ -252,6 +252,7 @@ export const webVi: Record<keyof typeof webEn, string> = {
   'web.residents.dialog.approve-deletion.body':
     'Sau thời gian chờ của tòa nhà, tài khoản và dữ liệu cá nhân của người này sẽ bị xóa. Không hoàn tác được.',
   'web.residents.dialog.approve-deletion.confirm': 'Duyệt xóa',
+  'web.residents.dialog.approve-deletion.owner': 'Chuyển chủ hộ của căn {codes} trước.',
   'web.residents.dialog.approve-deletion.title': 'Duyệt xóa tài khoản của {name}?',
   'web.residents.dialog.profile.action.phone': 'Cập nhật SĐT đăng nhập',
   'web.residents.dialog.profile.audit-note': 'Mỗi lần mở hồ sơ được ghi vào nhật ký.',

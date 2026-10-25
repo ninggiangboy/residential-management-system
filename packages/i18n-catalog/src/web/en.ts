@@ -254,6 +254,7 @@ export const webEn = {
   'web.residents.dialog.approve-deletion.body':
     "After the building's waiting period the account and personal data are deleted. This cannot be undone.",
   'web.residents.dialog.approve-deletion.confirm': 'Approve deletion',
+  'web.residents.dialog.approve-deletion.owner': 'Transfer ownership of unit {codes} first.',
   'web.residents.dialog.approve-deletion.title': "Approve deleting {name}'s account?",
   'web.residents.dialog.profile.action.phone': 'Update login phone',
   'web.residents.dialog.profile.audit-note':

@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
-import { signInAndWait, unique } from './support/app'
+import { API_URL, signInAndWait, unique } from './support/app'
+import { requestDeletion } from './support/db'
+import { PASSWORD, STAFF } from './support/seed'
 
 const phone = () =>
   `09${String(10_000_000 + (Date.now() % 80_000_000) + Math.floor(Math.random() * 9_000)).slice(0, 8)}`
@@ -137,5 +139,63 @@ test.describe('W-Residents and W-Resident-Add (UIWR-16…29)', () => {
     ).toBeVisible()
     await panel.getByRole('combobox', { name: 'Vai trò ở căn này' }).click()
     await expect(page.getByRole('option', { name: 'Chủ hộ' })).toHaveAttribute('data-disabled', '')
+  })
+  test('approving the deletion of an owner names the unit with a link and changes nothing (UIWR-22)', async ({
+    page,
+  }) => {
+    const ownerPhone = phone()
+    await signInAndWait(page, 'manager')
+    const { code, url } = await unitWithOwner(page, 'Phạm Chủ Căn', ownerPhone)
+    await requestDeletion(ownerPhone)
+    await page.goto(`/residents?q=${ownerPhone.slice(-6)}`)
+    await page.getByRole('button', { name: /Sửa hồ sơ Phạm Chủ Căn/ }).click()
+    const profile = page.getByRole('dialog', { name: /Hồ sơ cư dân/ })
+    await expect(profile.getByText(/Yêu cầu xóa tài khoản ngày/)).toBeVisible()
+    await profile.getByRole('button', { name: 'Duyệt yêu cầu xóa' }).click()
+    const confirm = page.getByRole('alertdialog')
+    await confirm.getByRole('button', { name: 'Duyệt xóa' }).click()
+    await expect(confirm.getByText(/Chuyển chủ hộ của căn/)).toBeVisible()
+    await confirm.getByRole('link', { name: code }).click()
+    await expect(page).toHaveURL(url)
+    await page.goto(`/residents?q=${ownerPhone.slice(-6)}`)
+    await page.getByRole('button', { name: /Sửa hồ sơ Phạm Chủ Căn/ }).click()
+    await expect(
+      page.getByRole('dialog', { name: /Hồ sơ cư dân/ }).getByText(/Yêu cầu xóa tài khoản ngày/),
+    ).toBeVisible()
+  })
+
+  test('approving the deletion of a member shows the execution date (UIWR-23)', async ({
+    page,
+    request,
+  }) => {
+    const memberPhone = phone()
+    await signInAndWait(page, 'manager')
+    const { url } = await unitWithOwner(page, 'Đỗ Chủ Hộ', phone())
+    const login = await request.post(`${API_URL}/auth/staff/login`, {
+      data: { email: STAFF.manager.email, password: PASSWORD, client: 'app' },
+    })
+    const { accessToken } = (await login.json()) as { accessToken: string }
+    const created = await request.post(`${API_URL}/staff/residents`, {
+      headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': crypto.randomUUID() },
+      data: {
+        unitId: /[0-9a-f]{8}-[0-9a-f-]{27}/.exec(url)?.[0],
+        phone: memberPhone,
+        fullName: 'Lý Thành Viên',
+        memberType: 'family',
+      },
+    })
+    expect(created.status(), await created.text()).toBe(201)
+    await requestDeletion(memberPhone)
+    await page.goto(`/residents?q=${memberPhone.slice(-6)}`)
+    await page.getByRole('button', { name: /Sửa hồ sơ Lý Thành Viên/ }).click()
+    const profile = page.getByRole('dialog', { name: /Hồ sơ cư dân/ })
+    await profile.getByRole('button', { name: 'Duyệt yêu cầu xóa' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Duyệt xóa' }).click()
+    await expect(profile.getByText(/Đã duyệt, sẽ xóa vào/)).toBeVisible()
+    await expect(profile.getByRole('button', { name: 'Duyệt yêu cầu xóa' })).toHaveCount(0)
+    await profile.getByRole('button', { name: 'Đóng' }).last().click()
+    await expect(page.getByRole('row', { name: /Lý Thành Viên/ })).toContainText(
+      'Yêu cầu xóa tài khoản',
+    )
   })
 })

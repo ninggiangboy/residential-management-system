@@ -1,5 +1,6 @@
 import { NotFoundError, requireRole, type SecretBox, type UnitOfWork } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
+import type { BuildingApi } from '@mod/building/contracts'
 import type { DeletionRequestDto, IdentityApi, ResidentAccountDto } from '@mod/identity/contracts'
 import type { BuildingScope, MemberType, StaffContext, StaffRole } from '@rms/shared-types'
 import { cccdAad } from '../../domain/resident-profile'
@@ -32,6 +33,11 @@ export interface ResidentListQuery {
 export interface Deletion {
   requestedAt: string | null
   approvedAt: string | null
+}
+
+/** The detail adds the earliest execution, which the Manager reads after the approval (E-68). */
+export interface DetailDeletion extends Deletion {
+  executeAfter: string | null
 }
 
 export interface ResidentListItem {
@@ -71,7 +77,7 @@ export interface ResidentDetail {
     status: 'active' | 'locked'
     startedAt: string
   }>
-  deletion: Deletion
+  deletion: DetailDeletion
 }
 
 const NO_DELETION: Deletion = { requestedAt: null, approvedAt: null }
@@ -91,6 +97,7 @@ export class ResidentQueries {
     private readonly residents: ResidentReader,
     private readonly lookups: LookupQueries,
     private readonly identity: Pick<IdentityApi, 'getResidentAccounts' | 'listDeletionRequests'>,
+    private readonly building: Pick<BuildingApi, 'getSettings'>,
     private readonly pii: () => SecretBox,
     audited: Audited,
   ) {
@@ -164,10 +171,12 @@ export class ResidentQueries {
     if (!profile) throw new NotFoundError()
     const [account] = await this.identity.getResidentAccounts([accountId])
     if (!account || account.status === 'deleted') throw new NotFoundError()
-    const [memberships, deletions] = await Promise.all([
+    const [memberships, deletions, settings] = await Promise.all([
       this.residents.membershipsOf(scope, [accountId]),
       this.deletionRequests(),
+      this.building.getSettings(staff.buildingId),
     ])
+    const deletion = deletions.get(accountId) ?? NO_DELETION
     const cccd =
       profile.cccdEnc === null
         ? null
@@ -192,7 +201,15 @@ export class ResidentQueries {
         status: m.status,
         startedAt: m.startedAt.toISOString(),
       })),
-      deletion: deletions.get(accountId) ?? NO_DELETION,
+      deletion: {
+        ...deletion,
+        executeAfter:
+          deletion.approvedAt === null
+            ? null
+            : new Date(
+                Date.parse(deletion.approvedAt) + settings.accountDeletionDays * 86_400_000,
+              ).toISOString(),
+      },
     }
   }
 
