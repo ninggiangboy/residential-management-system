@@ -7,7 +7,7 @@ interface Answer {
 }
 
 /** What Eden Treaty returns for an answer; a failure becomes the `ApiException` that `parseApiError` would have made. */
-export function failureOf(answer: Pick<Answer, 'error' | 'response'>): ApiError | null {
+function failureOf(answer: Pick<Answer, 'error' | 'response'>): ApiError | null {
   const { error, response } = answer
   if (!error) return null
   const retryAfter = Number(response.headers.get('retry-after'))
@@ -30,11 +30,6 @@ export function unwrap<R extends Answer>(answer: R): NonNullable<R['data']> {
 export function unwrapEmpty(answer: Answer): void {
   const failure = failureOf(answer)
   if (failure) throw new ApiException(failure)
-}
-
-/** The `ETag` of a read, for the `If-Match` of the write that follows. */
-export function etagOf(answer: Pick<Answer, 'response'>): string | null {
-  return answer.response.headers.get('etag')
 }
 
 /** Any thrown value as an `ApiError`: a screen shows `errorText(t, apiErrorOf(error))`. */

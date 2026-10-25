@@ -21,7 +21,7 @@ const toIsoDay = (text: string): string | null | undefined => {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : undefined
 }
 const fromIsoDay = (iso: string | null) => {
-  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null
+  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null
   return match ? `${match[3]}/${match[2]}/${match[1]}` : ''
 }
 

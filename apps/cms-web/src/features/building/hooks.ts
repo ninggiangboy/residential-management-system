@@ -69,5 +69,3 @@ export function usePublishTerms() {
       queryClient.invalidateQueries({ queryKey: ['terms', input.kind] }),
   })
 }
-
-export { ifMatch }

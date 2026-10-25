@@ -3,18 +3,18 @@ import { type Clock, UnavailableError } from '@core/kernel'
 import type { BuildingApi } from '../contracts'
 
 /** Where a store lists an app; a platform without a link has `null` (the client hides the button, DOC-64 `/wrong-app`). */
-export interface StoreUrls {
+interface StoreUrls {
   ios: string | null
   android: string | null
 }
 
-export interface AppRelease {
+interface AppRelease {
   minVersion: string
   storeUrl: StoreUrls
 }
 
 /** `MIN_APP_VERSION_*` and `STORE_URL_*` of DOC-41 §7: environment configuration, not database rows (DOC-51 E-03). */
-export interface PublicConfigOptions {
+interface PublicConfigOptions {
   resident: AppRelease
   staff: AppRelease
 }

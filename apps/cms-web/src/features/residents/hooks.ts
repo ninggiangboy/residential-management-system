@@ -97,9 +97,13 @@ export function usePhoneLookup(typed: string) {
 
 export function useResidentMutations() {
   const queryClient = useQueryClient()
+  // The lists and the units refetch; the profile detail never does: E-65 writes a `pii.read`, so a save is not followed by a read (UIWR-21).
   const changed = () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: staffKey('residents') }),
+      queryClient.invalidateQueries({
+        queryKey: staffKey('residents'),
+        predicate: (query) => query.queryKey[2] !== 'detail',
+      }),
       queryClient.invalidateQueries({ queryKey: staffKey('units') }),
     ])
   return {

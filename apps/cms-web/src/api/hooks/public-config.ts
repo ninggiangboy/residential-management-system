@@ -13,8 +13,6 @@ export const publicConfigQuery = () =>
     retry: false,
   })
 
-export type PublicConfig = NonNullable<Awaited<ReturnType<typeof api.public.config.get>>['data']>
-
 /** A bilingual value falls back to Vietnamese when the English text is missing (DR-71). */
 export const pick = (
   value: { vi: string; en: string | null } | null | undefined,

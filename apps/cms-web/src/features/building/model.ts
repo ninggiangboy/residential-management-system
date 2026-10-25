@@ -32,7 +32,7 @@ export interface BuildingFormValues {
   feeNoticeLanguage: 'vi' | 'en' | 'both'
 }
 
-export const FIELD_NAMES = [
+const FIELD_NAMES = [
   'nameVi',
   'nameEn',
   'companyNameVi',
@@ -58,7 +58,7 @@ export const FIELD_NAMES = [
 ] as const satisfies readonly (keyof BuildingFormValues)[]
 
 /** Where each API path lands in the form: a `details[].path` of `setting_invalid` or `validation_failed` names its field (DOC-67 §6). */
-export const PATH_TO_FIELD: Readonly<Record<string, keyof BuildingFormValues>> = {
+const PATH_TO_FIELD: Readonly<Record<string, keyof BuildingFormValues>> = {
   'name.vi': 'nameVi',
   'name.en': 'nameEn',
   'company.name.vi': 'companyNameVi',
@@ -212,6 +212,24 @@ export function buildPatch(
     ...(Object.keys(building).length > 0 ? { building } : {}),
     ...(Object.keys(settings).length > 0 ? { settings } : {}),
   }
+}
+
+/** The ranges of DOC-36 §5.1: the same table as the API's, so every out-of-range field is named at once, not one per request (UIWS-18). */
+const RANGES: ReadonlyArray<readonly [keyof BuildingFormValues, number, number]> = [
+  ['defaultDueDays', 1, 60],
+  ['accountDeletionDays', 1, 365],
+  ['maxAttempts', 3, 10],
+  ['lockMinutes', 5, 120],
+  ['maxCarsPerUnit', 1, 20],
+  ['quotaGb', 1, 1024],
+]
+
+/** The fields whose value is not a number inside its range; empty when the form may be sent. */
+export function outOfRange(values: BuildingFormValues): (keyof BuildingFormValues)[] {
+  return RANGES.filter(([field, min, max]) => {
+    const value = Number(values[field].trim().replace(',', '.'))
+    return !Number.isFinite(value) || value < min || value > max || values[field].trim() === ''
+  }).map(([field]) => field)
 }
 
 export const isEmptyPatch = (patch: BuildingPatch) =>

@@ -112,10 +112,10 @@ function Sidebar({ role }: { role: StaffRole }) {
         <div className="m-3 flex items-center gap-2 rounded-card bg-fill p-2">
           <Link
             to="/profile"
-            aria-label={t('web.shell.user.open-profile')}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-control p-1 outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus"
           >
             <Avatar name={me.fullName} src={me.avatarUrl} size="sm" />
+            <span className="sr-only lg:hidden">{t('web.shell.user.open-profile')}</span>
             <span className="hidden min-w-0 lg:block">
               <span className="block truncate text-label text-ink">{me.fullName}</span>
               <span className="block truncate text-caption text-ink-muted">
