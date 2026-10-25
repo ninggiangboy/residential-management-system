@@ -2300,11 +2300,11 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
                  "note": null, "version": 2 },
     "memberships": [ { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "unitId": "0192f3c4-5a1e-7000-8000-000000000021",
                       "unitCode": "A-1508", "memberType": "owner", "status": "active", "startedAt": "2026-01-05T00:00:00.000Z" } ],
-    "deletion": { "requestedAt": null, "approvedAt": null }
+    "deletion": { "requestedAt": null, "approvedAt": null, "executeAfter": null }
   }
   ```
 
-  `cccd` and `dateOfBirth` are `null` when not stored. `accountStatus` is `active` or `deletion_requested`.
+  `cccd` and `dateOfBirth` are `null` when not stored. `accountStatus` is `active` or `deletion_requested`. *Added 2026-10-25 (DR-264):* `deletion.executeAfter` is `approvedAt` plus `accountDeletionDays` (`BuildingApi.getSettings`), `null` until the approval, so the profile dialog shows the date after a reopen; the list items (E-63) carry the two dates only.
 - **Errors:** 404 `not_found`, 500 `internal_error` when the `pii.read` insert fails (no data is returned).
 - **Data source:** a short transaction first inserts the audit row `pii.read` (`object` `resident_profile`, `details {"view": "detail", "fields": ["cccd", "dateOfBirth"]}`) and then reads the profile, decrypts `cccd_enc` with `SecretBox` (AAD `cccd|<building_id>|<account_id>`), reads the memberships and the account (DOC-27 §5.3, DOC-35 §6).
 - **Cache:** `Cache-Control: no-store` (personal data); no `If-None-Match` shortcut: every view writes its audit row.

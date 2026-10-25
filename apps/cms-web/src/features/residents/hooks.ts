@@ -58,7 +58,7 @@ export interface ResidentDetail {
     status: 'active' | 'locked'
     startedAt: string
   }>
-  deletion: { requestedAt: string | null; approvedAt: string | null }
+  deletion: { requestedAt: string | null; approvedAt: string | null; executeAfter: string | null }
 }
 
 /** E-65 writes `pii.read`: it is never cached, never prefetched and never refetched on focus (DOC-65 `W-Residents` §5, UIWR-20). */
@@ -123,6 +123,25 @@ export function useResidentMutations() {
         }
         key: string
       }) => unwrap(await api.staff.residents.post(body, { headers: { 'idempotency-key': key } })),
+      onSettled: changed,
+    }),
+    /** E-68. It answers the dates, so the open profile takes them without a second `pii.read`; a stale state refetches the lists. */
+    approveDeletion: useMutation({
+      mutationFn: async (accountId: string) =>
+        unwrap(await api.staff.residents({ accountId }).deletion.approve.post()),
+      onSuccess: (approved) =>
+        queryClient.setQueryData(
+          residentDetailQuery(approved.accountId).queryKey,
+          (current: ResidentDetail | undefined) =>
+            current && {
+              ...current,
+              deletion: {
+                requestedAt: approved.deletionRequestedAt,
+                approvedAt: approved.deletionApprovedAt,
+                executeAfter: approved.executeAfter,
+              },
+            },
+        ),
       onSettled: changed,
     }),
     update: useMutation({

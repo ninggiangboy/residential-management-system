@@ -744,6 +744,14 @@ describe('E-68 approve a deletion request (DOC-35 §10.1)', () => {
        WHERE object_id = ${family.id} AND action = 'identity.account.deletion_approve'`
     expect(audit).toHaveLength(1)
     expect(JSON.stringify(audit[0]?.changes)).toContain('deletionApprovedAt')
+    const detail = await bodyOf<{ deletion: Record<string, string> }>(
+      await call(`/staff/residents/${family.id}`, { token: manager }),
+    )
+    expect(detail.deletion).toEqual({
+      requestedAt: body.deletionRequestedAt,
+      approvedAt: body.deletionApprovedAt,
+      executeAfter: body.executeAfter,
+    })
     const [row] = await db.sql`SELECT status FROM identity.resident_account WHERE id = ${family.id}`
     expect(row?.status).toBe('deletion_requested')
     const listed = await bodyOf<{

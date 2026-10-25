@@ -156,6 +156,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     residentReader,
     lookups,
     deps.identity,
+    deps.building,
     deps.pii,
     deps.audited,
   )

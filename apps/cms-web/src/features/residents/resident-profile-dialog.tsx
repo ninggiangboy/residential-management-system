@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { apiErrorOf } from '../../api/errors'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
-import { Dialog } from '../../components/ui/dialog'
+import { ConfirmDialog, Dialog } from '../../components/ui/dialog'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Plate } from '../../components/ui/tag'
 import { TextAreaField, TextField } from '../../components/ui/text-field'
@@ -23,6 +23,33 @@ const toIsoDay = (text: string): string | null | undefined => {
 const fromIsoDay = (iso: string | null) => {
   const match = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null
   return match ? `${match[3]}/${match[2]}/${match[1]}` : ''
+}
+
+const CODES_MARK = '\u0000'
+
+/** The message with the unit codes in its `{codes}` slot, each code a link to its unit (E-68 `details.unitIds`). */
+function OwnerMessage({
+  message,
+  units,
+}: {
+  message: string
+  units: Array<{ unitId: string; code: string }>
+}) {
+  const [before = '', after = ''] = message.split(CODES_MARK)
+  return (
+    <>
+      {before}
+      {units.map(({ unitId, code }, index) => (
+        <span key={unitId}>
+          {index > 0 && ', '}
+          <Link to="/units/$unitId" params={{ unitId }} search={{}} className="underline">
+            {code}
+          </Link>
+        </span>
+      ))}
+      {after}
+    </>
+  )
 }
 
 interface Values {
@@ -47,11 +74,13 @@ export function ResidentProfileDialog({
   const { t, formatPhone, formatDate } = useI18n()
   const canWrite = useCanWrite()
   const detail = useQuery(residentDetailQuery(accountId))
-  const { update } = useResidentMutations()
+  const { update, approveDeletion } = useResidentMutations()
   const [values, setValues] = useState<Values | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({})
   const [banner, setBanner] = useState<string | null>(null)
   const [phoneOpen, setPhoneOpen] = useState(false)
+  const [approving, setApproving] = useState(false)
+  const [ownedUnits, setOwnedUnits] = useState<string[]>([])
   const profile = detail.data?.profile
 
   useEffect(() => {
@@ -126,6 +155,28 @@ export function ResidentProfileDialog({
     )
   }
 
+  const closeApproval = () => {
+    setApproving(false)
+    setOwnedUnits([])
+  }
+
+  const approve = () =>
+    approveDeletion.mutate(accountId, {
+      onSuccess: closeApproval,
+      onError: (thrown) => {
+        const failure = apiErrorOf(thrown)
+        const unitIds = (failure.details as { unitIds?: string[] } | undefined)?.unitIds
+        if (failure.code === 'owner_must_transfer' && Array.isArray(unitIds)) {
+          // The dialog stays open and names the units with a link to each, so the Manager can transfer first (UIWR-22).
+          setOwnedUnits(unitIds)
+          return
+        }
+        closeApproval()
+        toast.error(errorText(t, failure))
+        if (failure.code === 'deletion_not_requested') onClose()
+      },
+    })
+
   const set = (key: keyof Values) => (event: { target: { value: string } }) =>
     setValues((current) => (current ? { ...current, [key]: event.target.value } : current))
 
@@ -172,10 +223,24 @@ export function ResidentProfileDialog({
           >
             {banner && <Banner tone="danger">{banner}</Banner>}
             {detail.data.accountStatus === 'deletion_requested' && (
-              <Banner tone="warning">
-                {detail.data.deletion.approvedAt
+              <Banner
+                tone="warning"
+                actions={
+                  detail.data.deletion.approvedAt === null ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!canWrite}
+                      onClick={() => setApproving(true)}
+                    >
+                      {t('web.residents.action.approve-deletion')}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {detail.data.deletion.executeAfter
                   ? t('web.residents.banner.deletion-approved', {
-                      date: formatDate(detail.data.deletion.approvedAt),
+                      date: formatDate(detail.data.deletion.executeAfter),
                     })
                   : t('web.residents.banner.deletion', {
                       date: detail.data.deletion.requestedAt
@@ -258,6 +323,30 @@ export function ResidentProfileDialog({
           </form>
         )}
       </Dialog>
+      <ConfirmDialog
+        open={approving}
+        onOpenChange={(open) => !open && closeApproval()}
+        title={t('web.residents.dialog.approve-deletion.title', {
+          name: profile?.fullName ?? detail.data?.phone ?? '',
+        })}
+        body={t('web.residents.dialog.approve-deletion.body')}
+        confirmLabel={t('web.residents.dialog.approve-deletion.confirm')}
+        tone="danger"
+        loading={approveDeletion.isPending}
+        onConfirm={approve}
+      >
+        {ownedUnits.length > 0 && (
+          <Banner tone="danger">
+            <OwnerMessage
+              message={t('web.residents.dialog.approve-deletion.owner', { codes: CODES_MARK })}
+              units={ownedUnits.map((unitId) => ({
+                unitId,
+                code: detail.data?.memberships.find((m) => m.unitId === unitId)?.unitCode ?? unitId,
+              }))}
+            />
+          </Banner>
+        )}
+      </ConfirmDialog>
       {detail.data && (
         <ChangePhoneDialog
           open={phoneOpen}

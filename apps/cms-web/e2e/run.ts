@@ -35,8 +35,23 @@ await fetch(`${mailUi}/api/v1/messages`, { method: 'DELETE' }).catch(() => undef
 const db = await cloneTemplate('empty')
 const children: { kill(): void; exited: Promise<number> }[] = []
 let code = 1
+let control: ReturnType<typeof Bun.serve> | undefined
 try {
   await seed(db)
+  // What a spec cannot do through the screens or the API: a resident's own request to delete the account (E-18 is P6-04).
+  control = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const { pathname } = new URL(request.url)
+      if (request.method !== 'POST' || pathname !== '/deletion-request')
+        return new Response(null, { status: 404 })
+      const { phone } = (await request.json()) as { phone: string }
+      const rows = await db.sql`
+        UPDATE identity.resident_account SET status = 'deletion_requested', deletion_requested_at = now()
+         WHERE phone = ${phone} AND status = 'active' RETURNING id`
+      return new Response(null, { status: rows.length === 1 ? 204 : 404 })
+    },
+  })
   const api = Bun.spawn(['bun', 'src/main.ts'], {
     cwd: resolve(root, 'apps/api'),
     env: {
@@ -78,12 +93,14 @@ try {
       E2E_BASE_URL: `http://localhost:${WEB_PORT}`,
       E2E_API_URL: apiUrl,
       E2E_MAIL_URL: mailUi,
+      E2E_CONTROL_URL: `http://localhost:${control.port}`,
     },
     stdout: 'inherit',
     stderr: 'inherit',
   })
   code = await run.exited
 } finally {
+  control?.stop(true)
   // The API is stopped before its database goes, or it logs a failed query on its way out.
   for (const child of children.reverse()) {
     child.kill()
