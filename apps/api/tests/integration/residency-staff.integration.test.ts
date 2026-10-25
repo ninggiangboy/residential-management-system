@@ -251,7 +251,7 @@ describe('units (E-57…E-62)', () => {
     ).toBe(400)
   })
 
-  test('E-59 returns the detail with an ETag and answers 304 to If-None-Match; another building is 404', async () => {
+  test('E-59 returns the detail with an ETag and never answers 304, so a changed household is never stale; another building is 404', async () => {
     const unit = await createUnit('V-1')
     const res = await call(`/staff/units/${unit.unitId}`, { token: manager })
     expect(res.status).toBe(200)
@@ -267,7 +267,7 @@ describe('units (E-57…E-62)', () => {
       token: manager,
       headers: { 'if-none-match': '"1"' },
     })
-    expect(cached.status).toBe(304)
+    expect(cached.status).toBe(200)
     expect((await call(`/staff/units/${unit.unitId}`, { token: strangerManager })).status).toBe(404)
     expect((await call(`/staff/units/${crypto.randomUUID()}`, { token: manager })).status).toBe(404)
   })
