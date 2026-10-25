@@ -33,7 +33,7 @@ async function waitFor(url: string, label: string, ms = 60_000): Promise<void> {
 await fetch(`${mailUi}/api/v1/messages`, { method: 'DELETE' }).catch(() => undefined)
 
 const db = await cloneTemplate('empty')
-const children: { kill(): void }[] = []
+const children: { kill(): void; exited: Promise<number> }[] = []
 let code = 1
 try {
   await seed(db)
@@ -84,7 +84,11 @@ try {
   })
   code = await run.exited
 } finally {
-  for (const child of children.reverse()) child.kill()
+  // The API is stopped before its database goes, or it logs a failed query on its way out.
+  for (const child of children.reverse()) {
+    child.kill()
+    await child.exited
+  }
   await db.drop()
 }
 process.exit(code)

@@ -7,7 +7,7 @@
     "dev": "vite --port 5173 --strictPort",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "bun test --pass-with-no-tests",
+    "test": "bun test src --pass-with-no-tests",
     "e2e": "bun --env-file=../../.env.local e2e/run.ts"
   },
   "dependencies": {

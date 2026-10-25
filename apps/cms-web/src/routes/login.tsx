@@ -1,8 +1,7 @@
 import { classify } from '@rms/client-core'
-import { type Static, Type } from '@sinclair/typebox'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
-import { type ReactElement, useEffect, useRef, useState } from 'react'
+import { lazy, type ReactElement, Suspense, useEffect, useRef, useState } from 'react'
 import { apiErrorOf } from '../api/errors'
 import { pick } from '../api/hooks/public-config'
 import { ensureSession, signInWithPassword } from '../auth/session'
@@ -13,25 +12,29 @@ import { Button } from '../components/ui/button'
 import { Icon } from '../components/ui/icon'
 import { Skeleton } from '../components/ui/skeleton'
 import { TextField } from '../components/ui/text-field'
-import { ForgotDialog } from '../features/auth/forgot-dialog'
 import { landingFor } from '../features/auth/landing'
 import { errorText, useI18n } from '../lib/i18n'
-import { safeRedirect, searchParser } from '../lib/search'
+import { f, safeRedirect, searchParser } from '../lib/search'
 import type { RouterContext } from './__root'
 
-const SearchSchema = Type.Object({
-  redirect: Type.Optional(Type.String()),
-  reason: Type.Optional(
-    Type.Union([Type.Literal('expired'), Type.Literal('signed_out'), Type.Literal('password_set')]),
-  ),
-  dialog: Type.Optional(Type.Literal('forgot')),
-})
+// The dialog is fetched when it is asked for: the first load of the page does not carry it (DOC-53 §8).
+const ForgotDialog = lazy(() =>
+  import('../features/auth/forgot-dialog').then((module) => ({ default: module.ForgotDialog })),
+)
+
+const SearchShape = {
+  redirect: f.string(),
+  reason: f.oneOf('expired', 'signed_out', 'password_set'),
+  dialog: f.oneOf('forgot'),
+}
 
 /** `beforeLoad` annotates its parameters: a context-sensitive callback that reads `search` makes the inferred search type collapse to `{}`. */
-type LoginSearch = Static<typeof SearchSchema>
+type LoginSearch = ReturnType<typeof loginSearch>
+
+const loginSearch = searchParser(SearchShape)
 
 export const Route = createFileRoute('/login')({
-  validateSearch: searchParser(SearchSchema),
+  validateSearch: loginSearch,
   // Cookie mode: one refresh on arrival; a valid session skips the form (DOC-64 `W-Login` §5, CL-20).
   beforeLoad: async ({
     context,
@@ -214,11 +217,17 @@ function LoginPage(): ReactElement {
           <p className="text-caption text-ink-muted">{t('web.login.footer')}</p>
         </div>
       </main>
-      <ForgotDialog
-        open={search.dialog === 'forgot'}
-        email={email}
-        onClose={() => void navigate({ to: '/login', search: { ...search, dialog: undefined } })}
-      />
+      {search.dialog === 'forgot' && (
+        <Suspense fallback={null}>
+          <ForgotDialog
+            open={search.dialog === 'forgot'}
+            email={email}
+            onClose={() =>
+              void navigate({ to: '/login', search: { ...search, dialog: undefined } })
+            }
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

@@ -1,118 +1,14 @@
 import type { IconName } from '@rms/design-tokens'
-import {
-  Bell,
-  Broom,
-  Buildings,
-  CalendarBlank,
-  Camera,
-  CaretDown,
-  CaretLeft,
-  CaretRight,
-  Car,
-  ChatCircleDots,
-  Check,
-  CheckCircle,
-  Clock,
-  DoorOpen,
-  DotsThree,
-  DownloadSimple,
-  Drop,
-  Elevator,
-  FileText,
-  FireExtinguisher,
-  Gear,
-  Headset,
-  House,
-  Image,
-  Info,
-  Key,
-  Lightning,
-  Lock,
-  MagnifyingGlass,
-  MapPin,
-  Megaphone,
-  Minus,
-  Motorcycle,
-  NotePencil,
-  Package,
-  PencilSimple,
-  Phone,
-  type Icon as PhosphorIcon,
-  Plus,
-  QrCode,
-  Receipt,
-  SignOut,
-  SquaresFour,
-  Star,
-  Trash,
-  UploadSimple,
-  UserCircle,
-  UsersThree,
-  Wallet,
-  Warning,
-  Wrench,
-  X,
-  XCircle,
-} from '@phosphor-icons/react'
+import { type Icon as PhosphorIcon, XCircle } from '@phosphor-icons/react'
+import { lazy, Suspense } from 'react'
 import { cn } from '../../lib/utils'
 
 /**
- * The typed registry of DOC-54 §7.3: exactly the names of `ICON_NAMES`, so an unknown name does not compile and a name without a
- * component fails `Record<IconName, …>` (test DS-06).
+ * The icon of a failed sign-in (the danger banner): they ship with the first load. Every other name comes from
+ * `icons-all`, a chunk fetched once when a signed-in screen first needs it (the budget of DOC-53 §8, DR-264).
  */
-export const ICONS: Record<IconName, PhosphorIcon> = {
-  house: House,
-  receipt: Receipt,
-  'squares-four': SquaresFour,
-  bell: Bell,
-  'user-circle': UserCircle,
-  plus: Plus,
-  minus: Minus,
-  x: X,
-  check: Check,
-  'caret-left': CaretLeft,
-  'caret-right': CaretRight,
-  'caret-down': CaretDown,
-  'magnifying-glass': MagnifyingGlass,
-  'pencil-simple': PencilSimple,
-  trash: Trash,
-  camera: Camera,
-  image: Image,
-  'qr-code': QrCode,
-  phone: Phone,
-  'chat-circle-dots': ChatCircleDots,
-  'sign-out': SignOut,
-  gear: Gear,
-  'dots-three': DotsThree,
-  lock: Lock,
-  'upload-simple': UploadSimple,
-  'download-simple': DownloadSimple,
-  'file-text': FileText,
-  'calendar-blank': CalendarBlank,
-  clock: Clock,
-  'map-pin': MapPin,
-  info: Info,
-  warning: Warning,
-  'check-circle': CheckCircle,
+const CORE: Partial<Record<IconName, PhosphorIcon>> = {
   'x-circle': XCircle,
-  star: Star,
-  buildings: Buildings,
-  elevator: Elevator,
-  key: Key,
-  'door-open': DoorOpen,
-  package: Package,
-  'fire-extinguisher': FireExtinguisher,
-  broom: Broom,
-  wrench: Wrench,
-  megaphone: Megaphone,
-  headset: Headset,
-  'note-pencil': NotePencil,
-  'users-three': UsersThree,
-  wallet: Wallet,
-  drop: Drop,
-  lightning: Lightning,
-  car: Car,
-  motorcycle: Motorcycle,
 }
 
 const SIZES = { sm: 'size-icon-sm', md: 'size-icon-md', lg: 'size-icon-lg' } as const
@@ -126,15 +22,16 @@ interface IconProps {
   className?: string
 }
 
+const Rest = lazy(() => import('./icons-all').then((module) => ({ default: module.ICONS_BY_NAME })))
+
 export function Icon({ name, size = 'md', weight = 'regular', label, className }: IconProps) {
-  const Component = ICONS[name]
+  const classes = cn('shrink-0', SIZES[size], className)
+  const accessible = { 'aria-hidden': label ? undefined : true, 'aria-label': label, role: label ? 'img' : undefined } as const
+  const Core = CORE[name]
+  if (Core) return <Core weight={weight} className={classes} {...accessible} />
   return (
-    <Component
-      weight={weight}
-      className={cn('shrink-0', SIZES[size], className)}
-      aria-hidden={label ? undefined : true}
-      aria-label={label}
-      role={label ? 'img' : undefined}
-    />
+    <Suspense fallback={<span className={classes} aria-hidden="true" />}>
+      <Rest name={name} weight={weight} className={classes} {...accessible} />
+    </Suspense>
   )
 }

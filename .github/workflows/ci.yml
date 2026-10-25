@@ -297,8 +297,23 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run check:bundle # DOC-53 §8 budgets (DR-179)
-      # P1-16 adds the database, `seed:demo`, the Playwright cache and the trace upload with its flows.
-      - run: bun scripts/run-if-defined.ts test:e2e P1-16
+      # The flows start their own database (a clone of the migrated template), the API and Vite; they need the three services of
+      # `infra:up` (PostgreSQL, the object store, Mailpit). `seed:demo` is not used: each run seeds its own building (P1-16).
+      - run: bun run keys:generate
+      - run: bun run infra:up
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bunx playwright install --with-deps chromium
+        working-directory: apps/cms-web
+      - run: bun run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-traces
+          path: apps/cms-web/test-results
+          retention-days: 7
 
   # The one required check (DR-163). `e2e-web` is not in it: it gates the staging deploy, not a merge. GitHub Free has
   # no branch protection for a private repository, so `bun run pr:merge <n>` is what refuses a merge without it (DR-241).

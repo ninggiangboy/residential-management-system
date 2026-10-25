@@ -1,26 +1,70 @@
-import type { Static, TObject, TSchema } from '@sinclair/typebox'
-import { Value } from '@sinclair/typebox/value'
 import type { SearchSchemaInput } from '@tanstack/react-router'
 
 /**
- * `validateSearch` of a route (DOC-53 §4 rule 2): each parameter is checked against its TypeBox schema and replaced by its default
- * when it is missing or invalid, so a hand-edited URL never crashes the page. The router parses a top-level `123` into a number; a
- * string parameter takes it back as text.
+ * `validateSearch` of a route (DOC-53 §4 rule 2): each parameter is checked against a small parser and replaced by its default when
+ * it is missing or invalid, so a hand-edited URL never crashes the page. The parsers are written here and not with TypeBox: the
+ * router runs them in the entry chunk of every page, and TypeBox's builders and checker would weigh as much as the sign-in page
+ * (DR-264). TypeBox stays in the forms, which load with their screens.
  */
-export function searchParser<T extends TObject>(schema: T, defaults: Partial<Static<T>> = {}) {
-  // `SearchSchemaInput` tells the router that a link may leave out what the defaults fill in: the input is partial, the output whole.
-  return (raw: Partial<Static<T>> & SearchSchemaInput): Static<T> => {
+export interface Field<T> {
+  parse(value: unknown): T | undefined
+}
+
+const field = <T>(parse: (value: unknown) => T | undefined): Field<T> => ({ parse })
+
+/** A number or a boolean the router parsed out of text comes back as text for a string parameter (`?q=123`). */
+const textOf = (value: unknown): string | undefined =>
+  typeof value === 'string'
+    ? value
+    : typeof value === 'number' || typeof value === 'boolean'
+      ? String(value)
+      : undefined
+
+export const f = {
+  string: (max = 300) =>
+    field<string>((value) => {
+      const text = textOf(value)
+      return text !== undefined && text.length <= max ? text : undefined
+    }),
+  pattern: (pattern: RegExp, max = 300) =>
+    field<string>((value) => {
+      const text = textOf(value)
+      return text !== undefined && text.length <= max && pattern.test(text) ? text : undefined
+    }),
+  int: (min: number, max: number) =>
+    field<number>((value) =>
+      typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
+        ? value
+        : undefined,
+    ),
+  bool: () => field<boolean>((value) => (typeof value === 'boolean' ? value : undefined)),
+  oneOf: <const V extends string>(...values: V[]) =>
+    field<V>((value) =>
+      typeof value === 'string' && (values as string[]).includes(value) ? (value as V) : undefined,
+    ),
+}
+
+type Shape = Record<string, Field<unknown>>
+type Parsed<S extends Shape> = { [K in keyof S]?: NonNullable<ReturnType<S[K]['parse']>> }
+
+/**
+ * The validator of a route: the input is whatever the URL holds (every parameter optional, so a link may omit what a default
+ * fills in), the output has the defaults. `SearchSchemaInput` tells the router so.
+ */
+export function searchParser<S extends Shape, D extends Parsed<S> = Record<never, never>>(
+  shape: S,
+  defaults?: D,
+) {
+  return (
+    raw: Parsed<S> & SearchSchemaInput,
+  ): Parsed<S> & Required<Pick<Parsed<S>, keyof D & keyof S>> => {
     const out: Record<string, unknown> = {}
-    for (const [key, property] of Object.entries(schema.properties) as [string, TSchema][]) {
-      let value: unknown = (raw as Record<string, unknown>)[key]
-      if (typeof value === 'number' || typeof value === 'boolean') {
-        if (property.type === 'string' || (property.anyOf && Value.Check(property, String(value))))
-          value = String(value)
-      }
-      if (value !== undefined && Value.Check(property, value)) out[key] = value
-      else if (key in defaults) out[key] = (defaults as Record<string, unknown>)[key]
+    for (const [key, parser] of Object.entries(shape)) {
+      const parsed = parser.parse((raw as Record<string, unknown>)[key])
+      if (parsed !== undefined) out[key] = parsed
+      else if (defaults && key in defaults) out[key] = (defaults as Record<string, unknown>)[key]
     }
-    return out as Static<T>
+    return out as Parsed<S> & Required<Pick<Parsed<S>, keyof D & keyof S>>
   }
 }
 

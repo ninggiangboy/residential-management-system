@@ -1,4 +1,4 @@
-import { Checkbox as RadixCheckbox, RadioGroup, Switch as RadixSwitch, ToggleGroup } from 'radix-ui'
+import { Checkbox as RadixCheckbox, RadioGroup, Switch as RadixSwitch } from 'radix-ui'
 import { type ReactNode, useId } from 'react'
 import { cn } from '../../lib/utils'
 import { Icon } from './icon'
@@ -64,57 +64,6 @@ export function Switch({
     >
       <RadixSwitch.Thumb className="block size-5 translate-x-0.5 rounded-full bg-surface transition-transform data-[state=checked]:translate-x-[22px]" />
     </RadixSwitch.Root>
-  )
-}
-
-export interface SegmentOption<V extends string> {
-  value: V
-  label: ReactNode
-  disabled?: boolean
-}
-
-/** One choice of a few, always visible (DOC-54 §7.2 `SegmentedControl`): a single-select toggle group. */
-export function SegmentedControl<V extends string>({
-  value,
-  onValueChange,
-  options,
-  label,
-  disabled,
-  size = 'md',
-  className,
-}: {
-  value: V
-  onValueChange: (value: V) => void
-  options: readonly SegmentOption<V>[]
-  label: string
-  disabled?: boolean
-  size?: 'sm' | 'md'
-  className?: string
-}) {
-  return (
-    <ToggleGroup.Root
-      type="single"
-      value={value}
-      // Radix reports '' when the pressed item is pressed again; a segmented control always has a value.
-      onValueChange={(next) => next && onValueChange(next as V)}
-      aria-label={label}
-      disabled={disabled}
-      className={cn('inline-flex rounded-full bg-fill p-1', className)}
-    >
-      {options.map((option) => (
-        <ToggleGroup.Item
-          key={option.value}
-          value={option.value}
-          disabled={option.disabled}
-          className={cn(
-            'rounded-full px-4 text-label text-ink-muted outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus data-[state=on]:bg-surface data-[state=on]:text-ink data-[state=on]:shadow-card',
-            size === 'sm' ? 'h-8' : 'h-control-md',
-          )}
-        >
-          {option.label}
-        </ToggleGroup.Item>
-      ))}
-    </ToggleGroup.Root>
   )
 }
 

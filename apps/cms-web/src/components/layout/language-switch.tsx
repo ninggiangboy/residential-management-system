@@ -1,6 +1,6 @@
 import type { Language } from '@rms/shared-types'
 import { useI18n } from '../../lib/i18n'
-import { SegmentedControl } from '../ui/controls'
+import { SegmentedControl } from '../ui/segmented-control'
 
 /** VI / EN. Signed out it is local only; the shell passes `onChange` to save the account's language (DOC-64 shell). */
 export function LanguageSwitch({

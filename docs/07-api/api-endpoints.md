@@ -2089,7 +2089,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
     "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "code": "A-1508", "floor": 15, "bedrooms": 2, "areaM2": "68.50",
     "occupancy": "occupied", "note": null, "version": 3,
     "owner": { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "accountId": "0192f3c4-5a1e-7000-8000-000000000041",
-               "fullName": "Nguyễn Văn An", "phone": "+84901234567" },
+               "fullName": "Nguyễn Văn An", "phone": "+84901234567", "status": "active", "lockedBy": null },
     "members": [
       { "membershipId": "0192f3c4-5a1e-7000-8000-000000000062", "accountId": "0192f3c4-5a1e-7000-8000-000000000042",
         "fullName": "Trần Thị Bình", "phone": "+84912345678", "memberType": "tenant", "canPay": false,

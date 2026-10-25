@@ -170,7 +170,7 @@ PS-1, PS-2 (and a Technician or Guard who asks from the web). UC-17 alternative 
 
 ### 2. URL and search params
 
-`/forgot/sent`, no params (DOC-53 §4). The email is passed in router state only, never in the URL. A visit without that state (a reload, a pasted link) goes to `/login?dialog=forgot`.
+`/forgot/sent`, no params (DOC-53 §4). The email is passed in router state only, never in the URL. A visit without that state (a pasted link) goes to `/login?dialog=forgot`. *Revised 2026-10-25 (P1-16, DR-263):* a reload keeps the page, because the browser keeps `history.state`.
 
 ### 3. Prototype
 
@@ -224,7 +224,7 @@ Offline: the resend button is disabled with the reason. Loading, empty, stale an
 | UIWO-11 | **G** a reset requested for a known and for an unknown email **W** `/forgot/sent` shows **T** the two pages are identical except for the typed address, and neither claims that a mail was sent | web-e2e |
 | UIWO-12 | **G** the page just opened **W** the clock advances **T** the resend button reads "Gửi lại link sau 00:45", counts down, is disabled until 00:00 and then enabled | web-e2e |
 | UIWO-13 | **G** three requests for one email in an hour **W** the fourth resend is clicked **T** the answer is 429 and the button shows the wait from `Retry-After` | web-e2e |
-| UIWO-14 | **G** a reload of `/forgot/sent` **W** the router state is gone **T** the visitor lands on `/login?dialog=forgot` | web-e2e |
+| UIWO-14 | **G** `/forgot/sent` opened by a pasted link, with no router state **T** the visitor lands on `/login?dialog=forgot`; a reload of the page that was reached from the dialog stays on it (the history state survives) | web-e2e |
 
 ### 10. E2E cases
 

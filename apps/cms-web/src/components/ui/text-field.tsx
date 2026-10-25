@@ -75,7 +75,7 @@ export function SearchField({
 }: Omit<TextFieldProps, 'type' | 'suffix'> & { label: string }) {
   return (
     <div className={cn('relative', className)}>
-      <span className="pointer-events-none absolute left-4 top-0 flex h-control-lg items-center text-ink-muted">
+      <span className="pointer-events-none absolute left-4 top-0 z-10 flex h-control-lg items-center text-ink-muted">
         <Icon name="magnifying-glass" />
       </span>
       <TextField {...props} aria-label={label} className="[&_input]:pl-12" />
