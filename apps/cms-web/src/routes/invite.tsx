@@ -1,11 +1,10 @@
-import { Type } from '@sinclair/typebox'
 import { createFileRoute } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { ResetScreen } from '../features/auth/reset-screen'
-import { searchParser } from '../lib/search'
+import { f, searchParser } from '../lib/search'
 
 export const Route = createFileRoute('/invite')({
-  validateSearch: searchParser(Type.Object({ token: Type.Optional(Type.String()) })),
+  validateSearch: searchParser({ token: f.string(200) }),
   component: Page,
 })
 

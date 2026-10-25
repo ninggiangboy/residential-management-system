@@ -31,6 +31,7 @@ bun run check:layout       # module layout (DR-254): one command per file with o
 bun run test               # unit tests of every workspace (bun test, no database)
 bun run test:coverage      # the same with lcov (CI `unit` job)
 bun run dev:web            # Vite for apps/cms-web on :5173
+bun run test:e2e            # Playwright flows of the web CMS: a cloned seeded database, the API on :3100 and Vite on :5173 (stop dev:web first); needs infra:up
 bun run --filter @app/api dev      # API on :3000 (skeleton until P1-04)
 bun run tokens:build       # regenerate packages/design-tokens/generated/ from tokens.json
 ```
@@ -40,10 +41,11 @@ Running tests:
 - One file: `bun test packages/core-i18n/src/merge.test.ts`. One test by name: add `-t '<pattern>'`. One workspace: `bun run --filter @core/i18n test`.
 - The `@core/db` tests skip themselves unless `TEST_ADMIN_DATABASE_URL=postgres://postgres:$RMS_POSTGRES_PASSWORD@localhost:$RMS_PG_PORT/postgres` is set and the stack is up.
 - The design-tokens font test (DS-05) calls `uv run --with fontTools`, so it needs `uv` installed.
+- The web flows (`bun run test:e2e`, then `e2e/<file>.spec.ts` to run one) need the stack, `.env.local` and Chromium (`bunx playwright install chromium` in `apps/cms-web`); `e2e/run.ts` starts and stops the API and Vite, so port 5173 must be free.
 - Integration tests (`bun run test:integration`, `bun run test:grants`) need the stack and `.env.local`; each file clones a migrated template database. The files tests of `@mod/building` use SeaweedFS when `S3_ENDPOINT` answers and an in-memory store otherwise; `bun --env-file=.env.local test tools/compat/uploads.test.ts` runs the upload checks (U1…U11) against the store that `S3_*` names.
 - `bun run check:arch:fixtures` tests the cruiser rules against the deliberately broken trees in `tools/arch-fixtures/cases/`.
 
-Several targets named in the docs (`dev`, `seed:demo`, `test:authz`, `test:e2e`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
+Several targets named in the docs (`dev`, `seed:demo`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
 
 ## Architecture
 
@@ -52,14 +54,14 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
 **Scopes and import rules.** dependency-cruiser enforces them (`.dependency-cruiser.*.cjs`):
 
 - `@app/api` (`apps/api`) is the composition root: it holds the HTTP server and the worker role. It imports modules only through their exports map (`.`, `./contracts`, `./config`, `./manifest`, `./schema`, `./integrations/<consumer>`) and never imports a driver directly. Only `main.ts` and `app.ts` may import the container.
-- `@app/cms-web` (Vite, React 19, TanStack Router, Tailwind 4), `@app/resident-app` and `@app/staff-app` (Expo Router, NativeWind on Tailwind 3) are the clients. They import `@app/api` **only as `import type { App }`** for the Eden treaty client, and never import server code (`modules/*` or the server-side `@core/*`).
+- `@app/cms-web` (Vite, React 19, TanStack Router and Query, Tailwind 4, Radix; the components are hand-written in `src/components/ui`, route search parameters use `src/lib/search.ts` and not TypeBox), `@app/resident-app` and `@app/staff-app` (Expo Router, NativeWind on Tailwind 3) are the clients. They import `@app/api` **only as `import type { App }`** for the Eden treaty client, and never import server code (`modules/*` or the server-side `@core/*`).
 - `@mod/<name>` (`modules/`: `audit`, `building`, `identity` and `residency` so far) is a business module that owns one PostgreSQL schema. Modules talk to each other **only through `./contracts`**. Inside a module the layers are `domain` → `application` → `infrastructure`/`presentation`:
   - `domain` is pure. It imports only `@core/kernel` and `@rms/shared-types`; no `new Date()` and no I/O. Time comes from the `Clock` port and ids from `IdGenerator`.
   - `application` holds the use cases and ports. It must not touch Elysia, Drizzle or `process.env`.
   - `presentation` holds Elysia routes. A route handler is about three lines and receives use cases, never repositories.
   - The layout to follow is the module template in DOC-12 §4 and its rules in §4.5 (DR-254): `application/use-cases/<verb>-<noun>.ts` for commands only, with one class and one `execute`; reads are methods of a few query services in `queries/<name>-queries.ts` (no `get-`/`list-`/`view-` use case files); one handler per file in `handlers/`; `api/<name>-api-impl.ts` for the contract; repository interfaces and aggregates in `domain/`, `<name>.module.ts` apart from `install.ts`. No `*Service` class. A staff operation exports its `<OPERATION>_ROLES` and calls `requireRole(staff, <OPERATION>_ROLES)` (`@core/kernel`); the route reads the same constant for its guard and `audience`. `bun run check:layout` enforces it.
 - `@core/*` (`packages/core-*`) is infrastructure vendored from an upstream reference repository (`packages/CORE_VERSION`). It is this project's code now: fix bugs here, in a normal PR. Any change that is not a rename gets a line under `local-changes` in `CORE_VERSION`. A package may import only the other packages listed for it in the `ALLOWED` map of `.dependency-cruiser.packages.cjs`.
-- `@rms/*` holds project packages shared with the clients. `@rms/shared-types` is a leaf with no dependencies (ids, statuses, error codes, `Money`, time helpers). The other packages are `@rms/i18n-catalog` and `@rms/design-tokens`. `client-core`, `mobile-core`, `ui-native` and `pdf-assets` are planned and not created yet.
+- `@rms/*` holds project packages shared with the clients. `@rms/shared-types` is a leaf with no dependencies (ids, statuses, error codes, `Money`, time helpers). `@rms/client-core` is the pure-TypeScript fetcher of the clients (single-flight refresh, retries, error classes, intent keys, query keys). The other packages are `@rms/i18n-catalog` and `@rms/design-tokens`. `mobile-core`, `ui-native` and `pdf-assets` are planned and not created yet.
 
 **Backend rules that reviewers enforce** (DOC-12 §14 and master plan §7.2):
 

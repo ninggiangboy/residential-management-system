@@ -125,6 +125,7 @@ Eden Treaty is created once per client with a custom `fetcher`; everything cross
 export interface ClientEnv { app: 'web' | 'resident' | 'staff'; appVersion?: string; baseUrl: string }
 export interface TokenStore {
   accessToken(): string | null                       // memory only (§5.1)
+  accessExpiresAt(): number | null                   // ms since the epoch: the refresh runs 30 s before it (§5.2; P1-16)
   setAccessToken(t: { token: string; expiresAt: number } | null): void
   refreshCredential(): Promise<string | null>        // mobile: the token from secure store; web: null (cookie)
   saveRefreshCredential(t: string): Promise<void>    // mobile only
@@ -166,7 +167,7 @@ export const api = treaty<App>(origin, { fetcher: createAuthenticatedFetch({ …
 | `X-Requested-With: rms`, `credentials: 'include'` | web only | `POST /auth/refresh`, `POST /auth/logout` with the cookie (§5.2) |
 | `User-Agent` | `rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` built from `expo-device` | mobile; React Native cannot always set it, so P1-17 checks the platform default and falls back to `X-App-Id` + `X-App-Version` only |
 
-The fetcher reads `X-Request-Id`, `Retry-After` and `Idempotent-Replayed` from the answer. It never logs a header value or a body (§15).
+The fetcher reads `X-Request-Id`, `Retry-After` and `Idempotent-Replayed` from the answer. It never logs a header value or a body (§15). *Added 2026-10-25 (P1-16, DR-263):* the error body of the API has no request id (DR-247) and Eden hands a screen only the body, so the fetcher copies `X-Request-Id` into `error.requestId` of a non-2xx JSON answer; the screens read the "Reference: …" from there.
 
 ### 4.3 Idempotency keys and retries
 

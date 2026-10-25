@@ -56,6 +56,7 @@
     "exp:10": "bun run --cwd apps/api exp:10",
     "config:example": "bun run --cwd apps/api config:example",
     "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
+    "test:e2e": "bun run --filter @app/cms-web e2e",
     "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"
   },
   "devDependencies": {

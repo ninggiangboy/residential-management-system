@@ -24,9 +24,7 @@ test.describe('W-Profile (UIWO-20…26)', () => {
     await expect(page.getByText('Đã lưu thay đổi.')).toBeVisible()
     expect(bodies).toHaveLength(1)
     expect(JSON.parse(bodies[0] ?? '{}')).toEqual({ fullName: 'Lê Văn Quản Lý' })
-    await expect(page.getByRole('link', { name: 'Mở hồ sơ cá nhân' })).toContainText(
-      'Lê Văn Quản Lý',
-    )
+    await expect(page.locator('aside a[href="/profile"]')).toContainText('Lê Văn Quản Lý')
     // The email is read only and never sent (UIWO-26).
     await expect(page.getByLabel('Email')).toBeDisabled()
   })

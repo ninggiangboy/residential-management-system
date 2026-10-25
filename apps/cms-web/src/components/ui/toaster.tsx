@@ -1,21 +1,27 @@
-import { Toaster as Sonner, toast } from 'sonner'
+import { lazy, type ReactNode, Suspense } from 'react'
 
-/** Toasts are 5 s and dismissible (DOC-68 §2); the colors come from the tokens through the CSS variables below. */
+const Impl = lazy(() => import('./sonner-toaster'))
+
+/** The toast library loads after the first paint: no page needs it before a user acts (the budget of DOC-53 §8, DR-264). */
 export function Toaster() {
   return (
-    <Sonner
-      position="bottom-right"
-      duration={5000}
-      closeButton
-      toastOptions={{
-        classNames: {
-          toast:
-            '!rounded-control !border-line !bg-surface !text-ink !shadow-float !font-sans !text-secondary',
-          closeButton: '!border-line !bg-surface !text-ink',
-        },
-      }}
-    />
+    <Suspense fallback={null}>
+      <Impl />
+    </Suspense>
   )
 }
 
-export { toast }
+interface Options {
+  description?: ReactNode
+}
+
+const load = () => import('sonner').then((module) => module.toast)
+
+export const toast = {
+  success(message: ReactNode, options?: Options): void {
+    void load().then((t) => t.success(message, options))
+  },
+  error(message: ReactNode, options?: Options): void {
+    void load().then((t) => t.error(message, options))
+  },
+}

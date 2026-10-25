@@ -160,7 +160,7 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `test:integration` | Integration tests against the local PostgreSQL; each file clones the template database (DOC-88 §6) through `@rms/test-support` | P1-04 (done) |
 | `test:race` | The race harness (`apps/api/test/race`) | P2-03 |
 | `test:authz` | The authorization matrix generator and run (EXP-10, DOC-39 §4) | P1-15 |
-| `test:e2e` | Playwright flows of the web CMS against `dev` | P1-16 (the first flows; P1-09 has no screen to drive) |
+| `test:e2e` | Playwright flows of the web CMS: `apps/cms-web/e2e/run.ts` clones a seeded database, starts the API on 3100 and Vite on **5173** (the CORS origin of the local bucket), runs the specs one after the other and stops them; needs `infra:up` and `.env.local`; stop `dev:web` first. Arguments go to Playwright (`bun run test:e2e e2e/staff.spec.ts`) | P1-16 (done) |
 | `test:grants` | The permission tests of DOC-19 §9 on clones of the migrated template (`apps/api/tests/grants`) | P1-06 (done) |
 | `test:mobile` | Maestro flows against a development build on a simulator (on demand, DOC-88 §11) | P1-17 |
 | `test:load` | k6 profile named by `--profile`, against the host named by `TEST_BASE_URL` (EXP-07; staging only, DOC-88 §11) | P6-01 |
