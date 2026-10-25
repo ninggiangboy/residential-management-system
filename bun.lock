@@ -220,6 +220,13 @@
         "drizzle-kit": "0.31.11",
       },
     },
+    "packages/client-core": {
+      "name": "@rms/client-core",
+      "version": "0.0.0",
+      "dependencies": {
+        "@rms/shared-types": "workspace:*",
+      },
+    },
     "packages/core-auth": {
       "name": "@core/auth",
       "version": "0.0.0",
@@ -1099,6 +1106,8 @@
     "@react-native/normalize-colors": ["@react-native/normalize-colors@0.88.0", "", {}, "sha512-eZCu3tGAQCfvMCPQJVY4dmoMX8ZZYBvqIGHX7lwOYyzNK+Dl8e5ky7ZoXub1Rq75oSrQXNNmSP2CDjNNXXZpFQ=="],
 
     "@react-native/virtualized-lists": ["@react-native/virtualized-lists@0.88.0", "", { "dependencies": { "invariant": "^2.2.4", "nullthrows": "^1.1.1" }, "peerDependencies": { "@types/react": "^19.2.0", "react": "*", "react-native": "0.88.0" }, "optionalPeers": ["@types/react"] }, "sha512-zpZIOAbobdS93edwHkNUdGDzvElNeQJqukRERRPns3/ucPvuMd2G4fYpmVJSVjhxtGCcLLB1PFndLYYfwaYoBQ=="],
+
+    "@rms/client-core": ["@rms/client-core@workspace:packages/client-core"],
 
     "@rms/design-tokens": ["@rms/design-tokens@workspace:packages/design-tokens"],
 
