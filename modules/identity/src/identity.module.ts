@@ -42,6 +42,7 @@ import { EnsureResidentAccount } from './application/use-cases/ensure-resident-a
 import { LockStaffAccount } from './application/use-cases/lock-staff-account'
 import { QueueMemberInvitation } from './application/use-cases/queue-member-invitation'
 import { RefreshSession } from './application/use-cases/refresh-session'
+import { ReportClientError } from './application/use-cases/report-client-error'
 import { RequestOtp } from './application/use-cases/request-otp'
 import { RequestPasswordReset } from './application/use-cases/request-password-reset'
 import { RequestStepUp } from './application/use-cases/request-step-up'
@@ -75,6 +76,7 @@ import { CryptoTokenFactory } from './infrastructure/security/crypto-token-facto
 import { JoseTokens } from './infrastructure/security/jose-tokens'
 import { identityManifest } from './manifest'
 import { authRoutes } from './presentation/auth-routes'
+import { clientErrorRoutes } from './presentation/client-error-routes'
 import { residentRoutes } from './presentation/resident-routes'
 import { staffRoutes } from './presentation/staff-routes'
 
@@ -123,9 +125,14 @@ export type IdentityRoutes = ReturnType<typeof createRoutes>
 function createRoutes(
   deps: Parameters<typeof authRoutes>[0] &
     Parameters<typeof staffRoutes>[0] &
-    Parameters<typeof residentRoutes>[0],
+    Parameters<typeof residentRoutes>[0] &
+    Parameters<typeof clientErrorRoutes>[0],
 ) {
-  return routePlugin().use(authRoutes(deps)).use(staffRoutes(deps)).use(residentRoutes(deps))
+  return routePlugin()
+    .use(authRoutes(deps))
+    .use(staffRoutes(deps))
+    .use(residentRoutes(deps))
+    .use(clientErrorRoutes(deps))
 }
 
 /** What the routes call; the test harness and later tasks (P1-14, P1-22) call the same objects. */
@@ -140,6 +147,8 @@ export interface IdentityUseCases {
   requestOtp: RequestOtp
   /** `POST /auth/otp/verify`. */
   verifyOtp: VerifyOtp
+  /** `POST /client-errors` (E-04). */
+  reportClientError: ReportClientError
   /** `DELETE /me/sessions/{id}`. */
   revokeResidentSession: RevokeResidentSession
   /** `POST /auth/staff/password-reset`. */
@@ -381,11 +390,13 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     }),
   ]
 
+  const reportClientError = new ReportClientError(limiter, accountLimiter, logger, config)
   const useCases: IdentityUseCases = {
     signInStaff,
     refreshSession,
     signOut,
     requestOtp,
+    reportClientError,
     verifyOtp,
     revokeResidentSession,
     requestPasswordReset,
@@ -425,6 +436,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       guards: deps.guards,
       idempotent: deps.idempotent,
       clock,
+      verifier: tokens,
     }),
     handlers,
     outbox: { name: 'identity', table: identityOutbox, inboxTable: identityInbox },

@@ -748,9 +748,9 @@ describe('E-68 approve a deletion request (DOC-35 §10.1)', () => {
       await call(`/staff/residents/${family.id}`, { token: manager }),
     )
     expect(detail.deletion).toEqual({
-      requestedAt: body.deletionRequestedAt,
-      approvedAt: body.deletionApprovedAt,
-      executeAfter: body.executeAfter,
+      requestedAt: body.deletionRequestedAt as string,
+      approvedAt: body.deletionApprovedAt as string,
+      executeAfter: body.executeAfter as string,
     })
     const [row] = await db.sql`SELECT status FROM identity.resident_account WHERE id = ${family.id}`
     expect(row?.status).toBe('deletion_requested')

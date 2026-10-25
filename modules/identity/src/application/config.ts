@@ -47,6 +47,10 @@ export interface IdentityConfig {
   otpPerIpPerHour: number
   /** `OTP_DAILY_CAP` (3000): challenges in a rolling 24 hours for the whole deployment. */
   otpDailyCap: number
+  /** `CLIENT_ERRORS_PER_MINUTE_PER_IP` (10). */
+  clientErrorsPerMinutePerIp: number
+  /** `CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT` (30). */
+  clientErrorsPerHourPerAccount: number
   /** `SMS_DOWN_FAILURES` (3): failing commands, with none delivered in 10 minutes, that mark the provider down. */
   smsDownFailures: number
   /** `SMS_BRAND`: the registered sender text, in every message. */

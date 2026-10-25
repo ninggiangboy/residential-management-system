@@ -255,6 +255,8 @@ export function createContainer(
       otpMaxAttempts: identityConfig.OTP_MAX_ATTEMPTS,
       otpPerPhonePerHour: identityConfig.OTP_PER_PHONE_PER_HOUR,
       otpPerIpPerHour: identityConfig.OTP_PER_IP_PER_HOUR,
+      clientErrorsPerMinutePerIp: http.CLIENT_ERRORS_PER_MINUTE_PER_IP,
+      clientErrorsPerHourPerAccount: http.CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT,
       otpDailyCap: identityConfig.OTP_DAILY_CAP,
       smsDownFailures: identityConfig.SMS_DOWN_FAILURES,
       smsBrand: config.drivers.SMS_BRAND ?? 'RMS',
