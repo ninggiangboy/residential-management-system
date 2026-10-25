@@ -1,3 +1,4 @@
+import { ApiException } from '@rms/client-core'
 import type { StaffRole } from '@rms/shared-types'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Outlet, redirect, useMatches, useRouter } from '@tanstack/react-router'
@@ -7,6 +8,7 @@ import { ensureSession } from '../auth/session'
 import { StepUpProvider } from '../auth/step-up'
 import { AppShell } from '../components/layout/app-shell'
 import { BreadcrumbProvider } from '../components/layout/breadcrumb'
+import { RouteErrorBoundary } from '../components/route-error-boundary'
 import { ErrorState, ForbiddenState } from '../components/ui/empty-state'
 import { Skeleton } from '../components/ui/skeleton'
 import { isWebRole } from '../features/auth/landing'
@@ -30,8 +32,10 @@ export const Route = createFileRoute('/_app')({
       <Skeleton className="h-8 w-64" />
     </div>
   ),
+  // A failed call keeps the shell and offers a retry; anything else is a render error of the page (reported, DOC-55 §15).
   errorComponent: ({ error }) => {
     const router = useRouter()
+    if (!(error instanceof ApiException)) return <RouteErrorBoundary error={error} />
     return (
       <main className="mx-auto max-w-xl p-8">
         <ErrorState requestId={apiErrorOf(error).requestId} onRetry={() => router.invalidate()} />

@@ -108,7 +108,7 @@ Read at build time, baked into the bundle, no secret (DOC-41 §15). Nothing here
 
 | Client | Key | Where it comes from | Used for |
 | --- | --- | --- | --- |
-| Web | `VITE_API_BASE_URL`, `VITE_APP_ENV` | Pages build variables; `apps/cms-web/.env.local` locally | API base (ends in `/api/v1`); footer badge on non-production builds |
+| Web | `VITE_API_BASE_URL`, `VITE_APP_ENV`, `VITE_APP_VERSION` | Pages build variables; `apps/cms-web/.env.local` locally | API base (ends in `/api/v1`); footer badge on non-production builds; the `appVersion` of an error report (`x.y.z`, `0.0.0` when unset) |
 | Apps | `API_BASE_URL`, `APP_ENV` | EAS profile `env` and EAS environment variables; read in `app.config.ts`, exposed as `extra` | the same |
 | Apps | `version`, slug | `app.config.ts` | `X-App-Version`, `X-App-Id` (`resident` or `staff`); derived, never configured |
 
@@ -537,7 +537,7 @@ Failures (DOC-37 §6.5): a `PUT` 403 or an expired URL (`expiresAt`, 15 minutes)
 
 ## 13. Real-time (web)
 
-Contract only; the event schema and the endpoint belong to DOC-52 (not written) and DR-75.
+Contract only; the event schema and the endpoint belong to DOC-52 (not written) and DR-75. **Not built in P1-16; it waits for P4 (DR-264).** The web is ready to take it without a redesign: the `_app` layout is the one place that would open the stream after `ensureSession` and close it in `endSessionLocally`; the event to cache map below is a plain table of query-key prefixes (`staffKey(...)`) to invalidate; `session.revoked` ends in `endSessionLocally(queryClient, 'revoked')`, the function another tab's sign-out already calls; and the top bar of the shell has room for the bell (DOC-64, DR-174). Until then a revoked session ends at the next refresh, at most 15 minutes later (the access token's life), and a list shows what changed at the next focus or navigation.
 
 | Point | Rule |
 | --- | --- |
@@ -571,9 +571,11 @@ Event to cache map (the web owns it; DOC-52 owns the event names):
 | Client | Hooks | `kind` sent |
 | --- | --- | --- |
 | Web | React error boundary per route (`render`); `window.onerror` (`crash`); `unhandledrejection` (`unhandled_rejection`) | |
-| Apps | error boundary at the root and per tab (`render`); `ErrorUtils.setGlobalHandler` (`crash`); an unhandled promise rejection hook where Hermes provides one, checked in P1-17 (`unhandled_rejection`); a repeated network failure of a screen's main query (`network`) | |
+| Apps | **EAS Observe** (DR-264): JavaScript errors and the startup and screen metrics go to Expo; the app does not post to `POST /client-errors` unless P1-17 finds a case Observe misses (a repeated network failure of a screen's main query, `network`), and then through the `@rms/client-core` reporter below. Native crashes are not captured by Observe (checked 2026-10-25); the stores' crash reports cover them | |
 
 Reporting to `POST /client-errors` (E-04, DOC-42 §10): body `{ app, appVersion, platform, kind, screen, errorName, message, stack?, requestId? }`; `message` ≤ 500 characters, `stack` ≤ 4 KB, body ≤ 8 KB, unknown keys refused.
+
+*As built for the web (P1-16, DR-264):* the throttle and the cleaning are `createErrorReporter` in `@rms/client-core` (no I/O: the client passes `send`), so the apps can use the same code. It strips the query and fragment of every URL (and of a path with a query) in `message`, `stack` and `screen`, redacts a bearer token, cuts the message at 500 characters and the stack at 4 KB of UTF-8, and names a thrown value that is not an `Error` `NonError` without its content. The web loads the reporter with a dynamic import (it is not in the first load of `/login`); `window.onerror` is a `crash`, `unhandledrejection` an `unhandled_rejection`, and the router's `defaultErrorComponent` (a lazy `RouteError`) a `render`, with `screen` the route template (`/units/$unitId`), a new reference shown as "Reference: {id}" and sent as `requestId`, and a Reload button. The access token goes with the report when there is one, so the line names the account. A development server reports nothing; the end-to-end run (`VITE_APP_ENV=e2e`) does. A chunk-load error reloads the page once.
 
 Rules (DR-192):
 

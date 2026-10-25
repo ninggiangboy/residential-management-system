@@ -6,6 +6,7 @@ import { setSignedOutHandler } from './api/client'
 import { createQueryClient } from './api/query-client'
 import { listenToOtherTabs } from './auth/refresh'
 import { endSessionLocally, setLoginRedirect } from './auth/session'
+import { RouteErrorBoundary } from './components/route-error-boundary'
 import { I18nProvider } from './lib/i18n'
 import { routeTree } from './routeTree.gen'
 import './styles.css'
@@ -16,6 +17,7 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: 'intent',
+  defaultErrorComponent: ({ error }) => <RouteErrorBoundary error={error} />,
   scrollRestoration: true,
 })
 
@@ -44,7 +46,8 @@ setSignedOutHandler((reason) =>
 )
 listenToOtherTabs(() => endSessionLocally(queryClient, 'revoked'))
 
-// A chunk that no longer exists after a deploy reloads the page once (DOC-55 §16, DR-192).
+// `window.onerror` and unhandled rejections (DOC-55 §15). A chunk that no longer exists after a deploy reloads the page once (§16, DR-192).
+void import('./lib/report-error').then((module) => module.installErrorReporting(router))
 window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
   if (sessionStorage.getItem('rms.chunk-reload') === null) {

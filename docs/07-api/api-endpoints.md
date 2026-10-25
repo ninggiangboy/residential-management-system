@@ -369,6 +369,7 @@ These four endpoints answer without a credential. None of them is behind the ter
 - **Performance:** p95 under 50 ms (two bucket statements, no other write).
 - **Events:** none.
 - **Tests:** ER-43 (5 KB stack, unknown key, a phone in `message`), ER-44 (the 11th in a minute is 429).
+- *As built (P1-16, DR-264):* `identity` owns it (`ReportClientError`, `presentation/client-error-routes.ts`) because the unauthenticated bucket table and the token verifier are its. The bucket keys are `client_errors:ip:<ip>` (`identity.rate_bucket`) and `client_errors:account:<id>` (`platform.rate_bucket`), so the `scope` of a 429 is `client_errors`. The 8 KB limit reads `Content-Length` in `transform`, before validation (a body over it is 413 `payload_too_large`, never a list of 400 findings); `stack` is checked in bytes (400 `max_bytes`). The `warn` line has the fields `app`, `appVersion`, `platform`, `kind`, `screen`, `errorName`, `message`, `stack`, `clientRequestId`, `accountKind` and `accountId`; a phone-shaped run of 8 to 15 digits in `message` and `stack` is masked as the audit log masks it. `client_errors_total{app,kind}` waits for the metrics of P1-18. The app-version gate, when it is built, must skip this path. Tests: `apps/api/tests/integration/client-errors.integration.test.ts` and `report-client-error.test.ts`.
 
 ## 4. Auth (E-05…E-12)
 
