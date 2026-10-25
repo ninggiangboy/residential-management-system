@@ -5,6 +5,16 @@
 
 @layer base {
   body {
-    @apply bg-ground text-ink font-sans;
+    @apply bg-ground text-ink font-sans text-body;
+  }
+
+  /* Numbers line up in tables and amounts (DOC-54 §8.1). */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The tap target of a small control grows to 44 px without growing the control (DR-184). */
+  :focus-visible {
+    outline-color: var(--focus);
   }
 }

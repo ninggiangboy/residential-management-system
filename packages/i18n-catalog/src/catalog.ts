@@ -7,9 +7,17 @@ import { en as sharedEn } from './shared/en'
 import { vi as sharedVi } from './shared/vi'
 import { smsEn } from './sms/en'
 import { smsVi } from './sms/vi'
+import { webEn } from './web/en'
+import { webVi } from './web/vi'
 
-const en = { ...sharedEn, ...mailEn, ...smsEn, ...importEn } as const
-const vi: Record<keyof typeof en, string> = { ...sharedVi, ...mailVi, ...smsVi, ...importVi }
+const en = { ...sharedEn, ...mailEn, ...smsEn, ...importEn, ...webEn } as const
+const vi: Record<keyof typeof en, string> = {
+  ...sharedVi,
+  ...mailVi,
+  ...smsVi,
+  ...importVi,
+  ...webVi,
+}
 
 /**
  * The message catalog of the whole product (DR-71, DOC-68): one flat map of ICU messages per language, keyed by the
@@ -32,5 +40,8 @@ export const SHARED_FAMILIES = [
   'mail',
   'sms',
 ] as const
+
+/** The first segments the screen documents own (DOC-68 §1): the web CMS today; `res` and `staff` come with the apps (P1-17). */
+export const SCREEN_FAMILIES = ['web'] as const
 
 export const isMessageKey = (key: string): key is MessageKey => Object.hasOwn(en, key)

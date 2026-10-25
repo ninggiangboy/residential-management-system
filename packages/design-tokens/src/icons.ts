@@ -28,6 +28,11 @@ export const ICON_NAMES = [
   'chat-circle-dots',
   'sign-out',
   'gear',
+  'dots-three',
+  'lock',
+  'upload-simple',
+  'download-simple',
+  'file-text',
   // time and place
   'calendar-blank',
   'clock',

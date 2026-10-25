@@ -167,7 +167,9 @@ export interface IdentityUseCases {
   enableStaffAccount: EnableStaffAccount
 }
 
-export interface IdentityModule extends AppModule<'identity', IdentityRoutes> {
+export interface IdentityModule extends AppModule<'identity'> {
+  /** Required, not optional: an optional `routes` would reach the Eden type of `App` as `Routes | undefined` and drop `/auth` and `/staff/me` from the client (P1-16). */
+  readonly routes: IdentityRoutes
   readonly api: IdentityApi
   readonly useCases: IdentityUseCases
   /** The reads behind `GET /staff/me`, `GET /staff/sessions` and `GET /me`. */
