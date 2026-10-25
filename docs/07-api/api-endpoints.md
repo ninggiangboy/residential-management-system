@@ -2371,9 +2371,10 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   `executeAfter` is `deletionApprovedAt` plus `accountDeletionDays` (30) as an interval of days; the job runs daily at 03:45 and executes within 24 hours after it. A second approval answers 200 with the existing dates.
 - **Errors:** 404 `not_found` (no profile in this building, or a deleted account); 409 `deletion_not_requested` (the account is `active`); 409 `owner_must_transfer` (`details {unitIds}`: the account is the active owner of a unit, `ResidencyApi.ownedUnitIds`; UI for the Manager "Transfer ownership of the unit first.").
 - **Data source:** `UPDATE identity.resident_account SET deletion_approved_at = now(), … WHERE id = :id AND status = 'deletion_requested' AND deletion_approved_at IS NULL RETURNING deletion_approved_at + make_interval(days => :days)` (DOC-35 §10.1). Zero rows: one `SELECT` chooses between 409 `deletion_not_requested` and the idempotent 200. The owner check runs first and again at execution.
-- **Events:** none; audit `identity.account.deletion_approve`.
+- **Events:** none; audit `identity.account.deletion_approve` (written once, by the approval that set the date; the idempotent answer writes none).
 - **Performance:** p95 ≤ 300 ms.
-- **Tests:** AD-39, AD-41, AD-42, AD-45; RM-46, RM-47.
+- **Tests:** AD-39, AD-41, AD-45 (`apps/api/tests/integration/residency-staff.integration.test.ts`, with three simultaneous approvals writing one audit row); AD-42 and RM-46, RM-47 belong to the execution (P6-04).
+- *As built (P1-16, DR-264):* `ApproveAccountDeletion` (`residency`) checks the profile of the Manager's building, then the ownership (`details.unitIds` lists every unit the account owns), reads `accountDeletionDays` from `BuildingApi.getSettings` and calls `IdentityApi.approveResidentDeletion`; `ApproveResidentDeletion` (`identity`) runs the conditional `UPDATE` and the audit in the caller's transaction. A losing race reads the state again: the other approval's dates, or 409 `deletion_not_requested` after a cancel. The request and the cancel (E-18, E-19) and the job are P6-04.
 
 ### E-69 `PATCH /staff/memberships/{id}` · `updateMembership`
 

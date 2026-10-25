@@ -31,5 +31,6 @@ export const identityManifest = {
     'identity.staff.unlock',
     'identity.staff.disable',
     'identity.staff.enable',
+    'identity.account.deletion_approve',
   ],
 } as const satisfies ModuleManifest

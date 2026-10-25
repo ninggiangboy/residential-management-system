@@ -122,3 +122,17 @@ export class PhoneInUseError extends ConflictError {
     super('phone_in_use', 'This phone number already has an account')
   }
 }
+
+/** The account has no deletion request to approve (DOC-35 §10.1): 409 `deletion_not_requested`; the caller refetches. */
+export class DeletionNotRequestedError extends ConflictError {
+  constructor() {
+    super('deletion_not_requested', 'This account has not asked to be deleted')
+  }
+}
+
+/** Another request approved the account first: `ApproveResidentDeletion` catches it and answers the existing dates (E-68). */
+export class DeletionAlreadyApprovedError extends ConflictError {
+  constructor() {
+    super('deletion_already_approved', 'The deletion was approved already')
+  }
+}

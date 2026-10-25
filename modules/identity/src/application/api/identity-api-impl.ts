@@ -1,5 +1,6 @@
 import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type {
+  DeletionApprovalDto,
   DeletionRequestDto,
   IdentityApi,
   ResidentAccountDto,
@@ -9,6 +10,7 @@ import type {
 } from '../../contracts'
 import type { ResidentQueries } from '../queries/resident-queries'
 import type { StaffQueries } from '../queries/staff-queries'
+import type { ApproveResidentDeletion } from '../use-cases/approve-resident-deletion'
 import type { ChangeResidentPhone } from '../use-cases/change-resident-phone'
 import type { EnsureResidentAccount } from '../use-cases/ensure-resident-account'
 import type { QueueMemberInvitation } from '../use-cases/queue-member-invitation'
@@ -23,6 +25,7 @@ export class IdentityApiImpl implements IdentityApi {
     private readonly findOrCreate: EnsureResidentAccount,
     private readonly changePhone: ChangeResidentPhone,
     private readonly queueInvitation: QueueMemberInvitation,
+    private readonly approveDeletion: ApproveResidentDeletion,
   ) {}
 
   getStaff(ids: string[]): Promise<StaffDto[]> {
@@ -76,6 +79,14 @@ export class IdentityApiImpl implements IdentityApi {
     limit?: number
   }): Promise<{ items: DeletionRequestDto[]; next: string | null }> {
     return this.residentQueries.listDeletionRequests(page)
+  }
+
+  approveResidentDeletion(
+    staff: StaffContext,
+    accountId: string,
+    cooloffDays: number,
+  ): Promise<DeletionApprovalDto> {
+    return this.approveDeletion.execute(staff, accountId, cooloffDays)
   }
 
   verifyStepUp(

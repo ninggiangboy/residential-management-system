@@ -166,6 +166,7 @@ describe('the guard of every route', () => {
       ['GET', `/staff/residents/${id}`],
       ['PATCH', `/staff/residents/${id}`],
       ['PATCH', `/staff/residents/${id}/phone`],
+      ['POST', `/staff/residents/${id}/deletion/approve`],
       ['PATCH', `/staff/memberships/${id}`],
     ] as const) {
       expect((await call(path, { method })).status).toBe(401)
@@ -714,5 +715,108 @@ describe('ownership and memberships (E-61, E-69)', () => {
       404,
     )
     expect((await patch(crypto.randomUUID(), { status: 'locked' })).status).toBe(404)
+  })
+})
+
+describe('E-68 approve a deletion request (DOC-35 §10.1)', () => {
+  const approve = (accountId: string, token = manager) =>
+    call(`/staff/residents/${accountId}/deletion/approve`, { method: 'POST', token, key: null })
+  const request = (accountId: string, requestedAt = '2026-10-18T02:00:00Z') =>
+    db.sql`UPDATE identity.resident_account SET status = 'deletion_requested', deletion_requested_at = ${requestedAt}
+            WHERE id = ${accountId}`
+
+  test('AD-39 approves with the date and the execution; a second approval answers the same dates and writes one audit row; an active account is 409', async () => {
+    const unit = await createUnit('D-1')
+    const family = await seedResident(unit.unitId, 'family')
+    expect((await errorOf(await approve(family.id))).code).toBe('deletion_not_requested')
+    await request(family.id)
+    const first = await approve(family.id)
+    expect(first.status).toBe(200)
+    const body = await bodyOf<Record<string, string>>(first)
+    expect(body.accountId).toBe(family.id)
+    expect(body.deletionRequestedAt).toBe('2026-10-18T02:00:00.000Z')
+    expect(
+      Date.parse(body.executeAfter as string) - Date.parse(body.deletionApprovedAt as string),
+    ).toBe(30 * 86_400_000)
+    expect(await bodyOf(await approve(family.id, admin))).toEqual(body)
+    const audit = await db.sql`
+      SELECT actor_kind, changes FROM audit.audit_log
+       WHERE object_id = ${family.id} AND action = 'identity.account.deletion_approve'`
+    expect(audit).toHaveLength(1)
+    expect(JSON.stringify(audit[0]?.changes)).toContain('deletionApprovedAt')
+    const [row] = await db.sql`SELECT status FROM identity.resident_account WHERE id = ${family.id}`
+    expect(row?.status).toBe('deletion_requested')
+    const listed = await bodyOf<{
+      items: Array<{ accountId: string; deletion: { approvedAt: string | null } }>
+    }>(await call('/staff/residents?deletion=requested', { token: manager }))
+    expect(listed.items.find((item) => item.accountId === family.id)?.deletion.approvedAt).toBe(
+      body.deletionApprovedAt,
+    )
+  })
+
+  test('AD-41 the active owner of a unit is 409 owner_must_transfer with the unit ids; after a transfer the approval passes', async () => {
+    const unit = await createUnit('D-2')
+    const owner = await seedResident(unit.unitId, 'owner')
+    await request(owner.id)
+    const refused = await errorOf(await approve(owner.id))
+    expect(refused.code).toBe('owner_must_transfer')
+    expect(refused.details).toEqual({ unitIds: [unit.unitId] })
+    expect(
+      await db.sql`SELECT 1 FROM identity.resident_account WHERE id = ${owner.id} AND deletion_approved_at IS NOT NULL`,
+    ).toHaveLength(0)
+    await db.sql`UPDATE residency.membership SET status = 'removed', removed_at = now() WHERE id = ${owner.membershipId}`
+    expect((await approve(owner.id)).status).toBe(200)
+  })
+
+  test('AD-45 the setting accountDeletionDays sets the execution date', async () => {
+    const saveDays = async (days: number | null) => {
+      const read = await call('/staff/settings', { token: admin })
+      const saved = await call('/staff/settings', {
+        method: 'PATCH',
+        token: admin,
+        headers: { 'if-match': read.headers.get('etag') as string },
+        json: { settings: { accountDeletionDays: days } },
+      })
+      expect(saved.status).toBe(200)
+    }
+    await saveDays(7)
+    try {
+      const unit = await createUnit('D-3')
+      const tenant = await seedResident(unit.unitId, 'tenant')
+      await request(tenant.id)
+      const body = await bodyOf<Record<string, string>>(await approve(tenant.id))
+      expect(
+        Date.parse(body.executeAfter as string) - Date.parse(body.deletionApprovedAt as string),
+      ).toBe(7 * 86_400_000)
+    } finally {
+      await saveDays(null)
+    }
+  })
+
+  test('an account with no profile here, an unknown id and a deleted account are 404; other roles and buildings are refused', async () => {
+    const unit = await createUnit('D-4')
+    const family = await seedResident(unit.unitId, 'family')
+    await request(family.id)
+    expect((await approve(family.id, strangerManager)).status).toBe(404)
+    expect((await approve(crypto.randomUUID())).status).toBe(404)
+    expect((await approve(family.id, technician)).status).toBe(403)
+    expect((await approve(family.id, guard)).status).toBe(403)
+    await db.sql`UPDATE identity.resident_account SET status = 'deleted', deleted_at = now(), phone = ${`deleted:${family.id}`} WHERE id = ${family.id}`
+    expect((await approve(family.id)).status).toBe(404)
+  })
+
+  test('two approvals at once change one row and write one audit row', async () => {
+    const unit = await createUnit('D-5')
+    const family = await seedResident(unit.unitId, 'family')
+    await request(family.id)
+    const results = await Promise.all([approve(family.id), approve(family.id), approve(family.id)])
+    expect(results.map((res) => res.status)).toEqual([200, 200, 200])
+    const dates = await Promise.all(
+      results.map(async (res) => (await bodyOf(res)).deletionApprovedAt),
+    )
+    expect(new Set(dates).size).toBe(1)
+    expect(
+      await db.sql`SELECT 1 FROM audit.audit_log WHERE object_id = ${family.id} AND action = 'identity.account.deletion_approve'`,
+    ).toHaveLength(1)
   })
 })

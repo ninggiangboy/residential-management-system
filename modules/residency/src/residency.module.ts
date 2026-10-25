@@ -15,6 +15,7 @@ import { LookupQueries } from './application/queries/lookup-queries'
 import { MembershipQueries } from './application/queries/membership-queries'
 import { ResidentQueries } from './application/queries/resident-queries'
 import { UnitQueries } from './application/queries/unit-queries'
+import { ApproveAccountDeletion } from './application/use-cases/approve-account-deletion'
 import { ChangeLoginPhone } from './application/use-cases/change-login-phone'
 import { ChangeMembership } from './application/use-cases/change-membership'
 import { CommitUnitOwnerImport } from './application/use-cases/commit-unit-owner-import'
@@ -49,7 +50,7 @@ import { residencyRoutes } from './presentation/residency-routes'
 
 export interface ResidencyDeps {
   /** The time zone of the building for "today" (DR-09). */
-  building: Pick<BuildingApi, 'getBuilding'>
+  building: Pick<BuildingApi, 'getBuilding' | 'getSettings'>
   /** The files of an import: the upload is read, attached to its job and removed at the commit (DOC-37 §3). */
   files: Pick<FilesApi, 'read' | 'attach' | 'remove'>
   /**
@@ -65,6 +66,7 @@ export interface ResidencyDeps {
     | 'changeResidentPhone'
     | 'findResidentAccountsByPhoneFragment'
     | 'listDeletionRequests'
+    | 'approveResidentDeletion'
   >
   guards: Guards
   /** E-72 takes an `Idempotency-Key` (DOC-50 §8.1). */
@@ -100,6 +102,7 @@ export interface ResidencyUseCases {
   transferOwnership: TransferOwnership
   /** `PATCH /staff/residents/{accountId}/phone` (E-67, DOC-27 §8). */
   changeLoginPhone: ChangeLoginPhone
+  approveAccountDeletion: ApproveAccountDeletion
   /** `POST /staff/imports` with `kind = unit_owner` (E-72). */
   validateUnitOwnerImport: ValidateUnitOwnerImport
   /** `POST /staff/imports/{id}/commit` (E-74). */
@@ -140,7 +143,8 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
   })
   const inbox = new DrizzleInboxGuard(database, residencyInbox)
 
-  const queries = new MembershipQueries(new DrizzleMembershipReader(database))
+  const membershipReader = new DrizzleMembershipReader(database)
+  const queries = new MembershipQueries(membershipReader)
   const units = new DrizzleUnitRepository(database)
   const unitReader = new DrizzleUnitReader(database)
   const residentReader = new DrizzleResidentReader(database)
@@ -243,6 +247,13 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     deps.identity,
     deps.audited,
   )
+  const approveAccountDeletion = new ApproveAccountDeletion(
+    database,
+    profiles,
+    membershipReader,
+    deps.building,
+    deps.identity,
+  )
 
   return {
     name: 'residency',
@@ -255,6 +266,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       createResident,
       transferOwnership,
       changeLoginPhone,
+      approveAccountDeletion,
       validateUnitOwnerImport,
       commitUnitOwnerImport,
       expireImports,
@@ -273,6 +285,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       createResident,
       updateProfile,
       changeLoginPhone,
+      approveAccountDeletion,
       changeMembership,
       guards: deps.guards,
       idempotent: deps.idempotent,

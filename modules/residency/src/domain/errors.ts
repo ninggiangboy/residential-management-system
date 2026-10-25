@@ -11,8 +11,13 @@ export class InvalidMembershipTransitionError extends ConflictError {
 
 /** 409 `owner_must_transfer`: the owner row is removed or retyped only by a transfer (DR-139). */
 export class OwnerMustTransferError extends ConflictError {
-  constructor() {
-    super('owner_must_transfer', 'Ownership changes only by a transfer')
+  /** `unitIds` names the units the account owns when its deletion is approved (E-68, DOC-35 §10.1). */
+  constructor(unitIds?: readonly string[]) {
+    super(
+      'owner_must_transfer',
+      'Ownership changes only by a transfer',
+      unitIds === undefined ? undefined : { details: { unitIds: [...unitIds] } },
+    )
   }
 }
 
