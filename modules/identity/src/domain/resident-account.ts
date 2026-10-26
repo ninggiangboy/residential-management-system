@@ -70,6 +70,28 @@ export class ResidentAccount {
   }
 
   /**
+   * The language and the push setting the resident sets for themselves (E-14, DOC-51 §5): a person's own preferences, last write
+   * wins (DR-146), so the guard names only the status. A deleted account has nothing to edit and looks missing. `null` when
+   * nothing changes.
+   */
+  editPreferences(
+    changes: Partial<Pick<ResidentAccountRecord, 'language' | 'pushEnabled'>>,
+  ): ResidentAccountTransition | null {
+    if (this.record.status === 'deleted') throw new NotFoundError()
+    const set: Partial<ResidentAccountRecord> = {}
+    if (changes.language !== undefined && changes.language !== this.record.language)
+      set.language = changes.language
+    if (changes.pushEnabled !== undefined && changes.pushEnabled !== this.record.pushEnabled)
+      set.pushEnabled = changes.pushEnabled
+    if (Object.keys(set).length === 0) return null
+    return {
+      id: this.id,
+      expect: { status: this.record.status },
+      set: { ...set, version: this.record.version + 1 },
+    }
+  }
+
+  /**
    * The login phone moves to `phone` (DOC-26 §2.2). A deleted account has no phone to change, so it looks missing; the same number
    * decides nothing (`null`). The guard names the old phone, so a parallel change of the same account is decided again.
    */

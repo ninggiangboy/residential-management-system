@@ -224,6 +224,59 @@ describe('the resident guard and /me/* (AU-41)', () => {
   })
 })
 
+describe('PATCH /me and GET /me/contact (E-14, E-15; UIRQ-03, UIRQ-04)', () => {
+  test('E-14: the language and the push toggle are saved, and the next GET /me shows them', async () => {
+    const { body, resident } = await signIn()
+    const patched = await call('/me', {
+      method: 'PATCH',
+      token: body.accessToken,
+      json: { language: 'en', pushEnabled: true },
+    })
+    expect(patched.status).toBe(200)
+    expect(await patched.json()).toMatchObject({
+      id: resident.id,
+      language: 'en',
+      pushEnabled: true,
+    })
+    const me = await call('/me', { token: body.accessToken })
+    expect(await me.json()).toMatchObject({ account: { language: 'en', pushEnabled: true } })
+    // A key alone leaves the other one as it is.
+    const again = await call('/me', {
+      method: 'PATCH',
+      token: body.accessToken,
+      json: { pushEnabled: false },
+    })
+    expect(await again.json()).toMatchObject({ language: 'en', pushEnabled: false })
+  })
+
+  test('E-14: the name and the phone are not editable, an empty body and a bad language are 400, no token is 401', async () => {
+    const { body } = await signIn()
+    for (const json of [
+      { displayName: 'Someone' },
+      { phone: '+84901111111' },
+      {},
+      { language: 'fr' },
+    ]) {
+      const res = await call('/me', { method: 'PATCH', token: body.accessToken, json })
+      expect(res.status).toBe(400)
+      expect((await errorOf(res)).code).toBe('validation_failed')
+    }
+    expect((await call('/me', { method: 'PATCH', json: { language: 'en' } })).status).toBe(401)
+  })
+
+  test('E-15: a resident with no unit gets the deployment building contact; no token is 401', async () => {
+    const { body } = await signIn()
+    const res = await call('/me/contact', { token: body.accessToken })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('cache-control')).toBe('private, max-age=60')
+    expect(await res.json()).toMatchObject({
+      name: { vi: 'Chung cư', en: 'Apartments' },
+      hotline: '1900 1234',
+    })
+    expect((await call('/me/contact')).status).toBe(401)
+  })
+})
+
 describe('the terms gate (DOC-35 §9.2)', () => {
   const admin = (): StaffContext => ({
     buildingId: BUILDING,

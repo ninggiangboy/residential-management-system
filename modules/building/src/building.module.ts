@@ -59,6 +59,10 @@ import {
 } from './presentation/building-routes'
 import { type PublicRouteDeps, publicRoutes } from './presentation/public-routes'
 import {
+  type ResidentContactRouteDeps,
+  residentContactRoutes,
+} from './presentation/resident-contact-routes'
+import {
   type ResidentBuildings,
   type ResidentTermsRouteDeps,
   residentTermsRoutes,
@@ -123,19 +127,24 @@ export interface BuildingModule extends AppModule<'building'> {
   /** The reads behind `GET /staff/settings` and `GET /staff/gateway` (DOC-36 §4, §7.1). */
   readonly queries: BuildingQueries
   readonly useCases: BuildingUseCases
-  /** `/staff/settings`, `/gateway`, `/terms` and `/uploads` (E-36, E-37, E-47…E-50, E-52, E-53), and `/me/terms` (E-16, E-17). */
+  /** `/staff/settings`, `/gateway`, `/terms` and `/uploads` (E-36, E-37, E-47…E-50, E-52, E-53), `/me/terms` (E-16, E-17) and `/me/contact` (E-15). */
   readonly routes: BuildingRoutes
 }
 
 export type BuildingRoutes = ReturnType<typeof createRoutes>
 
 function createRoutes(
-  d: BuildingRouteDeps & UploadRouteDeps & ResidentTermsRouteDeps & PublicRouteDeps,
+  d: BuildingRouteDeps &
+    UploadRouteDeps &
+    ResidentTermsRouteDeps &
+    ResidentContactRouteDeps &
+    PublicRouteDeps,
 ) {
   return routePlugin()
     .use(buildingRoutes(d))
     .use(uploadRoutes(d))
     .use(residentTermsRoutes(d))
+    .use(residentContactRoutes(d))
     .use(publicRoutes(d))
 }
 

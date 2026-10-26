@@ -43,4 +43,18 @@ describe('ResidentAccount', () => {
       set: { lastAppOpenAt: at(60 * 60_000) },
     })
   })
+
+  test('E-14: only a changed preference is set, the version moves, and nothing changed decides nothing', () => {
+    expect(account().editPreferences({ language: 'en', pushEnabled: true })).toEqual({
+      id: 'r1',
+      expect: { status: 'active' },
+      set: { language: 'en', version: 2 },
+    })
+    expect(account().editPreferences({ language: 'vi' })).toBeNull()
+    expect(account().editPreferences({})).toBeNull()
+  })
+
+  test('E-14: a deleted account has nothing to edit', () => {
+    expect(() => account({ status: 'deleted' }).editPreferences({ language: 'en' })).toThrow()
+  })
 })

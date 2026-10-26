@@ -53,6 +53,7 @@ import { SetPassword } from './application/use-cases/set-password'
 import { SignInStaff } from './application/use-cases/sign-in-staff'
 import { SignOut } from './application/use-cases/sign-out'
 import { UnlockStaffAccount } from './application/use-cases/unlock-staff-account'
+import { UpdateResidentMe } from './application/use-cases/update-resident-me'
 import { UpdateStaffAccount } from './application/use-cases/update-staff-account'
 import { UpdateStaffMe } from './application/use-cases/update-staff-me'
 import { VerifyOtp } from './application/use-cases/verify-otp'
@@ -151,6 +152,8 @@ export interface IdentityUseCases {
   reportClientError: ReportClientError
   /** `DELETE /me/sessions/{id}`. */
   revokeResidentSession: RevokeResidentSession
+  /** `PATCH /me` (E-14). */
+  updateResidentMe: UpdateResidentMe
   /** `POST /auth/staff/password-reset`. */
   requestPasswordReset: RequestPasswordReset
   /** `POST /auth/staff/password`. */
@@ -275,6 +278,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     config,
   )
   const revokeResidentSession = new RevokeResidentSession(sessions, events, database, clock)
+  const updateResidentMe = new UpdateResidentMe(residents, clock)
   const signOut = new SignOut(sessions, events, factory, database, clock)
   const revokeStaffSession = new RevokeStaffSession(sessions, events, database, clock)
   const requestPasswordReset = new RequestPasswordReset(
@@ -399,6 +403,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     reportClientError,
     verifyOtp,
     revokeResidentSession,
+    updateResidentMe,
     requestPasswordReset,
     setPassword,
     resendStaffInvite,
