@@ -1,6 +1,6 @@
 import { publicRoute, type RouteSet, routePlugin } from '@core/http'
 import { type Clock, UnavailableError } from '@core/kernel'
-import type { BuildingApi } from '../contracts'
+import type { BuildingApi, BuildingDto } from '../contracts'
 
 /** Where a store lists an app; a platform without a link has `null` (the client hides the button, DOC-64 `/wrong-app`). */
 interface StoreUrls {
@@ -27,6 +27,19 @@ export interface PublicRouteDeps {
 
 const nullable = <T>(value: T | undefined): T | null => value ?? null
 
+/** The contact block of E-03 and E-15 (DOC-51 §3, §5): the name and the contact lines a client shows when it needs the office. */
+export const contactOf = (building: BuildingDto) => ({
+  name: { vi: building.name.vi, en: nullable(building.name.en) },
+  hotline: building.contact.hotline,
+  workingHours: building.contact.workingHours
+    ? {
+        vi: building.contact.workingHours.vi,
+        en: nullable(building.contact.workingHours.en),
+      }
+    : null,
+  email: building.contact.email,
+})
+
 /**
  * `GET /public/config` (E-03, DOC-51 §3): what a client needs before anyone signs in, the same for every caller. The building
  * is the deployment's real one; a deployment with only a demo building answers with it (`local`, review builds, DR-145). The
@@ -38,20 +51,12 @@ export function publicRoutes(d: PublicRouteDeps) {
     const building = buildings.find((row) => !row.isDemo) ?? buildings[0]
     if (!building) throw new UnavailableError()
     context.set.headers['cache-control'] = 'public, max-age=60'
-    const { contact } = building
     return {
       serverTime: d.clock.now().toISOString(),
       languages: ['vi', 'en'] as const,
       defaultLanguage: 'vi' as const,
       apps: d.publicConfig,
-      contact: {
-        name: { vi: building.name.vi, en: nullable(building.name.en) },
-        hotline: contact.hotline,
-        workingHours: contact.workingHours
-          ? { vi: contact.workingHours.vi, en: nullable(contact.workingHours.en) }
-          : null,
-        email: contact.email,
-      },
+      contact: contactOf(building),
     }
   }
 
