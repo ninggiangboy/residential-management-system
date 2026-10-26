@@ -36,8 +36,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Approved |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Approved |
 | DOC-20 | [Data lifecycle](05-data/data-lifecycle.md) (skeleton) | Approved |
-| DOC-21 | Fee batches and import (`06-design/fee-batches-and-import.md`) | Not written |
-| DOC-22 | Ledger, allocation and the money log (`06-design/ledger-and-allocation.md`) | Not written |
+| DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes await DOC-18 §2) | Draft |
+| DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Draft |
 | DOC-23 | Payment intents and settlement (`06-design/payment-intents-and-settlement.md`) | Not written |
 | DOC-24 | payOS gateway adapter (`06-design/payos-gateway-adapter.md`) | Not written |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |

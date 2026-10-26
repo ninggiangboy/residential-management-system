@@ -1096,6 +1096,7 @@ interface ResidencyApi {
   listNoticeRecipients(buildingId: Uuid, cursor: string | null, limit: number): Promise<Page<NoticeRecipientDto>>
   activeUnitIds(accountId: Uuid): Promise<Uuid[]>
   getUnits(ids: Uuid[]): Promise<UnitDto[]>
+  findUnitsByCodes(buildingId: Uuid, codes: string[]): Promise<Array<{ unitId: Uuid; code: string; occupancy: 'occupied' | 'rented' | 'vacant'; hasActiveOwner: boolean }>>   // DR-265: ≤ 5,000 codes, by lower(code), a missing code is absent; the fee import's db layer (DOC-21 §2.1)
   getMembershipForScan(membershipId: Uuid): Promise<ScanMembershipDto | null>
   ownedUnitIds(accountId: Uuid): Promise<Uuid[]>            // DR-125: units where the account is the active owner
   listActiveMemberships(accountId: Uuid): Promise<ActiveMembershipDto[]>                  // DR-140

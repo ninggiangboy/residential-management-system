@@ -190,7 +190,7 @@ The names come from DR-63; the owning document confirms the labels.
 
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
-| `ledger_invariant_violations` | gauge | none (the count of violating rows over the 20 queries of DR-78; demo excluded) | DOC-22 | P2 |
+| `ledger_invariant_violations` | gauge | none (the count of violating rows over the 19 queries of DOC-22 §12, DR-266; demo excluded) | DOC-22 | P2 |
 | `payment_intents_pending_overdue` | gauge | none (`pending` older than 60 minutes and not moving to `expired`; demo excluded) | DOC-23 | P3 |
 | `payment_intents_creating_stale` | gauge | none (`creating` older than 2 minutes; demo excluded) | DOC-23 | P3 |
 | `money_log_open` | gauge | none (log rows without a review; demo excluded) | DOC-25 | P3 |

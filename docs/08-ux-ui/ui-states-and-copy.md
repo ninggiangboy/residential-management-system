@@ -174,6 +174,7 @@ A rule code is the `details[].code` of a `validation_failed`. Its key is `error.
 | `due_date_in_past` | 400 | Hạn thanh toán không được ở quá khứ. | The due date cannot be in the past. | — | — | later |
 | `due_date_not_later` | 400 | Hãy chọn ngày sau hạn hiện tại. | Choose a date later than the current due date. | — | — | later |
 | `no_unit_selected` | 400 | Hãy chọn ít nhất một căn. | Select at least one unit. | — | — | later |
+| `too_many_units` | 400 | Mỗi lần chỉ chọn tối đa {max, number} căn. | Select at most {max, number} units at a time. | — | — | later |
 | `audience_empty` | 400 | Bản tin này chưa có người nhận. Hãy chọn đối tượng. | This notice would reach nobody. Choose who receives it. | — | — | later |
 | `notice_rule` | 400 | Bản tin có nội dung, tệp đính kèm hoặc liên kết không được phép. | The notice has a body, attachment or link that is not allowed. | — | — | later |
 | `folder_depth` | 400 | Thư mục chỉ được lồng tối đa {max} cấp. | Folders can be at most {max} levels deep. | max | — | later |
@@ -201,7 +202,7 @@ A document that adds a code to DOC-42 §5 adds its row to §3 in the same change
 
 ### 3.10 Count
 
-61 top-level codes and 41 rule codes, 102 keys `error.*` in each language. Generated from DOC-42 §5 on 2026-10-20; UICP-03 repeats the generation in CI.
+61 top-level codes and 42 rule codes, 103 keys `error.*` in each language. Generated from DOC-42 §5 on 2026-10-20; UICP-03 repeats the generation in CI.
 
 ## 4. `common.*` keys
 
@@ -613,7 +614,7 @@ Counts are the rows of the microcopy tables of each screen document (generated b
 | DOC-67 | Web system | P1 (staff, building, step-up); P3, P6 owed | 0 | 0 | 70 | 0 |
 | **Total** | | | **151** | **48** | **375** | **28** |
 
-Shared families in this document: 102 `error.*`, 73 `status.*`, 81 `common.*`, 6 `auth.*`, 5 `offline.*`, 5 `upgrade.*`.
+Shared families in this document: 103 `error.*`, 73 `status.*`, 81 `common.*`, 6 `auth.*`, 5 `offline.*`, 5 `upgrade.*`.
 
 Owed by documents not yet written, each adding its screen keys and any new `status.*`/`error.*` rows here in the same change:
 

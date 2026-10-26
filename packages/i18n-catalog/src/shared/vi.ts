@@ -92,6 +92,7 @@ export const vi: Record<keyof typeof en, string> = {
   'error.due_date_in_past': 'Hạn thanh toán không được ở quá khứ.',
   'error.due_date_not_later': 'Hãy chọn ngày sau hạn hiện tại.',
   'error.no_unit_selected': 'Hãy chọn ít nhất một căn.',
+  'error.too_many_units': 'Mỗi lần chỉ chọn tối đa {max, number} căn.',
   'error.audience_empty': 'Bản tin này chưa có người nhận. Hãy chọn đối tượng.',
   'error.notice_rule': 'Bản tin có nội dung, tệp đính kèm hoặc liên kết không được phép.',
   'error.folder_depth': 'Thư mục chỉ được lồng tối đa {max} cấp.',

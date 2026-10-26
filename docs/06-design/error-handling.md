@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -162,6 +162,7 @@ The message key of a rule code is `error.<rule code>`, in the same namespace as 
 | `no_charges`, `charge_total_zero`, `due_date_in_past` | 400 | A batch that cannot be published (FR-03.1) | FR-03 |
 | `due_date_not_later` | 400 | A due-date extension that is not later than the current date | FR-44.1 |
 | `no_unit_selected` | 400 | A reminder with no unit | FR-12 |
+| `too_many_units` | 400 | A reminder request with more than 500 units (DR-267); details `{max}` | FR-12 |
 | `audience_empty`, `notice_rule` | 400 | A notice that would reach nobody; a body, attachment or link outside the rules of the notice | FR-27 |
 | `folder_depth`, `external_url`, `unsafe_link` | 400 | A library folder deeper than 5 levels; an external image or a link that is not allowed | FR-32 |
 | `terms_text` | 400 | A terms text outside the Markdown subset; `path` names the line | DOC-36 §8 |
