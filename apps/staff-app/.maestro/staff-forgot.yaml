@@ -1,0 +1,16 @@
+# UISM-08: a known and an unknown email reach the same confirmation, with a masked address.
+appId: vn.rms.staff.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: login-forgot
+- tapOn:
+    id: forgot-email
+- inputText: "nobody@mocmien.example"
+- tapOn:
+    id: forgot-submit
+- assertVisible: "Check your email"
+- assertVisible: ".*no\\*\\*\\*@mocmien.example.*"
+- tapOn:
+    id: forgot-back
+- assertVisible: "Sign in"

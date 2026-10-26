@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "The app uses the camera to scan residents' QR codes and to take photos of work."
+  }
+}

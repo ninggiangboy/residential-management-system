@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Ứng dụng dùng camera để quét mã QR của cư dân và chụp ảnh công việc."
+  }
+}

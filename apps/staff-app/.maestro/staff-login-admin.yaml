@@ -1,0 +1,17 @@
+# UISM-04: an Admin signs in on the staff app and meets the wrong-client page; "Sign out" returns to Login.
+appId: vn.rms.staff.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: email-input
+- inputText: "admin@mocmien.example"
+- tapOn:
+    id: password-input
+- inputText: "Sunrise2026!"
+- tapOn:
+    id: login-submit
+- assertVisible:
+    id: wrong-app
+- tapOn:
+    id: wrong-app-sign-out
+- assertVisible: "Sign in"
