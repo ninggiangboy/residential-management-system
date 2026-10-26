@@ -1,6 +1,6 @@
 # ADR-0017: Back up PostgreSQL with pgBackRest to R2 for point-in-time recovery, on a self-hosted database, and accept the single-provider risk
 
-- Status: Accepted
+- Status: Superseded in part by ADR-0027 for a deployment in Vietnam; **kept as the reference for a global deployment** that uses Cloudflare R2 (DR-268)
 - Date: 2026-10-19 · Related: DR-66, DR-67, DR-83, DR-93, DR-80, NFR-10, NFR-11, EXP-12, DOC-72, DOC-70, DOC-19, DOC-10, RB-10
 
 ## Context

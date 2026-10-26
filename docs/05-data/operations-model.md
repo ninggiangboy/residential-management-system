@@ -1,7 +1,7 @@
 # Operations model
 
-> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
-> Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
+> Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
 This document holds the tables of the schemas that run the system rather than the business: `building` (building, settings, gateway configuration, terms, files, job runs), `audit`, and the `platform` tables of the core packages. It gives the grain, keys, writers and readers of every table, runnable DDL, the reason of every index, the state machines and sample statements. **Sections 1–3 are complete; sections 4–9 (tickets, access, notices and notification, vehicles, wiki, reporting and realtime) are written when their phases start** (table in "Sections owed"), so the document stays `Draft` until then. It does not hold the rules of the flows (audit writing and the `pii.read` rules are DOC-35, building configuration and the demo reset DOC-36, uploads DOC-37, job runtime DOC-38), the grants (DOC-19), the retention periods (DOC-20) or the conventions every table follows (DOC-14).
@@ -511,7 +511,7 @@ ALTER TABLE building.building
 | Column | Meaning |
 | --- | --- |
 | `module`, `purpose` | The owning module and the kind of file. `purpose` tells the kinds apart in one bucket and one key layout (DR-86): the upload purposes of DR-61 plus the generated ones (`fee_notice_pdf`, `receipt_pdf`, `bulk_zip`, `export`) and `thumbnail`, the 480 px copy of an image, a row of its own with `owner_ref = 'thumb:<id of the original>'` (DR-122). DOC-37 §4 owns the full table of purposes with the allowed MIME types and size limits; a new purpose is an expand migration of this `CHECK`. |
-| `object_key` | The R2 key. The `CHECK` pins the shape of DR-61 (environment, building id, module, year, month, id, extension). The earlier wording "under `imports/`" in DR-21, DR-22 and DOC-16 §5.5 is superseded by DR-86: an import file is `purpose = 'import'` with this key. |
+| `object_key` | The object key in the files bucket (SeaweedFS in `vn`, R2 in `global`, DR-268). The `CHECK` pins the shape of DR-61 (environment, building id, module, year, month, id, extension). The earlier wording "under `imports/`" in DR-21, DR-22 and DOC-16 §5.5 is superseded by DR-86: an import file is `purpose = 'import'` with this key. |
 | `size` | The size the client declared at `register` (used for the quota check and the signed `Content-Length`), replaced by the real `HEAD` size at `verify`. Quota = Σ `size` of rows that are not `deleted` (DR-61). |
 | `checksum` | SHA-256 of the object, set when the server read all of it (imports, statements, generated PDFs); null for large media. |
 | `owner_ref` | The logical owner, set by `attach` (`ticket:<uuid>`, `vehicle:<uuid>`) or, for generated PDFs, the logical key of DR-56 (`batch/<id>/unit/<unit>.pdf`, DR-86). |
@@ -533,12 +533,12 @@ stateDiagram-v2
 | --- | --- | --- | --- |
 | (none) → `pending` | `FilesApi.register` | The client asks for an upload URL | Quota check (413 `quota_exceeded` at 100%); row with the declared size |
 | `pending` → `verified` | `FilesApi.verify` | The client reports the upload done | `HEAD` size ≤ the limit of the purpose, first 4 KB match the allowed type; `size`, `mime`, `checksum` set (422 `file_not_verified` otherwise) |
-| `pending` → `deleted` | `verify` on failure; `orphan_uploads` (hourly) | Oversize, wrong type, or `created_at` older than 24 h | `deleted_at` set; the object is removed from R2 (DOC-37) |
+| `pending` → `deleted` | `verify` on failure; `orphan_uploads` (hourly) | Oversize, wrong type, or `created_at` older than 24 h | `deleted_at` set; the object is removed from the files bucket (DOC-37) |
 | `verified` → `attached` | `FilesApi.attach` | The owning module saves the ticket, vehicle, notice… | `owner_ref` set; refused when `account_id` differs |
 | `verified` → `deleted` | `orphan_uploads` | Verified but never attached for 24 h | As above. DR-61 names only `pending` files; a verified file nobody attached is the same waste (DR-112) |
-| `attached` → `deleted` | `FilesApi.remove` | The owner module removes the attachment or purges its object | `deleted_at` set in the owner's transaction; the R2 delete is a command in the outbox (DOC-37) |
+| `attached` → `deleted` | `FilesApi.remove` | The owner module removes the attachment or purges its object | `deleted_at` set in the owner's transaction; the object delete is a command in the outbox (DOC-37) |
 
-The physical removal of the R2 object is the command `building.file_delete_requested.v1`, written in the same transaction as the status change (DR-122, DOC-37 §14); this table records the logical state and drives the quota.
+The physical removal of the stored object is the command `building.file_delete_requested.v1`, written in the same transaction as the status change (DR-122, DOC-37 §14); this table records the logical state and drives the quota.
 
 **Indexes**
 
@@ -931,7 +931,7 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | Retention periods, purge jobs, deletion execution, personal-data policy | DOC-20, DOC-35 |
 | The audit writer, the action catalog, the `pii.read` rules | DOC-35 |
 | Building configuration screens, the demo reset | DOC-36 |
-| Upload flow, allowed types and limits, the R2 delete command | DOC-37 |
+| Upload flow, allowed types and limits, the object delete command | DOC-37 |
 | Job runner, outbox relay settings | DOC-38 |
 | Event envelope and the list of schemas with an outbox | DOC-09 |
 | Configuration keys (`SETTINGS_ENCRYPTION_KEYS`, `JOB_RUN_RETENTION_DAYS`, `OUTBOX_RETENTION_DAYS`) | DOC-41 |

@@ -1,12 +1,12 @@
 # Deploy: staging and production
 
-> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
-> Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
+> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-26 (DR-268: SeaweedFS replaces R2 for the `vn` profile; earlier 2026-10-22, DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
+> Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162, DR-228, DR-268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
 > Main readers: P0-03, P1-18, P1-20, P1-22, P6-05, P6-13; the Owner and the operator who builds a host; [DOC-72](backup-restore.md) (backup, restore), [DOC-71](ci-cd.md) (calls the deploy command)
 
-This document builds one environment from nothing: the inputs the Owner must supply, the VPS and its hardening, the Cloudflare setup, native PostgreSQL and pgBackRest, the compose files, the Caddyfile and the Tunnel, the secrets as files, the rolling deploy script, the migrations, the first deploy and the teardown. It does not hold the pipeline that calls the deploy command (DOC-71), the restore procedure and the drill (DOC-72, RB-10), the meaning of a configuration key (DOC-41), the alert rules (DOC-40) or the application's design (DOC-07). Staging and production use the same files; §12 lists the few values that differ.
+This document builds one environment from nothing: the inputs the Owner must supply, the VPS and its hardening, the Cloudflare setup, the object store (SeaweedFS on the VPS), native PostgreSQL and pgBackRest, the compose files, the Caddyfile and the Tunnel, the secrets as files, the rolling deploy script, the migrations, the first deploy and the teardown. It does not hold the pipeline that calls the deploy command (DOC-71), the restore procedure and the drill (DOC-72, RB-10), the meaning of a configuration key (DOC-41), the alert rules (DOC-40) or the application's design (DOC-07). Staging and production use the same files; §12 lists the few values that differ. It describes the `vn` profile (§1); the `global` profile with Cloudflare R2 is not built here.
 
-**State of this document.** Nothing has been installed: there is no VPS, no Cloudflare account configured and no domain yet (the inputs of §2 are open and are placeholders until the task that needs them, DR-228). Every command is written from the vendor documentation read on 2026-10-20 (sources in §17) and **not run**. P1-20 builds staging by following this document and corrects it where reality differs; each place that task must confirm is marked **P1-20 checks**. The values for production are the same files with the sizes of DR-06.
+**State of this document.** Nothing has been installed: there is no VPS, no Cloudflare account configured and no domain yet (the inputs of §2 are open and are placeholders until the task that needs them, DR-228). Every command is written from the vendor documentation read on 2026-10-20 (sources in §17) and **not run**. P1-20 builds staging by following this document and corrects it where reality differs; each place that task must confirm is marked **P1-20 checks**. **Nothing of the SeaweedFS and pgBackRest-on-SeaweedFS parts (§5.5, §6.1, §8.4) has been run or read from SeaweedFS documentation for this version**: they come from DR-268, ADR-0027 and the local stack (DOC-69, SeaweedFS 4.48 in `compose.local.yml`). pgBackRest against the SeaweedFS S3 gateway is **unproven until P1-20** (archive, backup, a restore on an empty host); every SeaweedFS option named here is **to verify in P1-20**. The values for production are the same files with the sizes of DR-06.
 
 ## 1. Purpose and scope
 
@@ -15,7 +15,8 @@ This document builds one environment from nothing: the inputs the Owner must sup
 | Inputs the Owner supplies (P0-03) | §2 |
 | Hosts, sizes, names, the layout on the host | §3 |
 | VPS provisioning and hardening | §4 |
-| Cloudflare: DNS, Tunnel, Access, WAF, rate rule, Pages, R2 | §5 |
+| Cloudflare: DNS, Tunnel, Access, WAF, rate rule, Pages | §5.1 to §5.4 |
+| Object store: SeaweedFS on the VPS (data volume, TLS, identities, buckets, the files host) | §5.5 |
 | Compose files, profiles, start order, health, migrations, the deploy script, rollback, one-shot containers for experiments | §6 |
 | Caddyfile and the Tunnel routes | §7 |
 | PostgreSQL native install and tuning, pgBackRest | §8 |
@@ -26,6 +27,16 @@ This document builds one environment from nothing: the inputs the Owner must sup
 | Teardown | §13 |
 | Checks | §14 |
 
+**Two profiles (DR-268, ADR-0027).** `vn` is what this document builds for staging and production: the system is deployed in Vietnam, so Cloudflare R2 (no Vietnam location) is **not** used. Files and the pgBackRest repository live in SeaweedFS (S3 gateway, Docker Compose) on the environment's own VPS, on a separate data volume. The Cloudflare edge stays (https domain, DNS, Tunnel, Pages, Access, WAF); clients reach the S3 gateway only through the Tunnel host `files.<domain>`. `global` is the DR-83 topology with R2 for a later deployment outside Vietnam; it stays described in ADR-0016 (files), ADR-0017 (backup) and ADR-0020 (topology) and is not repeated here. The code and `FilesApi` do not change between the profiles; the difference is `S3_*` values (§9.2) and the pgBackRest repository settings (§8.4):
+
+| | `vn` (this document) | `global` (ADR-0016, 0017, 0020) |
+| --- | --- | --- |
+| Files and backup store | SeaweedFS on the VPS, separate data volume | Cloudflare R2, two buckets |
+| `S3_ENDPOINT` / `S3_PUBLIC_ENDPOINT` | `https://seaweedfs:8333` (bridge) / `https://files(-staging).<domain>` | `https://<account-id>.r2.cloudflarestorage.com` for both |
+| `S3_FORCE_PATH_STYLE` | `true` | `false` |
+| pgBackRest repository | S3 path-style over TLS on the bridge, CA file; fallback: POSIX on the backup volume | R2 endpoint |
+| Losing the VPS | Loses database, files and backups until the replica exists (§15) | Backups and files survive |
+
 ## 2. Owner inputs (P0-03)
 
 Task P0-03 collects these and records them in this table. **The documents never hold the real data** (DR-228, Owner, 2026-10-21): they use placeholders (`<domain>`, `<reverse-domain>`, `<company-name>`, `<tax-code>`, `<github-org>`, …), and the Owner supplies the real value only when the task that needs it starts, to the place that uses it (the Cloudflare account, the EAS project, the secret files of §9, the operator), never to this repository. The column *Needed by* is the task that stops without the real value; the column *Blocking?* says what happens before that task. **No input is needed to start coding phase 1**: P1-01…P1-16, P1-19 and P1-21 run locally with placeholders, Mailpit and the fake drivers.
@@ -34,8 +45,8 @@ Task P0-03 collects these and records them in this table. **The documents never 
 | --- | --- | --- | --- | --- | --- |
 | 1 | Company legal name, address, tax code | Terms, receipts, store listings (DOC-73) | P1-12, P6-10 | **Placeholder, then required.** The terms seed of P1-12 uses `<company-name>`, `<company-address>`, `<tax-code>`; the real text is needed before the staging UAT and for the store listing (P6-10) | Open |
 | 2 | **Company domain** `<domain>` and where it is registered; the Owner can change its name servers to Cloudflare | §5.1; every host name | P1-20 | **Required at P1-20 (staging), not before.** Lead time: buying the domain and moving its name servers to Cloudflare can take days | Open |
-| 3 | Cloudflare account: owner email, two-factor on; R2 enabled; what the free plan asks (payment method) | §5 | P1-20 | **Required at P1-20 (staging), not before** | Open |
-| 4 | **VPS provider, location, plan and price** for staging (2 vCPU, 4 GB, 60 GB) and production (4 vCPU, 8 GB, 100 GB), Ubuntu Server 26.04 LTS available (else 24.04, DR-83); out-of-band console access; whether the location is in Vietnam (DR-58 residency review) | §3, §4 | P1-20 | **Required at P1-20 (staging), not before**; production is needed at P6 | Open |
+| 3 | Cloudflare account: owner email, two-factor on; no R2 in the `vn` profile; what the free plan asks (payment method) | §5 | P1-20 | **Required at P1-20 (staging), not before** | Open |
+| 4 | **VPS provider, location, plan and price** for staging (2 vCPU, 4 GB, 60 GB) and production (4 vCPU, 8 GB, 100 GB), Ubuntu Server 26.04 LTS available (else 24.04, DR-83); out-of-band console access; **location in Vietnam** (DR-268: files and backups stay in the country; fixed by P0-03); whether the provider offers block volumes and snapshots (row 16) | §3, §4, §5.5 | P1-20 | **Required at P1-20 (staging), not before**; production is needed at P6 | Open |
 | 5 | Operators: names and emails of the Owner and of the Admin who operates the system; their SSH public keys | §4.3, §5.2 (Access allow-list) | P1-20 | **Required at P1-20 (staging), not before** | Open |
 | 6 | GitHub organization and repository (private); who administers it | DOC-71 | P1-01 | **Not blocking: satisfied.** The repository already exists; documents use `<github-org>` | Satisfied |
 | 7 | App display names, bundle ids `<reverse-domain>.rms.resident` and `<reverse-domain>.rms.staff` (DR-69) | DOC-73 | P1-17 | **Placeholder, then required.** `<reverse-domain>` and `<app-name>` until the first EAS build of P1-17, which needs the real ids | Open |
@@ -45,10 +56,11 @@ Task P0-03 collects these and records them in this table. **The documents never 
 | 11 | A second mail account for alert delivery (not the application's SMTP), and a Telegram bot with the chat id of the alert group (DR-63) | §10 | P1-18 | **Required for the acceptance of P1-18 on staging** (the alert must reach email and Telegram); locally the alerts go to Mailpit | Open |
 | 12 | An external uptime probe service (free tier) and who receives its messages (DOC-40 §6) | NFR-10 | P1-18 | **Required for the acceptance of P1-18 on staging**; not needed locally | Open |
 | 13 | Manager contact; time zone confirmation `Asia/Ho_Chi_Minh` (DR-09) | DOC-36 | P1-12 | **Placeholder (demo seed), then required** before the staging UAT. The time zone is already decided (DR-09) | Open |
-| 14 | Where the Owner keeps the **sealed offline copies** of the PII key and the pgBackRest passphrase (a safe or a password manager with an emergency kit) | §9.3 | P1-20 | **Required at P1-20 (staging), not before**; the keys of staging are created then (EXP-09 of P1-23 runs on it) | Open |
+| 14 | Where the Owner keeps the **sealed offline copies** of the PII key, the pgBackRest passphrase and the backup S3 credentials (a safe or a password manager with an emergency kit), kept **off the VPS** (DR-268 item 2) | §9.3 | P1-20 | **Required at P1-20 (staging), not before**; the keys of staging are created then (EXP-09 of P1-23 runs on it) | Open |
 | 15 | Expo push credentials: FCM service account and APNs key (DOC-73) | `EXPO_ACCESS_TOKEN`, §9 | P1-17 | **Required for the acceptance of P1-17 on a real device** (a push reaching a phone); the development build and simulators run without | Open |
+| 16 | **Data volume for SeaweedFS** (files and the backup repository), separate from the OS and PostgreSQL disks: its size for staging and production (sized from DOC-10 §6 and the backup retention of §8.4; not decided yet, P1-20 measures), whether the provider sells it as a block volume or as a second disk, and whether the provider offers **snapshots** of the VPS or the volume, and their price (an optional mitigation of the whole-VPS risk, §15; DR-268 consequences) | §3.2, §5.5 | P1-20 (staging), P6-05 | **Required at P1-20 (staging), not before** | Open |
 
-**Lead times to start early** (DR-228): the SMS brandname registration (up to about 3 weeks, row 10), the Apple Developer enrolment (row 8) and the domain registration with the name-server change (row 2). None blocks coding; each can delay the staging UAT or the first iOS build if started late.
+**Lead times to start early** (DR-228): the SMS brandname registration (up to about 3 weeks, row 10), the Apple Developer enrolment (row 8) and the domain registration with the name-server change (row 2) and, if the provider needs time to add a volume in Vietnam, row 16. None blocks coding; each can delay the staging UAT or the first iOS build if started late.
 
 No input is a secret to write in this repository: the table records *that* the Owner supplied it and where it is kept.
 
@@ -64,11 +76,13 @@ No input is a secret to write in this repository: the table records *that* the O
 | Grafana (Tunnel → Grafana, behind Access) | `monitor-staging.<domain>` | `monitor.<domain>` |
 | SSH (Tunnel, behind Access) | `ssh-staging.<domain>` | `ssh.<domain>` |
 | Tunnel | `rms-staging` | `rms-production` |
-| R2 buckets | `rms-staging-files`, `rms-staging-backup` | `rms-production-files`, `rms-production-backup` |
+| Files (Tunnel → SeaweedFS S3 gateway only) | `files-staging.<domain>` | `files.<domain>` |
+| SeaweedFS buckets (on the VPS) | `rms-staging-files`, `rms-staging-backup` | `rms-production-files`, `rms-production-backup` |
+| Data volume (SeaweedFS data) | `/srv/rms-data`, a separate volume (§5.5) | the same |
 | Pages project | `rms-admin-staging` | `rms-admin-production` |
 | Compose project | `rms` | `rms` |
 
-`ssh-<env>.<domain>` is a fourth host that DR-83 and DOC-07 imply (SSH through the Tunnel) without naming; it is behind Access and never serves a web page (DR-158).
+`ssh-<env>.<domain>` is a fourth host that DR-83 and DOC-07 imply (SSH through the Tunnel) without naming; it is behind Access and never serves a web page (DR-158). `files-<env>.<domain>` is the fifth, added by DR-268: the Tunnel routes it to the SeaweedFS S3 gateway and to nothing else; it is **not** behind Access (apps and browsers upload to it with presigned URLs, as they do to the API).
 
 Memory and CPU ceilings per container, the PostgreSQL budget and the connection arithmetic are DOC-10 §6 and DR-06, DR-102; §6.1 applies them.
 
@@ -83,8 +97,10 @@ Memory and CPU ceilings per container, the PostgreSQL budget and the connection 
 | `/etc/rms/secrets/` | One file per secret (§9.1) | `deploy:rms` (gid 10001) · 0750 directory; files 0440 |
 | `/var/lib/rms/deploy-state` | Lines `current=<tag>` and `previous=<tag>` | `deploy` · 0644 |
 | `/var/lib/node_exporter/textfile/backup.prom` | The backup success timestamp (DR-154) | `postgres` · 0644 |
-| `/etc/pgbackrest/pgbackrest.conf` | pgBackRest configuration, **holds the R2 backup key and the repository passphrase** | `postgres:postgres` · 0600 |
-| `/var/lib/postgresql/18/main` | The database cluster (PostgreSQL 18, native) | `postgres` |
+| `/etc/pgbackrest/pgbackrest.conf` | pgBackRest configuration, **holds the SeaweedFS backup key and the repository passphrase** | `postgres:postgres` · 0600 |
+| `/var/lib/postgresql/18/main` | The database cluster (PostgreSQL 18, native), on the OS disk | `postgres` |
+| `/srv/rms-data/` | Mount point of the **separate data volume** (§5.5): `seaweedfs/` (the buckets of files and backup) and, only in the fallback of §8.4, `pgbackrest/` | `root` · 0755; `seaweedfs/` is written by the container |
+| `/etc/rms/tls/` | The private CA and the gateway certificate of §5.5 (`ca.pem`, `seaweedfs.pem`); the key is the secret file `seaweedfs-tls-key` | `deploy:rms` · 0750; files 0440 |
 | Docker volumes | `prometheus-data`, `alertmanager-data`, `grafana-data`, `loki-data` (production, and staging while the `logs` profile is on) | Docker |
 
 The repository paths that this layout expects are `docker/` (Dockerfile and compose files) and `ops/` (everything mounted into a container or installed on the host). `ops/` is new: DOC-12 §2.1 lists `docker/` only (DR-158):
@@ -100,6 +116,7 @@ ops/
 ├── grafana/provisioning/{datasources,dashboards}/*.yml, dashboards/*.json
 ├── postgres/{rms.conf, pg_hba.conf, pg_ident.conf, 0001-provision.sql, createcluster.conf}
 ├── pgbackrest/pgbackrest.conf.template
+├── seaweedfs/{s3-config.template.json, tls.sh}      # the identities of §5.5 and the CA and certificate commands
 ├── backup/{backup.sh, rms-backup@.service, rms-backup@full.timer, rms-backup@diff.timer}
 ├── host/{sshd-rms.conf, daemon.json, sysctl-rms.conf, unattended-upgrades-rms.conf, postgres-override.conf}
 └── deploy/{deploy.sh, smoke.sh, maintenance.sh}
@@ -274,14 +291,14 @@ If a mistake locks the host, the provider console (root login by the provider's 
 
 ## 5. Cloudflare
 
-A single Cloudflare account on the free plan holds everything (DR-83). Plan limits were read on 2026-10-20: **one** rate-limiting rule per zone, 10-second period, counted per IP, 10-second mitigation (Cloudflare rate-limiting documentation).
+A single Cloudflare account on the free plan holds the edge (DR-83; in the `vn` profile it holds no files and no backups, DR-268). Plan limits were read on 2026-10-20: **one** rate-limiting rule per zone, 10-second period, counted per IP, 10-second mitigation (Cloudflare rate-limiting documentation).
 
 ### 5.1 Zone and DNS
 
 1. Add `<domain>` to Cloudflare (Add a domain, free plan). At the registrar, set the two name servers Cloudflare shows. Wait for status **Active**.
 2. SSL/TLS: encryption mode **Full (strict)**; *Always Use HTTPS* on; *Minimum TLS Version* 1.2; *Automatic HTTPS Rewrites* on.
 3. **Do not turn on** *Bot Fight Mode* and turn it **off** if it is on (Security → Bots). Reason in §5.3.
-4. DNS records are made by the steps below, not by hand: the Tunnel's public hostnames add proxied `CNAME` records to `<tunnel-id>.cfargotunnel.com` (§5.2); the Pages custom domains add records to `<project>.pages.dev` (§5.4). Nothing else is created. In particular **there is no `A` record to the VPS address**: the host is not addressable from the Internet.
+4. DNS records are made by the steps below, not by hand: the Tunnel's public hostnames (api, monitor, ssh and files) add proxied `CNAME` records to `<tunnel-id>.cfargotunnel.com` (§5.2); the Pages custom domains add records to `<project>.pages.dev` (§5.4). Nothing else is created. In particular **there is no `A` record to the VPS address**: the host is not addressable from the Internet.
 5. Email for `<domain>` (SPF, DKIM, DMARC for the invitation mail) is set up with the chosen SMTP relay (DR-68, P1-22).
 
 ### 5.2 Tunnel, Access and the service token
@@ -296,8 +313,9 @@ A single Cloudflare account on the free plan holds everything (DR-83). Plan limi
    | `api-staging.<domain>` | HTTP | `caddy:80` | The API through Caddy (§7.1). Container name on the `rms` network |
    | `monitor-staging.<domain>` | HTTP | `grafana:3000` | Grafana directly, **not** through Caddy (DR-88) |
    | `ssh-staging.<domain>` | SSH | `172.30.0.1:22` | `sshd` on the host, seen from the container through the bridge gateway. The dashboard form offers `localhost:22`; inside a container that is the container itself, so the gateway address is used |
+   | `files-staging.<domain>` | HTTPS | `seaweedfs:8333` | The SeaweedFS **S3 gateway only** (DR-268 item 5): presigned `PUT` and `GET` from the apps and the web CMS. The gateway serves TLS (§5.5), so the type is HTTPS; the origin certificate is signed by the private CA of §5.5, so set *Origin Server Name* to `seaweedfs` and give the connector the CA (**P1-20 checks** the dashboard field; if it cannot take a CA, the fallback is *No TLS Verify* for this one route, acceptable because the hop never leaves the Docker bridge). Do **not** override the *HTTP Host Header*: the presigned URL is signed for `files-staging.<domain>` and the gateway must see that Host (U1…U11 of `tools/compat/uploads.test.ts` prove it, P1-07) |
 
-   The catch-all rule is `http_status:404`. The three hostnames are the only way in.
+   The catch-all rule is `http_status:404`. The four hostnames are the only way in. The filer, master and volume ports of SeaweedFS (8888, 9333, 8080) have **no** route and no `ports:` entry.
 3. Ops routes are **not** published: `/health/live`, `/metrics` and the other `OPS_PORT` routes (DR-07). `GET /api/v1/health/ready` is public because it is a normal API path (E-02).
 
 **Access** (Zero Trust → Access → Applications), three applications per environment. Before them: Settings → Authentication → keep **One-time PIN** as the identity method; and Access → Access groups:
@@ -313,7 +331,7 @@ A single Cloudflare account on the free plan holds everything (DR-83). Plan limi
 | `rms-monitor-staging` | `monitor-staging.<domain>` | **Allow** group `rms-operators` | 8 h |
 | `rms-ssh-staging` | `ssh-staging.<domain>` | 1. **Allow** group `rms-operators`. 2. **Service Auth** token `deploy-ci` | 8 h |
 
-**Access never fronts `api-<env>.<domain>`** (DR-83 item 4): the mobile apps and the payment gateway cannot pass a login. The Access layer on the web CMS is therefore one more lock on the static site, **not** a protection of the API: a staff password and the API's own limits remain the real gate (DOC-39 §3). The Owner adds an email to `rms-web-staff` when the Admin creates a staff member who needs the CMS; forgetting it shows the person the Access login page, not an error of the application (a known cost, in §15 risks).
+**Access never fronts `api-<env>.<domain>`** (DR-83 item 4): the mobile apps and the payment gateway cannot pass a login. It does not front `files-<env>.<domain>` either, for the same reason: a presigned URL is the credential. The Access layer on the web CMS is therefore one more lock on the static site, **not** a protection of the API: a staff password and the API's own limits remain the real gate (DOC-39 §3). The Owner adds an email to `rms-web-staff` when the Admin creates a staff member who needs the CMS; forgetting it shows the person the Access login page, not an error of the application (a known cost, in §15 risks).
 
 **Service token.** Access → Service credentials → Create service token `deploy-ci`, duration 1 year (the dashboard accepts a duration; the token expires and the Owner refreshes it from the dashboard: a calendar reminder 30 days before). Copy the Client ID and Client Secret **once** into the GitHub environment secrets `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` (DOC-71 §12). A request that presents `CF-Access-Client-Id` and `CF-Access-Client-Secret` passes a Service Auth policy; an invalid token gets 401 or 403, never a login redirect (Cloudflare service-token documentation).
 
@@ -329,6 +347,7 @@ A single Cloudflare account on the free plan holds everything (DR-83). Plan limi
 | 2 | Configuration rules | **API host.** If `http.host eq "api-staging.<domain>"` | *Browser Integrity Check* **off** (a native client or a gateway without a browser-like user agent), *Security Level* **Essentially Off** (an IP reputation challenge would break an app behind a carrier NAT) |
 | 3 | Cache rules | **No cache for the API.** If `http.host eq "api-staging.<domain>"` and `starts_with(http.request.uri.path, "/api/")` | *Bypass cache* (DOC-50 §12: the API sets its own `Cache-Control`) |
 | 4 | Security → WAF → Rate limiting rules | **Auth flood** (the one rule of the free plan) | See below |
+| 5 | Configuration rules and Cache rules | **Files host.** If `http.host eq "files-staging.<domain>"` | Cache: *Bypass cache* (a signed `GET` is private data and must never sit in the edge cache); *Browser Integrity Check* **off** (native clients). The managed WAF stays on: **P1-20 checks** that a 50 MB `PUT` of a video and a JPEG upload are not blocked, and the free plan's 100 MB request limit (DR-268) |
 
 Rate rule 4:
 
@@ -361,35 +380,71 @@ Then in the dashboard: Workers & Pages → `rms-admin-staging` → Custom domain
 - Access protects the custom domain (§5.2). The project's `*.pages.dev` address is **also public**: turn on *Access policy for `*.pages.dev`* for the project (Settings → General → Enable access policy) so the unprotected alias is not a way around Access. **P1-20 checks** that the free plan offers it; if not, the alias stays public and the static bundle holds no secret (a bundle is public by nature, DOC-41 §15).
 - Build variables are set by the job (DOC-71 §8), not in the Pages dashboard.
 
-### 5.5 R2
+### 5.5 Object store: SeaweedFS on the VPS (no R2)
 
-Two private buckets per environment (DR-83 item 8). Bucket names are fixed; the location hint is `apac` (best effort, no Vietnam location; DR-83).
+DR-268, ADR-0027. One SeaweedFS per environment runs in Docker Compose on the VPS (service `seaweedfs`, §6.1): master, volume server, filer and S3 gateway in one `weed server` process set, as in the local stack (DOC-69). Two private buckets per environment keep the names of DR-83 item 8: `rms-<env>-files` and `rms-<env>-backup`. **Nothing here has been run.** The SeaweedFS version is the local stack's (`chrislusf/seaweedfs:4.48`, DR-231) until P1-20 verifies and records the release in DOC-11 (DR-268 item 2). A replica on another server is a later step and is **not** built (DR-268 item 4); the two buckets stay separate collections so that each can be replicated alone.
+
+**1. The data volume.** SeaweedFS stores its data on a volume that is **not** the OS disk and **not** the PostgreSQL data directory, so one disk fault is not a total loss (DR-268 item 3). The device name and size come from §2 input 16.
 
 ```bash
-bunx wrangler@4.151.1 r2 bucket create rms-staging-files  --location apac
-bunx wrangler@4.151.1 r2 bucket create rms-staging-backup --location apac
-bunx wrangler@4.151.1 r2 bucket list
-# the files bucket needs CORS (DR-61: PUT and GET from the admin origin only)
-cat > cors-files.json <<'EOF'
-{ "rules": [ {
-  "allowed": { "origins": ["https://admin-staging.<domain>"], "methods": ["GET", "PUT"], "headers": ["Content-Type"] },
-  "exposeHeaders": ["ETag"], "maxAgeSeconds": 3600 } ] }
-EOF
-bunx wrangler@4.151.1 r2 bucket cors set rms-staging-files --file cors-files.json
+lsblk                                                   # find the new device, e.g. /dev/vdb (name differs per provider)
+mkfs.ext4 -L rms-data /dev/vdb                          # or xfs; P1-20 picks and records the file system
+install -d -m 0755 /srv/rms-data
+echo 'LABEL=rms-data /srv/rms-data ext4 defaults,nofail 0 2' >> /etc/fstab
+mount /srv/rms-data && install -d -m 0755 /srv/rms-data/seaweedfs
+findmnt /srv/rms-data                                   # expected: a device other than the root file system's
 ```
 
-The CORS file format and the `wrangler r2 bucket cors set` command are **P1-20 checks** against `wrangler` 4.151.1 and the R2 documentation. Neither bucket is public: there is no custom domain and no `r2.dev` access (the default is off; confirm in the dashboard).
+`nofail` keeps the host booting if the volume is missing; SeaweedFS then fails its health check instead of writing to the OS disk (the directory is created only after the mount, and a check in §14 proves the two are different devices). Disk-space and archive-failure alerts apply to this mount (DOC-10 §6.4, DOC-40).
 
-**API tokens** (R2 → Manage API tokens → Create API token), two per environment, each limited to **one bucket**:
+**2. A private CA and the gateway certificate** (TLS on the bridge, DR-268 item 7). pgBackRest on the host reaches the gateway at the fixed bridge address `172.30.0.20` (§6.1) and must verify the certificate; the API and the Tunnel connector use the service name `seaweedfs`. One certificate therefore names both:
 
-| Token | Permission | Bucket | Stored as |
-| --- | --- | --- | --- |
-| `rms-staging-files` | Object Read & Write | `rms-staging-files` | Host secrets `s3-access-key-id`, `s3-secret-access-key` (`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, DOC-41 §6) |
-| `rms-staging-backup` | Object Read & Write | `rms-staging-backup` | `repo1-s3-key`, `repo1-s3-key-secret` in `/etc/pgbackrest/pgbackrest.conf` (§8.4). **Not** shared with the application (DOC-07 TB5) |
+```bash
+install -d -m 0750 -o deploy -g rms /etc/rms/tls && cd /etc/rms/tls
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 1825 -subj "/CN=rms-staging-ca" -keyout ca.key -out ca.pem
+openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -subj "/CN=seaweedfs" -keyout seaweedfs.key -out seaweedfs.csr
+printf 'subjectAltName=DNS:seaweedfs,IP:172.30.0.20\n' > san.ext
+openssl x509 -req -in seaweedfs.csr -CA ca.pem -CAkey ca.key -CAcreateserial -days 825 -extfile san.ext -out seaweedfs.pem
+install -m 0440 -o deploy -g rms seaweedfs.key /etc/rms/secrets/seaweedfs-tls-key
+# later, after pgBackRest is installed (§8.1): install -m 0644 -o postgres -g postgres /etc/rms/tls/ca.pem /etc/pgbackrest/seaweedfs-ca.pem   (§8.4)
+shred -u seaweedfs.key seaweedfs.csr ca.key                       # the CA key is not kept on the host: re-create the CA to renew
+```
 
-Each token shows an Access Key ID and a Secret Access Key **once**. The S3 endpoint is `https://<account-id>.r2.cloudflarestorage.com`, region `auto` (R2 documentation). The account id is on the R2 overview page; it goes in `app.env` (`S3_ENDPOINT`) and in `pgbackrest.conf`.
+(`ops/seaweedfs/tls.sh` holds these commands.) The validity periods above are a starting point; **P1-20 checks** the commands, the SAN handling and that SeaweedFS accepts the certificate and key through its S3 TLS options, and puts a calendar reminder for the certificate's expiry in §15. If SeaweedFS's S3 gateway cannot serve TLS in 4.48, the alternative is a TLS listener in front of it on the bridge (a second Caddy site, `tls` with this certificate); that choice is P1-20's and does not change anything else in this document.
 
-A lifecycle rule on the backup bucket aborts incomplete multipart uploads after 1 day (R2 → bucket → Settings → Object lifecycle rules): a failed `archive-push` must not leave orphan parts that are billed.
+**3. S3 identities.** The gateway reads a JSON identities file (the secret file `seaweedfs-s3-config`, §9.1) built from `ops/seaweedfs/s3-config.template.json`. Three identities, each limited to bucket(s) by SeaweedFS's `Action:bucket` form (**P1-20 checks** the exact syntax and that a cross-bucket request is refused, §14 check 18):
+
+| Identity | Actions | Bucket | Used by | Stored as |
+| --- | --- | --- | --- | --- |
+| `rms-staging-files` | Read, Write, List, Tagging | `rms-staging-files` | The application (`api`, `worker`) | Host secrets `s3-access-key-id`, `s3-secret-access-key` (`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, DOC-41 §6) |
+| `rms-staging-backup` | Read, Write, List | `rms-staging-backup` | pgBackRest on the host | `repo1-s3-key`, `repo1-s3-key-secret` in `/etc/pgbackrest/pgbackrest.conf` (§8.4). **Not** shared with the application (DOC-07 TB5); the files identity cannot read the backup bucket (DR-268 item 2) |
+| `rms-staging-admin` | Admin | all | The operator, once, to create the buckets and the CORS rule (step 5) | A file in the operator's home during that step; removed from the identities file afterwards or kept only in the operator's custody (§9.3) |
+
+The key pairs are random, made on the host (`keys:generate --out` for the application pair, as for local, DOC-69; the other two by `openssl rand`).
+
+**4. The Tunnel route.** `files-staging.<domain>` → HTTPS `seaweedfs:8333` (§5.2). The DNS record is the Tunnel's own. The client-visible settings follow from it: `S3_PUBLIC_ENDPOINT=https://files-staging.<domain>` (§9.2), the web CMS's CSP and CORS name that host (DOC-39 §5.1 owes the line, DR-268), and the signed `Content-Type` of the presigned `PUT` is unchanged (DR-61, DR-268 item 6). Presigned POST is not relied on.
+
+**5. Buckets and CORS**, after the first deploy has started the `seaweedfs` container (§11). The local stack does the same with the AWS CLI because SeaweedFS has no CLI for CORS (DOC-69 §6); on the host the one-shot runs on the `rms` network and trusts the private CA (the `aws-cli` image tag is the local stack's, `amazon/aws-cli:2.38.3`):
+
+```bash
+aws() { docker run --rm --network rms -v /etc/rms/tls/ca.pem:/ca.pem:ro -v /tmp/cors-files.json:/cors.json:ro \
+  -e AWS_ACCESS_KEY_ID="$ADMIN_KEY" -e AWS_SECRET_ACCESS_KEY="$ADMIN_SECRET" -e AWS_DEFAULT_REGION=auto -e AWS_CA_BUNDLE=/ca.pem \
+  amazon/aws-cli:2.38.3 --endpoint-url https://seaweedfs:8333 "$@"; }
+aws s3api create-bucket --bucket rms-staging-files
+aws s3api create-bucket --bucket rms-staging-backup
+cat > /tmp/cors-files.json <<'EOF'
+{ "CORSRules": [ { "AllowedOrigins": ["https://admin-staging.<domain>"], "AllowedMethods": ["GET", "PUT", "HEAD"],
+  "AllowedHeaders": ["Content-Type"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 } ] }
+EOF
+aws s3api put-bucket-cors --bucket rms-staging-files --cors-configuration file:///cors.json
+aws s3 ls                                                  # expected: both buckets
+```
+
+Neither bucket is public: there is no anonymous policy and the gateway is reachable only through the Tunnel route and the bridge. **P1-20 checks** the commands (the bucket-creation path, `put-bucket-cors` against 4.48 as in the local stack) and the identity syntax. The mobile apps do not need CORS; the web CMS does.
+
+**6. Incomplete multipart uploads.** On R2 a lifecycle rule removed orphaned parts of a failed `archive-push`. Whether SeaweedFS removes them by itself, or offers a lifecycle rule, is **to verify in P1-20**; if not, the operator lists and aborts old multipart uploads of the backup bucket on a timer (`s3api list-multipart-uploads`) and the disk alert of §14 is the backstop.
+
+**7. Firewall and exposure.** No `ports:` entry (§6.1) and no new `ufw` rule: the host reaches `172.30.0.20` over the bridge (outbound), the containers reach it on the same network. §14 check 17 proves that only the files host answers from outside.
 
 ## 6. Compose, start order, migrations, the deploy script
 
@@ -423,6 +478,7 @@ x-app: &app
   networks: [rms]
   extra_hosts: ["host.docker.internal:172.30.0.1"]       # the bridge gateway: PostgreSQL listens there (§8.2)
   env_file: [/opt/rms/env/app.env]
+  volumes: ["/etc/rms/tls/ca.pem:/etc/rms/seaweedfs-ca.pem:ro"]   # the private CA of §5.5, read through NODE_EXTRA_CA_CERTS (§9.2)
   stop_grace_period: 60s                                  # longer than WORKER_STOP_TIMEOUT_SECONDS 40 + close (DOC-38 §5.4)
   healthcheck:
     test: ["CMD", "bun", "scripts/healthcheck.ts"]
@@ -456,6 +512,8 @@ secrets:
   expo-access-token:         { file: /etc/rms/secrets/expo-access-token }
   demo-staff-password:       { file: /etc/rms/secrets/demo-staff-password }
   tunnel-token:              { file: /etc/rms/secrets/tunnel-token }
+  seaweedfs-s3-config:       { file: /etc/rms/secrets/seaweedfs-s3-config }     # the identities of §5.5 (holds the backup and admin keys: only seaweedfs mounts it)
+  seaweedfs-tls-key:         { file: /etc/rms/secrets/seaweedfs-tls-key }
   grafana-admin-password:    { file: /etc/rms/secrets/grafana-admin-password }
   telegram-bot-token:        { file: /etc/rms/secrets/telegram-bot-token }
   alertmanager-smtp-password: { file: /etc/rms/secrets/alertmanager-smtp-password }
@@ -502,12 +560,30 @@ services:
       - /opt/rms/current/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
     depends_on: { api-1: { condition: service_healthy } }
+  seaweedfs:                                              # DR-268: files and the pgBackRest repository, no R2
+    <<: *third
+    image: chrislusf/seaweedfs:4.48                       # the local stack's tag; P1-20 verifies and records the release (DOC-11)
+    command: >
+      server -dir=/data -ip.bind=0.0.0.0 -filer -volume.max=8 -master.volumeSizeLimitMB=512
+      -s3 -s3.port=8333 -s3.config=/run/secrets/seaweedfs-s3-config
+      -s3.cert.file=/etc/seaweedfs/tls/seaweedfs.pem -s3.key.file=/run/secrets/seaweedfs-tls-key
+    secrets: [seaweedfs-s3-config, seaweedfs-tls-key]
+    networks: { rms: { ipv4_address: 172.30.0.20 } }      # fixed, so that pgBackRest on the host can reach it (§8.4); the CA names this IP
+    volumes:
+      - /srv/rms-data/seaweedfs:/data                     # the separate data volume (§5.5)
+      - /etc/rms/tls/seaweedfs.pem:/etc/seaweedfs/tls/seaweedfs.pem:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
   cloudflared:
     <<: *third
     image: cloudflare/cloudflared:2026.10.1
     command: tunnel --no-autoupdate run --token-file /run/secrets/tunnel-token
     secrets: [tunnel-token]
-    depends_on: [caddy]
+    depends_on: [caddy, seaweedfs]
   prometheus:
     <<: *third
     image: prom/prometheus:v3.15.0
@@ -578,7 +654,8 @@ services:
 
 Notes on the file:
 
-- **No `ports:`** anywhere. Services reach each other by name on the `rms` network; the Tunnel reaches `caddy` and `grafana` the same way (§5.2).
+- **No `ports:`** anywhere. Services reach each other by name on the `rms` network; the Tunnel reaches `caddy`, `grafana` and `seaweedfs` the same way (§5.2). `seaweedfs` is the only service with a fixed address (`172.30.0.20`), because the host's pgBackRest cannot resolve Docker names. Only the S3 port 8333 is meant to be used; the filer, master and volume ports stay on the network and have no route.
+- **`seaweedfs`.** The service holds the bucket data on the data volume of §5.5 and is **not** recreated by a deploy unless its image tag or its secret changes (a recreate stops uploads and the WAL archive for a few seconds; the archive retries, §6.2). Every option on its `command` line is copied from the local stack (`-dir`, `-filer`, `-s3`, `-s3.port`, `-volume.max`, `-master.volumeSizeLimitMB`) or is **to verify in P1-20** (`-s3.config`, `-s3.cert.file`, `-s3.key.file`, the identity syntax, the health path over TLS, running as a non-root user with `read_only`). The value `-master.volumeSizeLimitMB=512` is the local value; production sizing follows the volume of §2 input 16.
 - **Exact image tags** (DR-95), the versions of DOC-11 §7. The image of `api`, `worker` and `migrate` is `rms-api:${RMS_TAG}`, which `deploy.sh` sets.
 - **Config hashes.** The bind mounts use the stable path `/opt/rms/current/…`, so Compose would not notice a changed config file. `deploy.sh` computes a hash of each `ops/<service>/` directory and passes it as `RMS_CFG_<SERVICE>`, which is an environment variable of the container: the container is recreated **only** when its configuration changed (DR-158).
 - **Secrets.** Each service mounts only the files it needs; `db-migrator-url` appears only in `migrate` (DR-65, DR-113, CF-15). Inside a container a secret is `/run/secrets/<name>`, and the variable `X_FILE` names it (DOC-41 §2 rule 4).
@@ -603,6 +680,7 @@ services:
   grafana:        { mem_limit: 200m, memswap_limit: 200m }
   postgres-exporter: { mem_limit: 50m, memswap_limit: 50m }
   node-exporter:  { mem_limit: 50m, memswap_limit: 50m }
+  seaweedfs:      { mem_limit: 512m, memswap_limit: 512m }      # provisional: P1-20 and EXP-07 set it, DOC-10 §6 gets the SeaweedFS budget (DR-268)
 ```
 
 `docker/compose.production.yml`:
@@ -624,15 +702,17 @@ services:
   alloy:        { mem_limit: 80m,  memswap_limit: 80m }
   postgres-exporter: { mem_limit: 50m, memswap_limit: 50m }
   node-exporter: { mem_limit: 50m, memswap_limit: 50m }
+  seaweedfs:    { mem_limit: 768m, memswap_limit: 768m }      # provisional, as on staging
 ```
 
-These are DR-06, DR-102 and DOC-10 §6.1 as numbers: the `cloudflared` limit is left open until EXP-07 measures it (DR-06). `memswap_limit` equal to `mem_limit` gives containers no swap.
+These are DR-06, DR-102 and DOC-10 §6.1 as numbers: the `cloudflared` limit is left open until EXP-07 measures it (DR-06), and the `seaweedfs` limits are provisional values that share the VPS with PostgreSQL (DR-268: the ceilings of DR-06 are rechecked by P1-20, EXP-07 and EXP-08). `memswap_limit` equal to `mem_limit` gives containers no swap.
 
 ### 6.2 Start order and health
 
 | Order | Unit | Ready when | Waits for |
 | --- | --- | --- | --- |
 | 0 | PostgreSQL 18 (host, systemd) | `pg_isready -h 172.30.0.1` | Docker's bridge `br-rms` (§8.2: `After=docker.service`) |
+| 0 | `seaweedfs` | `healthy` (the S3 port answers over TLS) | The data volume mounted (§5.5), the network `rms` |
 | 1 | `migrate` (a deploy only) | Exits 0 | PostgreSQL |
 | 2 | `api-1` | `healthy` (`/health/ready` on the ops port answers 200) | Migrations |
 | 3 | `caddy` | Its health check passes an upstream | `api-1` healthy (`depends_on`) |
@@ -641,7 +721,7 @@ These are DR-06, DR-102 and DOC-10 §6.1 as numbers: the `cloudflared` limit is 
 | 6 | `worker` | `healthy` (relay finished a pass, DOC-38 §5.2) | |
 | any | Monitoring | Prometheus targets up | |
 
-**After a host reboot** Docker restarts every container (`restart: unless-stopped`) at the same moment, and PostgreSQL starts after Docker (it needs the bridge). `api` and `worker` therefore start before the database answers. The requirement on the application is: **the first connection is retried for 30 seconds, then the process exits with code 1** and Docker restarts it; `/health/ready` is 503 until the database answers (E-02). P1-04 implements and tests that (DOC-38 §5.1, DR-248: the ops port answers 503 during the wait); §14 check 9 proves the whole reboot.
+**After a host reboot** Docker restarts every container (`restart: unless-stopped`) at the same moment, and PostgreSQL starts after Docker (it needs the bridge). `api` and `worker` therefore start before the database answers. The requirement on the application is: **the first connection is retried for 30 seconds, then the process exits with code 1** and Docker restarts it; `/health/ready` is 503 until the database answers (E-02). PostgreSQL's `archive_command` fails until `seaweedfs` is up and retries (pgBackRest's async archive keeps the WAL in the spool and `pg_wal`); after a reboot the archive resumes by itself, which §14 check 9 includes. P1-04 implements and tests that (DOC-38 §5.1, DR-248: the ops port answers 503 during the wait); §14 check 9 proves the whole reboot.
 
 Health, at three levels:
 
@@ -716,7 +796,7 @@ done
 # 2. pull images
 step 2 pull
 docker pull "ghcr.io/<org>/rms-api:$tag" >/dev/null || fail 2
-dc pull --quiet --ignore-buildable caddy cloudflared prometheus alertmanager grafana postgres-exporter node-exporter || fail 2
+dc pull --quiet --ignore-buildable caddy seaweedfs cloudflared prometheus alertmanager grafana postgres-exporter node-exporter || fail 2
 
 # 3. migrations (maintenance on first when asked)
 [ "${maint:-0}" = 1 ] && "$RMS/current/ops/deploy/maintenance.sh" on "Planned maintenance"
@@ -725,7 +805,7 @@ dc run --rm migrate || fail 3
 
 # 4. edge and monitoring services (recreated only when their config hash changed)
 step 4 infrastructure
-dc up -d --no-deps caddy cloudflared postgres-exporter node-exporter prometheus alertmanager grafana || fail 4
+dc up -d --no-deps caddy seaweedfs cloudflared postgres-exporter node-exporter prometheus alertmanager grafana || fail 4
 [[ ",$COMPOSE_PROFILES," == *",logs,"* ]] && { dc up -d --no-deps loki alloy || fail 4; }
 
 # 5. rolling restart: api-1 -> ready -> api-2 -> ready -> worker
@@ -868,7 +948,7 @@ Plain HTTP inside the host; TLS ends at Cloudflare (DR-83 item 3, DR-07). Caddy 
 
 Points to know:
 
-- `request_body max_size 2MB`: a larger body gets **413** from Caddy before it reaches the application (Caddy documentation); uploads go to R2 by presigned `PUT`, so the API never receives a video (DR-07).
+- `request_body max_size 2MB`: a larger body gets **413** from Caddy before it reaches the application (Caddy documentation); uploads go to SeaweedFS by presigned `PUT` through `files.<domain>`, a Tunnel route that does not pass Caddy (§5.2), so the API never receives a video (DR-07, DR-268).
 - **SSE** (`GET /api/v1/staff/events`, E-xxx of DOC-52): `flush_interval -1` disables buffering. The application sends a heartbeat every 25 s (`SSE_HEARTBEAT_SECONDS`) because Cloudflare closes a proxied request that receives no data for 100 s (DR-83 item 10).
 - **Health check on the ops port:** `health_port 3001` with `health_uri /health/ready` checks the same endpoint as Docker without routing the ops port to the world (DR-07). An upstream that fails is skipped for `fail_duration`.
 - **`-Server`** removes the `Server` header. The app's `Cache-Control` and `ETag` are not touched (DOC-39 §5.1).
@@ -878,7 +958,7 @@ Points to know:
 
 ### 7.2 The Tunnel
 
-The Tunnel is remote-managed (§5.2): the routes live in Cloudflare, not in a file. The table of §5.2 is the source of truth and is copied into `ops/cloudflared/README.md`; a change of a route is a change to that table in the same pull request. The connector is the container of §6.1, started with `--token-file` (**P1-20 checks** the flag on `cloudflared` 2026.10.1 and falls back to the `TUNNEL_TOKEN` environment variable read through an entrypoint, as for the exporter). `--no-autoupdate` keeps the version pinned by DR-95: the image tag is the update path.
+The Tunnel is remote-managed (§5.2): the routes live in Cloudflare, not in a file. The table of §5.2 (api, monitor, ssh and files) is the source of truth and is copied into `ops/cloudflared/README.md`; the Caddyfile does not change for DR-268 (the files host does not pass Caddy); a change of a route is a change to that table in the same pull request. The connector is the container of §6.1, started with `--token-file` (**P1-20 checks** the flag on `cloudflared` 2026.10.1 and falls back to the `TUNNEL_TOKEN` environment variable read through an entrypoint, as for the exporter). `--no-autoupdate` keeps the version pinned by DR-95: the image tag is the update path.
 
 A second connector replica for the same Tunnel is **not** run: the VPS is the single point (DR-83). Cloudflare shows the Tunnel as *Down* when the VPS or the container stops; the external probe (§6.2) is what pages.
 
@@ -968,7 +1048,7 @@ install -m 0640 -o postgres -g postgres ops/postgres/pg_ident.conf /etc/postgres
 install -m 0644 ops/postgres/rms.conf /etc/postgresql/18/main/conf.d/rms.conf
 systemctl daemon-reload && systemctl restart postgresql@18-main
 sudo -u postgres psql -c 'show listen_addresses' -c 'show shared_buffers' -c 'show archive_mode'
-# expected: localhost,172.30.0.1 ; 512MB ; on   (archive_mode on needs the stanza of §8.4 before it archives)
+# expected: localhost,172.30.0.1 ; 512MB ; on   (archive_mode on needs the stanza of §8.4 and a running `seaweedfs` before it archives: do §8.4's stanza step after the first deploy, §11)
 ```
 
 ### 8.4 Roles, the database, the stanza
@@ -985,17 +1065,18 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -v db=rms -v app_conn_limit=45 \
 
 `app_conn_limit` is 45 on staging and 80 on production (DR-113). The password files must be readable by `ops` for this one command (the operator runs it with `sudo cat`); they are root-equivalent secrets already.
 
-pgBackRest, as `ops/pgbackrest/pgbackrest.conf.template` → `/etc/pgbackrest/pgbackrest.conf` (owner `postgres`, 0600) with the values filled in:
+pgBackRest, as `ops/pgbackrest/pgbackrest.conf.template` → `/etc/pgbackrest/pgbackrest.conf` (owner `postgres`, 0600) with the values filled in. The repository is the SeaweedFS S3 gateway of §5.5, over TLS on the Docker bridge (DR-268 item 7); **this exact combination is unproven until P1-20**:
 
 ```
 [global]
 repo1-type=s3
-repo1-s3-endpoint=<account-id>.r2.cloudflarestorage.com
+repo1-s3-endpoint=172.30.0.20:8333
 repo1-s3-bucket=rms-staging-backup
 repo1-s3-region=auto
 repo1-s3-uri-style=path
-repo1-s3-key=<access key id of the backup token>
-repo1-s3-key-secret=<secret access key of the backup token>
+repo1-storage-ca-file=/etc/pgbackrest/seaweedfs-ca.pem
+repo1-s3-key=<access key id of the backup identity>
+repo1-s3-key-secret=<secret access key of the backup identity>
 repo1-cipher-type=aes-256-cbc
 repo1-cipher-pass=<passphrase, 32 random bytes in base64>
 repo1-retention-full=4
@@ -1014,7 +1095,16 @@ pg1-database=rms
 pg1-user=rms_backup
 ```
 
-Option names and meanings were read in the pgBackRest configuration reference (2026-10-20): `repo-s3-uri-style` is `host` by default and `path` addresses the bucket in the path; `repo-cipher-type` is `none` or `aes-256-cbc` and encryption is client-side; `repo-retention-full` and `repo-retention-diff` are counts; `archive-async` defaults to `n`; `spool-path` defaults to `/var/spool/pgbackrest`. The endpoint without `https://`, the `path` style and `region=auto` for R2 are **P1-20 checks** (a bucket host style with a wildcard certificate may work as well; `path` is the one that avoids DNS). pgBackRest's own `archive-timeout` (default 1 minute) is the wait for a segment to reach the repository; it is a different setting from PostgreSQL's `archive_timeout` above.
+Option names and meanings were read in the pgBackRest configuration reference (2026-10-20): `repo-s3-uri-style` is `host` by default and `path` addresses the bucket in the path; `repo-cipher-type` is `none` or `aes-256-cbc` and encryption is client-side; `repo-retention-full` and `repo-retention-diff` are counts; `archive-async` defaults to `n`; `spool-path` defaults to `/var/spool/pgbackrest`. `repo-storage-ca-file` (a file of CA certificates for the repository's TLS) is in the same reference as the S3 and TLS options; **P1-20 checks** it on 2.59.3. The endpoint by IP (`172.30.0.20:8333`, which the certificate of §5.5 names) avoids a DNS entry on the host; the region is any fixed string (`auto` as for the application, DOC-41 §6); the `path` style is required because there is no wildcard DNS for bucket names. pgBackRest's own `archive-timeout` (default 1 minute) is the wait for a segment to reach the repository; it is a different setting from PostgreSQL's `archive_timeout` above. **P1-20 proves** that archiving, a full backup, a differential, `check` and a restore on an empty host work against this gateway, and that the gateway keeps up with a WAL segment every 60 s with `archive-async=y`.
+
+**Fallback if it does not work: a POSIX repository on the backup volume** (DR-268 item 7). The mechanism does not change (schedule, retention, encryption, `archive_command`); only the repository lines do, and the SeaweedFS `rms-<env>-backup` bucket and the backup identity are then not used:
+
+```
+repo1-type=posix
+repo1-path=/srv/rms-data/pgbackrest          # on the separate data volume, owned by postgres
+```
+
+**Key custody (DR-268 item 2).** The passphrase `repo1-cipher-pass` and the backup identity's key pair are generated on the host and a **sealed copy of each is kept offline by the Owner, off the VPS** (§2 input 14, §9.3, DR-65): an encrypted repository that is copied off the VPS later (the replica, an operator-held `pg_dump`) is readable only with the passphrase, and the host's own copy is lost with the host. Losing the passphrase makes every backup unreadable.
 
 ```bash
 install -d -o postgres -g postgres -m 0750 /var/spool/pgbackrest /var/lib/node_exporter/textfile
@@ -1023,8 +1113,6 @@ sudo -u postgres pgbackrest --stanza=rms check                   # expected: che
 sudo -u postgres pgbackrest --stanza=rms --type=full backup      # expected: backup command end: completed successfully
 sudo -u postgres pgbackrest info                                 # shows one full backup and the WAL range
 ```
-
-The passphrase `repo1-cipher-pass` is generated on the host and a **sealed copy is kept offline by the Owner** (DR-65, §9.3): losing it makes every backup unreadable.
 
 ### 8.5 Backup schedule
 
@@ -1072,7 +1160,7 @@ systemctl enable --now rms-backup@full.timer rms-backup@diff.timer
 systemctl list-timers 'rms-backup*'                              # two timers with the next run times
 ```
 
-Full weekly, differential daily and continuous WAF… archive are DR-66. The weekly `pg_dump` (the portable copy), its encryption on the host, the retention of four weeks, the restore and the drill are **DOC-72** (P6). The risk that backups, files and the edge share one provider account is recorded there (DR-66, Owner 2026-10-19).
+Full weekly, differential daily and continuous WAF… archive are DR-66. The weekly `pg_dump` (the portable copy), its encryption on the host, the retention of four weeks, the restore and the drill are **DOC-72** (P6). The risk that the database, the files and the backups share one VPS (DR-268; it replaces the shared-provider-account risk of DR-66) is recorded there and in §15.
 
 ## 9. Secrets and environment
 
@@ -1087,13 +1175,15 @@ One file per secret under `/etc/rms/secrets`, mode 0440, owner `deploy`, group `
 | `db-app-password`, `db-migrator-password`, `db-readonly-password` | psql variables of §8.4 | none | the same |
 | `jwt-keys`, `qr-keys`, `otp-hmac-key` | `JWT_KEYS_FILE`, `QR_KEYS_FILE`, `OTP_HMAC_KEY_FILE` | `api-*` | the same |
 | `settings-encryption-keys`, `pii-encryption-keys` | `SETTINGS_ENCRYPTION_KEYS_FILE` (`api-*`, `worker`), `PII_ENCRYPTION_KEYS_FILE` (`api-*`) | as named | the same |
-| `s3-access-key-id`, `s3-secret-access-key` | `S3_ACCESS_KEY_ID_FILE`, `S3_SECRET_ACCESS_KEY_FILE` | `api-*`, `worker` | R2 token of §5.5 |
+| `s3-access-key-id`, `s3-secret-access-key` | `S3_ACCESS_KEY_ID_FILE`, `S3_SECRET_ACCESS_KEY_FILE` | `api-*`, `worker` | The files identity of §5.5 |
 | `smtp-password`, `expo-access-token`, `sms-*` | `SMTP_PASSWORD_FILE`, `EXPO_ACCESS_TOKEN_FILE`, `SMS_*_FILE` | `worker` | the providers (P1-22) |
 | `demo-staff-password` | `DEMO_STAFF_PASSWORD_FILE` | `api-*`, `worker` | `keys:generate --out` (≥ 12 characters) |
 | `tunnel-token` ¹ | `--token-file` | `cloudflared` | Cloudflare (§5.2) |
+| `seaweedfs-s3-config` ¹ | `-s3.config` (the identities JSON: files, backup and admin keys) | `seaweedfs` only | Built by the operator from `ops/seaweedfs/s3-config.template.json` (§5.5) |
+| `seaweedfs-tls-key` ¹ | `-s3.key.file` | `seaweedfs` only | `openssl` (§5.5) |
 | `grafana-admin-password` ¹ | `GF_SECURITY_ADMIN_PASSWORD__FILE` | `grafana` | `keys:generate --out` |
 | `telegram-bot-token`, `alertmanager-smtp-password` ¹ | read by `alertmanager.yml` as `bot_token_file`, `smtp_auth_password_file` | `alertmanager` | the bot and the second mail account (§2 input 11) |
-| `/etc/pgbackrest/pgbackrest.conf` ¹ | the R2 backup key and the repository passphrase | pgBackRest on the host | §8.4 |
+| `/etc/pgbackrest/pgbackrest.conf` ¹ | the SeaweedFS backup key and the repository passphrase | pgBackRest on the host | §8.4 |
 | GHCR read token ¹ | `~deploy/.docker/config.json` | Docker on the host | §4.7 |
 
 The key names of `alertmanager.yml` (`bot_token_file`, `smtp_auth_password_file`) are **P1-18 checks** against Alertmanager 0.34.1 (DOC-40 §6 already lists the Telegram keys as open).
@@ -1109,7 +1199,7 @@ sudo chmod 0400 /etc/rms/secrets/db-migrator-url /etc/rms/secrets/db-*-password
 ls -l /etc/rms/secrets | head                                      # mode -r--r----- and owner deploy rms
 ```
 
-Expected: `created 17 files`; a second run prints `kept 17 files` and changes nothing (CF-16). `--env staging` and `production` make `keys:generate` refuse a plain `.env.local` form (DOC-41 §2 rule 4).
+Expected: `created 17 files` (the two `seaweedfs-*` files above are made by the operator in §5.5, not by `keys:generate`; P1-20 may extend it); a second run prints `kept 17 files` and changes nothing (CF-16). `--env staging` and `production` make `keys:generate` refuse a plain `.env.local` form (DOC-41 §2 rule 4).
 
 ### 9.2 Non-secret environment
 
@@ -1124,11 +1214,12 @@ CORS_ORIGINS=https://admin-staging.<domain>
 ADMIN_BASE_URL=https://admin-staging.<domain>
 APP_DOWNLOAD_URL=<the page that links the staging builds>
 OPENAPI_ENABLED=true
-S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-S3_PUBLIC_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+S3_ENDPOINT=https://seaweedfs:8333
+S3_PUBLIC_ENDPOINT=https://files-staging.<domain>
 S3_REGION=auto
 S3_BUCKET=rms-staging-files
-S3_FORCE_PATH_STYLE=false
+S3_FORCE_PATH_STYLE=true
+NODE_EXTRA_CA_CERTS=/etc/rms/seaweedfs-ca.pem
 SMS_DRIVER=allowlist
 MAIL_DRIVER=allowlist
 SMS_ALLOWLIST=<test phones, comma separated, E.164>
@@ -1141,7 +1232,9 @@ MIN_APP_VERSION_RESIDENT=1.0.0
 MIN_APP_VERSION_STAFF=1.0.0
 ```
 
-Production: `APP_ENV=production`, `OPENAPI_ENABLED=false` (the boot guard refuses `true`), `SMS_DRIVER=provider`, `MAIL_DRIVER=smtp`, `SMS_BRAND=<brand>`, the production hosts and bucket, and the four `STORE_URL_*` (Owner input); `SMS_ALLOWLIST` and `MAIL_ALLOWLIST` are removed. Every other key keeps its default (DOC-41 §16). A key that is set in a way DOC-41 §17 refuses stops the boot with `config_invalid`, exit 78, so a typo is found at the first start of the first deploy.
+`S3_ENDPOINT` is the gateway inside the `rms` network (the application signs and uses it directly, over TLS with the private CA); `S3_PUBLIC_ENDPOINT` is the files host the clients receive in presigned URLs (DR-61, DR-268 item 5); path-style is on (DOC-41 §6). That the runtime reads the CA from `NODE_EXTRA_CA_CERTS` (the key is not in DOC-41; it is a Bun and Node variable) is **to verify in P1-20**; if it is not honored, DOC-41 gets a CA-file key. The `global` profile's values are in the table of §1.
+
+Production: `APP_ENV=production`, `OPENAPI_ENABLED=false` (the boot guard refuses `true`), `SMS_DRIVER=provider`, `MAIL_DRIVER=smtp`, `SMS_BRAND=<brand>`, the production hosts and buckets, and the four `STORE_URL_*` (Owner input); `SMS_ALLOWLIST` and `MAIL_ALLOWLIST` are removed. Every other key keeps its default (DOC-41 §16). A key that is set in a way DOC-41 §17 refuses stops the boot with `config_invalid`, exit 78, so a typo is found at the first start of the first deploy.
 
 `DB_POOL_MAX` and `PDF_CONCURRENCY` come from the compose files (§6.1), not from `app.env`.
 
@@ -1157,8 +1250,11 @@ RMS_HOST_SUFFIX=-staging          # empty on production
 | Secret | Held by | If lost |
 | --- | --- | --- |
 | `pii-encryption-keys` | The host, and a **sealed offline copy** with the Owner | CCCD numbers unrecoverable (DR-65, DOC-39 §7) |
-| pgBackRest passphrase | The host, and a sealed offline copy with the Owner | Every backup unreadable (DR-66) |
+| pgBackRest passphrase | The host, and a sealed offline copy with the Owner, **off the VPS** (DR-268) | Every backup unreadable (DR-66); with the VPS gone and no offline copy, an off-VPS backup is useless |
 | `settings-encryption-keys`, `jwt-keys`, `qr-keys` | The host only | The gateway credentials are entered again; tokens and QR codes are reissued (RB-12) |
+| Backup S3 identity (key pair) | The host (`pgbackrest.conf`, the identities file), and a sealed offline copy with the Owner | Create a new key pair in the identities file and `pgbackrest.conf`; the backups stay readable (the passphrase is separate) |
+| `seaweedfs-s3-config` (files, backup, admin keys) | The host only (the files key is also a host secret of §9.1) | Re-create the identities and update the consumers; no data is lost |
+| The private CA and gateway certificate | The host (`ca.pem`, the certificate); the CA key is **not** kept | Re-create the CA and certificate (§5.5) and restart `seaweedfs`; update `ca.pem` for pgBackRest and the application |
 | `tunnel-token` | The host and Cloudflare | Create a new connector token in the dashboard; replace the file |
 | CI secrets | GitHub | Recreate; the host is unaffected |
 
@@ -1229,22 +1325,24 @@ The whole sequence for staging. Production is the same with its values. Time: ab
 
 | Step | Do | Expected |
 | --- | --- | --- |
-| 1 | §2: inputs 2 to 5 and 14 are known | The table has no *Open* in those rows |
+| 1 | §2: inputs 2 to 5, 14 and 16 are known | The table has no *Open* in those rows |
 | 2 | §5.1: the zone is **Active**; Bot Fight Mode off | Dashboard shows Active |
-| 3 | §5.5: buckets, CORS, the two tokens | `wrangler r2 bucket list` shows both |
+| 3 | §5.5 steps 1 to 3: the data volume mounted on `/srv/rms-data`, the private CA and certificate, the three S3 identities (the identities file) | `findmnt /srv/rms-data` shows a separate device; the files exist in `/etc/rms/tls` and `/etc/rms/secrets` |
 | 4 | §4.1 to §4.7 on the VPS (firewall still off) | `docker compose version` v5.6.0; the network `rms` exists |
-| 5 | §8.1 to §8.4: PostgreSQL, the cluster, roles, the stanza, the first full backup | `pgbackrest info` shows a full backup |
-| 6 | §9.1: generate the secrets; paste the Tunnel token, the R2 files credentials, the pgBackRest values | 17 files, modes as listed |
+| 5 | §8.1 to §8.4 up to the roles and the configuration file: PostgreSQL, the cluster, roles, `pgbackrest.conf` written (the stanza **waits**: the repository does not exist before step 11) | `psql` works; `archive_mode` on |
+| 6 | §9.1: generate the secrets; paste the Tunnel token, the files identity, the identities file | 17 files plus the two `seaweedfs-*` files, modes as listed |
 | 7 | §9.2: write `app.env` and `compose.env` | `config` check below passes |
-| 8 | §5.2: create the Tunnel and its three routes, the Access applications and the service token | The Tunnel is created |
+| 8 | §5.2: create the Tunnel and its **four** routes, the Access applications and the service token | The Tunnel is created |
 | 9 | CI step: a merge to `dev` builds and publishes `sha-<7>` (DR-239); or by hand: `docker pull` the image and upload `docker/` and `ops/` as `/opt/rms/incoming/sha-<7>.tgz` | The image and the tarball exist |
-| 10 | **First deploy only**, while SSH on the VPS's public address still works (§4.9 step 1; the Tunnel is not up before this deploy starts `cloudflared`): from a checkout of the commit, `tar -czf - docker ops \| ssh deploy@<VPS IP> 'cat > /opt/rms/incoming/sha-<7>.tgz'`, then `ssh deploy@<VPS IP> "bash -s -- sha-<7>" < ops/deploy/deploy.sh`. Every later deploy goes through the Tunnel (DOC-71 §7.1) | `deploy ok sha-<7> in <n> s`; all containers `healthy` |
-| 11 | The Tunnel shows **Healthy**; from a laptop: `curl -s https://api-staging.<domain>/api/v1/health/ready` | `{"status":"ok","maintenance":false}` |
-| 12 | §4.9 steps 3 to 5: SSH through the Tunnel, then `ufw --force enable` | A session through `ssh-staging.<domain>`; `ufw status` active |
-| 13 | `ops/deploy/smoke.sh staging` from a laptop with the staging variables | `smoke passed (staging)` |
-| 14 | Web: `wrangler pages deploy` (DOC-71 §8) and open `https://admin-staging.<domain>` | The Access login page, then the CMS sign-in |
-| 15 | §10: Grafana at `https://monitor-staging.<domain>`; a test alert (DOC-40 §6) | Dashboard loads; email and Telegram arrive |
-| 16 | Reboot (§14 check 9) | Every container is `healthy` within 5 minutes without a command |
+| 10 | **First deploy only**, while SSH on the VPS's public address still works (§4.9 step 1; the Tunnel is not up before this deploy starts `cloudflared`): from a checkout of the commit, `tar -czf - docker ops \| ssh deploy@<VPS IP> 'cat > /opt/rms/incoming/sha-<7>.tgz'`, then `ssh deploy@<VPS IP> "bash -s -- sha-<7>" < ops/deploy/deploy.sh`. Every later deploy goes through the Tunnel (DOC-71 §7.1) | `deploy ok sha-<7> in <n> s`; all containers `healthy`, `seaweedfs` included |
+| 11 | §5.5 steps 5 and 6: the buckets and the CORS rule; then §8.4: `stanza-create`, `check` and the first full backup; `systemctl enable --now` the timers of §8.5 | `aws s3 ls` shows both buckets; `pgbackrest info` shows a full backup |
+| 12 | The Tunnel shows **Healthy**; from a laptop: `curl -s https://api-staging.<domain>/api/v1/health/ready` | `{"status":"ok","maintenance":false}` |
+| 13 | §4.9 steps 3 to 5: SSH through the Tunnel, then `ufw --force enable` | A session through `ssh-staging.<domain>`; `ufw status` active |
+| 14 | `ops/deploy/smoke.sh staging` from a laptop with the staging variables | `smoke passed (staging)` |
+| 15 | `bun --env-file=<staging values> test tools/compat/uploads.test.ts` against `files-staging.<domain>` (P1-07: U1…U11 through the Tunnel and the files host) | The upload checks pass |
+| 16 | Web: `wrangler pages deploy` (DOC-71 §8) and open `https://admin-staging.<domain>` | The Access login page, then the CMS sign-in |
+| 17 | §10: Grafana at `https://monitor-staging.<domain>`; a test alert (DOC-40 §6) | Dashboard loads; email and Telegram arrive |
+| 18 | Reboot (§14 check 9) | Every container is `healthy` within 5 minutes without a command |
 
 The config check of step 7, before the first deploy: `docker compose --env-file /opt/rms/env/compose.env -f docker/compose.base.yml -f docker/compose.staging.yml config -q` prints nothing and exits 0.
 
@@ -1264,19 +1362,21 @@ The config check of step 7, before the first deploy: `docker compose --env-file 
 | Demo building | present | present (store review) |
 | Access allow-list | operators and web staff of staging | operators and the building's web staff |
 | Deploy trigger | merge to `dev` (DR-239) | a `v*` tag with the Owner's approval |
-| R2, Tunnel, Pages, tokens, keys | own | own: nothing is shared across environments except the Cloudflare account, the zone and its one rate rule |
+| Files host | `files-staging.<domain>` | `files.<domain>` |
+| SeaweedFS, data volume, buckets, S3 identities, CA | own (own container, own volume, `rms-staging-*`) | own (`rms-production-*`); the sizes of the volume and of the `seaweedfs` limit differ (§2 input 16, §6.1) |
+| Tunnel, Pages, keys | own | own: nothing is shared across environments except the Cloudflare account, the zone and its one rate rule |
 
 ## 13. Teardown
 
 Order matters: data first, then access, then the host.
 
 1. Announce; set maintenance on (§6.4) if users exist.
-2. Take a last backup and a `pg_dump` (DOC-72) and copy them to a place the Owner controls **outside** this account. Record where.
+2. Take a last backup and a `pg_dump` (DOC-72) and copy them to a place the Owner controls **outside the VPS**: in the `vn` profile the backups live on the host that is being destroyed, so this copy is the only one that survives (DR-268). Copy the files bucket too if the files are to be kept (`aws s3 sync` through the bridge). Record where.
 3. `ops/deploy/deploy.sh` is not needed: on the host `docker compose … down` (volumes kept for now); `systemctl disable --now rms-backup@full.timer rms-backup@diff.timer`.
-4. Cloudflare, in this order: delete the Access applications and the service token `deploy-ci`; delete the Tunnel (the dashboard removes its DNS records); delete the Pages project and its custom domain; empty and delete the two R2 buckets (an R2 bucket must be empty before it is deleted) and revoke the two R2 tokens; remove the WAF, configuration and cache rules and the rate rule for that environment.
+4. Cloudflare, in this order: delete the Access applications and the service token `deploy-ci`; delete the Tunnel (the dashboard removes its DNS records); delete the Pages project and its custom domain; remove the WAF, configuration and cache rules and the rate rule for that environment.
 5. GitHub: delete the environment secrets of that environment and the deploy key; delete the GHCR read token.
-6. Destroy the VPS at the provider and its snapshots. Revoke the operators' SSH keys wherever they were copied.
-7. Personal data in the database or in the buckets is erased by 2 and 4; a copy kept by the Owner is theirs to protect or destroy (DR-58, DOC-35).
+6. Stop `seaweedfs`; destroy the VPS **and the data volume** at the provider, with their snapshots (the volume holds the files and the backups: personal data, DR-58). If the provider cannot confirm that a deleted volume is erased, overwrite the device first. Revoke the operators' SSH keys wherever they were copied.
+7. Personal data in the database or in the buckets is erased by step 6 (the database, the files and the backups are all on the host); a copy kept by the Owner is theirs to protect or destroy (DR-58, DOC-35). In the `global` profile the R2 buckets are emptied and deleted and the R2 tokens revoked instead (ADR-0016, ADR-0017).
 
 ## 14. Checks
 
@@ -1291,22 +1391,32 @@ These are the checks of P1-20 (staging) and P6-13 (production). They are **not r
 | 5 | `GET https://api-staging.<domain>/api/v1/health/ready`; `…/health/live`; `…/metrics` | 200; 404; 404 | DR-07, E-01, E-02 |
 | 6 | `GET https://api-staging.<domain>/api/v1/docs` on staging; on production | A page with no CSP header; 404 | SC-16, AG-03 |
 | 7 | `docker inspect rms-api-1-1` environment and `GET /metrics` | `*_FILE` paths, no secret value, none in `/metrics` | SC-22 |
-| 8 | `pgbackrest info`; wait for the next differential; `backup_last_success_timestamp` in Prometheus | A backup exists; the timestamp moves after 02:00 ICT | NFR-11, OB- |
-| 9 | Reboot the VPS | After the reboot, with no command: PostgreSQL up, all containers `healthy` in 5 minutes, the Tunnel Healthy, the smoke test passes | §6.2 |
+| 8 | `pgbackrest info` against the SeaweedFS repository; wait for the next differential; `backup_last_success_timestamp` in Prometheus | A backup exists; the timestamp moves after 02:00 ICT | NFR-11, OB- |
+| 9 | Reboot the VPS | After the reboot, with no command: the data volume mounted, PostgreSQL up, all containers `healthy` in 5 minutes (`seaweedfs` included), the Tunnel Healthy, the WAL archive resumes (`pgbackrest check`), the smoke test passes | §6.2 |
 | 10 | A deploy of a second tag with a new migration | `deploy ok`; the old container served until `api-1` was recreated; the probe saw no failure | NFR-10 |
 | 11 | `deploy.sh --rollback` then the smoke test; time it | Within 10 minutes; written in §6.6 | DR-08 |
 | 12 | Stop the database (`systemctl stop postgresql@18-main`) | `/api/v1/health/ready` is 503; `ReadinessFailing` fires; the email and Telegram arrive within 2 minutes | OB-14 |
-| 13 | A PITR restore onto an empty host from this repository | Works and is timed (formerly spike S-09; the drill is EXP-12) | NFR-11 |
+| 13 | A PITR restore onto an empty host from this repository (the SeaweedFS gateway, or the POSIX fallback of §8.4 if P1-20 chose it) | Works and is timed (formerly spike S-09; the drill is EXP-12); the result decides between the S3 repository and the fallback | NFR-11 |
 | 14 | Cloudflare: the rate rule | A script of 150 requests in 10 s to `/api/v1/auth/staff/login` from one IP is blocked for 10 s; ordinary traffic passes | §5.3 |
 | 15 | Webhook skip: `POST /api/v1/payments/webhooks/payos/<id>` without a signature | 401 `invalid_signature` from the application, not a Cloudflare block page | SC-11 |
 | 16 | `unattended-upgrade --dry-run -d` | PostgreSQL, pgBackRest and Docker packages are in the blacklist | §4.5 |
+| 17 | From a machine outside the VPS: `curl -sI https://files-staging.<domain>/`; `curl` to `https://files-staging.<domain>:8888`, `:9333` | The S3 gateway answers (an S3 error body, no listing); the filer, master and volume ports do not answer; no S3 port is open on the VPS address (check 1) | DR-268 item 5 |
+| 18 | With the **files** identity: `aws s3 ls s3://rms-staging-backup`; with the **backup** identity: `aws s3 ls s3://rms-staging-files` | Both refused (`AccessDenied`): the identities are limited to their bucket | DR-268 item 2, DOC-07 TB5 |
+| 19 | `findmnt -no SOURCE /srv/rms-data`, `findmnt -no SOURCE /`, `findmnt -no SOURCE /var/lib/postgresql/18/main`; `df -h` | The data volume's device differs from the root and PostgreSQL's | DR-268 item 3 |
+| 20 | `pgbackrest --stanza=rms check` with the repository CA removed, and with the right CA | Fails the TLS check; passes with the CA (verification is on, not skipped) | DR-268 item 7 |
+| 21 | `ops/deploy/smoke.sh` plus `tools/compat/uploads.test.ts` against the files host; a presigned `PUT` of 50 MB | U1…U11 pass; the video limit fits the Tunnel's 100 MB | P1-07, DR-61 |
 
 ## 15. Risks recorded here
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
-| One VPS per environment | The loss of the host is an RTO of up to 4 h | Rebuild from this document and restore (RB-10); the Owner accepted it (DR-83) |
-| Backups, files and the edge share one Cloudflare account | An account compromise or suspension affects all | Accepted by the Owner (DR-66); recorded in DOC-72 |
+| One VPS per environment | The loss of the host is an RTO of up to 4 h **for a rebuild with a restore from backups that survive**; in the `vn` profile they do not (next row) | Rebuild from this document (RB-10); the Owner accepted one VPS (DR-83) |
+| **The whole VPS, or its provider account, is lost** (DR-268 consequences) | **The database, the files and the backups are lost together** until the SeaweedFS replica on another server exists. This breaks the claim of DR-66 that backups survive the host | Accepted by the Owner (DR-268). Mitigations without a decision: the separate data volume (it protects against a disk fault, **not** against the loss of the VPS), a provider snapshot if the provider offers one (§2 input 16), the weekly `pg_dump` copied to an operator-held place at the Owner's discretion (DOC-72). The replica is a later DR; recorded in DOC-72 and DOC-10 |
+| **RPO and RTO scope** (NFR-11) | RPO <= 5 min and RTO <= 4 h hold for a PostgreSQL fault, a bad migration, a dropped table or a bad deploy (what PITR serves). They do **not** hold for the loss of the whole VPS: there the recovery point is the last off-VPS copy, if any, and may be total loss | Stated in DOC-10 §7 and DOC-72; restated when the replica exists |
+| **pgBackRest against the SeaweedFS S3 gateway is not proven** | The WAL archive or a restore may fail, or the gateway may not keep up with a segment per minute | P1-20 runs archive, backup, restore and the load; the POSIX fallback on the backup volume (§8.4) |
+| SeaweedFS shares the VPS's CPU, memory and disk with PostgreSQL and the API | A burst of uploads or a backup slows the API; a full data volume stops uploads **and** the archive | Separate volume, provisional limits (§6.1), disk and archive-failure alerts, EXP-07 and EXP-08 recalibrate (DR-268) |
+| The Owner operates SeaweedFS (upgrades, volume growth, the TLS certificate of §5.5 expires) | An unnoticed expiry or a version drift breaks uploads and the archive | A calendar reminder before the certificate's expiry; a restore drill that includes the backup bucket (DOC-72) |
+| Uploads and downloads cross the Cloudflare Tunnel | The free plan's 100 MB request limit; the files host depends on `cloudflared` | The 50 MB video limit fits; check 21 |
 | Docker is a dependency of SSH over the Tunnel (`cloudflared` is a container) | A broken Docker daemon removes the SSH path | The provider console (§14 check 2) |
 | `deploy` is root-equivalent | A leaked CI key is a root on that host | Access service token, pinned host key, per-environment keys, nothing shared (§3.3) |
 | The Docker socket in Alloy | A compromised Alloy is root | Official image, read-only intent, no inbound; revisit if Loki is dropped |
@@ -1317,7 +1427,7 @@ These are the checks of P1-20 (staging) and P6-13 (production). They are **not r
 
 ## 16. Decisions made while writing
 
-Every new decision in this document is recorded as a DR (decided, Claude delegated by the Owner, unless the row says otherwise).
+Every new decision in this document is recorded as a DR (decided, Claude delegated by the Owner, unless the row says otherwise). The implementation choices of §5.5 and §6.1 (one `weed server` process set, a fixed bridge address, TLS on the gateway with a private CA, three identities) are proposals that follow DR-268 and are **to confirm in P1-20**; if P1-20 changes one, it is recorded then.
 
 | ID | Title | State | Where used |
 | --- | --- | --- | --- |
@@ -1325,11 +1435,12 @@ Every new decision in this document is recorded as a DR (decided, Claude delegat
 | DR-159 | Cloudflare free-plan rules: the one rate rule on `/api/v1/auth/*` is 100 requests per 10 s per IP, block 10 s, one rule for both hosts; `*.pages.dev` goes behind Access when the plan allows | Decided | §5.3, §5.4 |
 | DR-160 | **Bot Fight Mode is off for the zone**, because it cannot be skipped on the free plan (revises DR-83 item 4, DOC-07 TB1, DOC-39 §5.4) | Decided (Owner, 2026-10-20) | §5.3 |
 | DR-161 | Staging runs without Loki and Alloy (profile `logs`, production only); `deploy.sh` stops at the first failing step and never rolls back by itself | Decided | §6.1, §6.5 |
+| DR-268 | Deployment in Vietnam: files and backups in SeaweedFS on the VPS (separate data volume), no R2; the edge stays; clients reach the S3 gateway through `files.<domain>`; two profiles, `vn` and `global` (**Decided, Owner, 2026-10-26**; ADR-0027) | Decided | §1, §2, §3, §5.2, §5.5, §6.1, §8.4, §9, §11 to §15 |
 | DR-162 | PostgreSQL cluster locale `C.UTF-8` with data checksums; backup timers are systemd timers with `Asia/Ho_Chi_Minh` in `OnCalendar` (full Sunday 02:00, differential Monday to Saturday 02:00) | Decided | §8.1, §8.5 |
 
 ## 17. Sources read (2026-10-20)
 
-Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot Fight Mode and WAF skip (cannot be skipped), SSH with client-side `cloudflared` (route type SSH to `localhost:22`, `ProxyCommand cloudflared access ssh --hostname %h`), Access service tokens (`CF-Access-Client-Id`, `CF-Access-Client-Secret`, Service Auth), Pages `_headers` (100 rules, 2,000 characters, not applied to Functions), Pages custom domains and branch aliases. Caddy documentation: `reverse_proxy` health checks and `flush_interval`, `request_body max_size`, global `servers` `trusted_proxies`, `auto_https off`. pgBackRest configuration reference (S3, cipher, retention, async archive). Expo and PostgreSQL package facts are in DOC-11. A statement in this document that no source here covers is marked **P1-20 checks** or **P1-18 checks**.
+Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot Fight Mode and WAF skip (cannot be skipped), SSH with client-side `cloudflared` (route type SSH to `localhost:22`, `ProxyCommand cloudflared access ssh --hostname %h`), Access service tokens (`CF-Access-Client-Id`, `CF-Access-Client-Secret`, Service Auth), Pages `_headers` (100 rules, 2,000 characters, not applied to Functions), Pages custom domains and branch aliases. Caddy documentation: `reverse_proxy` health checks and `flush_interval`, `request_body max_size`, global `servers` `trusted_proxies`, `auto_https off`. pgBackRest configuration reference (S3, cipher, retention, async archive). Expo and PostgreSQL package facts are in DOC-11. **SeaweedFS:** no SeaweedFS documentation was read for this revision (2026-10-26). The `weed server` flags that appear in `compose.local.yml` come from the local stack (DOC-69, DR-231); the S3 identities, TLS options, bucket-scoped actions, health path over TLS and multipart cleanup are **to verify in P1-20**, as is `repo-storage-ca-file` against pgBackRest 2.59.3. A statement in this document that no source here covers is marked **P1-20 checks** or **P1-18 checks**.
 
 ## 18. Not in this document
 
@@ -1343,17 +1454,20 @@ Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot
 | Container and capacity budgets (the reasons) | DOC-10 §6 |
 | EAS, stores, mobile secrets | DOC-73 |
 | Module and package layout | DOC-12 |
+| The SeaweedFS replica on another server (later, DR-268 item 4) | A future DR; then DOC-72 and this document |
+| The `global` profile with R2 (buckets, tokens, CORS, lifecycle, pgBackRest on R2) | ADR-0016, ADR-0017, ADR-0020, DR-83 |
+| SeaweedFS version and upgrade, disk budget | DOC-11 §1 (version), DOC-10 §6 (budget) |
 
 ## 19. Traceability
 
 | Section | Decisions | Requirements and tasks |
 | --- | --- | --- |
-| §4 hardening, §5.2 SSH | DR-83 item 2, DR-88 | NFR-14; P1-20; check 1 to 4 |
+| §4 hardening, §5.2 SSH and the files route | DR-83 item 2, DR-88, DR-268 item 5 | NFR-14; P1-20; check 1 to 4 |
 | §5.3 WAF, rate rule | DR-64, DR-83 item 4 | NFR-07; check 14, 15 |
-| §5.5 R2 | DR-61, DR-83 item 8 | FR-40; P1-07, P1-20 |
+| §5.5 SeaweedFS on the VPS (replaces R2) | DR-61, DR-268 | FR-40; P1-07, P1-20; check 17 to 21 |
 | §6 compose, deploy, experiments | DR-05, DR-06, DR-08, DR-95, DR-102, DR-161 | NFR-03, NFR-10; P1-20; check 9 to 11 |
 | §7 Caddy | DR-07, DR-75, DR-83 item 3 | NFR-10; check 5, 6 |
-| §8 PostgreSQL, pgBackRest | DR-66, DR-67, DR-93, DR-113 | NFR-11; P1-20; check 8, 13 |
+| §8 PostgreSQL, pgBackRest (SeaweedFS repository, POSIX fallback) | DR-66, DR-67, DR-93, DR-113, DR-268 | NFR-11; P1-20; check 8, 13 |
 | §9 secrets | DR-65, DR-113, DR-156 | NFR-14; CF-15, CF-16; check 7 |
 | §10 monitoring | DR-63, DR-88, DR-154 | NFR-09, NFR-10; P1-18; check 12 |
 
@@ -1363,4 +1477,6 @@ Cloudflare documentation: rate-limiting rules (free plan: 1 rule, 10 s, IP), Bot
 - **DR-160 (Bot Fight Mode off)** weakens the edge relative to DR-83 item 4; the Owner confirmed it on 2026-10-20. The alternative, to keep it on, would let a challenge hit an app or the gateway callback.
 - **Whether the free plan offers** *Access for `*.pages.dev`*, accepts the `starts_with` operator and host condition in the one rate rule, and covers the staff count in Access is checked by P1-20.
 - **The GHCR token type**, the `cloudflared` flags, the Alertmanager `*_file` keys, the Alloy option names and the `postgres_exporter` options are checked by P1-20 and P1-18 as marked.
-- Decisions made while writing: DR-158…162.
+- **SeaweedFS in P1-20 (DR-268).** Commands and options of §5.5, §6.1 and §8.4 are not run. P1-20 must confirm: pgBackRest 2.59.3 against the S3 gateway over TLS (archive, backup, restore, load; else the POSIX fallback); that the gateway serves TLS with the certificate options named, or a TLS listener goes in front of it; the identities syntax and bucket scoping; that the Tunnel route to an HTTPS origin accepts the private CA or falls back to *No TLS Verify*; that presigned URLs signed for the files host validate behind the Tunnel; the runtime's use of `NODE_EXTRA_CA_CERTS`; multipart cleanup; the `seaweedfs` memory limits and the data-volume size (§2 input 16).
+- **The whole-VPS risk (DR-268)** stays open until the SeaweedFS replica on another server has its own DR; the Owner may price a provider snapshot in P0-03.
+- Decisions made while writing: DR-158…162 and DR-268 (decided by the Owner).

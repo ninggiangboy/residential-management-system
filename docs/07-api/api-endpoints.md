@@ -1,6 +1,6 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-26 (DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
@@ -670,7 +670,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   {
     "account": {
       "id": "0192f3c4-5a1e-7000-8000-000000000041", "phone": "+84901234567", "displayName": "Nguyễn Văn An",
-      "avatarUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
+      "avatarUrl": "https://files.<domain>/…?X-Amz-Expires=900&…",
       "language": "vi", "pushEnabled": true, "status": "active",
       "deletion": { "requestedAt": null, "approvedAt": null, "cooloffDays": 30, "executeAfter": null }
     },
@@ -718,7 +718,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 
   ```json
   { "id": "0192f3c4-5a1e-7000-8000-000000000041", "phone": "+84901234567", "displayName": "Nguyễn Văn An",
-    "avatarUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
+    "avatarUrl": "https://files.<domain>/…?X-Amz-Expires=900&…",
     "language": "en", "pushEnabled": false, "status": "active", "deletion": { "requestedAt": null, "approvedAt": null, "cooloffDays": 30, "executeAfter": null } }
   ```
 
@@ -949,7 +949,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   {
     "fileId": "0192f3c4-9d02-7000-8000-00000000f001",
     "method": "PUT",
-    "url": "https://<account>.r2.cloudflarestorage.com/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-7000-8000-00000000f001.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
+    "url": "https://files.<domain>/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-7000-8000-00000000f001.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
     "headers": { "Content-Type": "image/jpeg" },
     "expiresAt": "2026-10-20T03:25:12.000Z",
     "maxBytes": 10485760
@@ -957,7 +957,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   ```
 
 - **Errors:** 400 `validation_failed` rules `file_type_not_allowed`, `file_too_large`; 403 `forbidden` (a purpose the caller may not register), `membership_inactive`, `terms_required`; 413 `quota_exceeded` (`details {usedBytes, quotaBytes}`); 429 `rate_limited` (bucket `upload:account:<id>`, 60 per hour); 422 `idempotency_key_reuse`.
-- **Data source:** `building.file_object` insert (`status = 'pending'`, `account_kind`, `account_id`, declared `size`), the quota sum over `ix_file_object_building_live` (DOC-37 §11), the presign (a local signature, no R2 call).
+- **Data source:** `building.file_object` insert (`status = 'pending'`, `account_kind`, `account_id`, declared `size`), the quota sum over `ix_file_object_building_live` (DOC-37 §11), the presign (a local signature, no store call).
 - **Cache:** `no-store`.
 - **Performance:** p95 under 200 ms.
 - **Events:** none.
@@ -977,8 +977,8 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   ```
 
   `size` is the real size of the object. A repeat call on a file that is already `verified` returns the same 200 (a retry after a lost response must not fail, DR-146); on an `attached` or `deleted` file it is 404.
-- **Errors:** 404 `not_found` (another account's file, another building's); 422 `file_not_verified` with `details [{code}]`, `code` ∈ `missing` (the object is not there yet; the row stays `pending` and the client may retry within the window), `too_large`, `empty`, `wrong_type`, `bad_content` (the row becomes `deleted` and the worker removes the object); 503 `service_unavailable` (R2 or the database; the row stays `pending`, retry).
-- **Data source:** `building.file_object` by id; **no transaction is open** during the `HEAD` and the ranged `GET` of R2; then one short transaction sets `status = 'verified'` (or `'deleted'`) and writes `building.thumbnail_requested.v1` for an image purpose with a thumbnail, or `building.file_delete_requested.v1` on failure.
+- **Errors:** 404 `not_found` (another account's file, another building's); 422 `file_not_verified` with `details [{code}]`, `code` ∈ `missing` (the object is not there yet; the row stays `pending` and the client may retry within the window), `too_large`, `empty`, `wrong_type`, `bad_content` (the row becomes `deleted` and the worker removes the object); 503 `service_unavailable` (the store or the database; the row stays `pending`, retry).
+- **Data source:** `building.file_object` by id; **no transaction is open** during the `HEAD` and the ranged `GET` of the store; then one short transaction sets `status = 'verified'` (or `'deleted'`) and writes `building.thumbnail_requested.v1` for an image purpose with a thumbnail, or `building.file_delete_requested.v1` on failure.
 - **Cache:** `no-store`.
 - **Performance:** p95 under 500 ms (one `HEAD`, one ranged `GET`, one short transaction; 150 to 250 ms planned, measured in P1-07).
 - **Events:** `building.thumbnail_requested.v1`, `building.file_delete_requested.v1`.
@@ -1134,7 +1134,7 @@ These endpoints belong to the signed-in staff member and need no capability beyo
     "buildingId": "0192f3c4-5a1e-7000-8000-000000000001",
     "language": "vi",
     "pushEnabled": true,
-    "avatarUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
+    "avatarUrl": "https://files.<domain>/…?X-Amz-Expires=900&…",
     "lastLoginAt": "2026-10-20T01:02:11.000Z",
     "version": 5
   }
@@ -1142,7 +1142,7 @@ These endpoints belong to the signed-in staff member and need no capability beyo
 
   `avatarUrl` is the 480 px thumbnail, or the original while the thumbnail does not exist (DOC-37 §8); `null` without an avatar. `role` and `status` come from the database row of this request, not from the token (DOC-26 §3.1).
 - **Errors:** 401 `unauthenticated`.
-- **Data source:** `IdentityApi.getStaff` (primary key of `identity.staff_account`); `FilesApi.signedUrl` for the avatar (local signature, no R2 call).
+- **Data source:** `IdentityApi.getStaff` (primary key of `identity.staff_account`); `FilesApi.signedUrl` for the avatar (local signature, no store call).
 - **Cache:** `Cache-Control: private, no-cache` with the `ETag`; `If-None-Match` answers 304.
 - **Performance:** p95 ≤ 100 ms (one key read; the shell calls it at every start).
 - **Tests:** AU-41 (token kinds), AU-55 (shape of the neighbouring sessions list).
@@ -1290,14 +1290,14 @@ These endpoints belong to the signed-in staff member and need no capability beyo
   {
     "fileId": "0192f3c4-9d02-7000-8000-00000000f021",
     "method": "PUT",
-    "url": "https://<account>.r2.cloudflarestorage.com/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/building/2026/10/0192f3c4-9d02-7000-8000-00000000f021.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
+    "url": "https://files.<domain>/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/building/2026/10/0192f3c4-9d02-7000-8000-00000000f021.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
     "headers": { "Content-Type": "image/png" },
     "expiresAt": "2026-10-20T03:25:12.000Z",
     "maxBytes": 1048576
   }
   ```
 - **Errors:** 400 `validation_failed` (`file_type_not_allowed`, `file_too_large`, `required` for `module`); 403 `forbidden`; 413 `quota_exceeded` (`details {usedBytes, quotaBytes}`); 429 `rate_limited` (60 per hour per account, bucket `upload:account:<id>`); 422 `idempotency_key_reuse`.
-- **Data source:** `building.file_object` insert (`status = 'pending'`), the quota sum `ix_file_object_building_live` (DOC-37 §11); no R2 call (the URL is signed locally).
+- **Data source:** `building.file_object` insert (`status = 'pending'`), the quota sum `ix_file_object_building_live` (DOC-37 §11); no store call (the URL is signed locally).
 - **Performance:** p95 ≤ 150 ms.
 - **Events:** none; an unverified file is removed by `orphan_uploads` after 24 h (DOC-37 §14).
 - **Tests:** FS-01, FS-02, FS-03, FS-20.
@@ -1313,8 +1313,8 @@ These endpoints belong to the signed-in staff member and need no capability beyo
   { "fileId": "0192f3c4-9d02-7000-8000-00000000f021", "purpose": "logo", "mime": "image/png", "size": 184322,
     "status": "verified", "createdAt": "2026-10-20T03:10:12.000Z" }
   ```
-- **Errors:** 404 `not_found` (another account's file); 422 `file_not_verified` with `details [{ "code": "missing" | "too_large" | "empty" | "wrong_type" | "bad_content" }]`. On `missing` the row stays `pending` and the client may retry within the 15-minute window; on any other code the row is `deleted` and a delete command is queued (DOC-37 §6.5). 503 when R2 or the database is unavailable (the row stays `pending`).
-- **Data source:** `HEAD` and a ranged `GET` (`bytes=0-4095`) on R2, then one short transaction on `building.file_object` (DOC-37 §6.3).
+- **Errors:** 404 `not_found` (another account's file); 422 `file_not_verified` with `details [{ "code": "missing" | "too_large" | "empty" | "wrong_type" | "bad_content" }]`. On `missing` the row stays `pending` and the client may retry within the 15-minute window; on any other code the row is `deleted` and a delete command is queued (DOC-37 §6.5). 503 when the store or the database is unavailable (the row stays `pending`).
+- **Data source:** `HEAD` and a ranged `GET` (`bytes=0-4095`) on the store, then one short transaction on `building.file_object` (DOC-37 §6.3).
 - **Performance:** p95 ≤ 400 ms (one `HEAD` and one ranged `GET`; planned 150 to 250 ms from the VPS, measured in P1-07).
 - **Events:** `building.thumbnail_requested.v1` for an image purpose that has a thumbnail; `building.file_delete_requested.v1` on a failure.
 - **Tests:** FS-04, FS-05, FS-06, FS-07, FS-08, FS-18.
@@ -1625,7 +1625,7 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
                    "email": "bql@sunrise.example", "representative": null },
       "address": "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", "hotline": "1900 1234",
       "workingHours": { "vi": "Thứ 2 – Thứ 6, 8:00 – 17:00", "en": null }, "email": "bql@sunrise.example",
-      "logoFileId": "0192f3c4-9d02-7000-8000-00000000f021", "logoUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
+      "logoFileId": "0192f3c4-9d02-7000-8000-00000000f021", "logoUrl": "https://files.<domain>/…?X-Amz-Expires=900&…",
       "timeZone": "Asia/Ho_Chi_Minh", "isDemo": false
     },
     "settings": { "defaultLanguage": "vi", "defaultDueDays": 12, "accountDeletionDays": 30,

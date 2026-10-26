@@ -1,7 +1,7 @@
 # Use cases
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
-> Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: UC-29 repository on SeaweedFS, whole-VPS loss scoped) · 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
+> Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84, DR-96, DR-268), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-05, DOC-21…49 (each detailed flow `FL-xx` expands one use case), DOC-51 (endpoints), DOC-56…67 (screens), P0-29, every task `Pn-xx` that builds a use case
 
 This document describes how each actor reaches a goal with the system: 30 use cases (UC-01…30), each with its main, alternative and error flows and the race branches that two actors can create. It holds no design. The rules and numbers are in the requirements ([DOC-03](requirements.md)), the mechanisms in the design documents, and the step-by-step call sequences in the detailed flows (`06-design/flows/`, `FL-xx`).
@@ -1110,18 +1110,18 @@ flowchart LR
 ## UC-29 · Restore the system from backup
 
 - **Actor:** Operator (the Owner in phase 1).
-- **Trigger:** The VPS is lost, the database is corrupted, or the quarterly restore drill (EXP-12).
-- **Preconditions:** The Operator has the offline copy of the pgBackRest repository key, the compose files and access to the Cloudflare and R2 accounts. A new host with the same OS exists.
+- **Trigger:** The database is corrupted, a migration or a bad deploy damaged data, a table was dropped, or the quarterly restore drill (EXP-12). The VPS is lost: see 2b.
+- **Preconditions:** The Operator has the offline copy of the pgBackRest repository key, the compose files, access to the Cloudflare account and to the SeaweedFS backup bucket of the VPS (in `global`: the R2 account). A host with the same OS exists.
 - **Main flow:**
   1. The Operator rebuilds the host from the compose files and installs PostgreSQL 18 (DOC-70).
-  2. The Operator restores with pgBackRest to a point in time (latest full + differential + WAL from R2); the data-loss window is at most 5 min (NFR-11).
+  2. The Operator restores with pgBackRest to a point in time (latest full + differential + WAL from the SeaweedFS backup bucket; `global`: R2); the data-loss window is at most 5 min (NFR-11).
   3. The Operator starts `api` and `worker` in maintenance mode and runs the invariant check (UC-20).
   4. The Operator re-queries payOS for every intent created in the lost period, imports the bank statement for the gap and reconciles it (UC-06), and lists the `unknown_order` log rows (DR-66).
   5. The Operator reopens traffic through the Tunnel after the checks pass; the time to a working system is at most 4 h.
-- **Alternative flows:** 2a. The pgBackRest repository is unreadable: the Operator restores the weekly portable `pg_dump` (a larger loss window) and then follows step 4.
+- **Alternative flows:** 2a. The pgBackRest repository is unreadable: the Operator restores the weekly portable `pg_dump` (a larger loss window) and then follows step 4. 2b. The whole VPS is lost (`vn`, DR-268): the repository and the files were on it, so the pgBackRest path is gone. Until a SeaweedFS replica on another server exists, the Operator can rebuild only from an off-VPS copy that the Owner chose to keep (a provider snapshot or a copy of the weekly `pg_dump`); without one the data is lost. The RPO ≤ 5 min and RTO ≤ 4 h of NFR-11 do not apply to this case.
 - **Error flows:** E1. A missing WAL segment → restore to the last consistent time and document the gap. E2. The invariant check fails after the restore → the system stays closed until RB-01 repairs it.
 - **Postconditions:** A running system; the restore log; a note of the lost window.
-- **Business rules:** No payment is lost silently: webhook gaps are covered by re-query and statement reconciliation. A single-provider risk is accepted: backups, files and the edge share one Cloudflare account (DR-66).
+- **Business rules:** No payment is lost silently: webhook gaps are covered by re-query and statement reconciliation. In `vn` the database, files and backups share one VPS, which is an accepted risk until the replica exists (DR-268; in `global` backups and files are in R2, DR-66).
 - **Race branches:** During the gap payOS may deliver webhooks to a down API; they retry or are caught by the re-query (UC-18).
 - **Related:** NFR-11; runbook RB-10; documents DOC-72, DOC-84; flows none.
 

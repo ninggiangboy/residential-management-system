@@ -1,7 +1,7 @@
 import type { ObjectStorage } from '@core/storage'
 import type { ObjectStore } from '../../application/ports'
 
-/** The bucket as `FilesService` sees it, over the `ObjectStorage` of `@core/storage` (S3 on R2 or SeaweedFS, the disk, or a fake). */
+/** The bucket as `FilesService` sees it, over the `ObjectStorage` of `@core/storage` (S3 on SeaweedFS in the `vn` profile or R2 in `global` (DR-268), the disk, or a fake). */
 export class CoreObjectStore implements ObjectStore {
   constructor(private readonly storage: ObjectStorage) {}
 

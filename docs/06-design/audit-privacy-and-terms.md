@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -286,7 +286,7 @@ Classes are those of DR-58 and ADR-0022: **sensitive** (CCCD number), **personal
 1. **Masked everywhere except the profile detail.** Lists, searches, imports' previews, exports, push, logs, audit `changes` and error `details` never carry a full CCCD, a date of birth or a full phone (Guards and logs see `+84•••••123`).
 2. **Role-based field filters.** The DTO mapper of each endpoint drops fields the caller's audience may not see; it does not rely on the screen to hide them (FR-16.4, NFR-14, EXP-10 asserts per role).
 3. **Push is generic.** Title and body come from templates and carry no amount, name, phone or ticket text; `data` is `{route, unitId, entityId}` (DR-52, FR-29.3).
-4. **Cross-border flows, and only these:** Expo, FCM and APNs (generic payload); Cloudflare edge, Pages and R2 (DR-83); the SMS and mail providers, chosen from Vietnam-hosted vendors where possible (DR-68). No error tracker (DR-103). A new processor needs a new DR that adds it to this list and to the privacy notice.
+4. **Cross-border flows, and only these:** Expo, FCM and APNs (generic payload); Cloudflare edge (DNS, Tunnel, WAF; in transit) and Pages, which holds no personal data (DR-83, DR-268); files and backups are in SeaweedFS on the VPS in Vietnam, so storage is not a cross-border flow (R2 only in the `global` profile); the SMS and mail providers, chosen from Vietnam-hosted vendors where possible (DR-68). No error tracker (DR-103). A new processor needs a new DR that adds it to this list and to the privacy notice.
 5. **The CCCD number is never a file.** No upload purpose holds a CCCD image (DOC-37 §2).
 
 ### 7.3 Keeping the inventory true
@@ -310,7 +310,7 @@ DOC-20 §2 is the table of every table and file; §5 holds the purge statements 
 | Logs | Deleted by age | 14 days in Loki | Alloy and Loki (DR-63) |
 | Backups | Deleted by age | About 5 weeks tail (DOC-20 §6) | pgBackRest retention; the notice says so |
 
-**What the notice must say about the tail:** personal data removed from the database remains in backups until the last backup that holds it expires, about 5 weeks after a deletion; backups are encrypted with a key that is not on R2 (ADR-0022).
+**What the notice must say about the tail:** personal data removed from the database remains in backups until the last backup that holds it expires, about 5 weeks after a deletion; backups are encrypted with a key that is not on the VPS (ADR-0022, DR-268).
 
 ## 9. Terms of use and privacy
 

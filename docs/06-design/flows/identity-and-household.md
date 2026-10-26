@@ -1,6 +1,6 @@
 # Identity and household flows
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-46
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the object store participant is `s3`, not `r2`) · 2026-10-20 · DOC-46
 > Depends on: [DOC-43](README.md), [DOC-04](../../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-17, UC-27), [DOC-03](../../01-product/requirements.md) (FR-13…18, FR-39, FR-41, FR-45, FR-50), [DOC-26](../identity-and-sessions.md), [DOC-27](../residency-and-memberships.md), [DOC-35](../audit-privacy-and-terms.md) §9, §10, [DOC-36](../building-configuration-and-demo.md) §7, [DOC-37](../files-and-uploads.md), [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-42](../error-handling.md), [DOC-51](../../07-api/api-endpoints.md), [DOC-50](../../07-api/api-guidelines.md), [DR](../../00-decision-register.md) (DR-36…41, 59, 74, 127…141, DR-142…), [DOC-06](../../02-glossary.md)
 > Main readers: P1-10…P1-17, P1-14 (staff, unit and resident API), P1-21, P1-22, DOC-57, DOC-60, DOC-61, DOC-64, DOC-65, DOC-67, DOC-88, EXP-09, EXP-10
 
@@ -1399,7 +1399,7 @@ The validation is synchronous inside E-72 (DR-21, option B): no worker, no `vali
 | `AuditApi` | Contract | `AuditApi.record` | DOC-35 §3 |
 | `db` | Data store | `residency.import_job`, `unit`, `membership`, `resident_profile`, `unit_history`; `building.file_object` | DOC-16 §5.5 |
 | `outbox` | Data store | `residency.outbox_messages`, `building.outbox_messages` | DOC-09 |
-| `r2` | Data store | the files bucket, purpose `import` | DOC-37 |
+| `s3` | Data store | the files bucket, purpose `import` | DOC-37 |
 | `worker` | Worker | handler of `building.file_delete_requested.v1`; job `import_expire` (hourly :25) | DOC-37 §14, DOC-38 §4 |
 
 ### FL-23.1 · Upload and validate
@@ -1411,7 +1411,7 @@ sequenceDiagram
   participant WI as W-Import
   participant API as api
   participant F as FilesApi
-  participant R2 as r2
+  participant S3 as s3
   participant V as ValidateUnitOwnerImport
   participant ID as IdentityApi
   participant DB as db
@@ -1428,11 +1428,11 @@ sequenceDiagram
     API-->>WI: 413 quota_exceeded or 429 rate_limited
   end
   API-->>WI: 201 fileId, url, headers, expiresAt, maxBytes
-  WI->>R2: PUT url with the signed Content-Type
+  WI->>S3: PUT url with the signed Content-Type
   WI->>API: POST /staff/uploads/{id}/verify (E-37)
-  Note over API,R2: No transaction is open during verify
+  Note over API,S3: No transaction is open during verify
   API->>F: verify(actor, fileId)
-  F->>R2: HEAD, then GET Range bytes 0 to 4095
+  F->>S3: HEAD, then GET Range bytes 0 to 4095
   alt object missing, empty, oversize, wrong type or bad content
     API-->>WI: 422 file_not_verified
   end
@@ -1440,7 +1440,7 @@ sequenceDiagram
   API-->>WI: 200 fileId, status verified
   WI->>API: POST /staff/imports (E-72) with kind unit_owner, fileId, Idempotency-Key
   API->>V: execute(staff, kind, fileId)
-  V->>R2: GET the object (5 MB at most)
+  V->>S3: GET the object (5 MB at most)
   Note over V: Layers file, row and set run in memory, DQ-01 to DQ-31
   V->>DB: three set queries Q-U, Q-M, Q-P on unit, membership, resident_profile
   V->>ID: findResidentAccountsByPhones(phones)
@@ -1459,10 +1459,10 @@ sequenceDiagram
 | 2–3 | `W-Import` → `api` | `GET /staff/imports/templates/unit_owner` (E-71) | the workbook | The `kind` is `unit_owner` in the API and in the database (DR-22, DR-141) | 404 for an unknown `kind` |
 | 5 | `W-Import` → `api` | `POST /staff/uploads` (E-36), `Idempotency-Key` | `{"module": "residency", "purpose": "import", "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "size": 412345}` | The purpose `import` allows `.xlsx` only, 5 MB; Manager or Admin (DOC-37 §4) | A file of 5.2 MB → 400 `validation_failed` rule `file_too_large`, no row, no object |
 | 6–10 | `FilesApi` → `db`; `api` → screen | register | the key `production/<building>/residency/2026/10/<uuid>.xlsx` | Rate bucket 60 an hour, quota check (DOC-37 §6.1) | 413 `quota_exceeded`: "Storage is full. Contact the administrator."; 429 |
-| 11 | `W-Import` → `r2` | `PUT url` | the bytes, `Content-Type` as registered | R2 refuses a different type with 403 (not the API's shape; the screen shows "upload failed") | Registers again |
-| 12–17 | `W-Import` → `api` → `FilesApi` → `r2` | `POST /staff/uploads/{id}/verify` (E-37) | — | `HEAD` for size and type, a ranged `GET` for the zip signature (DOC-37 §7) | 422 `file_not_verified` (`missing`, `too_large`, `empty`, `wrong_type`, `bad_content`) |
+| 11 | `W-Import` → `s3` | `PUT url` | the bytes, `Content-Type` as registered | The store refuses a different type with 403 (not the API's shape; the screen shows "upload failed") | Registers again |
+| 12–17 | `W-Import` → `api` → `FilesApi` → `s3` | `POST /staff/uploads/{id}/verify` (E-37) | — | `HEAD` for size and type, a ranged `GET` for the zip signature (DOC-37 §7) | 422 `file_not_verified` (`missing`, `too_large`, `empty`, `wrong_type`, `bad_content`) |
 | 18 | `W-Import` → `api` | `POST /staff/imports` (E-72) | `{"kind": "unit_owner", "fileId": "0192f3c4-9d02-7000-8000-00000000f001"}` (see DR-149) | The request is served by `residency` by `kind`; the fee import is `finance`'s (DOC-27 §9.1) | 400 for an unknown kind |
-| 20–22 | `ValidateUnitOwnerImport` → `r2`, `db`, `IdentityApi` | read the file; validate | file layer (`.xlsx`, header, no repeated column, ≥ 1 and ≤ 5,000 rows), row layer (DQ-10…23), set layer (DQ-30, 31), db layer by three set queries and one contract call (DOC-18 §1.5) | `fail` severity (DQ-01…05) makes the job `failed`; `error` rejects the row; `warning` and `info` keep it | 5,001 rows → job `failed` with `import_too_many_rows` (DQ-05), see the finding on UC-13 E2 |
+| 20–22 | `ValidateUnitOwnerImport` → `s3`, `db`, `IdentityApi` | read the file; validate | file layer (`.xlsx`, header, no repeated column, ≥ 1 and ≤ 5,000 rows), row layer (DQ-10…23), set layer (DQ-30, 31), db layer by three set queries and one contract call (DOC-18 §1.5) | `fail` severity (DQ-01…05) makes the job `failed`; `error` rejects the row; `warning` and `info` keep it | 5,001 rows → job `failed` with `import_too_many_rows` (DQ-05), see the finding on UC-13 E2 |
 | 23 | `ValidateUnitOwnerImport` → `db` | `INSERT residency.import_job` | `result` = counts, first 50 valid rows (ID number shown as `•••• 2345`), up to 500 issues, `issuesTruncated` | One short transaction; no ID number or date of birth in `result` (DR-58) | — |
 | 24 | `api` → `W-Import` | 201 | `{"jobId": "…", "status": "validated", "counts": {"rows": 7, "valid": 3, "errors": 4, "unitsToCreate": 1, "unitsToUpdate": 2, "accountsToCreate": 1, "accountsLinked": 2, "ownersToAdd": 2, "ownersUnchanged": 1}, "validRows": […], "issues": […], "issuesTruncated": false}` | A 2,000-row file with 40 errors answers within 10 s of the accepted request (NFR-12, IM-30) | — |
 | 25–26 | `W-Import` → `api` | `GET /staff/imports/{id}` (E-73) | the same preview and the `status` (`validated`, `failed`, `committed`, `expired`) | Used after a page reload and by the commit screen | 404 for a job of another building |
@@ -1483,7 +1483,7 @@ sequenceDiagram
   participant AU as AuditApi
   participant DB as db
   participant OB as outbox
-  participant R2 as r2
+  participant S3 as s3
   participant WK as worker
   M->>WI: Press Save valid rows
   WI->>API: POST /staff/imports/{id}/commit (E-74)
@@ -1500,7 +1500,7 @@ sequenceDiagram
       API-->>WI: 409 import_not_ready
     end
   end
-  C->>R2: GET the file again
+  C->>S3: GET the file again
   C->>DB: run the db layer again, Q-U, Q-M, Q-P
   C->>ID: findResidentAccountsByPhones(phones)
   alt the counts differ from the stored preview
@@ -1523,7 +1523,7 @@ sequenceDiagram
   Note over C,DB: T1 commits
   API-->>WI: 200 status committed with the counts
   OB-->>WK: file delete handler and inbox member.added
-  WK->>R2: DELETE the object
+  WK->>S3: DELETE the object
 ```
 
 #### Step details
@@ -1533,13 +1533,13 @@ sequenceDiagram
 | 2 | `W-Import` → `api` | `POST /staff/imports/{id}/commit` (E-74) | no body | Manager or Admin; one transaction (DR-21) | — |
 | 4 | `CommitUnitOwnerImport` → `db` | the claim `UPDATE` | the job row of the preview | The claim is the arbiter of two commits (DOC-27 §13): the second waits on the row, then updates 0 rows | — |
 | 5–8 | `CommitUnitOwnerImport` → `db`, `api` → screen | read the job, decide the answer | — | `committed` → the **first** result, no write (DQ-51 note, IM-33); `expires_at` passed or `expired` → 409 `import_expired` ("This preview has expired. Upload the file again."); `failed` → 409 `import_not_ready` ("This import is not ready to commit.") | The job stays as it was |
-| 9–12 | `CommitUnitOwnerImport` → `r2`, `db`, `IdentityApi` | read the file again; run layers DQ-01…46 | `counts` compared with the stored `result.counts` | The ID number and the date of birth come from the file here and nowhere else (DOC-18 §1.4) | Difference → 409 `import_stale` with `details {rows}`: "The data changed since the preview. Upload the file again." |
+| 9–12 | `CommitUnitOwnerImport` → `s3`, `db`, `IdentityApi` | read the file again; run layers DQ-01…46 | `counts` compared with the stored `result.counts` | The ID number and the date of birth come from the file here and nowhere else (DOC-18 §1.4) | Difference → 409 `import_stale` with `details {rows}`: "The data changed since the preview. Upload the file again." |
 | 13 | `CommitUnitOwnerImport` → `db` | unit upsert | statements S8 of DOC-27 §9.2 step 3 | A blank cell keeps the stored value; a new unit with a blank occupancy is `vacant`; an occupancy change across the vacancy boundary writes `moved_in` or `moved_out` | — |
 | 14 | `CommitUnitOwnerImport` → `IdentityApi` | `findOrCreateResidentAccount` per new phone | up to 2,000 sequential calls | An existing account keeps its name (DQ-44) | — |
 | 15–17 | `CommitUnitOwnerImport` → `db`, `outbox` | profile fill-empty-only; owner membership; history; event | `unit_history` `details {"from": null, "to": "<account>", "source": "import"}`; `added_by_kind = 'staff'` | A stored value is never replaced; a different file value was only a warning (DR-114 (8)); no SMS and no `membership_changed` (DOC-27 §9.2) | — |
 | 18–20 | `CommitUnitOwnerImport` → `AuditApi`, `FilesApi`, `outbox` | audit; remove the file | `residency.import.commit` with the counts in `details` (bulk form); `file_object` → `deleted` | The file holds national ID numbers and goes at commit (DR-22) | — |
 | 21–22 | `CommitUnitOwnerImport` → `db` | DQ-60 | per touched unit at most one active owner; written rows equal the preview | Unreachable in practice (the unique index) | 500 `internal_error`, an alert |
-| 23–25 | `api` → screen; `outbox` → `worker` → `r2` | 200; the delete command | `{"status": "committed", "counts": {…}}` | `import_expire` and `import_purge` find nothing left for this job | A failed object delete is retried by the outbox; the row is already `deleted` |
+| 23–25 | `api` → screen; `outbox` → `worker` → `s3` | 200; the delete command | `{"status": "committed", "counts": {…}}` | `import_expire` and `import_purge` find nothing left for this job | A failed object delete is retried by the outbox; the row is already `deleted` |
 
 ### Transactions and concurrency
 
@@ -1634,7 +1634,7 @@ stateDiagram-v2
 | `db` | Data store | `identity.resident_account`, `refresh_family`; `residency.membership`, `resident_profile`, `unit_history`; `notification.device_token`; `building.terms_acceptance` | DOC-16, DOC-17 |
 | `outbox` | Data store | `identity.outbox_messages`, `residency.outbox_messages` | DOC-09 |
 | `worker` | Worker | job `account_deletion`; handlers `notification.drop_tokens_on_identity_account_deletion_executed`, `residency.clear_profile_on_identity_account_deletion_executed`, `building.null_terms_ip_on_identity_account_deletion_executed` | DOC-38 §4, DOC-09 §5.2 |
-| `r2` | Data store | the avatar object | DOC-37 §14 |
+| `s3` | Data store | the avatar object | DOC-37 §14 |
 
 ### FL-24.1 · Request and cancel
 
@@ -1739,7 +1739,7 @@ sequenceDiagram
   participant AU as AuditApi
   participant DB as db
   participant OB as outbox
-  participant R2 as r2
+  participant S3 as s3
   WK->>DB: take the job lock and INSERT job_run account_deletion
   WK->>BA: getSettings() for accountDeletionDays
   WK->>DB: SELECT accounts deletion_requested, approved and due (resident_account_deletion_idx)
@@ -1765,7 +1765,7 @@ sequenceDiagram
   OB-->>WK: building.null_terms_ip_on_identity_account_deletion_executed
   WK->>DB: UPDATE terms_acceptance SET ip = NULL WHERE account_id
   OB-->>WK: building file delete handler
-  WK->>R2: DELETE the avatar object
+  WK->>S3: DELETE the avatar object
 ```
 
 | Step | From → To | Call | Data | Rules and checks | Error → handling |
@@ -1776,7 +1776,7 @@ sequenceDiagram
 | 10–11 | `worker` → `db` | device tokens | `DELETE` by account | A second run deletes nothing | Outbox retry |
 | 12–14 | `worker` → `db`, `outbox` | the `residency` handler (DOC-27 §12) | each membership `removed`, `credential_version + 1`; one `unit_history` row per membership with `actor_kind = 'system'` and `details {"source": "account_deletion", "memberType": …}`; the profile cleared (`cleared_at` set once) | Idempotent (RM-47); an account that became an owner in between is still removed, with the `warn` `deleted_owner_membership` | Handler failure → retry by the outbox rules; dead letter alerts |
 | 15–16 | `worker` → `db` | terms IP | `ip = NULL` | The acceptance (account, version, time) stays | — |
-| 17–18 | `worker` → `r2` | delete the avatar | — | A 404 from R2 counts as success | — |
+| 17–18 | `worker` → `s3` | delete the avatar | — | A 404 from the store counts as success | — |
 
 What stays: the account row and its id, removed memberships and `unit_history`, payer-name snapshots on payments and receipts, ticket and vehicle rows (account id), audit rows (ids only), and backups for about 5 weeks (DOC-35 §10.1 property 6). An account marked `deleted` whose handler steps are still pending is a normal, brief state; the resident cannot sign in or refresh (families revoked).
 

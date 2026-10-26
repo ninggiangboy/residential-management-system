@@ -1,7 +1,7 @@
 # Database roles and grants
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
-> Depends on: original SDD §19.1, [DR](../00-decision-register.md) (DR-12, 57, 65, 66, 67, 83, 85, 105, 110, 112, 113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2, §5, §12, [DOC-16](identity-and-residency-model.md), [DOC-17](operations-model.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.1, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the pgBackRest repository is SeaweedFS in `vn`) · 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
+> Depends on: original SDD §19.1, [DR](../00-decision-register.md) (DR-12, 57, 65, 66, 67, 83, 85, 105, 110, 112, 113, 268), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2, §5, §12, [DOC-16](identity-and-residency-model.md), [DOC-17](operations-model.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.1, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles and migrations), P1-08 (append-only audit), P1-20 (the VPS), CI (the permission tests), DOC-41, DOC-70, DOC-72, RB-12
 
 This document says which database role does what: the four roles, how they are created, what each may do in each schema, how the runtime role is kept from changing the schema or the audit log, how the credentials are provisioned, and the tests that prove all of it on a fresh database. It does not hold the tables (DOC-14 to DOC-17), the deploy script (DOC-70), the backup procedure (DOC-72) or the secret rotation steps (RB-12).
@@ -277,7 +277,7 @@ backup     postgres         rms_backup
 
 - **Logical dump (weekly, DR-66).** `pg_dump -U rms_backup -d rms` over the local socket as the OS user `postgres`. `pg_read_all_data` is enough: the dump of the test database (all 14 schemas, 72,935 bytes) completed with exit code 0 and the data of one table came out as `INSERT` statements (GRT-87). The dump holds every column, including hashes and encrypted values, so it is encrypted on the host before it leaves it (DOC-72, ADR-0022).
 - **Physical backup and WAL (pgBackRest, DR-66).** pgBackRest connects to PostgreSQL to call the backup functions. The grants of §3 are the ones listed for a non-superuser pgBackRest user on PostgreSQL 15 and later (`pg_backup_start`, `pg_backup_stop`, `pg_switch_wal`, `pg_create_restore_point`, `pg_read_all_settings`, `pg_checkpoint`; third-party documentation of the pgBackRest non-superuser setup, [EnterpriseDB](https://www.enterprisedb.com/docs/supported-open-source/pgbackrest/10-non-superuser/), read on 2026-10-19). The functions ran correctly as `rms_backup` in one session (`pg_backup_start(…, true)`, `pg_backup_stop(false)`, GRT-86). pgBackRest needs `pg1-database=rms` in its configuration, because `rms_backup` can connect to that database only.
-- **Not proven here.** A full pgBackRest backup and a restore need the pgBackRest binary and the repository on R2. P1-20 proves them against pgBackRest 2.60. **Fallback:** if pgBackRest asks for more than the grants above, it connects as the OS user `postgres` (its default) and `rms_backup` keeps the `pg_dump` job only; nothing else in this document changes.
+- **Not proven here.** A full pgBackRest backup and a restore need the pgBackRest binary and the repository on SeaweedFS (`vn`; R2 in `global`, DR-268). P1-20 proves them against pgBackRest 2.60. **Fallback:** if pgBackRest asks for more than the grants above, it connects as the OS user `postgres` (its default) and `rms_backup` keeps the `pg_dump` job only; nothing else in this document changes.
 
 ## 9. Permission tests
 
@@ -418,7 +418,7 @@ GRT-97 also prints the table-count matrix of §5 (the second table there).
 | Item | Why | Done in |
 | --- | --- | --- |
 | `pg_hba.conf` and `pg_ident.conf` of §7 | The container has its own; the VPS file does not exist yet | P1-20 |
-| A full pgBackRest backup and restore as `rms_backup` | Needs the binary and the R2 repository | P1-20 (DOC-72, EXP-12) |
+| A full pgBackRest backup and restore as `rms_backup` | Needs the binary and the SeaweedFS repository (DR-268) | P1-20 (DOC-72, EXP-12) |
 | `postgres_exporter` connecting as `rms_readonly` | Needs the exporter container | P1-21 (DOC-40) |
 | The `CONNECTION LIMIT` and timeouts under load | Planned values | EXP-07 (P1-06 confirms the settings are applied) |
 | Behaviour when the grants step runs while requests are in flight | Needs the deploy flow; the deploy runs it in maintenance mode, and the script is one transaction | P1-20 (DOC-70) |

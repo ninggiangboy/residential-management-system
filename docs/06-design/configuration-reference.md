@@ -1,6 +1,6 @@
 # Configuration reference
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
 > Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
@@ -147,10 +147,10 @@ Source: DOC-37 §11.1. Read by `api` and `worker`.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `S3_ENDPOINT` | url | the R2 account endpoint; `local` the local object store | Where the API reaches the bucket |
-| `S3_PUBLIC_ENDPOINT` | url | `S3_ENDPOINT` | What clients are told; its host is `<files-host>` in the CSP (DOC-39 §5.1) |
-| `S3_REGION`, `S3_BUCKET` | string | `auto`, `rms-<env>-files` | |
-| `S3_FORCE_PATH_STYLE` | bool | `false` | `true` for the local store |
+| `S3_ENDPOINT` | url | the S3 gateway of the store: SeaweedFS on the VPS in `vn` (staging, production) and locally; the R2 account endpoint in `global` | Where the API reaches the bucket (DR-268) |
+| `S3_PUBLIC_ENDPOINT` | url | `S3_ENDPOINT` | What clients are told; its host is `<files-host>` in the CSP (DOC-39 §5.1). In `vn`: `https://files.<domain>` (staging `https://files-staging.<domain>`), the Tunnel route to the S3 gateway (DR-268) |
+| `S3_REGION`, `S3_BUCKET` | string | `auto`, `rms-<env>-files` | `auto` is kept in `vn`: SeaweedFS does not check the region (DR-268) |
+| `S3_FORCE_PATH_STYLE` | bool | `false` | `true` for SeaweedFS (locally and in the `vn` profile, DR-268); `false` only in `global` on R2. The schema default stays `false`, so `vn` sets it |
 | `FILES_UPLOAD_URL_TTL_SECONDS` | int | 900 | Presigned `PUT` |
 | `FILES_DOWNLOAD_URL_TTL_SECONDS`, `FILES_PAPER_URL_TTL_SECONDS` | int | 900, 300 | Presigned `GET` |
 | `FILES_MAX_IMAGE_BYTES`, `FILES_MAX_VIDEO_BYTES`, `FILES_MAX_ATTACHMENT_BYTES`, `FILES_MAX_IMPORT_BYTES`, `FILES_MAX_LOGO_BYTES` | int | 10485760, 52428800, 20971520, 5242880, 1048576 | Per-purpose maxima (DOC-37 §4) |
@@ -259,8 +259,9 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | `DB_POOL_MAX` (`api` / `worker`) | 10 / 10 | 5 / 5 | 15 / 10 | 20 / 15 |
 | `PDF_CONCURRENCY` | 1 | 1 | 1 | 2 |
 | `CORS_ORIGINS` | `http://localhost:5173` | empty | `https://admin-staging.<domain>` | `https://admin.<domain>` |
-| `S3_ENDPOINT` | local store | local store | R2 staging bucket | R2 production bucket |
-| `S3_FORCE_PATH_STYLE` | `true` | `true` | `false` | `false` |
+| `S3_ENDPOINT` | local store | local store | SeaweedFS S3 gateway on the staging VPS | SeaweedFS S3 gateway on the production VPS |
+| `S3_PUBLIC_ENDPOINT` | the local store's host | the local store's host | `https://files-staging.<domain>` | `https://files.<domain>` |
+| `S3_FORCE_PATH_STYLE` | `true` | `true` | `true` | `true` |
 | The gateway driver (a row of `gateway_config`, not a key) | `fake` | `fake` | `fake` on the demo building, `payos` on a real one | `payos` |
 
 ## 17. Boot validation

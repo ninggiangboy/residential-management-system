@@ -1,6 +1,6 @@
 # Review queue
 
-> Status: **Working file** · Updated: 2026-10-21 (Owner answers of 2026-10-21 applied: DR-96, 91, 92, 68, E-169, DOC-69 dry run, DOC-71 review rule, Owner inputs; earlier: DR-01…08, DR-10…81 decisions applied; DR-57, DR-17, DR-42 applied) · Not a project document: delete after the decisions are applied to `00-decision-register.md` and `00-master-plan.md`
+> Status: **Working file** · Updated: 2026-10-26 (DR-268 applied) · 2026-10-21 (Owner answers of 2026-10-21 applied: DR-96, 91, 92, 68, E-169, DOC-69 dry run, DOC-71 review rule, Owner inputs; earlier: DR-01…08, DR-10…81 decisions applied; DR-57, DR-17, DR-42 applied) · Not a project document: delete after the decisions are applied to `00-decision-register.md` and `00-master-plan.md`
 
 How it works: while the Owner reviews, each answer is one line here. The register and master plan are edited later, per cluster, in one pass (`docs-master-plan apply-decisions`). Order of review is by importance (money, security, access first).
 
@@ -23,6 +23,7 @@ How it works: while the Owner reviews, each answer is one line here. The registe
 | DR-01 and all spikes | **Spikes dropped** ("the project does not need spikes, remove them all"): S-01…S-09 and tasks P0-08…P0-16 removed (identifiers kept in the master plan table "Dropped spikes"); each question absorbed into the task that needs it; 🔬 marker removed. DR-01 keeps the pinning rules, Dependabot rule and the Expo fallback; the compatibility table is filled in P1-01/P1-02 | 2026-10-19 |
 | DR-02 | Vendor (copy) confirmed, plus rename: `kit-*` → `core-*`, `@kit/*` → `@core/*`, `packages/KIT_VERSION` → `packages/CORE_VERSION`, `chore(core): sync <sha>`, ADR-0003 "Vendor the core packages; manual sync"; mapping table in DOC-12 | 2026-10-19 |
 | DR-03, DR-04 | Accepted as proposed (DR-04 with the `@core/*` scope) | 2026-10-19 |
+| DR-268 | Decided (Owner, 2026-10-26): **no R2 in Vietnam**; two profiles, `vn` (staging, production) and `global` (the DR-83 topology kept as the reference); files and the pgBackRest repository in SeaweedFS (S3 gateway, Docker Compose) on the same VPS with a separate data volume; clients reach it through the Tunnel host `files.<domain>` (`files-staging.<domain>`); a SeaweedFS replica on another server is a later step; whole-VPS loss is outside RPO/RTO until then; ADR-0027 written, ADR-0016, 0017, 0020 superseded in part; applied to DOC-01, 03, 04, 06, 07, 10, 11, 17, 19, 20 and the master plan | 2026-10-26 |
 | DR-05, DR-06, DR-07 | Owner: "as you see fit". Rewritten by Claude (delegated) to the DR-83 topology; "Superseded" boxes merged; sizes of DR-06 and the NFR-03 restatement kept; webhook URL provider-neutral | 2026-10-19 |
 | DR-08 | Kept as is for now, to be revisited later (marked `Decided (Owner, 2026-10-19), to be revisited`) | 2026-10-19 |
 | DR-10, 11, 12 | Accepted as proposed (receipt number stays gapless) | 2026-10-19 |

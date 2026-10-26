@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the upload target is the S3 store, not R2; DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -260,7 +260,7 @@ A document that adds a code adds its row here in the same change (§2, principle
 | **Health** `/health/live`, `/health/ready` | `ready` answers 503 `{ "status": "degraded" }` or `stopping`, not the error shape (DOC-38 §5.2) |
 | **SSE** `GET /staff/events` | An error before the stream starts is the usual shape (401, 429 for a fourth stream). Once started, a stream ends with the event `session.revoked` or by closing; the client reconnects with `Last-Event-ID` and falls back to refetch on focus |
 | **Public** `/public/*`, `/auth/*` | The same shape. `/auth/*` answers do not reveal whether an account exists beyond `phone_not_registered` (an accepted trade-off, original SDD §7.3) |
-| **Upload to R2** | The PUT goes to R2, not the API; R2's own 403 `SignatureDoesNotMatch` XML is not this shape. The app treats any non-2xx from the bucket as "upload failed" and registers again (DOC-37 §6) |
+| **Upload to the S3 store** | The PUT goes to the store (SeaweedFS behind `files.<domain>` in `vn`, R2 in `global`), not the API; the store's own 403 `SignatureDoesNotMatch` XML is not this shape. The app treats any non-2xx from the bucket as "upload failed" and registers again (DOC-37 §6) |
 
 ## 7. Workers: what a handler or a job does with a failure
 
@@ -271,7 +271,7 @@ DOC-09 §4.4 says a handler may throw, throw `RetryLaterError` or return normall
 | Failure | Outcome | Level and metric |
 | --- | --- | --- |
 | A database error: connection, timeout, deadlock, serialization | **Throw**; the relay backs off (5 s doubling) | `warn` |
-| A provider answers 5xx, times out or the network fails (SMS, SMTP, Expo, R2, payOS) | **Throw** | `warn` |
+| A provider answers 5xx, times out or the network fails (SMS, SMTP, Expo, the S3 store, payOS) | **Throw** | `warn` |
 | A provider answers 429 or a quota error | **`RetryLaterError`** with the provider's `Retry-After`, else 30 s; the attempt is given back, the 24 h budget applies | `info`; `handler_outcomes_total{outcome="deferred"}` |
 | A provider answers 401 or 403: our credentials are wrong or revoked | **`RetryLaterError`** with 300 s; the operator fixes the credential; messages wait (an SMS code expires on its own) | `error` `provider_auth_failed`; alert (DOC-40) |
 | A permanent failure for one recipient: an invalid phone or email, a bounced address, an Expo `DeviceNotRegistered` | **Return normally**; delete the device token where it applies; the other recipients of the message proceed | `warn`; `delivery_failed_total{channel,reason}` |
@@ -280,7 +280,7 @@ DOC-09 §4.4 says a handler may throw, throw `RetryLaterError` or return normall
 | The entity the message refers to is gone (deleted by the demo reset, a cleared account) | **Return normally** | `info` `entity_gone` |
 | A duplicate delivery (the inbox row exists, a natural key conflicts) | **Return normally** | `debug` |
 | The payload does not match its schema, or an invariant is broken (a bug) | **Throw**: it dead-letters after the class limit and alerts (RB-05); a poison message is never dropped silently | `error` |
-| R2 delete of an object that is already absent (404) | **Success**: the goal is reached | `debug` |
+| Delete of an object in the store that is already absent (404) | **Success**: the goal is reached | `debug` |
 | Expo accepts a push but the receipt later says an error | Per receipt: `DeviceNotRegistered` as above; other errors count as "push failed" (UC-24) | `warn` |
 
 A handler sets its own client timeout (10 to 30 s) so a pass stays under the 60 s lease (DOC-38 §2.3). The retry classes are DOC-09 §4.2; a *throw* above spends one attempt of the class of the message type:

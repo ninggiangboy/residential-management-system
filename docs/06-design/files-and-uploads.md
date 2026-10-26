@@ -1,12 +1,12 @@
 # Files and uploads
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07: §12 results, the signer, `FileActor.role`, DR-252) · 2026-10-19 · DOC-37
-> Depends on: original SDD §12, §16, §19.1, [DR](../00-decision-register.md) (DR-07, 21, 22, 55, 56, 61, 64, 74, 83, 86, 111, 112, 115, 119, 122, 123), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.4, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-17](../05-data/operations-model.md) §3.1, [DOC-20](../05-data/data-lifecycle.md) §3, [DOC-38](jobs-and-outbox-runtime.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: no R2 in the `vn` profile; files in SeaweedFS on the VPS behind `files.<domain>`; R2 kept as the `global` profile) · 2026-10-22 (P1-07: §12 results, the signer, `FileActor.role`, DR-252) · 2026-10-19 · DOC-37
+> Depends on: original SDD §12, §16, §19.1, [DR](../00-decision-register.md) (DR-07, 21, 22, 55, 56, 61, 64, 74, 83, 86, 111, 112, 115, 119, 122, 123, 268), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md) (the `global` profile), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.4, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-17](../05-data/operations-model.md) §3.1, [DOC-20](../05-data/data-lifecycle.md) §3, [DOC-38](jobs-and-outbox-runtime.md)
 > Main readers: P1-07 (`building` module and files), every task that uploads or serves a file (tickets, vehicles, notices, library, imports, statements, PDFs, exports), DOC-34, DOC-39, DOC-51, DOC-70, RB-12
 
-This document says how a file gets into the system and out of it: the `FilesApi` that every module uses, the purposes and their limits, the upload flow on Cloudflare R2 (register, presigned `PUT`, verify, attach), signed downloads, thumbnails, files the worker generates, the per-building quota, and how a file leaves (orphans, removal, the physical delete). It does not hold the `file_object` DDL (DOC-17 §3.1), the HTTP shapes of the upload endpoints (DOC-51), the CORS and security headers of the web CMS (DOC-39), what a module does with its files (DOC-28 tickets, DOC-30 vehicles, DOC-31 notices, DOC-32 library, DOC-34 PDFs, DOC-33 exports), or the retention periods (DOC-20).
+This document says how a file gets into the system and out of it: the `FilesApi` that every module uses, the purposes and their limits, the upload flow on the S3 store (SeaweedFS on the VPS in the `vn` profile, Cloudflare R2 in the `global` profile; register, presigned `PUT`, verify, attach), signed downloads, thumbnails, files the worker generates, the per-building quota, and how a file leaves (orphans, removal, the physical delete). It does not hold the `file_object` DDL (DOC-17 §3.1), the HTTP shapes of the upload endpoints (DOC-51), the CORS and security headers of the web CMS (DOC-39), what a module does with its files (DOC-28 tickets, DOC-30 vehicles, DOC-31 notices, DOC-32 library, DOC-34 PDFs, DOC-33 exports), or the retention periods (DOC-20).
 
-Every new decision in this document is recorded as DR-122 or DR-123 (and DR-119 earlier) and summarized in §16. The facts about R2 used below were read on 2026-10-19 in the Cloudflare documentation ([presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/), [S3 API compatibility](https://developers.cloudflare.com/r2/api/s3/api/)): presigned URLs support `GET`, `HEAD`, `PUT` and `DELETE` with an expiry from 1 second to 7 days; there is no presigned `POST`; a signed `Content-Type` is enforced (a different one gives `403 SignatureDoesNotMatch`); the documentation does not say whether `Content-Length` can be signed (checked in P1-07, §12); presigned URLs do not work with custom domains and are bearer tokens until they expire; `GetObject` supports `Range`; multipart upload and bucket lifecycle rules are implemented; `PutObject` accepts `If-None-Match` and checks it atomically.
+Every new decision in this document is recorded as DR-122 or DR-123 (and DR-119 earlier) and summarized in §16. **Profiles (DR-268, 2026-10-26).** The Vietnam deployment (`vn`: staging and production) does not use R2: files live in **SeaweedFS** (S3 gateway, Docker Compose) on the environment's VPS, on a data volume apart from PostgreSQL and the OS disk, and clients reach it only through the Tunnel host `files.<domain>` (staging `files-staging.<domain>`, which is `S3_PUBLIC_ENDPOINT`). The `global` profile keeps the R2 design of ADR-0016 as the reference. The code, `FilesApi` and the flow below do not change between profiles; only `S3_*` differs (§11). A replica of SeaweedFS on another server is a later step (DR-268 item 4), not built now. The R2 facts that follow were read on 2026-10-19 in the Cloudflare documentation and describe the `global` profile; the SeaweedFS behavior is what §12 measured ([presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/), [S3 API compatibility](https://developers.cloudflare.com/r2/api/s3/api/)): presigned URLs support `GET`, `HEAD`, `PUT` and `DELETE` with an expiry from 1 second to 7 days; there is no presigned `POST`; a signed `Content-Type` is enforced (a different one gives `403 SignatureDoesNotMatch`); the documentation does not say whether `Content-Length` can be signed (checked in P1-07, §12); presigned URLs do not work with custom domains and are bearer tokens until they expire; `GetObject` supports `Range`; multipart upload and bucket lifecycle rules are implemented; `PutObject` accepts `If-None-Match` and checks it atomically.
 
 ## 1. Scope and reading guide
 
@@ -21,17 +21,17 @@ Every new decision in this document is recorded as DR-122 or DR-123 (and DR-119 
 | How does the worker store a PDF or an export? | §9 |
 | Thumbnails | §10 |
 | The quota | §11 |
-| What was not yet proven on R2 | §12 |
+| What was proven on the store (SeaweedFS; R2 not run) | §12 |
 | How does a file leave? | §14 |
 | How is it tested? | §13 |
 
 ## 2. Principles
 
-1. **No upload byte passes through the API.** The client writes to R2 with a presigned `PUT`; the API only issues the URL and later looks at the result (ADR-0016). The Caddy body limit stays 2 MB (DR-07).
+1. **No upload byte passes through the API.** The client writes to the store with a presigned `PUT`; the API only issues the URL and later looks at the result (ADR-0016). The Caddy body limit stays 2 MB (DR-07).
 2. **The database decides what a file is.** An object in the bucket without a `file_object` row does not exist for the system; a row says which module, which account, which purpose, which status. The bucket is never listed to find files.
 3. **Nothing is trusted until verified.** A client says "this is a 3 MB JPEG"; the server checks the size and the first bytes in the bucket before the file can be attached (§6).
-4. **No network call inside a transaction.** Presigning is local arithmetic and may happen inside one; `HEAD`, `GET`, `PUT` and `DELETE` on R2 happen between transactions or in the worker (DOC-12 §8.2).
-5. **Everything is private.** One private bucket per environment, no public access, no CDN, no custom domain. A person sees a file through a signed `GET` URL inside an authorised response, valid for 15 minutes (5 for vehicle papers). The URL is a bearer token: it is never logged, stored, put in a push or sent by mail.
+4. **No network call inside a transaction.** Presigning is local arithmetic and may happen inside one; `HEAD`, `GET`, `PUT` and `DELETE` on the store happen between transactions or in the worker (DOC-12 §8.2).
+5. **Everything is private.** One private bucket per environment, no public access, no CDN. The only public name is the files host of the S3 gateway (`files.<domain>`, Tunnel route to the gateway alone), and every object on it needs a signature. A person sees a file through a signed `GET` URL inside an authorised response, valid for 15 minutes (5 for vehicle papers). The URL is a bearer token: it is never logged, stored, put in a push or sent by mail.
 6. **No file holds a national ID.** There is no purpose for a CCCD image; the number is an encrypted column, never a file (DR-58, ADR-0016).
 7. **Generated files do not fight the quota.** A receipt PDF must render even when a building is at its limit; only client uploads are refused at 100% (DR-123).
 
@@ -70,12 +70,12 @@ interface FileDto { fileId: Uuid; purpose: Purpose; mime: string; size: number; 
 | Call | Transaction | What it does and refuses |
 | --- | --- | --- |
 | `register` | Its own short one (also joins an open one) | Checks the audience, the purpose, the module, the mime, the declared size, the rate bucket `upload:account:<id>` (60 per hour, DR-64) and the quota; inserts a `pending` row; presigns the `PUT`. Errors: 403 `forbidden`, 400 `validation_failed` (`file_type_not_allowed`, `file_too_large`), 429, 413 `quota_exceeded` |
-| `verify` | **Must be called outside any transaction**: it calls R2 and throws an invariant error if one is open | §6.3. Errors: 404 for a file of another account or building; 422 `file_not_verified` |
+| `verify` | **Must be called outside any transaction**: it calls the store and throws an invariant error if one is open | §6.3. Errors: 404 for a file of another account or building; 422 `file_not_verified` |
 | `attach` | **Requires the caller's open transaction** | One conditional `UPDATE` (§6.4). Zero rows (not verified, another account, another building, already attached) throws `FileNotVerifiedError` → 422 `file_not_verified`; the owner's transaction rolls back |
 | `remove` | Requires the caller's open transaction | `attached` or `verified` → `deleted`, its thumbnail too, and one `building.file_delete_requested.v1` per file (§14) |
 | `read` | **Outside any transaction**: it reads the bucket (DR-258) | The bytes of a file the server itself must read, the units-and-owners import (DOC-18, DOC-27 §9). A `verified` file must be the caller's; an `attached` one is read by any account of the building that names its `ownerRef` (the commit reads the upload again). Unknown, another building's or another account's file: 404; a file that is not `verified` or `attached` to that owner, or of another module or purpose: 422 `file_not_verified` (`missing` when the object is gone). It never gives out a URL |
 | `usage` | None | The quota sum of §11 |
-| `signedUrl` | None; no R2 call | §8. Returns `null` for an unknown or `deleted` file |
+| `signedUrl` | None; no store call | §8. Returns `null` for an unknown or `deleted` file |
 | `storeGenerated` | Its own short transactions around the upload | §9 |
 
 An ordinary module never reads `building.file_object` or the bucket (DOC-07 §6.1); a repository holds the `file_id` of its own row (no cross-schema foreign key, ADR-0014) and the owner reference goes the other way as `owner_ref`.
@@ -117,9 +117,9 @@ A purpose is a value of the closed `CHECK` of `file_object.purpose` (DOC-17 §3.
 production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-7000-8000-00000000f001.jpg
 ```
 
-**Buckets.** `rms-<env>-files` holds every object of this document; `rms-<env>-backup` holds the database backups and is not touched by `FilesApi`. The files token cannot read the backup bucket (DR-83, ADR-0016). Locally and in CI the S3 API of a local store replaces R2 (the store is chosen in P1-03, DOC-11); the code uses only the S3 operations of §6 and so runs against either. R2 encrypts at rest; no SSE header is sent (R2 does not support SSE-KMS).
+**Buckets.** `rms-<env>-files` holds every object of this document; `rms-<env>-backup` holds the database backups and is not touched by `FilesApi`. The files identity cannot read the backup bucket (DR-268, DR-83, ADR-0016). In `vn` both buckets are in the SeaweedFS of the environment's VPS, in separate collections on a separate data volume, with separate S3 identities; in `global` they are R2 buckets with separate tokens. Locally and in CI the same SeaweedFS runs in the dev stack (DOC-69); the code uses only the S3 operations of §6 and so runs against either. No SSE header is sent (R2 does not support SSE-KMS). **Residual risk in `vn` (DR-268):** until the SeaweedFS replica on another server exists (a later step), the files live on the same VPS as the database, so the loss of the whole VPS loses the files too; the separate data volume only covers a disk fault (DOC-72, DOC-10).
 
-**Two endpoints.** The API talks to R2 at `S3_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`). The URLs given to clients use `S3_PUBLIC_ENDPOINT`, which equals it on R2 and differs locally (a browser outside Docker cannot reach the container's host name). The CSP of the web CMS allows this host in `img-src`, `media-src` and `connect-src` (DR-64).
+**Two endpoints.** The API talks to the store at `S3_ENDPOINT`: the SeaweedFS S3 gateway on the Docker network in `vn` (its address is DOC-70's), the account endpoint in `global` (`https://<account>.r2.cloudflarestorage.com`). The URLs given to clients use `S3_PUBLIC_ENDPOINT`: `https://files.<domain>` in production and `https://files-staging.<domain>` in staging (`vn`), which differs from `S3_ENDPOINT` because a client outside the VPS cannot reach the gateway's container host name; it equals `S3_ENDPOINT` on R2. The URLs are signed for that public host, in path style (`/<bucket>/<key>`). The Tunnel routes this host to the gateway only; the filer, master and volume ports are never exposed (DR-268). The CSP of the web CMS allows this host in `img-src`, `media-src` and `connect-src` (DR-64). The CSP of the web CMS allows this host in `img-src`, `media-src` and `connect-src` (DR-64). Uploads and downloads cross the Cloudflare Tunnel, whose free plan limits a request to 100 MB; the largest object, a 50 MB video, fits.
 
 **CORS** (the browser `PUT` of the web CMS; the mobile apps send no `Origin`):
 
@@ -128,7 +128,7 @@ production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-70
                    "AllowedHeaders": ["content-type"], "ExposeHeaders": ["etag"], "MaxAgeSeconds": 3600 } ] }
 ```
 
-Staging uses `https://admin-staging.<domain>`, local `http://localhost:5173`. DOC-39 holds the rest of the web security headers.
+In `vn` the rule is set on the SeaweedFS gateway (the files host answers the preflight; checked by U11 on the staging host in P1-07 and P1-20). Staging uses `https://admin-staging.<domain>`, local `http://localhost:5173`. DOC-39 holds the rest of the web security headers.
 
 **Lifecycle.** One rule on the files bucket: abort incomplete multipart uploads after 1 day. There is no expiry rule: the database, not the bucket, decides when an object goes (§14), and versioning is not enabled (DOC-20 §3).
 
@@ -140,7 +140,7 @@ sequenceDiagram
   participant C as Client (app or web CMS)
   participant A as API
   participant DB as PostgreSQL
-  participant R as R2
+  participant R as S3 store
   C->>A: POST /me|staff/uploads {purpose, mime, size}
   A->>DB: quota, rate bucket; INSERT file_object (pending)
   A-->>C: {fileId, url, headers, expiresAt}
@@ -167,7 +167,7 @@ The response example (`headers` must be sent exactly):
 {
   "fileId": "0192f3c4-9d02-7000-8000-00000000f001",
   "method": "PUT",
-  "url": "https://<account>.r2.cloudflarestorage.com/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-7000-8000-00000000f001.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
+  "url": "https://files.<domain>/rms-production-files/production/0192f3c4-5a1e-7000-8000-000000000001/tickets/2026/10/0192f3c4-9d02-7000-8000-00000000f001.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=900&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=…",
   "headers": { "Content-Type": "image/jpeg" },
   "expiresAt": "2026-10-19T03:36:12.000Z",
   "maxBytes": 10485760
@@ -176,20 +176,20 @@ The response example (`headers` must be sent exactly):
 
 ### 6.2 The `PUT`
 
-The client sends the bytes to `url` with the header. R2 refuses a different `Content-Type` (403). The API sees nothing of this step. The size is not enforced by R2 (no presigned `POST`, so no `content-length-range`); §6.3 enforces it afterwards (ADR-0016).
+The client sends the bytes to `url` with the header. The store refuses a different `Content-Type` (403; U2). The API sees nothing of this step. The size is not enforced by the store: a presigned `POST` with `content-length-range` is not used (R2 has none, which is the `global` reason in ADR-0016; in `vn` SeaweedFS support for it is not relied on, DR-268 item 6); §6.3 enforces the size afterwards (ADR-0016).
 
 ### 6.3 Verify
 
-Called by the client after the `PUT` (`POST /me|staff/uploads/{id}/verify`, DR-123). No transaction is open while it talks to R2.
+Called by the client after the `PUT` (`POST /me|staff/uploads/{id}/verify`, DR-123). No transaction is open while it talks to the store.
 
-1. Load the row of this building and this account; `status` must be `pending`. A file that is already `verified` answers the same 200 without touching R2 (a retry after a lost response, *revised 2026-10-20, DR-146*); an `attached` or `deleted` file, and another account's file, are 404.
+1. Load the row of this building and this account; `status` must be `pending`. A file that is already `verified` answers the same 200 without touching the store (a retry after a lost response, *revised 2026-10-20, DR-146*); an `attached` or `deleted` file, and another account's file, are 404.
 2. `HEAD` the object. Missing: 422 `file_not_verified` with `details[0].code = "missing"`; the row stays `pending` so the client can retry within the window.
 3. Size: `ContentLength` must be between 1 and the maximum of the purpose; `ContentType` must equal the registered mime. A failure goes to step 6.
 4. Magic bytes: `GET` with `Range: bytes=0-4095` and apply the rule of §7 for the mime. A failure goes to step 6.
 5. One short transaction: `status = 'verified'`, `verified_at = now()`, `size` = the real `ContentLength`, `updated_at`; for an image of a purpose that has a thumbnail (a video of `ticket_media` has none), write `building.thumbnail_requested.v1`. Answer 200.
 6. On failure, one short transaction: `status = 'deleted'`, `deleted_at = now()`, write `building.file_delete_requested.v1`; answer 422 `file_not_verified` with `details[0].code` one of `too_large`, `empty`, `wrong_type`, `bad_content`. The object is deleted by the worker, not by this request.
 
-Planned cost: one `HEAD` and one ranged `GET` to R2 and one short transaction, about 150 to 250 ms from the VPS (planned, not measured; P1-07 measures). Verifying right after each `PUT`, not at submit, spreads that cost over the time the user spends choosing the next photo.
+Planned cost: one `HEAD` and one ranged `GET` to the store and one short transaction, about 150 to 250 ms from the VPS for the store (planned, not measured; P1-07 measures); with SeaweedFS on the same VPS the two calls are local to the host and should be faster, but they cross the gateway (not measured). Verifying right after each `PUT`, not at submit, spreads that cost over the time the user spends choosing the next photo.
 
 For `import` and `statement` the server later reads the whole object (the import or the statement parser) and sets `checksum` (SHA-256 hex) in the same statement that consumes the file; for large media `checksum` stays null.
 
@@ -215,10 +215,10 @@ Zero rows means the file was not verified, belongs to someone else, or is alread
 | Register | Type or size not allowed | 400 `validation_failed` | none | none |
 | Register | Over 60 per hour | 429 `rate_limited` + `Retry-After` | none | none |
 | Register | Quota would be exceeded | 413 `quota_exceeded` | none | none |
-| `PUT` | Wrong `Content-Type`, URL expired | 403 from R2 | `pending` | none |
+| `PUT` | Wrong `Content-Type`, URL expired | 403 from the store | `pending` | none |
 | Verify | Object not there yet | 422 `file_not_verified` (`missing`) | `pending` | none |
 | Verify | Oversize, empty, wrong type, bad content | 422 `file_not_verified` | `deleted` | deleted by the worker |
-| Verify | R2 or the database unavailable | 503 | `pending` | unchanged; the client retries |
+| Verify | The store or the database unavailable | 503 | `pending` | unchanged; the client retries |
 | Attach | Not verified, someone else's, already attached | 422 `file_not_verified` | unchanged | unchanged |
 | Anywhere | The owner's transaction rolls back | the owner's error | `verified` | deleted after 24 h by `orphan_uploads` |
 
@@ -239,7 +239,7 @@ The first 4,096 bytes are read; each type has one rule. A magic check is a filte
 
 ## 8. Downloads
 
-`signedUrl(fileId, opts)` presigns a `GET` locally (no R2 call): `FILES_DOWNLOAD_URL_TTL_SECONDS` = 900, or `FILES_PAPER_URL_TTL_SECONDS` = 300 for `vehicle_paper` (FR-40.4). `downloadName` adds `response-content-disposition: attachment; filename*=UTF-8''…` so an attachment saves under its display name (the owner module stores the name; `file_object` does not). The module that builds a DTO calls `signedUrl` for the files it has already authorised; the authorisation (membership, role, the history rule, internal notes) is the module's, never `FilesApi`'s.
+`signedUrl(fileId, opts)` presigns a `GET` locally (no store call): `FILES_DOWNLOAD_URL_TTL_SECONDS` = 900, or `FILES_PAPER_URL_TTL_SECONDS` = 300 for `vehicle_paper` (FR-40.4). `downloadName` adds `response-content-disposition: attachment; filename*=UTF-8''…` so an attachment saves under its display name (the owner module stores the name; `file_object` does not). The module that builds a DTO calls `signedUrl` for the files it has already authorised; the authorisation (membership, role, the history rule, internal notes) is the module's, never `FilesApi`'s.
 
 DTO fragment of a ticket message with a photo (the mapper adds the URLs; the `thumbUrl` is the 480 px copy, or the original while the thumbnail does not exist):
 
@@ -248,8 +248,8 @@ DTO fragment of a ticket message with a photo (the mapper adds the URLs; the `th
   "id": "0192f3c4-b001-7000-8000-000000000a01",
   "attachments": [
     { "fileId": "0192f3c4-9d02-7000-8000-00000000f001", "mime": "image/jpeg", "size": 812345,
-      "url": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…",
-      "thumbUrl": "https://<account>.r2.cloudflarestorage.com/…?X-Amz-Expires=900&…" }
+      "url": "https://files.<domain>/…?X-Amz-Expires=900&…",
+      "thumbUrl": "https://files.<domain>/…?X-Amz-Expires=900&…" }
   ]
 }
 ```
@@ -273,7 +273,7 @@ An image purpose with a thumbnail (§4) gets one derived file.
 
 - **Trigger.** `verify` writes `building.thumbnail_requested.v1 {buildingId, fileId}` in the transaction that marks the file `verified` (DOC-09).
 - **Handler** `building.make_thumbnail` (worker, `afterSideEffect`): load the original; skip unless its status is `verified` or `attached`; skip if a `thumbnail` row with `owner_ref = 'thumb:<fileId>'` exists; download the object; resize with `sharp` to a longest side of `FILES_THUMBNAIL_WIDTH` (480; `FILES_LOGO_WIDTH` 512 for `logo`), without enlarging, rotate by EXIF, strip metadata, encode WebP at quality 80; upload with `storeGenerated`-style insertion (purpose `thumbnail`, same module as the original, `owner_ref = 'thumb:<fileId>'`, `attached` at once). A thumbnail counts toward the quota (typically 20 to 60 KB).
-- **Failures.** A transient error (R2, memory) throws and is retried by the default class. A file that cannot be decoded (a truncated JPEG that passed the magic check) returns normally after a `warn` log: no thumbnail is made and the DTO falls back to the original.
+- **Failures.** A transient error (the store, memory) throws and is retried by the default class. A file that cannot be decoded (a truncated JPEG that passed the magic check) returns normally after a `warn` log: no thumbnail is made and the DTO falls back to the original.
 - **Reading.** `signedUrl(fileId, { variant: 'thumb' })` finds the row through `ix_file_object_building_owner (building_id, owner_ref)`; if there is none it returns the original's URL.
 - **Removal.** `remove(original)` also marks its thumbnail `deleted` and writes its delete command in the same transaction.
 - **Limit.** Videos get no thumbnail; the app shows a play icon. `sharp` 0.35.5 on Bun is proven in P1-07 (§12); if it fails the choice of another resizer is a DR (DR-61).
@@ -291,7 +291,7 @@ SELECT coalesce(sum(size), 0) AS used_bytes
 - **Alert.** The hourly `storage_quota` job sets the gauge `storage_usage_ratio` (DOC-38 §4.2); DOC-40 alerts at 0.8 (40 GiB), by email and Telegram to the Owner and the Admin (DR-63, FR-40.1), and at 1.0.
 - **At 100%.** Client uploads are refused; text-only actions continue; generated files continue (DR-123). The remedy is to raise `storageQuotaBytes` or remove old files (degraded mode, DOC-10 §8).
 - **Breakdown** (*noted 2026-10-20, DR-148*): `GET /staff/storage` adds `byPurpose [{purpose, files, bytes}]` and `computedAt` from one `GROUP BY purpose` over the same rows; no new index.
-- **Counted.** Every row not `deleted`: pending, verified and attached files, thumbnails and generated files. A `deleted` row stops counting at once, before the object leaves R2.
+- **Counted.** Every row not `deleted`: pending, verified and attached files, thumbnails and generated files. A `deleted` row stops counting at once, before the object leaves the store.
 - **Planned growth.** About 4.6 GB per building per year (DOC-10 §5.3), so the alert is reached after about 8.7 years; the figure is planned, from the sample building.
 
 ### 11.1 Configuration keys
@@ -300,7 +300,7 @@ DOC-41 lists them. Defaults:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE` | R2 account endpoint; = `S3_ENDPOINT`; `auto`; `rms-<env>-files`; `false` | Where the API reaches the bucket and what clients are told |
+| `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE` | The store's gateway (`global`: the R2 account endpoint); = `S3_ENDPOINT`; `auto`; `rms-<env>-files`; `false` | Where the API reaches the bucket and what clients are told. The `vn` profile sets `S3_ENDPOINT` to the SeaweedFS gateway, `S3_PUBLIC_ENDPOINT` to the files host, `S3_FORCE_PATH_STYLE` to `true` and leaves `S3_REGION` at `auto` (SeaweedFS does not check the region; the signer needs a value). DR-268 |
 | `S3_ACCESS_KEY_ID_FILE`, `S3_SECRET_ACCESS_KEY_FILE` | `/etc/rms/secrets/…` | Credentials, read through `*_FILE` (DOC-07 §7.2) |
 | `FILES_UPLOAD_URL_TTL_SECONDS` | 900 | Presigned `PUT` |
 | `FILES_DOWNLOAD_URL_TTL_SECONDS`, `FILES_PAPER_URL_TTL_SECONDS` | 900, 300 | Presigned `GET` |
@@ -312,13 +312,13 @@ DOC-41 lists them. Defaults:
 
 ## 12. Upload checks of P1-07
 
-DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07. They are the test file `tools/compat/uploads.test.ts` (`bun run check:compat`), which runs against whichever store `S3_ENDPOINT`, `S3_BUCKET` and the keys name and prints one line per check (`UPLOAD-CHECK U2: …`). With `sharp` 0.35.5 and, in the first version of this section, `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1152.0 (DOC-11); the AWS packages were not adopted (DR-252). **Run on 2026-10-22 against SeaweedFS 4.48; the staging bucket of Cloudflare R2 has no credentials yet and is not run**: it is the same command with its keys and `UPLOAD_CHECK_ORIGIN` set to the CMS origin. The results are here and in the compatibility table of DOC-11.
+DR-61 and the dropped spike S-05 (2026-10-19) moved these checks into task P1-07. They are the test file `tools/compat/uploads.test.ts` (`bun run check:compat`), which runs against whichever store `S3_ENDPOINT`, `S3_BUCKET` and the keys name and prints one line per check (`UPLOAD-CHECK U2: …`). With `sharp` 0.35.5 and, in the first version of this section, `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1152.0 (DOC-11); the AWS packages were not adopted (DR-252). **Run on 2026-10-22 against SeaweedFS 4.48, the store of the `vn` profile (DR-268); the R2 bucket of the `global` profile is not run** (no credentials, and it is no longer a staging target): it is the same command with its keys. Since DR-268 the staging run is against the SeaweedFS behind `files-staging.<domain>` with `UPLOAD_CHECK_ORIGIN` set to the CMS origin: P1-07 and P1-20 repeat U1…U11 there, through the Tunnel. The results are here and in the compatibility table of DOC-11.
 
 | # | Check | Expected | Result |
 | --- | --- | --- | --- |
 | U1 | A browser (CORS) and an app (`fetch`) `PUT` to a presigned URL with the signed `Content-Type` | 200 | **Pass** (SeaweedFS 4.48, 2026-10-22; the URL signs `content-type;host`). A real browser's CORS is not run |
 | U2 | The same `PUT` with another `Content-Type` | 403 `SignatureDoesNotMatch` | **Pass** on SeaweedFS: 403 `SignatureDoesNotMatch`. **Bun's `S3File.presign({ type })` does not sign the header**: with it the same `PUT` returned 200 and the object was stored under `image/png`. `@core/storage` signs the `PUT` itself (DR-252) |
-| U3 | A `PUT` whose body is larger than a signed `Content-Length` | Refused; if accepted, the design is unchanged and §6.3 is the only size control | **SeaweedFS honors it**: a body of 5,000 bytes against a signed length of 100 was refused with 403, an exact body passed. R2 not run. The design is unchanged and §6.3 stays the size control; the register does not sign the length |
+| U3 | A `PUT` whose body is larger than a signed `Content-Length` | Refused; if accepted, the design is unchanged and §6.3 is the only size control | **SeaweedFS honors it**: a body of 5,000 bytes against a signed length of 100 was refused with 403, an exact body passed. R2 (`global`) not run. The design is unchanged and §6.3 stays the size control; the register does not sign the length |
 | U4 | `HEAD` returns `ContentLength`, `ContentType`, `ETag`; `GET` with `Range: bytes=0-4095` returns 206 and 4,096 bytes | As stated | **Pass**: size and `Content-Type` from `HEAD` (the storage `stat`), `Range: bytes=0-4095` returns 206 and 4,096 bytes |
 | U5 | A client that lies: registers 5 MB, `PUT`s 11 MB; verify | 422 `file_not_verified` (`too_large`); the object is gone after the delete command | **Pass** (FS-04): the store takes the 11 MB body (200), verify answers 422 `file_not_verified` (`too_large`), the row is `deleted` and the worker's command removes the object |
 | U6 | A second `PUT` to the same key with a signed `If-None-Match: *` | 412; if it works it is adopted as hardening against replacing a verified file inside the URL's 15 minutes | **Not run**: the presigner signs `content-type` (and optionally `content-length`) only; the residual risk below stays accepted |
@@ -379,7 +379,7 @@ stateDiagram-v2
   deleted --> [*]: the row is deleted 90 days later
 ```
 
-- **The logical delete is a status change in a transaction**; the physical delete is a command. Every move to `deleted` (verify failure, `remove`, the orphan job) writes `building.file_delete_requested.v1 {buildingId, fileId}` in the same transaction (DR-122). The handler `building.delete_file_object` loads the row, does nothing unless its status is `deleted` (it never deletes the object of a live file), calls `DeleteObject` (idempotent: a missing key is success) and returns. R2 errors throw and are retried by the default class; a dead letter alerts (RB-05). The row stays `deleted` for 90 days, then `orphan_uploads` deletes it (DOC-20 §3).
+- **The logical delete is a status change in a transaction**; the physical delete is a command. Every move to `deleted` (verify failure, `remove`, the orphan job) writes `building.file_delete_requested.v1 {buildingId, fileId}` in the same transaction (DR-122). The handler `building.delete_file_object` loads the row, does nothing unless its status is `deleted` (it never deletes the object of a live file), calls `DeleteObject` (idempotent: a missing key is success) and returns. Store errors throw and are retried by the default class; a dead letter alerts (RB-05). The row stays `deleted` for 90 days, then `orphan_uploads` deletes it (DOC-20 §3).
 - **`orphan_uploads`** (hourly, per building): marks `pending` and `verified` rows older than 24 hours `deleted` and writes one command each, in batches of 1,000; then deletes `deleted` rows older than 90 days (statements: DOC-20 §5, DOC-38 §4.2).
 - **Owners** call `remove` when they drop a file (the avatar replaced, an import committed or expired, a statement past one year, an export past 7 days) and never delete a `file_object` row themselves. Tickets, vehicles, notices and the library keep their files for ever (DR-115).
 - **`bulk_zip`** objects are removed 7 days after creation by the weekly `finance_purge` (so a ZIP lives 7 to 14 days). The per-unit PDFs stay as the cache of DR-56.
@@ -400,7 +400,7 @@ stateDiagram-v2
 | Metrics, alerts | DOC-40 |
 | Backup of the database | DOC-72, RB-10 |
 | Rotation of the S3 credentials | RB-12 |
-| The personal-data and cross-border review of R2 | DOC-35, DR-83 |
+| The personal-data and cross-border review of the store (no R2 in `vn`) | DOC-35, DR-268 |
 
 ## 16. Decisions made while writing
 
@@ -408,8 +408,9 @@ stateDiagram-v2
 | --- | --- | --- |
 | DR-119 | `FilesApi.signedUrl` and `storeGenerated` | §3, §8, §9 |
 | DR-258 | `FilesApi.read`: the bytes of an import, for the file's owner (or the owner named by `ownerRef`), outside a transaction | §3 |
-| DR-122 | Removing an object from R2 and making a thumbnail are outbox commands of `building`; a thumbnail is a `file_object` row of purpose `thumbnail` with `owner_ref = 'thumb:<fileId>'`; the width is 480 px (512 px for the logo) | §10, §14 |
+| DR-122 | Removing an object from the store and making a thumbnail are outbox commands of `building`; a thumbnail is a `file_object` row of purpose `thumbnail` with `owner_ref = 'thumb:<fileId>'`; the width is 480 px (512 px for the logo) | §10, §14 |
 | DR-123 | Verification is an endpoint (`POST /me\|staff/uploads/{id}/verify`); "MB" is the mebibyte; the limits per purpose of §4 (avatar as an image; no thumbnail for papers); generated files bypass the quota; `bulk_zip` lives 7 days; the residual risk of a reused `PUT` URL is accepted and `If-None-Match` is tried in P1-07 | §4, §6, §9, §11, §12 |
+| DR-268 | The `vn` profile stores files in SeaweedFS on the VPS behind `files.<domain>`; R2 stays as the `global` profile; the flow and `FilesApi` do not change | Intro, §5, §6.2, §11, §12 |
 
 ## 17. Traceability
 
