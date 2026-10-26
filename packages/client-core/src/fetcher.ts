@@ -206,5 +206,7 @@ export function createAuthenticatedFetch(options: AuthenticatedFetchOptions): ty
       return withRequestId(response)
     }
   }
-  return Object.assign(authenticatedFetch, { preconnect: send.preconnect }) as typeof fetch
+  // Bun's `typeof fetch` also has `preconnect`; the DOM one does not, so the property is read without naming the type.
+  const preconnect = (send as { preconnect?: unknown }).preconnect
+  return Object.assign(authenticatedFetch, { preconnect }) as unknown as typeof fetch
 }
