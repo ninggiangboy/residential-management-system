@@ -1,5 +1,6 @@
 export * from './classify'
 export * from './constants'
+export * from './eden'
 export * from './errors'
 export * from './fetcher'
 export * from './intent'
