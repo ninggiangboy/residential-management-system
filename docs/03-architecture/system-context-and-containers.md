@@ -1,7 +1,7 @@
 # System context and containers
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-245: `fee_notice_job`; DOC-15 names `debt_reminder` and `fake_gateway_link`; DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
-> Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: SeaweedFS on the VPS replaces R2 in the `vn` profile; `files.<domain>` host; earlier 2026-10-22 (DR-245: `fee_notice_job`; DOC-15 names `debt_reminder` and `fake_gateway_link`; DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
 This document shows the system from the outside (who and what it talks to), from the inside (containers, modules) and from the ground (where each container runs, who owns each table, topic and bucket prefix, where trust changes and which container holds which secret). It holds no sequence of calls (DOC-08), no event schema (DOC-09), no resource budget or capacity figure (DOC-10), no version pin (DOC-11) and no folder layout of the code (DOC-12).
@@ -68,7 +68,7 @@ flowchart LR
 | SMTP relay | Staff reset, invite, step-up and alert mail | Out: SMTP from `worker` (`identity.mail_requested.v1`) | `SMTP_*` | `local`: `console`. `staging`: `allowlist`. `production`: real relay (DR-68) | Links are delayed; the outbox retries with backoff |
 | Bank statement | The company's receiving-account statement | A file: the Manager uploads it through the web CMS (presigned PUT, then `POST` of its key) | None (a person carries it in) | Generic profile until the real sample arrives (DR-34) | Reconciliation waits; payments are unaffected |
 
-Cloudflare (Pages, edge, Tunnel, R2) is infrastructure of the system, not an external actor, and appears at level 2.
+Cloudflare (Pages, edge, Tunnel) is infrastructure of the system, not an external actor, and appears at level 2. **Two deployment profiles (DR-268, ADR-0027).** `vn` (staging and production now) keeps files and backups in **SeaweedFS on the VPS**; no object storage of Cloudflare is used. `global` is the DR-83 topology with Cloudflare R2, kept as the reference for a deployment outside Vietnam (ADR-0016, ADR-0017, ADR-0020). This document draws `vn`; §3 and §4 say what `global` changes. The profile changes `S3_*` and the pgBackRest repository settings only.
 
 ## 3. Containers (C4 level 2)
 
@@ -83,8 +83,7 @@ flowchart TB
     PAGES["Pages: static web CMS at admin.domain"]
     EDGE["Edge: DNS, managed WAF, one rate rule, Access on admin and monitor only; TLS ends here"]
     TUN["Tunnel: outbound only"]
-    R2F[("R2 files bucket: private")]
-    R2B[("R2 backup bucket: private")]
+    FILESH["Tunnel host files.domain: S3 gateway only"]
   end
   subgraph VPS["One VPS per environment: Ubuntu LTS"]
     CFD["cloudflared container"]
@@ -94,6 +93,7 @@ flowchart TB
     WRK["worker: same image, APP_ROLES=worker: relay, handlers, jobs"]
     PG[("PostgreSQL 18: native on the host")]
     PGB["pgBackRest: full, diff, WAL archive"]
+    SWF[("SeaweedFS S3 gateway: files and backup buckets, private, separate data volume")]
     MON["Monitoring containers: Prometheus, Alertmanager, Grafana, Loki, Alloy, postgres_exporter"]
   end
   WEB --> PAGES
@@ -103,19 +103,21 @@ flowchart TB
   EDGE --> TUN
   TUN --> CFD
   CFD --> CADDY
+  CFD -- "files host" --> SWF
   CADDY --> API1
   CADDY --> API2
   API1 --> PG
   API2 --> PG
   WRK --> PG
-  API1 -. "presign, HEAD, GET" .-> R2F
-  API2 -. "presign, HEAD, GET" .-> R2F
-  WRK -. "PDFs, thumbnails, exports" .-> R2F
-  WEB -. "presigned PUT and GET, direct" .-> R2F
-  RAPP -. "presigned PUT and GET, direct" .-> R2F
-  SAPP -. "presigned PUT and GET, direct" .-> R2F
+  API1 -. "presign, HEAD, GET" .-> SWF
+  API2 -. "presign, HEAD, GET" .-> SWF
+  WRK -. "PDFs, thumbnails, exports" .-> SWF
+  WEB -. "presigned PUT and GET, direct, via files host" .-> FILESH
+  RAPP -. "presigned PUT and GET, direct, via files host" .-> FILESH
+  SAPP -. "presigned PUT and GET, direct, via files host" .-> FILESH
+  FILESH -.-> TUN
   PGB --> PG
-  PGB --> R2B
+  PGB --> SWF
   MON -. "scrape the ops port" .-> API1
   MON -. "scrape the ops port" .-> WRK
   MON -.-> PG
@@ -129,13 +131,13 @@ Containers and their jobs:
 | Staff app | Expo, React Native, New Architecture | Manager, Technician, Guard tabs by role; QR scan for Guards | — | HTTPS, bearer token; refresh token in `expo-secure-store` |
 | Resident app | Expo, React Native | Fees, payment, tickets, QR, notices, household; every request carries `X-Unit-Id` | — | HTTPS, bearer token |
 | Cloudflare edge | Cloudflare free plan | DNS, TLS, managed WAF, one rate rule on `/api/v1/auth/*`, Access in front of `admin.<domain>` and `monitor.<domain>` only, never in front of `api.<domain>` (DR-83, DR-88) | 443 | HTTPS |
-| Tunnel + `cloudflared` | Official image | The only way in: outbound connection from the VPS to Cloudflare; routes the API hostname to Caddy | none inbound | QUIC/HTTP2 outbound |
+| Tunnel + `cloudflared` | Official image | The only way in: outbound connection from the VPS to Cloudflare; routes the API hostname to Caddy and the files hostname to the SeaweedFS S3 gateway (DR-268) | none inbound | QUIC/HTTP2 outbound |
 | Caddy | Official image, `auto_https off` | Reverse proxy to `api-1`/`api-2` with active health checks on `/health/ready`, 2 MB request body limit, no buffering on the SSE path, API security headers, real client IP from `CF-Connecting-IP` (DR-83 item 3) | 80 (Docker network only) | HTTP |
 | `api-1`, `api-2` | Bun, Elysia, image `rms-api`, `APP_ROLES=api` | Every HTTP route: `/api/v1/staff`, `/me`, `/auth`, `/public`, `/payments/webhooks`, SSE `/staff/events`. Stateless; scaling unit is the container | 3000 (`PORT`) | HTTP; ops port separate |
 | `worker` | Same image, `APP_ROLES=worker` | Outbox relay and handlers, every job timer (DR-62), PDF rendering, exports, thumbnails. No public route; `/health/*` and `/metrics` on the ops port only | ops port only | — |
-| PostgreSQL 18 | Native on the host (apt) | The only stateful dependency besides R2: data, outbox/inbox, rate buckets, job claims, counters, idempotency keys. One schema per module (§6). Direct connection for `LISTEN/NOTIFY` and the relay (DR-62, DR-67) | 5432 (localhost and Docker bridge gateway only) | PostgreSQL wire, `scram-sha-256` |
-| pgBackRest | Native on the host, cron | Weekly full, daily differential 02:00, continuous WAL archive (`archive_timeout` 60 s) to the R2 backup bucket, encrypted repository; weekly `pg_dump` (DR-66, DR-83) | — | S3 API |
-| R2 | Cloudflare object storage | Two private buckets per environment: `rms-<env>-files` and `rms-<env>-backup` (DR-83 item 8) | — | S3 API, presigned URLs |
+| PostgreSQL 18 | Native on the host (apt) | The only stateful dependency besides SeaweedFS (`vn`; R2 in `global`): data, outbox/inbox, rate buckets, job claims, counters, idempotency keys. One schema per module (§6). Direct connection for `LISTEN/NOTIFY` and the relay (DR-62, DR-67) | 5432 (localhost and Docker bridge gateway only) | PostgreSQL wire, `scram-sha-256` |
+| pgBackRest | Native on the host, cron | Weekly full, daily differential 02:00, continuous WAL archive (`archive_timeout` 60 s) to the SeaweedFS backup bucket (`global`: R2), encrypted repository; weekly `pg_dump` (DR-66, DR-268) | — | S3 API over TLS on the Docker bridge, path-style |
+| SeaweedFS | Official release in Docker Compose (master, volume, filer and S3 gateway; version pinned in DOC-11 when P1-20 verifies it) | Two private buckets per environment with separate S3 identities: `rms-<env>-files` and `rms-<env>-backup`. Data on a **separate volume** from the OS and PostgreSQL disks. Reachable only on the Docker network and through the Tunnel route `files.<domain>` (staging `files-staging.<domain>`); no replica yet (DR-268, ADR-0027). In `global`, R2 takes this place (DR-83 item 8) | gateway on the Docker network only (fixed in DOC-69) | S3 API, presigned URLs |
 | Monitoring | Prometheus, Alertmanager, Grafana, Loki, Grafana Alloy, `postgres_exporter` containers | Metrics, alert rules, dashboards, log search with 14-day retention (DR-63). Alertmanager sends email and Telegram | 9090, 9093, 3000, 3100, 12345, 9187 (software defaults, Docker network only) | HTTP |
 | Uptime probe | External free-tier service | Probes `GET /api/v1/health/ready` every 60 s for NFR-10 | — | HTTPS |
 | CI/CD | GitHub Actions, GHCR, `wrangler`, Expo EAS | Verify, test, build image, deploy over the Tunnel, deploy Pages, build and update the apps (DR-08, DR-83 item 9; DOC-71) | — | — |
@@ -164,8 +166,7 @@ flowchart TB
   subgraph CF["Cloudflare, free plan"]
     PAGES["Pages: static web CMS"]
     EDGE["Edge: DNS, WAF, rate limit; Access protects the admin and monitor sites"]
-    TUN["Tunnel: no inbound port"]
-    R2[("R2: files, backups")]
+    TUN["Tunnel: no inbound port; hosts api and files"]
     EDGE --> TUN
   end
   subgraph VPS["VPS Ubuntu LTS, PostgreSQL installed on the host"]
@@ -174,17 +175,21 @@ flowchart TB
     APP["Elysia api x2 and worker, Docker"]
     MON["Monitoring, Docker"]
     PG[("PostgreSQL 18, native")]
-    PGB["pgBackRest: full, diff, WAL to R2"]
+    SWF[("SeaweedFS: files and backups, separate volume")]
+    PGB["pgBackRest: full, diff, WAL to SeaweedFS"]
     CFD --> CADDY --> APP --> PG --> PGB
+    CFD -- "files host" --> SWF
     MON -.-> APP
   end
   TUN --> CFD
-  APP --> R2
-  PGB --> R2
+  APP --> SWF
+  PGB --> SWF
   GHCR -.-> APP
 ```
 
 The VPS firewall denies all inbound traffic, SSH included. Operators and the deploy job reach SSH through the Tunnel with a Cloudflare Access service token; the provider's console is the break-glass path (DR-83 item 2).
+
+**`vn` and `global` (DR-268).** In `vn` the database, the files and the backups share one VPS: a lost VPS or provider account loses all three until a SeaweedFS replica on another server exists (a later step, not built now). NFR-11 (RPO ≤ 5 min, RTO ≤ 4 h) holds for PostgreSQL faults, not for the loss of the whole VPS (DOC-10 §7). In `global`, files and backups sit in R2 and survive the VPS (the DR-83 topology, ADR-0020).
 
 ### 4.2 Environments
 
@@ -194,7 +199,7 @@ The VPS firewall denies all inbound traffic, SSH included. Operators and the dep
 | Host | Developer machine; PostgreSQL 18 and an S3-compatible store from compose (`bun run infra:up`, DOC-69) | VPS 2 vCPU, 4 GB, 60 GB (DR-06) | VPS 4 vCPU, 8 GB, 100 GB (DR-06) |
 | Web CMS | Vite dev server | Pages branch at `admin-staging.<domain>` | Pages production at `admin.<domain>` |
 | API host | `localhost` | `api-staging.<domain>` through its own Tunnel | `api.<domain>` through its own Tunnel |
-| Files | Local S3-compatible bucket | `rms-staging-files`, `rms-staging-backup` | `rms-production-files`, `rms-production-backup` |
+| Files | Local S3-compatible bucket (SeaweedFS from compose) | SeaweedFS on the staging VPS: `rms-staging-files`, `rms-staging-backup`; clients use `files-staging.<domain>` | SeaweedFS on the production VPS: `rms-production-files`, `rms-production-backup`; clients use `files.<domain>` |
 | Payment driver | `fake` | payOS sandbox if reported, else `fake` (DR-25, DR-26) | `payos`; `fake` only for the demo building |
 | SMS and mail | `console` | `allowlist` (real provider for listed test phones only) | Real providers (DR-37, DR-68) |
 | Push | Real devices allowed with a development project | Separate push project | Production push project |
@@ -466,12 +471,12 @@ flowchart LR
   subgraph Z1["Zone 1: Cloudflare"]
     ED["Edge: WAF, Access on admin and monitor only"]
     PG1["Pages"]
-    R2["R2 buckets"]
   end
   subgraph Z2["Zone 2: VPS, no inbound port"]
     CA["cloudflared and Caddy"]
     AP["api and worker"]
     DB[("PostgreSQL")]
+    SW[("SeaweedFS S3 gateway")]
     MN["Monitoring, ops port"]
   end
   subgraph Z3["Zone 3: providers"]
@@ -482,8 +487,9 @@ flowchart LR
   ED -- "TB2 Tunnel" --> CA
   CA -- "TB3" --> AP
   AP -- "TB4" --> DB
-  AP -- "TB5" --> R2
-  CL -- "TB6 presigned" --> R2
+  AP -- "TB5" --> SW
+  CL -- "TB6 presigned, files host" --> ED
+  ED -- "TB6 Tunnel, files host" --> SW
   AP -- "TB8" --> SM
   AP -- "TB8 REST" --> PO
   MN -- "TB10" --> AP
@@ -495,8 +501,8 @@ flowchart LR
 | TB2 | Cloudflare → VPS | The VPS opens an outbound Tunnel; no inbound port, SSH included. Operators and CI reach SSH through the Tunnel with an Access service token | HTTP to Caddy; SSH | DR-83 item 2 |
 | TB3 | Caddy → `api` | Docker network, plain HTTP. Caddy trusts the private Docker ranges and passes `CF-Connecting-IP`; the API keeps `TRUSTED_PROXY_HOPS=1`. Body limit 2 MB | Requests with the client IP | DR-07 |
 | TB4 | `api`, `worker` → PostgreSQL | `scram-sha-256` from the Docker subnet; roles `rms_app` (DML only) and `rms_migrator` (migrations only); direct connection for `LISTEN` and the relay | SQL | DR-67, DR-83 item 6 |
-| TB5 | `api`, `worker` → R2 | S3 credentials `S3_*` (files bucket); separate token for the backup bucket held only by pgBackRest | Presigns, `HEAD`, `GET`, PDF and export `PUT` | DR-83 item 8 |
-| TB6 | Client → R2 | Presigned `PUT` (15 min, `Content-Type` signed, key chosen by the server), size and magic bytes verified afterwards; signed `GET` (15 min, 5 min for papers). Bucket CORS allows `PUT`/`GET` from `admin.<domain>` only | File bytes, never through the API | DR-61, DR-64 |
+| TB5 | `api`, `worker` → SeaweedFS | S3 credentials `S3_*` (files bucket) over the Docker network; a separate S3 identity for the backup bucket held only by pgBackRest, which the files identity cannot read | Presigns, `HEAD`, `GET`, PDF and export `PUT` | DR-268 (`global`: R2, DR-83 item 8) |
+| TB6 | Client → SeaweedFS through the files host | Presigned `PUT` (15 min, `Content-Type` signed, key chosen by the server), size and magic bytes verified afterwards; signed `GET` (15 min, 5 min for papers). Bucket CORS allows `PUT`/`GET` from `admin.<domain>` only. The client reaches the gateway only through the Tunnel host `files.<domain>` (`S3_PUBLIC_ENDPOINT`; staging `files-staging.<domain>`); no other route to the S3 port exists; the CSP `connect-src` and the CORS rule name this host (DR-64). The file bytes cross the Tunnel (100 MB per request on the free plan; the video limit is 50 MB) | File bytes, never through the API | DR-61, DR-64, DR-268 |
 | TB7 | payOS → webhook route | HMAC-SHA256 with the checksum key is the only gate; body ≤ 16 KB; a call from an unknown IP is logged, never blocked; failures go to `finance.webhook_rejection`, never to `gateway_event` | Signed confirmations | DR-32 |
 | TB8 | `api`, `worker` → providers | API keys and passwords from secret files (`SMS_*`, `SMTP_*`, `EXPO_ACCESS_TOKEN`); payOS credentials decrypted from `gateway_config`. Payloads carry no personal text for push (DR-52) | Link requests, OTP text, mail, push | DR-52, DR-58 |
 | TB9 | CI → registry and VPS | GitHub Actions pushes the image to GHCR; the VPS pulls with a read-only token; deploy runs over the Tunnel with an Access service token | Image, deploy commands | DR-08, DR-83 item 9 |
@@ -516,13 +522,13 @@ Secrets are Docker secrets as files, read through `*_FILE`; nothing is in the im
 | OTP HMAC key | `OTP_HMAC_KEY` | `api` | HMAC of OTP codes and step-up codes | On suspicion |
 | Settings encryption keys | `SETTINGS_ENCRYPTION_KEYS` | `api`, `worker` | Encrypt and decrypt `gateway_config.secrets_enc` (the worker re-queries and cancels links) | Re-encrypt job, RB-12 |
 | PII encryption keys | `PII_ENCRYPTION_KEYS` | `api`; the re-encrypt job | `resident_profile.cccd_enc`; sealed offline copy is mandatory | Re-encrypt job, RB-12 |
-| Files bucket credentials | `S3_*` | `api`, `worker` | Presign, `HEAD`, `GET`, PDFs, exports, thumbnails | Per provider |
+| Files bucket credentials | `S3_*` | `api`, `worker` | Presign, `HEAD`, `GET`, PDFs, exports, thumbnails | Operator (SeaweedFS identity; per provider in `global`) |
 | SMS credentials | `SMS_*` | `worker` | OTP delivery | Per provider |
 | SMTP credentials | `SMTP_*` | `worker` | Staff mail | Per provider |
 | Expo access token | `EXPO_ACCESS_TOKEN` | `worker` | Push requests and receipts | Per provider |
 | payOS credentials (client id, API key, checksum key) | In the database, encrypted: not an environment variable | `api` (link creation, webhook verification), `worker` (query, cancel) | Gateway calls and webhook HMAC | Admin edits with step-up (DR-33, DR-39) |
 | Tunnel token | `cloudflared` configuration | `cloudflared` | Outbound Tunnel | Operator |
-| pgBackRest passphrase, R2 backup token | Host files (root) | pgBackRest | Encrypt and write the repository | Operator; offline copy of the passphrase |
+| pgBackRest passphrase, backup-bucket S3 identity (`global`: R2 token), gateway CA file | Host files (root) | pgBackRest | Encrypt and write the repository | Operator; the passphrase is kept **off the VPS**, offline copy (DR-268) |
 | GHCR read token | `docker login` on the VPS | Docker on the VPS | Pull `rms-api` | Operator |
 | CI secrets: Access service token, Cloudflare Pages token, `EXPO_TOKEN`, GHCR push (`GITHUB_TOKEN`) | GitHub Actions secrets | CI | Deploy, build, publish | Operator |
 | Alert delivery: Telegram bot token, Alertmanager SMTP, Grafana admin password | Monitoring configuration | Alertmanager, Grafana | Alerts, dashboards | Operator |

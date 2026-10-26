@@ -8,8 +8,8 @@ import sharp from 'sharp'
  * presigned `GET` with a download name, the CORS preflight, a stream through the multipart writer, and `sharp` on Bun.
  *
  * They run against whatever `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` name: SeaweedFS locally
- * (`bun --env-file=.env.local test tools/compat/uploads.test.ts`), the staging bucket of Cloudflare R2 when its credentials are
- * given (set `UPLOAD_CHECK_ORIGIN` to the CMS origin that the bucket's CORS allows). Without a reachable store they skip.
+ * (`bun --env-file=.env.local test tools/compat/uploads.test.ts`), the staging SeaweedFS behind the files host (`files-staging.<domain>`, DR-268) when its
+ * credentials are given (set `UPLOAD_CHECK_ORIGIN` to the CMS origin that the bucket's CORS allows); R2 is the `global` profile only. Without a reachable store they skip.
  * Each check prints its measured result as `UPLOAD-CHECK U<n>: …`, which is what DOC-37 §12 records.
  */
 

@@ -79,7 +79,7 @@ describe('the schema against DOC-41', () => {
     const defaults = loadAppConfig(localEnv()) as unknown as Record<string, Record<string, unknown>>
     const flat = Object.assign({}, ...Object.values(defaults)) as Record<string, unknown>
     const wrong: string[] = []
-    // Only a literal default is compared: prose ("the R2 account endpoint"), `none` and a reference to another key are not.
+    // Only a literal default is compared: prose ("the SeaweedFS S3 gateway"), `none` and a reference to another key are not.
     const literal = /^[\w.:/@-]+(, [\w.:/@-]+)*$/
     for (const row of tableKeys()) {
       const cell = row.defaults?.replace(/`/g, '')

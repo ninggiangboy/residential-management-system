@@ -28,7 +28,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Approved |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Approved |
 | DOC-12 | [Code architecture](03-architecture/code-architecture.md) | Approved |
-| DOC-13 | [ADR index](04-adr/README.md) | Approved |
+| DOC-13 | [ADR index](04-adr/README.md) | Approved (27 ADRs; ADR-0027, DR-268: files and backups in SeaweedFS on the VPS for `vn`, ADR-0016, 0017, 0020 superseded in part) |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Approved |
 | DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; intent and statement tables follow proposed DR-27, 28, 30, 34, 35) | Draft |
 | DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Approved |

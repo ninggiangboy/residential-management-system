@@ -185,7 +185,7 @@ def main():
     for sc in scales:
         print(f"{sc.name:14s}" + "".join(f"{retained_gb(sc, y, True):8.2f}" for y in (1, 3, 5))
               + f"{retained_gb(sc, 5, False):26.2f}")
-    print("\n== 5. Object storage (R2 files bucket), GB per year (planned) ==")
+    print("\n== 5. Object storage (files bucket: SeaweedFS in vn, R2 in global), GB per year (planned) ==")
     for sc in scales:
         per_b = files_gb_per_year(sc) / sc.buildings
         print(f"{sc.name:14s}{files_gb_per_year(sc):8.1f} GB/year in total; {per_b:5.1f} GB/year per building (quota 50 GB, alert at 40 GB)")

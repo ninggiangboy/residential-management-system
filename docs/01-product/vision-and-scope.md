@@ -1,7 +1,7 @@
 # Vision and scope
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-68: providers picked before P1-22) · DOC-01
-> Depends on: original SDD §1–§3, §21–§22, [DR](../00-decision-register.md) (DR-06, 17, 47, 58, 79, 80, 81, 83, 84, DR-68), [DOC-06](../02-glossary.md), master plan §1, §4
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: no R2 in Vietnam, files and backups in SeaweedFS on the VPS; whole-VPS loss is an accepted risk until a replica exists) · 2026-10-21 (DR-68: providers picked before P1-22) · DOC-01
+> Depends on: original SDD §1–§3, §21–§22, [DR](../00-decision-register.md) (DR-06, 17, 47, 58, 79, 80, 81, 83, 84, DR-68, DR-268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-06](../02-glossary.md), master plan §1, §4
 > Main readers: Owner (project), P0-18…P0-35, every later document that cites a goal or a scope boundary
 
 This document says what the Residential Management System is for, what it must achieve in numbers, what it covers and what it does not. It holds no design. Requirements are in [DOC-03](requirements.md), personas in [DOC-02](personas-and-journeys.md), the architecture in DOC-07, the plan and cut order in the [master plan](../00-master-plan.md).
@@ -140,7 +140,7 @@ Work proceeds on these defaults (DR-81). An answer from the client that differs 
 | payOS behavior (webhook retry, expired-link transfers, rate limits, order-code range, fees) | The assumptions of original SDD §6.5, checked against a gateway sandbox when the Owner reports one. No sandbox: the `fake` driver, then one real minimum-amount payment before go-live (P6-09) | Before P3-01 | DR-25 |
 | Receiving account linked through payOS | Not linked: transfer content at most 9 characters (`TT2FMZ9`) | Start of P3 | DR-27 |
 | SMS provider and brandname, mail relay | Chosen by the Owner or client; not chosen yet, the ports and the `console`/`allowlist` drivers come first | Before P1-22 (M1 needs a real SMS OTP) | DR-68 |
-| PostgreSQL hosting | The Owner's VPS, native PostgreSQL 18, pgBackRest to R2 | Start of P1 | DR-67, DR-83 |
+| PostgreSQL hosting | The Owner's VPS in Vietnam, native PostgreSQL 18, pgBackRest to SeaweedFS on the same VPS (`vn` profile; R2 only in the `global` profile) | Start of P1 | DR-67, DR-83, DR-268 |
 | Ticket deadlines | Phase 2 (decided) | Decided 2026-10-19 | DR-47 |
 | Meaning of a "closed" batch | A manual reporting freeze; charges stay payable (decided) | Decided 2026-10-19 | DR-20 |
 | Family member type | Kept, separate from "tenant" (decided) | Decided 2026-10-19 | DR-81 |
@@ -153,7 +153,7 @@ Work proceeds on these defaults (DR-81). An answer from the client that differs 
 | Constraint | Effect |
 | --- | --- |
 | One person, full time, 50 weeks (about 100 calendar weeks at 50%) | The plan has a cut order (§8) and a two-person split after M1 (master plan §4.1) |
-| Hosting: one VPS per environment behind Cloudflare, no inbound port | A single point of failure per environment; recovery is a rebuild plus a pgBackRest restore (DR-83) |
+| Hosting: one VPS per environment behind Cloudflare, no inbound port | A single point of failure per environment; recovery is a rebuild plus a pgBackRest restore, but in `vn` the repository and the files are on the same VPS, so losing the whole VPS loses them too until a SeaweedFS replica exists (DR-83, DR-268) |
 | Cloudflare free plan | One rate-limiting rule; the application limiter carries more of the load (DR-83) |
 | SMS brandname approval takes calendar time (the target is at most 3 weeks) | Register the brandname during P0/P1; an unbranded OTP route is the paid fallback (DR-68) |
 | Client inputs with waiting time | Bank statement sample, payOS account, hosting and store accounts, legal texts (P0-03…P0-06); the DR-81 defaults apply meanwhile |
@@ -181,12 +181,12 @@ Only the risks that decide scope or the value of the system are listed here; the
 | Risk | Early sign | Mitigation |
 | --- | --- | --- |
 | **E-invoices become mandatory or are requested more often** (DR-17) | The client or residents ask for them regularly, or the client reports a legal obligation | The reserved column and event; no work in phases 1–6 unless the client asks, then a new DR and an expand migration |
-| **Personal data law, Decree 13/2023/NĐ-CP** (DR-58) | The legal dossier (P0-06) rejects a cross-border flow; real data is about to be imported | Encrypted CCCD, ciphertext backups, no CCCD images on R2, generic push text; files can move to a Vietnam-hosted store behind `FilesApi` (DR-83 options a–c) |
-| Cloudflare edge and R2 are outside Vietnam | As above | The review is deferred by the Owner: before real personal data is loaded, at the latest at go-live (DR-83, DOC-103) |
+| **Personal data law, Decree 13/2023/NĐ-CP** (DR-58) | The legal dossier (P0-06) rejects a cross-border flow; real data is about to be imported | Encrypted CCCD, ciphertext backups, generic push text; files and backups are stored in SeaweedFS on the VPS in Vietnam, not on R2 (DR-268) |
+| Cloudflare edge (DNS, Tunnel) is outside Vietnam; R2 is not used in `vn` | As above | Storage and backups stay in Vietnam (DR-268); the remaining cross-border flows are Cloudflare in transit and the push services, reviewed before real personal data is loaded, at the latest at go-live (DR-83, DR-268, DOC-103) |
 | payOS differs from the assumptions | The sandbox or documentation contradicts DR-25 | Fake driver and simulator for all tests; one real minimum payment; re-query and statement reconciliation as independent paths |
 | A transfer is made twice or with another amount | Rows in the money log | Nothing is posted; the Manager refunds outside the system; the resident sees a neutral message (DR-84) |
 | One person cannot carry the plan | M1 more than 3 weeks late | The cut order and the two-person split |
-| One provider holds the edge, files and backups | A Cloudflare account problem | Accepted by the Owner (2026-10-19); encrypted repository with offline key custody; the weekly `pg_dump` is portable (DR-66) |
+| One VPS holds the database, the files and the backups (`vn`) | Losing the VPS or its provider account loses all three; RPO ≤ 5 min and RTO ≤ 4 h hold for PostgreSQL faults only (NFR-11) | Accepted by the Owner (DR-268) until a SeaweedFS replica on another server exists; separate data volume, encrypted repository with the key off the VPS, the weekly `pg_dump` is portable (DR-66, DR-268) |
 | SMS brandname approval is slow | No approval 3 weeks after choosing the provider | Start as soon as the Owner picks the provider (before P1-22); unbranded route as the fallback |
 | Scope creep from the 113-feature checklist | Features with no FR | Every feature is mapped to an FR or marked out of scope (P0-07, DOC-05) |
 

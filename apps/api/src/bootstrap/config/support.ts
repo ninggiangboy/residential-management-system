@@ -36,7 +36,7 @@ export function hostEnv(profile: 'staging' | 'production', overrides: Env = {}) 
     CORS_ORIGINS: 'https://admin.example.vn',
     ADMIN_BASE_URL: 'https://admin.example.vn',
     APP_DOWNLOAD_URL: 'https://apps.example.vn',
-    S3_ENDPOINT: 'https://acct.r2.example.invalid',
+    S3_ENDPOINT: 'https://s3.example.invalid',
     OPENAPI_ENABLED: profile === 'production' ? 'false' : 'true',
     SMS_DRIVER: profile === 'production' ? 'provider' : 'allowlist',
     MAIL_DRIVER: profile === 'production' ? 'smtp' : 'allowlist',

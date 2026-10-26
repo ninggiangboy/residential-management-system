@@ -1,7 +1,7 @@
 # Security
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-22 (DR-238, DR-239: Semgrep CE replaces CodeQL in §12, the trunk is `dev`; earlier: DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
-> Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 147, 151, 152, 153, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-26 (DR-268: no R2 in `vn`; the files host fronts SeaweedFS) · 2026-10-22 (DR-238, DR-239: Semgrep CE replaces CodeQL in §12, the trunk is `dev`; earlier: DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
+> Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 268, 147, 151, 152, 153, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
 > Main readers: P1-04, P1-10, P1-14, P1-15 (route metadata and the matrix), P1-16 (the web CMS headers), P1-20 (Caddy), P3-03, P5-09, P6-08 (the review), DOC-70, DOC-71, DOC-99 (EXP-10), DOC-98 (EXP-09)
 
 This document is the security view of a system whose parts are specified elsewhere: who may call what (the endpoint × actor matrix and how it is generated), the headers and the client-IP rule, the rate limits in one table, the secrets, the webhook and step-up rules seen as defenses, a lightweight threat model per trust boundary, and what the pipeline scans. It does not specify sign-in and sessions (DOC-26), the household policy table (DOC-27 §3), the audit writer (DOC-35), the upload flow (DOC-37), the gateway adapter (DOC-24) or the infrastructure install (DOC-70).
@@ -201,7 +201,7 @@ It proves the gates, not the content. Content checks live beside their features 
 
 ### 5.1 TLS and where headers come from
 
-TLS ends at the Cloudflare edge; the VPS has no inbound port and Caddy speaks plain HTTP (`auto_https off`). The web CMS headers come from the Pages `_headers` file; the API headers from Caddy; the app sets `Cache-Control` and `ETag` itself (DOC-50 §12), which Caddy must not override. `<files-host>` is the host of `S3_PUBLIC_ENDPOINT`; `<domain>` the company domain (Owner input, P0-03).
+TLS ends at the Cloudflare edge; the VPS has no inbound port and Caddy speaks plain HTTP (`auto_https off`). The web CMS headers come from the Pages `_headers` file; the API headers from Caddy; the app sets `Cache-Control` and `ETag` itself (DOC-50 §12), which Caddy must not override. `<files-host>` is the host of `S3_PUBLIC_ENDPOINT` (`files.<domain>`, staging `files-staging.<domain>`: a Tunnel route to the SeaweedFS S3 gateway only, DR-268); `<domain>` the company domain (Owner input, P0-03).
 
 **Web CMS `_headers`** (DR-64 revised by DR-152: the CSP of DR-64 had `connect-src 'self'`, which would block the calls to `api.<domain>` because the web CMS and the API are different origins):
 
@@ -306,7 +306,7 @@ Format and reader are DOC-41 §6; this table adds where each lives, how it chang
 | `SMS_*`, `SMTP_PASSWORD`, `EXPO_ACCESS_TOKEN` | Per provider | OTP, mail or push stops; alerts `ProviderAuthFailed` | Abuse of the account (cost, spam): rotate at the provider |
 | payOS credentials | Admin edits with step-up (DR-33) | Enter again | Fake payment links under our name; and with the checksum key, forged webhooks: change them at payOS (RB-13) |
 | `DEMO_STAFF_PASSWORD` | On staff change | Reseed | Access to the demo only (the demo is isolated, DR-60) |
-| Tunnel token, GHCR read token, pgBackRest passphrase and R2 backup token, CI secrets, Telegram token, Alertmanager SMTP, Grafana admin password | Operator | Per DOC-70 | Per DOC-70; a leaked Tunnel token exposes the API under our hostname |
+| Tunnel token, GHCR read token, pgBackRest passphrase and the S3 identities of the backup and files buckets (SeaweedFS; R2 tokens in `global`), CI secrets, Telegram token, Alertmanager SMTP, Grafana admin password | Operator | Per DOC-70 | Per DOC-70; a leaked Tunnel token exposes the API under our hostname |
 
 A boot error names a key and a rule, never a value (DOC-41 §17). The `/metrics` page, the logs and the audit rows never hold a secret (DOC-42 §8.4, BD-19).
 
@@ -406,7 +406,7 @@ Completed in P5-09 (`—` = nothing to add yet).
 | TB2 Cloudflare → VPS | A stolen Tunnel token | The token is a secret of §7; Access service tokens for CI; SSH only through the Tunnel |
 | TB3 Caddy → `api` | A spoofed `CF-Connecting-IP` | §5.3: believed only from a trusted peer |
 | TB4 `api`, `worker` → PostgreSQL | SQL injection; a leaked URL | Parameterized queries (Drizzle); role `rms_app` is DML only; `scram-sha-256` from the Docker subnet |
-| TB5 `api`, `worker` → R2 | A leaked bucket key | Private bucket; separate token for the backup bucket |
+| TB5 `api`, `worker` → the S3 store (SeaweedFS on the VPS; R2 in `global`) | A leaked bucket key; the gateway reached from outside | Private bucket; separate S3 identity for the backup bucket; the gateway is reachable only on the compose network and through the files-host Tunnel route, and the filer, master and volume ports are never exposed (DR-268) |
 | TB8 `api`, `worker` → providers | Personal data to a third party | Push payloads without personal text; SMS carries a code only |
 | TB9 CI → registry and VPS | A poisoned image or action | Pinned action versions; Trivy; a read-only registry token on the VPS |
 | TB10 Monitoring | Metrics or logs exposed | Ops port not routed; only Grafana has a public host, `monitor.<domain>`, behind Cloudflare Access plus its own sign-in; Prometheus, Loki and Alertmanager have none (DR-88) |

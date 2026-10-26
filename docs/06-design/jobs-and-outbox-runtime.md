@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the store is SeaweedFS in `vn`; DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -102,7 +102,7 @@ UPDATE finance.outbox_messages
 
 With `:base` 5 and `:cap` 900 the waits after attempts 1 to 8 were 5, 10, 20, 40, 80, 160, 320 and (on the eighth, which dies) 640 seconds (JB-03). A dead row is not claimed; `outbox:requeue` makes it claimable again (JB-04). A deferred row returned with `attempts` unchanged and a wait of 60 to 66 seconds, and the one older than 24 hours died (JB-05). A mix of a deferral and a real error counts as a real failure.
 
-**Bus.** `InProcessMessageBus.publish` runs every handler of the type with `Promise.allSettled`; if any failed it throws an `AggregateError` and the relay retries the whole message. Handlers that already succeeded are skipped by their inbox row. A handler sets its own client timeout (Expo, SMS, SMTP, payOS, R2: 10 to 30 seconds, in the driver documents) so that a pass stays well under the 60-second lease.
+**Bus.** `InProcessMessageBus.publish` runs every handler of the type with `Promise.allSettled`; if any failed it throws an `AggregateError` and the relay retries the whole message. Handlers that already succeeded are skipped by their inbox row. A handler sets its own client timeout (Expo, SMS, SMTP, payOS, the S3 store: 10 to 30 seconds, in the driver documents) so that a pass stays well under the 60-second lease.
 
 ### 2.4 Settings per event type
 
@@ -259,7 +259,7 @@ Nine further assertions ran with it: the daily slot before and after the clock t
 
 ### 3.4 Where a job runs
 
-A job body opens its own short transactions (claim, then work; DOC-12 §8.2) and makes every call to the outside world (R2, payOS, Expo, SMTP) **between** transactions, never inside one. A job that loops over buildings reads the `building` rows (the one building of the deployment and, where present, the demo building) and passes each `BuildingScope` to its repositories; the scope lint applies (DOC-14 §5.2). `ctx.signal` is aborted at shutdown: a batch job checks it between batches and returns, a `snapshot` job finishes or is cancelled by its timeout.
+A job body opens its own short transactions (claim, then work; DOC-12 §8.2) and makes every call to the outside world (the S3 store, payOS, Expo, SMTP) **between** transactions, never inside one. A job that loops over buildings reads the `building` rows (the one building of the deployment and, where present, the demo building) and passes each `BuildingScope` to its repositories; the scope lint applies (DOC-14 §5.2). `ctx.signal` is aborted at shutdown: a batch job checks it between batches and returns, a `snapshot` job finishes or is cancelled by its timeout.
 
 ### 3.5 `job_run` and the gauge
 
@@ -340,7 +340,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `notice_reclaim` | Re-claims a `sending` notice whose heartbeat is older than 5 minutes and finishes it from its last cursor | `{"reclaimed": n}` | DOC-31 |
 | `intent_requery` | Claims up to 20 intents (`creating`, `pending`, `cancelling`) with `next_check_at <= now()` by `SKIP LOCKED`, one building at a time (DR-244, index of DOC-15 §6.1), extends `next_check_at` as the lease, commits, then asks the gateway outside any transaction; `PAID` runs `settle`; at 60 minutes expires and queues the cancel; cleans a `creating` intent older than 2 minutes; backs off 30 s, 60 s, 2 min, 5 min on errors; at most 5 gateway calls in flight | `{"checked": n, "settled": n, "expired": n, "failed": n}` | DOC-23 (DR-30) |
 | `push_receipts` | Fetches Expo receipts for tickets older than 15 minutes, deletes the token on `DeviceNotRegistered`, deletes push tickets older than 3 days | `{"receipts": n, "tokensDeleted": n}` | DOC-31 (DR-52) |
-| `export_run` | Claims queued exports (at most `EXPORT_CONCURRENCY` at once), streams the file to R2, writes the `file_object`, marks the export ready and writes `reporting.export_ready.v1` | `{"exports": n}` | DOC-33 |
+| `export_run` | Claims queued exports (at most `EXPORT_CONCURRENCY` at once), streams the file to the S3 store, writes the `file_object`, marks the export ready and writes `reporting.export_ready.v1` | `{"exports": n}` | DOC-33 |
 | `fee_notice_run` | Claims queued bulk fee-notice requests (`finance.fee_notice_job`, DOC-15 §10.2, DR-245; per building), renders per-unit PDFs with `PDF_CONCURRENCY` (1 on staging, 2 on production), then the ZIP by streaming | `{"documents": n}` | DOC-34 (DR-56) |
 | `storage_quota` | Per building: the sum of `size` of non-deleted `file_object` rows; sets `storage_usage_ratio` | `{"buildings": n, "maxRatio": 0.37}` | DOC-37 |
 | `orphan_uploads` | Per building: marks `pending` and `verified` files older than 24 h `deleted` and writes `building.file_delete_requested.v1` for each, in batches of 1,000; deletes `deleted` rows older than 90 days | `{"orphaned": n, "purged": n}` | DOC-37, DOC-20 §5 |
@@ -475,7 +475,7 @@ Prefix `JB-` (jobs and outbox runtime). Tests marked **run** were executed on 20
 | DR-120 | The job catalog: `export_run` and `fee_notice_run` (claim loops every 5 s), `realtime_purge` (hourly), the unique names `import_purge` (residency), `finance_purge` (finance), `integrity_weekly` (residency) and `integrity_notices` (notices); hourly jobs at :05, :15, :25, :35, :45; grace windows (hourly none, daily 12 h, weekly 24 h, monthly 7 days, `demo_reset` 2 h) | §4 |
 | DR-121 | Runtime rules: the singleton lock is taken at the start of every transaction of a job and a `snapshot` job holds it for its one transaction; a failed run is not retried before its next slot; a 15-second scheduler tick; `JOBS_TIME_ZONE`; the shutdown order and its 40 s limit; `outbox:discard` and `jobs:run` | §2.7, §3, §5, §7 |
 | DR-249 | As built in P1-05: `JobContext` has `withLock` and `snapshot`; the `job_run` table is written by `SqlJobRunStore` of `@core/runtime` until `building` ships its own; `outbox:*` scripts write no audit row until P1-08; the retry class map is `outboxPolicies` of the manifests | §2.7, §3 |
-| DR-122 | Deleting a file from R2 and making a thumbnail are outbox commands of `building` (DOC-37); `building` becomes a publishing module | §2, §4.2 |
+| DR-122 | Deleting a file from the store and making a thumbnail are outbox commands of `building` (DOC-37); `building` becomes a publishing module | §2, §4.2 |
 
 ## 11. Not in this document
 

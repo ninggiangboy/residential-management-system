@@ -1,6 +1,6 @@
 # Flows index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-43
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the object store is `s3`, not `r2`) · 2026-10-20 · DOC-43
 > Depends on: [DOC-04](../../01-product/use-cases.md), [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-50](../../07-api/api-guidelines.md), [DOC-12](../../03-architecture/code-architecture.md) §4, §5, §8, [DOC-09](../../03-architecture/messaging-contracts.md), [DR](../../00-decision-register.md) (DR-142…), master plan §3.2 (flows), Appendix A.8, [DOC-06](../../02-glossary.md)
 > Main readers: the authors of DOC-44…49, P1-25, every task that implements a flow, DOC-56…67 (screens name the `FL-xx` they start), DOC-88
 
@@ -45,7 +45,7 @@ Participants are named once and keep the same name in every file. A flow adds it
 | API edge | `api`, with the guards that run before a use case | `api`, `ResidentGuard`, `UnitGuard`, `StaffGuard` |
 | Use case or service | The class named in the design document, one participant per class, never the module | `StaffSignIn`, `ResidentOtp`, `SessionService`, `StepUp`, `AddMember`, `TransferOwnership`, `CommitUnitOwnerImport`, `settle` (the function of DOC-23) |
 | Contract | The contract name of DOC-09 §7 | `IdentityApi`, `ResidencyApi`, `BuildingApi`, `FilesApi`, `AuditApi`, `FinanceApi` |
-| Data store | `db`, with the schema-qualified table in the arrow; `outbox` and `inbox` for the message tables; `r2` for the object store | `db`, `outbox`, `r2` |
+| Data store | `db`, with the schema-qualified table in the arrow; `outbox` and `inbox` for the message tables; `s3` for the object store (SeaweedFS on the VPS in `vn`, R2 in `global`; DR-268) | `db`, `outbox`, `s3` |
 | Worker | `worker`, with the handler or job name in the arrow | `worker` (`identity.send_sms`, `account_deletion`) |
 | External | The provider, lower case with a hyphen | `sms-provider`, `mail-relay`, `payos`, `expo-push` |
 

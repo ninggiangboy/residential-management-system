@@ -4,7 +4,7 @@
 > Depends on: [DR](../00-decision-register.md), [master plan](../00-master-plan.md) §3.2, [ADR-0001](0001-record-architecture-decisions.md)
 > Main readers: every task `Pn-00` (doc gate), reviewers of pull requests that touch an architecture decision
 
-This index lists the 26 architecture decision records of the project. An ADR is written for a decision that is hard to reverse and touches many modules; every other decision stays in the decision register. Detail lives in the design documents; an ADR gives the reason and the rejected options (ADR-0001).
+This index lists the 27 architecture decision records of the project. An ADR is written for a decision that is hard to reverse and touches many modules; every other decision stays in the decision register. Detail lives in the design documents; an ADR gives the reason and the rejected options (ADR-0001).
 
 ## 1. How to read this index
 
@@ -16,7 +16,7 @@ This index lists the 26 architecture decision records of the project. An ADR is 
 | Gate | The phase that needs the ADR `Accepted` before it starts |
 | Source | The decision register entries (`DR-xx`) and original SDD sections it records |
 
-## 2. The 26 ADRs
+## 2. The 27 ADRs
 
 | ADR | Title | Status | Gate | Source |
 | --- | --- | --- | --- | --- |
@@ -35,17 +35,18 @@ This index lists the 26 architecture decision records of the project. An ADR is 
 | [ADR-0013](0013-time-zones-and-calendar-day-semantics.md) | Store everything in UTC and compute every business day in the building's time zone | Accepted | P1 | DR-09 |
 | [ADR-0014](0014-schema-per-module-no-cross-module-foreign-keys.md) | Give each module its own schema, with no cross-module foreign keys, per-module counters and reports composed through contracts | Accepted | P1 | DR-03, DR-10, DR-42, DR-55 |
 | [ADR-0015](0015-jobs-and-worker-topology.md) | Run jobs in a separate worker role with in-process timers and transaction-level advisory locks | Accepted | P1 | DR-62 |
-| [ADR-0016](0016-files-on-r2-presigned-put.md) | Store files on R2, upload with a presigned PUT, verify with `HEAD` and a magic-byte check, and track every object in `file_object` under a per-building quota | Accepted | P1 | DR-61, DR-83 |
-| [ADR-0017](0017-backup-with-point-in-time-recovery.md) | Back up PostgreSQL with pgBackRest to R2 for point-in-time recovery, on a self-hosted database, and accept the single-provider risk | Accepted | P1 | DR-66, DR-67, DR-83 |
+| [ADR-0016](0016-files-on-r2-presigned-put.md) | Store files on R2, upload with a presigned PUT, verify with `HEAD` and a magic-byte check, and track every object in `file_object` under a per-building quota | Superseded in part by ADR-0027 (kept as the global reference) | P1 | DR-61, DR-83 |
+| [ADR-0017](0017-backup-with-point-in-time-recovery.md) | Back up PostgreSQL with pgBackRest to R2 for point-in-time recovery, on a self-hosted database, and accept the single-provider risk | Superseded in part by ADR-0027 (kept as the global reference) | P1 | DR-66, DR-67, DR-83 |
 | [ADR-0018](0018-audit-in-the-mutation-transaction.md) | Write the audit row in the same transaction as the mutation, append-only for the runtime role | Accepted | P1 | DR-57 |
 | [ADR-0019](0019-mobile-and-web-client-stacks.md) | Build the web CMS and the two Expo apps on one React and Tailwind token set, with the latest stable stack and the New Architecture only | Accepted | P1 | DR-70 |
-| [ADR-0020](0020-deployment-topology.md) | Deploy behind Cloudflare to one VPS per environment, with the API and worker in Docker and PostgreSQL installed natively | Accepted | P1 | DR-05, DR-06, DR-07, DR-83 |
+| [ADR-0020](0020-deployment-topology.md) | Deploy behind Cloudflare to one VPS per environment, with the API and worker in Docker and PostgreSQL installed natively | Superseded in part by ADR-0027 (kept as the global reference) | P1 | DR-05, DR-06, DR-07, DR-83 |
 | [ADR-0021](0021-observability-stack-and-alert-delivery.md) | Observe each host with Prometheus, Alertmanager, Grafana and Loki, without traces, and send alerts by email and Telegram | Accepted | P1 | DR-63 |
 | [ADR-0022](0022-personal-data-protection.md) | Classify personal data, protect it by field, keep push payloads generic and send no error data to a third-party tracker | Accepted | P1 | DR-52, DR-58 |
 | [ADR-0023](0023-api-conventions.md) | Keep the design's error shape, store idempotency keys in PostgreSQL for every create, and page with opaque cursors | Accepted | P1 | DR-74 |
 | ADR-0024 | Real-time for the web CMS with the reference `realtime` module | Not written | P2 | DR-75 |
 | ADR-0025 | Notice fan-out, heartbeat reclaim and single-source read state; allowed rich-text subset | Not written | P4 | DR-50, DR-51 |
 | [ADR-0026](0026-demo-building-and-fake-payment-driver.md) | Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept | Proposed | P1 | DR-26, DR-60 |
+| [ADR-0027](0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md) | In Vietnam, keep files and backups in SeaweedFS on the VPS instead of Cloudflare R2, and keep the Cloudflare domain, HTTPS and Tunnel | Accepted | P1 | DR-268 |
 
 ## 3. Rules
 

@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: SeaweedFS replaces the R2 row; rows for the `vn`/`global` profiles and the files host; VPS, pgBackRest, web CMS, presigned PUT, inbox mode) · 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -26,7 +26,7 @@ This document defines the words of the project, as the project uses them. Every 
 | Technician | — | Staff role. Receives assigned tickets, accepts or rejects them, records before/after photos and the result. | DR-46 |
 | Guard | — | Staff role. Scans resident QR codes, looks up units and approved plates, handles security tickets, sees Technician tickets read-only. Sees phone numbers masked and logged. | DR-46, DR-48 |
 | staff | — | Admin, Manager, Technician and Guard together. | |
-| web CMS | — | The web application for Admin and Manager (static site on Cloudflare Pages). | original SDD §2.3, DR-83 |
+| web CMS | — | The web application for Admin and Manager (static site on Cloudflare Pages; it uploads files to the files host `files.<domain>`). | original SDD §2.3, DR-83, DR-268 |
 | staff app | — | The mobile app for Manager, Technician and Guard (Expo). | original SDD §2.3 |
 | resident app | — | The mobile app for owner, family member, tenant and helper (Expo). | original SDD §2.3 |
 | staff account | — | An account in `identity.staff_account`: email and password, one fixed role, one building. Status `invited`, `active`, `locked` or `disabled`. Signs in to the web CMS and the staff app. | DR-36, DR-39 |
@@ -290,7 +290,7 @@ This document defines the words of the project, as the project uses them. Every 
 | export job | — | `reporting.export_job`: a requested Excel or PDF export, run by the worker; file kept 7 days, delivered as a 15-minute signed URL. | FR-48, DR-55 |
 | export center | — | The screen where requested exports are listed and downloaded. | FR-48, DR-72 |
 | file object | — | `building.file_object`: the ledger of every stored file (`pending`, `verified`, `attached`, `deleted`); the basis of the quota. | FR-40, DR-61 |
-| presigned PUT | — | The upload method for files: a short-lived URL with a signed `Content-Type`. R2 has no presigned POST. | DR-61, DR-83 |
+| presigned PUT | — | The upload method for files: a short-lived URL with a signed `Content-Type`, used against the SeaweedFS S3 gateway through the files host (`vn`) or R2 (`global`). The method does not change with the store; presigned POST is not relied on (R2 has none). | DR-61, DR-83, DR-268 |
 | signed URL | — | A presigned `GET` URL for a file, valid 15 minutes (5 for a vehicle paper), given inside an authorised response; a bearer token that is never logged or stored. | DR-61, DOC-37 §8 |
 | verify (a file) | — | The call after the client's `PUT`: `HEAD` for size and type, a ranged `GET` for the first bytes; passes to `verified` or deletes the file. | DR-123, DOC-37 §6.3 |
 | thumbnail | — | The 480 px WebP copy of an image (512 px for the logo), a `file_object` row of purpose `thumbnail` made by the worker. | DR-122, DOC-37 §10 |
@@ -327,7 +327,7 @@ This document defines the words of the project, as the project uses them. Every 
 | command | — | A message addressed to one handler (intent cancel, receipt render, SMS, mail), as opposed to an event with many consumers. | DOC-09 |
 | envelope | — | The wire format of every outbox message: `id`, `type`, `source`, `aggregateId`, `occurredAt`, `payload`, `headers`. | DOC-09 §3 |
 | handler (consumer group) | — | A named consumer of one message type, `<module>.<effect>_on_<producer>_<event>`. The pair (module, handler name) is the second half of the inbox key; a message with three handlers is delivered to each. | DOC-09 §3.3 |
-| inbox mode | — | How a handler records that it ran: `transactional` (database effect, one transaction with the inbox row), `afterSideEffect` (SMTP, SMS, Expo, payOS, R2: check, do, record) or none (live SSE). | DOC-09 §4.3 |
+| inbox mode | — | How a handler records that it ran: `transactional` (database effect, one transaction with the inbox row), `afterSideEffect` (SMTP, SMS, Expo, payOS, the object store: check, do, record) or none (live SSE). | DOC-09 §4.3 |
 | retry class | — | The number of attempts a message type gets: `default` (8), `sms` (3), `push` (3), `intent_cancel` (8). | DR-118, DOC-09 §4.2 |
 | retry later | — | The outcome of a handler that throws `RetryLaterError`: the attempt is given back and the message returns after a delay, dead only after 24 hours. For provider rate limits. | DOC-09 §4.4 |
 | message part | — | One of the messages of a chunked action: at most 500 ids per message, with `part` and `parts`. | DR-118, DOC-09 §3.4 |
@@ -386,12 +386,15 @@ This document defines the words of the project, as the project uses them. Every 
 
 | Term | Local name | Definition | Related |
 | --- | --- | --- | --- |
-| VPS | — | The one virtual server per environment that runs Caddy, `cloudflared`, `api`, `worker`, monitoring and native PostgreSQL. | DR-83 |
+| VPS | — | The one virtual server per environment, in Vietnam, that runs Caddy, `cloudflared`, `api`, `worker`, monitoring, native PostgreSQL and (in `vn`) SeaweedFS with the files and the backups on a separate data volume. Losing it loses all of them until a SeaweedFS replica on another server exists. | DR-83, DR-268 |
 | Cloudflare Tunnel (`cloudflared`) | — | The outbound tunnel from Cloudflare to Caddy; the VPS has no inbound port. | DR-83 |
 | Caddy | — | The reverse proxy inside the VPS (plain HTTP; TLS ends at Cloudflare). | DR-83 |
 | Cloudflare Pages | — | Hosting of the static web CMS at `admin.<domain>`. | DR-83 |
-| R2 | — | Cloudflare's S3-compatible object storage: a files bucket and a backup bucket per environment. | DR-83, ADR-0016 |
-| pgBackRest | — | The backup tool: weekly full, daily differential, continuous WAL archive to R2. | DR-66, ADR-0017 |
+| SeaweedFS | — | The S3-compatible object store used in the `vn` profile: Docker Compose on the environment's VPS (S3 gateway), with a files bucket (`rms-<env>-files`) and a backup bucket (`rms-<env>-backup`) on a separate data volume. It is also the local development store (DR-231). A replica on another server is a later step. | DR-268, ADR-0027 |
+| R2 (Cloudflare R2) | — | Cloudflare's object storage, used only in the `global` profile (a deployment outside Vietnam); not used in `vn`. | DR-83, DR-268, ADR-0016 |
+| `vn` / `global` profile | — | The two deployment profiles. `vn` (staging and production now): files and backups in SeaweedFS on the VPS. `global`: the DR-83 topology with files and backups in R2. The profile changes the `S3_*` settings and the pgBackRest repository settings only. | DR-268, ADR-0027 |
+| files host (`files.<domain>`) | — | The Tunnel public hostname (staging `files-staging.<domain>`) that routes clients to the SeaweedFS S3 gateway, the only route from clients to the store; `S3_PUBLIC_ENDPOINT` names it and the CSP and CORS rules allow it. | DR-268, ADR-0027 |
+| pgBackRest | — | The backup tool: weekly full, daily differential, continuous WAL archive to the SeaweedFS backup bucket on the VPS (`global`: R2). | DR-66, DR-268, ADR-0017 |
 | PITR | — | Point-in-time recovery from a base backup plus archived WAL. | DR-66 |
 | uptime probe | — | The external check of `GET /api/v1/health/ready` every 60 seconds that measures availability. | NFR-10, DR-80 |
 | RPO / RTO | — | Recovery point objective (at most 5 minutes of data lost) and recovery time objective (at most 4 hours). | NFR-11 |

@@ -1,6 +1,6 @@
 # ADR-0020: Deploy behind Cloudflare to one VPS per environment, with the API and worker in Docker and PostgreSQL installed natively
 
-- Status: Accepted
+- Status: Superseded in part by ADR-0027 for a deployment in Vietnam; **kept as the reference for a global deployment** that uses Cloudflare R2 (DR-268)
 - Date: 2026-10-19 · Related: DR-83, DR-160, DR-05, DR-06, DR-07, DR-102, DR-08, DR-61, DR-64, DR-66, DR-67, NFR-03, NFR-10, NFR-11
 
 ## Context

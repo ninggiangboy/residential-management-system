@@ -1,7 +1,7 @@
 # Data lifecycle
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
-> Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
+> Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
 This document says how long each kind of data lives and how it leaves: what is never deleted, what is purged by age and by which job, what is cleared but kept, what a restore brings back, and what the system does when a resident's account is deleted. **This is the skeleton the plan asks for in Phase 1** (P0-25): the schemas whose tables are written (`identity`, `residency`, `building`, `audit`, `platform`, the outbox and inbox) are complete, with purge statements run on PostgreSQL 18.6; the tables of the documents not yet written appear with the period the decisions already give, and the Owner has decided that tickets, vehicles, notices and the library are never deleted (DR-115). **The tables still marked "DDL pending" are confirmed when their documents are written; the final version is due before Phase 6.** The periods marked "default" are the defaults of DR-115 until the legal dossier (P0-06) confirms them. The document does not hold the table definitions (DOC-14 to DOC-17), the job runtime (DOC-38), the privacy workflow and the `pii.read` rules (DOC-35) or the backup procedures (DOC-72).
@@ -107,10 +107,10 @@ Keys are `{env}/{building_id}/{module}/{yyyy}/{mm}/{uuid}.{ext}` (DR-61, DR-86).
 | `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56); a bulk ZIP 7 days (DR-123) |
 | `tickets/`, `vehicles/`, `notices/`, `wiki/` | Photos, videos, papers, attachments | Follows the owner, which is never deleted (DR-115) |
 | `reporting/` | Export files | 7 days (DR-55) |
-| `rms-<env>-backup` / `pgbackrest/` | The encrypted repository | 4 full + 7 differential backups and the WAL they need (DR-66, DR-83) |
+| `rms-<env>-backup` / `pgbackrest/` | The encrypted repository | 4 full + 7 differential backups and the WAL they need (DR-66, DR-268) |
 | `rms-<env>-backup` / `pg_dump/` | Weekly logical dump | 4 weeks (DR-66) |
 
-R2 versioning is not used for the files bucket. The quota is 50 GiB per building and counts every row that is not `deleted` (DOC-17 §3.1).
+Object versioning is not used for the files bucket (SeaweedFS in `vn`; R2 in `global`, DR-268). The quota is 50 GiB per building and counts every row that is not `deleted` (DOC-17 §3.1).
 
 ## 4. What a restore brings back
 
@@ -180,12 +180,12 @@ The scope lint (DOC-14 §5.2) applies to the statements on scoped tables (`file_
 | pgBackRest full backup | Weekly; the last **4** full backups are kept | DR-66, DR-83 |
 | pgBackRest differential backup | Daily at 02:00; the last **7** are kept | DR-66 |
 | WAL archive | Continuous, `archive_timeout` 60 s, kept as far back as the oldest kept full backup needs | DR-66 |
-| Repository | R2 bucket `rms-<env>-backup`, encrypted by pgBackRest; its own API token, which the files token cannot read | DR-83 |
+| Repository | Bucket `rms-<env>-backup` in SeaweedFS on the same VPS (`vn`; R2 in `global`), on a separate data volume, encrypted by pgBackRest with the key kept off the VPS; its own S3 identity, which the files identity cannot read | DR-268, DR-83 |
 | Logical dump | Weekly `pg_dump` by `rms_backup` (DOC-19 §8), encrypted before it leaves the host, **4 weeks** | DR-66 |
-| Objects in the files bucket | Not backed up a second time: the files live in R2 only, and the Owner accepted the single-provider risk (2026-10-19) | DR-66 |
-| RPO, RTO | RPO ≤ 5 minutes, RTO ≤ 4 hours; a restore drill every quarter (NFR-11, EXP-12) | DR-66 |
+| Objects in the files bucket | Not backed up a second time: in `vn` the files live in SeaweedFS on the one VPS, with no off-VPS copy until the replica on another server exists; a lost VPS loses them (in `global` they live in R2 only, DR-66) | DR-268, DR-66 |
+| RPO, RTO | RPO ≤ 5 minutes, RTO ≤ 4 hours **for a PostgreSQL fault** (bad migration, dropped table); **not for the loss of the whole VPS** in `vn`, where the backups are on the same host until the replica exists; a restore drill every quarter that includes the backup bucket (NFR-11, EXP-12) | DR-66, DR-268 |
 
-**What this means for deleted data.** Personal data removed from the database (a purge, an account deletion) remains in the backups until the last backup that contains it expires. With 4 weekly full backups and a weekly dump kept 4 weeks, that is **about 5 weeks** after the deletion (a full backup taken just before it, plus the retention). The privacy notice states this period (DOC-35); ADR-0022 keeps the backup repository encrypted with a key that is not on R2. Computed from the schedule above; not measured.
+**What this means for deleted data.** Personal data removed from the database (a purge, an account deletion) remains in the backups until the last backup that contains it expires. With 4 weekly full backups and a weekly dump kept 4 weeks, that is **about 5 weeks** after the deletion (a full backup taken just before it, plus the retention). The privacy notice states this period (DOC-35); ADR-0022 keeps the backup repository encrypted with a key that is not on the VPS or in the backup store. Computed from the schedule above; not measured.
 
 ## 7. Personal data
 
@@ -233,7 +233,7 @@ DOC-10 §5 holds the estimate (computed by `docs/03-architecture/capacity/capaci
 | Rows per day, design scale (5,000 units, 20 buildings) | 13,609 | DOC-10 §5.3 |
 | Database size retained after purges, design scale | 0.92 GB at 1 year, 2.33 GB at 3, 3.74 GB at 5 | DOC-10 §5.3 |
 | Same, if every job tick wrote a `job_run` row and none were purged (what DR-101 prevents) | 6.57 GB at 5 years | DOC-10 §5.3 |
-| Files, R2 | About 4.6 GB per building per year; the 50 GiB quota is reached after about 10.8 years and the 80% alert after about 8.7 years | DOC-10 §5.3 |
+| Files (SeaweedFS volume in `vn`) | About 4.6 GB per building per year; the 50 GiB quota is reached after about 10.8 years and the 80% alert after about 8.7 years | DOC-10 §5.3 |
 | WAL | Up to 1,440 objects per day of 16 MB before compression; measured in P1-20 | DOC-10 §5.5 |
 | Logs and metrics | About 42 MB per day of raw logs for the sample building (8 MB in Loki, 14 days); Prometheus about 25 MB per day | DOC-10 §5.4 |
 
@@ -285,7 +285,7 @@ Tested on PostgreSQL 18.6 on 2026-10-19 on a database built from the DDL of DOC-
 | The job runtime, locks, missed runs | DOC-38, ADR-0015 |
 | The privacy workflow: consent, requests, `pii.read` | DOC-35 |
 | Backup and restore procedures, drills | DOC-72, RB-10, EXP-12 |
-| Upload flow and the R2 delete command | DOC-37 |
+| Upload flow and the object delete command | DOC-37 |
 | Metrics and alerts of the purge jobs | DOC-40 |
 | The legal basis and the confirmed periods | The legal dossier (P0-06) |
 

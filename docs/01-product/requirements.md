@@ -1,7 +1,7 @@
 # Requirements
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
-> Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84, DR-96), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: NFR-11 scope) · 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
+> Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84, DR-96, DR-268), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-04, DOC-05, DOC-21…42 (every design document cites an FR), P0-19, every task `Pn-xx` (acceptance), `docs/10-testing` (test cases)
 
 This document lists what the system must do (FR-01…50) and how well (NFR-01…14), each with acceptance criteria that a test can check. It holds no design: how a rule is built is in the design documents named in §4. Use cases are in DOC-04, features in DOC-05.
@@ -645,7 +645,7 @@ Numbers are design targets for the phase 1 machine and are recalibrated on the s
 | NFR-08 | Isolation | 0 successful reads or writes of another unit or building across the matrix of every endpoint × role and member type × own and foreign unit and building, including internal ticket notes | Unexpected 2xx count | Matrix generated from route metadata | EXP-10 |
 | NFR-09 | Ledger self-check | A nightly job (03:00 building time) verifies the invariants on every unit; an injected difference is reported within 24 h; 0 false positives on clean data | Inject 20 corruptions (DR-78) and compare the report | SQL queries, harness | EXP-11 |
 | NFR-10 | Availability | 99.5% per month | Successful probes ÷ all probes of `GET /api/v1/health/ready` every 60 s, minus announced maintenance (DR-80) | External uptime probe (free tier) | First month in production |
-| NFR-11 | Backup and restore | RPO ≤ 5 min; RTO ≤ 4 h; a restore drill succeeds once per quarter (pgBackRest to R2, point-in-time recovery; DR-66) | Time to a working system; data-loss window; invariant checks after restore | pgBackRest, smoke test | EXP-12 |
+| NFR-11 | Backup and restore | RPO ≤ 5 min; RTO ≤ 4 h; a restore drill succeeds once per quarter (pgBackRest to SeaweedFS on the VPS, `global`: R2; point-in-time recovery; DR-66, DR-268). **Scope:** RPO and RTO hold for PostgreSQL faults (bad migration, dropped table), not for the loss of the whole VPS in `vn` until a SeaweedFS replica on another server exists (DR-268) | Time to a working system; data-loss window; invariant checks after restore | pgBackRest, smoke test | EXP-12 |
 | NFR-12 | Import | A 2,000-row Excel file: accepted `POST /staff/imports` → response carrying the validated preview ≤ 10 s; validation is synchronous in the API (DR-21, DR-80) | Timed integration test | `bun test` | P1-13 (`IM-`) |
 | NFR-13 | Languages | 100% of UI strings exist in Vietnamese and English, with the same ICU placeholders | Parity of keys and placeholders | Catalog parity test in CI | CI |
 | NFR-14 | Personal data | National ID numbers (CCCD) and phone numbers are visible only to the Manager, Admin, the unit's own members and, masked and logged, Guards; the detail view of a profile and every export of it are logged (DR-48, DR-58) | Field-level assertions per role; log rows per view and per export | Authorization matrix, `AD-`/`RM-` tests | `AD-`, `RM-` tests; EXP-10 |

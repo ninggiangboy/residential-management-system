@@ -245,7 +245,7 @@ const filesConfig = defineSlice({
     S3_ENDPOINT: url
       .optional()
       .describe(
-        'Where the API reaches the bucket (the R2 account endpoint; locally the object store).',
+        'Where the API reaches the bucket (the SeaweedFS S3 gateway in `vn` and locally; the R2 account endpoint in `global`, DR-268).',
       ),
     S3_PUBLIC_ENDPOINT: url
       .optional()

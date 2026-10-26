@@ -1,6 +1,6 @@
 # ADR-0016: Store files on R2, upload with a presigned PUT, verify with `HEAD` and a magic-byte check, and track every object in `file_object` under a per-building quota
 
-- Status: Accepted
+- Status: Superseded in part by ADR-0027 for a deployment in Vietnam; **kept as the reference for a global deployment** that uses Cloudflare R2 (DR-268)
 - Date: 2026-10-19 · Related: DR-61, DR-83, DR-86, DR-07, FR-40, FR-19.1, FR-30.1, NFR-08, EXP-10, DOC-37, DOC-17, DOC-39
 
 ## Context
