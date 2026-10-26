@@ -46,6 +46,7 @@ interface ResidencyApi {
   listActiveMemberships(accountId: Uuid): Promise<ActiveMembershipDto[]>
   buildingIdsOfAccounts(accountIds: Uuid[]): Promise<Array<{ accountId: Uuid; buildingId: Uuid }>>
   lookup(buildingId: Uuid, q: string, opts?: { limitPerKind?: number }): Promise<LookupDto>
+  findUnitsByCodes(buildingId: Uuid, codes: string[]): Promise<Array<{ unitId: Uuid; code: string; occupancy: 'occupied' | 'rented' | 'vacant'; hasActiveOwner: boolean }>>   // DR-265, for the fee import (DOC-21 §2.1)
 }
 interface ActiveMembershipDto {            // the sign-in answer and GET /me
   membershipId: Uuid; buildingId: Uuid; unitId: Uuid; unitCode: string
@@ -62,6 +63,7 @@ interface ResidentHitDto { accountId: Uuid; fullName: string | null; phone: stri
 | --- | --- |
 | `listActiveMemberships` | The memberships of the account whose status is `active`, ordered by unit code. A `locked` one is not returned: a locked membership gives no access, and the app must not offer it in `Unit-Pick`. At most 500 rows; more is a data defect and the call throws (same rule as `activeUnitIds`). Statement: S11 of §17.1; served by `membership_one_per_account_unit` (prefix `account_id`) and the unit primary key. An empty answer is the neutral screen "No unit is linked to this account" (UC-14 E7). |
 | `buildingIdsOfAccounts` | The distinct buildings in which each account has a **non-removed** membership, for up to 500 account ids; an account with none is absent. The boot guard of DOC-36 §10.1 check 1 calls it with the `is_demo` account ids and compares each building with `BuildingApi.isDemo`. |
+| `findUnitsByCodes` | *Owed to P2-04 (DR-265).* At most 5,000 codes, compared by `lower(code)` through `unit_code_prefix_idx`; one row per code that exists, none for a missing code; `hasActiveOwner` is true when a non-removed owner membership exists. The caller is `finance`'s fee import (DOC-21 §4.3) |
 | `lookup` | *Built in P1-14 (DR-260).* The union search of §11 for units and residents. `limitPerKind` 1…20, default 20. The DTO carries the **full** E.164 phone; the caller maps it to the audience (a Guard gets it masked, DOC-12 §10, DOC-29). The caller never logs the DTO. |
 
 `MembershipDto.status` is `active` or `locked`; a `removed` row is never returned (DOC-09 §7.2). The calls `getUnits`, `listRecipients`, `listNoticeRecipients`, `getMembershipForScan` and `ownedUnitIds` behave as DOC-09 §7.2 says.

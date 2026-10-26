@@ -511,7 +511,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 
 | Prefix | Meaning | Document | Written today | Status | Task |
 | --- | --- | --- | --- | --- | --- |
-| `LG-` | Ledger, allocation, money log | DOC-22 | not written | planned (P2) | P2-02, P2-03, P2-07 |
+| `LG-` | Ledger, allocation, money log, batch lifecycle | [DOC-22](../06-design/ledger-and-allocation.md) owns `LG-01…60`; [DOC-21](../06-design/fee-batches-and-import.md) takes `LG-61…81` | `LG-01…81` | Draft (DOC-21, DOC-22) | P2-02, P2-03, P2-05, P2-07…P2-11 |
 | `IN-` | Payment intents and settlement | DOC-23 | not written | planned (P2, P3) | P2-06, P3-02, P3-04 |
 | `PX-` | payOS gateway adapter | DOC-24 | not written | planned (P3) | P3 |
 | `ST-` | Bank-statement reconciliation | DOC-25 | not written | planned (P3) | P3-07 |
@@ -530,7 +530,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `JB-` | Jobs and outbox runtime | [DOC-38](../06-design/jobs-and-outbox-runtime.md) §9 | `JB-01…26` | Review | P1-05 |
 | `MC-` | Messaging contracts | [DOC-09](../03-architecture/messaging-contracts.md) §9 | `MC-01…20` | Review | P1-02, P1-05 |
 | `ER-` | Error handling | [DOC-42](../06-design/error-handling.md) §14 | `ER-01…45` | Review | P1-03, P1-04, P1-05 |
-| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 starts at number 50 | `IM-01…43` | Draft (DOC-18); DOC-21 not written | P1-13, P2-04 |
+| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 holds `IM-50…77` (fee import) | `IM-01…43`, `IM-50…77` | Draft (DOC-18, DOC-21) | P1-13, P2-04 |
 | `IDM-` | Identity and residency tables (statement and constraint tests) | [DOC-16](../05-data/identity-and-residency-model.md) §9 | `IDM-01…68`; statement tests `IDM-S01…S14` | Review | P1-05 |
 | `OPM-` | Operations-model tables | [DOC-17](../05-data/operations-model.md) §13 | `OPM-01…44`, `50…66`, `70…74`, `80…83`, `90…99` (80 tests); statement tests `OPM-S01…S12` | Draft | P1-05, P1-07 |
 | `FNM-` | Finance tables (constraint, trigger and statement tests) | [DOC-15](../05-data/finance-model.md) §13 | `FNM-01…123`; statement tests `FNM-S01…S12` | Draft | P2-01, P2-02 |

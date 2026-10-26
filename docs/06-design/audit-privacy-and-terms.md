@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -153,6 +153,7 @@ One row per action the design knows today. Each document that adds staff mutatio
 | `finance.batch.recall` | `fee_batch` | Manager, Admin | `status` | R | FR-04 |
 | `finance.batch.close` | `fee_batch` | Manager, Admin | `status` | | DR-20 |
 | `finance.batch.reissue` | `fee_batch` | Manager, Admin | — (`replaces`) | | DR-20 |
+| `finance.batch.discard` | `fee_batch` | Manager, Admin | — (`code`, `chargeCount` in `details`) | | DR-265 |
 | `finance.charge.update` | `charge` | Manager, Admin | edited fields of a draft charge | | FR-02 |
 | `finance.charge.void` | `charge` | Manager, Admin | `status` | R | FR-49 |
 | `finance.payment.post` | `payment` | Manager, Admin; **system** (§3.6) | — (`source`, `amount` in `details`) | | FR-05, FR-37.3 |

@@ -28,7 +28,7 @@ function documentedCodes(): string[] {
 
 test('UICP-03: every code of DOC-42 §5 has error.<code>, and no error key lacks a code', () => {
   const codes = documentedCodes()
-  expect(codes).toHaveLength(102)
+  expect(codes).toHaveLength(103)
   expect([...codes].sort()).toEqual([...ERROR_CODES, ...RULE_CODES].sort())
   const errorKeys = keys.filter((k) => k.startsWith('error.')).map((k) => k.slice('error.'.length))
   expect(errorKeys.sort()).toEqual([...codes].sort())

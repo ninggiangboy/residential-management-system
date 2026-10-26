@@ -102,6 +102,7 @@ export const RULE_CODES = [
   'due_date_in_past',
   'due_date_not_later',
   'no_unit_selected',
+  'too_many_units',
   'audience_empty',
   'notice_rule',
   'folder_depth',

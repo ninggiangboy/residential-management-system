@@ -94,6 +94,7 @@ export const en = {
   'error.due_date_in_past': 'The due date cannot be in the past.',
   'error.due_date_not_later': 'Choose a date later than the current due date.',
   'error.no_unit_selected': 'Select at least one unit.',
+  'error.too_many_units': 'Select at most {max, number} units at a time.',
   'error.audience_empty': 'This notice would reach nobody. Choose who receives it.',
   'error.notice_rule': 'The notice has a body, attachment or link that is not allowed.',
   'error.folder_depth': 'Folders can be at most {max} levels deep.',

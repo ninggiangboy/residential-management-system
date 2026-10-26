@@ -1,10 +1,10 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-21 (DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-26 (DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
-This document numbers every endpoint of the API (`E-01…E-169`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
+This document numbers every endpoint of the API (`E-01…E-172`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
 
 Every new decision in this document is recorded as DR-142…DR-14x and summarized in §13. Sample requests and responses use the sample building (DOC-01): unit `A-1508`, owner Nguyễn Văn An, tenant Trần Thị Bình.
 
@@ -142,6 +142,9 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-73 | `GET /staff/imports/{id}` | `getImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 | E-74 | `POST /staff/imports/{id}/commit` | `commitImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 | E-169 | `GET /staff/imports` | `listImports` | staff: admin, manager | | | UC-13, UC-01 | §10 |
+| E-170 | `POST /staff/fee-batches/{id}/charges` | `addDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
+| E-171 | `DELETE /staff/charges/{id}` | `removeDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
+| E-172 | `DELETE /staff/fee-batches/{id}` | `discardFeeBatch` | staff: admin, manager | | UC-01 | DOC-21 §3.8 (DR-265, P2) |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -2715,6 +2718,9 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-41 | `GET /staff/accounts/{id}` | The `ETag` for an edit with `If-Match` |
 | E-73 | `GET /staff/imports/{id}` | Read the stored preview again |
 | E-169 | `GET /staff/imports` | The import history of `W-Import` (DR-226, added after the catalog was numbered) |
+| E-170 | `POST /staff/fee-batches/{id}/charges` | Add one unit's charge to a draft (DR-265) |
+| E-171 | `DELETE /staff/charges/{id}` | Remove a draft charge (DR-265) |
+| E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |

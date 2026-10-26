@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -210,7 +210,7 @@ COMMIT;                                                              -- the lock
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL statement_timeout = '300s';
 SELECT pg_try_advisory_xact_lock(hashtext('job:invariant_check'));
--- … the 20 queries of DR-78 …
+-- … the 19 queries of DOC-22 §12 (DR-266) …
 COMMIT;
 ```
 
@@ -347,7 +347,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `import_expire` | Turns `validated` import jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove` (built in P1-13, one batch of 500 per transaction) | `{"expired": n}` | DOC-18, DOC-20 §5 |
 | `export_purge` | Deletes export rows and files older than 7 days | `{"deleted": n}` | DOC-33, DOC-20 §2.5 |
 | `realtime_purge` | Deletes `realtime.events` older than 24 hours | `{"deleted": n}` | DOC-17 §9, DOC-20 |
-| `invariant_check` | The 20 queries of DR-78 in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 20, "violations": n}` | DOC-22 (EXP-11) |
+| `invariant_check` | The 19 queries of DOC-22 §12 (the 17 ledger corruptions of DR-78 and two table checks, DR-266) in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 19, "violations": n}` | DOC-22 (EXP-11) |
 | `qr_scan_purge` | Deletes `qr_scan` and `lookup_log` rows older than 90 days | `{"deleted": n}` | DOC-20 §5 |
 | `otp_purge` | Deletes OTP challenges older than 24 hours | `{"deleted": n}` | DOC-20 §5 |
 | `token_purge` | Deletes consumed or expired tokens, expired or revoked families, idle buckets (identity and platform), expired idempotency keys, `job_run` rows older than 30 days | `{"deleted": {"password_token": n, …}}` | DOC-20 §5 |
