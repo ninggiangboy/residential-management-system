@@ -1,0 +1,33 @@
+{
+  "name": "@rms/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src --pass-with-no-tests"
+  },
+  "dependencies": {
+    "@rms/design-tokens": "workspace:*",
+    "@rms/shared-types": "workspace:*",
+    "phosphor-react-native": "3.0.6",
+    "react-native-svg": "15.16.0"
+  },
+  "peerDependencies": {
+    "nativewind": "4.2.7",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.10.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  }
+}
