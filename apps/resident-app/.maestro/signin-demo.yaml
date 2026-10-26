@@ -12,6 +12,7 @@ appId: vn.rms.resident.dev
     id: login-submit
 - assertVisible: "Enter the OTP"
 - inputText: "123456"
+- runFlow: helpers/dismiss-push-prompt.yaml
 # One verify, then the single home opens with no Unit-Pick (UIRA-32).
 - assertVisible:
     id: home-screen
