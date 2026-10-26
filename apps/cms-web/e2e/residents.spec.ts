@@ -14,7 +14,8 @@ async function unitWithOwner(
 ): Promise<{ code: string; url: string }> {
   const code = unique('R').toUpperCase().slice(0, 7)
   await page.goto('/units')
-  await page.getByRole('button', { name: 'Thêm căn' }).click()
+  // First: an empty list repeats the action in its empty state.
+  await page.getByRole('button', { name: 'Thêm căn' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Thêm căn hộ' })
   await dialog.getByLabel('Mã căn *').fill(code)
   await dialog.getByRole('button', { name: 'Thêm căn' }).click()
@@ -110,7 +111,7 @@ test.describe('W-Residents and W-Resident-Add (UIWR-16…29)', () => {
     // A second unit gets the same person as a tenant.
     const second = unique('T').toUpperCase().slice(0, 7)
     await page.goto('/units')
-    await page.getByRole('button', { name: 'Thêm căn' }).click()
+    await page.getByRole('button', { name: 'Thêm căn' }).first().click()
     await page.getByRole('dialog', { name: 'Thêm căn hộ' }).getByLabel('Mã căn *').fill(second)
     await page.getByRole('dialog').getByRole('button', { name: 'Thêm căn' }).click()
     await expect(page).toHaveURL(/\/units\/[0-9a-f-]{36}/)

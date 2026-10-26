@@ -6,7 +6,8 @@ const phone = () =>
 
 async function addUnit(page: Page, code: string, floor = '7'): Promise<void> {
   await page.goto('/units')
-  await page.getByRole('button', { name: 'Thêm căn' }).click()
+  // First: an empty list repeats the action in its empty state.
+  await page.getByRole('button', { name: 'Thêm căn' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Thêm căn hộ' })
   await dialog.getByLabel('Mã căn *').fill(code)
   await dialog.getByLabel('Tầng').fill(floor)
