@@ -14,6 +14,36 @@ appId: vn.rms.staff.dev
 - tapOn:
     text: "Continue"
     optional: true
+# On Android the link may leave the launcher on its list of servers; the one server of `bun run rapp`/`sapp` is picked from it.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible: "http://.*:808[12]"
+          timeout: 30000
+          optional: true
+      - tapOn:
+          text: "http://.*:808[12]"
+          optional: true
+      # The development client's introduction sheet covers the app and takes its input; it opens a moment after the app does.
+      - extendedWaitUntil:
+          visible: "Continue"
+          timeout: 20000
+          optional: true
+      - tapOn:
+          text: "Continue"
+          optional: true
+      # Then the tools menu opens over the app; Back closes it (only when it is open, or Back would leave the app).
+      - extendedWaitUntil:
+          visible: "Toggle performance monitor"
+          timeout: 8000
+          optional: true
+      - runFlow:
+          when:
+            visible: "Toggle performance monitor"
+          commands:
+            - pressKey: back
 - extendedWaitUntil:
     visible:
       id: "email-input"

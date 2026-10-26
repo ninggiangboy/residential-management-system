@@ -8,6 +8,7 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: login-submit
 - inputText: "123456"
+- runFlow: helpers/dismiss-push-prompt.yaml
 - tapOn:
     id: tile-contact
 - assertVisible: "1900 1234"

@@ -1,0 +1,11 @@
+# The first Home after a sign-in asks whether to turn on notifications (`res.main.push.*`); the sheet covers Home, so a flow closes it
+# before it looks for anything on the screen. It is not there on a later start of the same install.
+appId: vn.rms.resident.dev
+---
+- extendedWaitUntil:
+    visible: "Not now"
+    timeout: 15000
+    optional: true
+- tapOn:
+    text: "Not now"
+    optional: true
