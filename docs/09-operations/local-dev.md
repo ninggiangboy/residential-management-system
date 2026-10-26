@@ -162,7 +162,7 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `test:authz` | The authorization matrix generator and run (EXP-10, DOC-39 §4) | P1-15 |
 | `test:e2e` | Playwright flows of the web CMS: `apps/cms-web/e2e/run.ts` clones a seeded database, starts the API on 3100 and Vite on **5173** (the CORS origin of the local bucket), runs the specs one after the other and stops them; needs `infra:up` and `.env.local`; stop `dev:web` first. Arguments go to Playwright (`bun run test:e2e e2e/staff.spec.ts`) | P1-16 (done) |
 | `test:grants` | The permission tests of DOC-19 §9 on clones of the migrated template (`apps/api/tests/grants`) | P1-06 (done) |
-| `test:mobile` | Maestro flows against a development build on a simulator (on demand, DOC-88 §11). **Created in P1-17.** Needs `maestro` (`brew install mobile-dev-inc/tap/maestro`, 2.11.0 verified), the API on :3000 with the demo seed, Metro of the app under test and a booted simulator whose language is English; each flow starts with `helpers/launch.yaml`, which opens the Metro link of the development client | P1-17 |
+| `test:mobile` | Maestro flows against a development build on a simulator (on demand, DOC-88 §11). **Created in P1-17.** Needs `maestro` (`brew install mobile-dev-inc/tap/maestro`, 2.11.0 verified), the API on :3000 with the demo seed, Metro of the app under test and a booted simulator whose language is English; each flow starts with `helpers/launch.yaml`, which opens the Metro link of the development client and, on Android, picks the server from the launcher and closes its introduction sheet. Run it with `maestro --device <id>` when an iOS simulator and an emulator are both up. On the Xcode 27 simulator (iOS 27.0) Maestro's `inputText` did not reach a field; on an Android emulator it does | P1-17 |
 | `test:load` | k6 profile named by `--profile`, against the host named by `TEST_BASE_URL` (EXP-07; staging only, DOC-88 §11) | P6-01 |
 | `test:db-clean` | Drops the leftover test databases `rms_t_*` and the templates `rms_tpl_*` of an older hash (DOC-88 §6) | P1-04 (done) |
 | `check:test-ids` | Compares the IDs of every "Required tests" table with the test titles; **warns, never fails** (DOC-88 §5, DR-169) | P1-19 |
@@ -321,6 +321,10 @@ Both apps are Expo SDK 58 on the New Architecture, as **development builds** (DR
    | A physical device on the same Wi-Fi | `http://<LAN-IP of the laptop>:3000/api/v1` |
 
    A physical device cannot reach `localhost`. `bun run dev` listens on all interfaces in `local`; allow the port in the laptop firewall.
+
+   An Android emulator can also keep `localhost` in `API_BASE_URL` if the ports are forwarded: `adb reverse tcp:3000 tcp:3000` and `adb reverse tcp:8081 tcp:8081`. The Maestro flows rely on this.
+
+   **An Android build needs `EAS_PROJECT_ID` while the native app is built**, even though no EAS project exists yet: any UUID does (`EAS_PROJECT_ID=00000000-0000-4000-8000-000000000000 bunx expo run:android`). `expo-observe` creates its native module as soon as the JavaScript starts, reads the project id from the configuration embedded in the build, and stops the app on a red screen (`Project ID is required to send observability metrics`) when it is missing; Metro cannot supply it afterwards, and the JavaScript cannot switch the module off. iOS does not stop. The placeholder is for a local build only, because the push token and the update URL also read it; the real id comes from `eas init` (DOC-73 §5.2). Android also needs JDK 17 or 21 (`JAVA_HOME`) and `ANDROID_HOME` with platform 37, build-tools 37.0.0 and one arm64 image.
 3. Start Metro: `bun run dev:resident` (port 8081) or `bun run dev:staff` (port 8082), open the development build, and it connects by the QR code or the URL printed in the terminal.
 4. Sign in as a demo resident (§9) or, in the staff app, as a demo staff member.
 
