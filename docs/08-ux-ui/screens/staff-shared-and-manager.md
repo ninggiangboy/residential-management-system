@@ -384,6 +384,8 @@ Loading: skeleton, then the persisted `['staff', 'me']` shows first. Offline: wr
 
 The role labels follow the web sidebar ("Ban quản lý" for the Manager, `W-Tickets`) and the artboard (`Tag` "Kỹ thuật").
 
+*As built (P1-17, DR-265):* `S-Account` has the avatar initials (the photo change waits for the upload screen), the role tag, the building name, the language sheet, the push switch (saved through E-31; the registration with E-34 waits for the `notification` module), the password note, the sessions view, a developer-only "Device check" row (push token and a QR scan with the camera; hidden when `APP_ENV` is `production`) and the sign-out dialog. The wrong-client page is the route `wrong-app`. The landing is `(app)/index`, which redirects to `/account`.
+
 ### 9. Acceptance criteria
 
 | ID | Given / When / Then | Level |

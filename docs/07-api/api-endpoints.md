@@ -728,6 +728,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 - **Performance:** p95 under 200 ms.
 - **Events:** `building.file_delete_requested.v1` for the replaced avatar (DOC-37 §14).
 - **Tests:** FS-08, FS-09, FS-13; AG-xx (an unknown key).
+- *As built (P1-17, DR-265):* `UpdateResidentMe` in `identity`. Only `language` and `pushEnabled` are accepted for now (the body schema is strict, so `avatarFileId`, like `displayName` and `phone`, is 400 `validation_failed`); an empty body is 400. The guarded statement names the status only (last write wins) and moves `version`. The answer is the `account` object `GET /me` returns (`id`, `phone`, `displayName`, `language`, `pushEnabled`). Tested in `resident-auth.integration.test.ts` and `resident-account.test.ts`. The avatar comes with the avatar upload of the resident app.
 
 ### E-15 `GET /me/contact` · `getBuildingContact`
 
@@ -748,6 +749,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 - **Performance:** p95 under 100 ms.
 - **Events:** none.
 - **Tests:** AG-xx; the contact fields are BD-07.
+- *As built (P1-17, DR-265):* `residentContactRoutes` in `building` (beside E-16); the block is the one E-03 builds (`contactOf`); the building of the first active membership, or the deployment's real building when the account has none; `Cache-Control: private, max-age=60`. Tested in `resident-auth.integration.test.ts`.
 
 ### E-16 `GET /me/terms` · `getMyTerms`
 

@@ -100,6 +100,8 @@ Rules (DOC-12 §2.2, §6): clients import `import type { App } from '@app/api'` 
 | No deep imports | No import from `react-native/Libraries/*` (Strict TypeScript API, RN 0.87+) | review, DOC-11 §6.4 |
 | Async file API | `File.write()` is asynchronous in SDK 58 | DOC-11 §6.4 |
 
+*As built (P1-17, DR-265).* `@rms/mobile-core` and `@rms/ui-native` exist; the apps keep `app/` at their root (not `src/app/`) and their routes are flat: `(auth)/index` (sign-in), `(auth)/otp`, `terms`, `terms-full`, `unit-pick`, `contact`, `offline`, `(app)/…`; the staff app has `(auth)/index`, `forgot`, `forgot-sent`, `wrong-app`, `(app)/account/…`. There is one persisted query cache per install (`rms.query-cache`), cleared at every sign-out and before every sign-in, in place of one key per account (§9.2). `can` is the table of `@rms/shared-types` (`PolicySubject`), read through `useUnit`-style helpers (`capabilityOf`). The Eden answer helpers are in `@rms/client-core` and `errorText` in `@rms/i18n-catalog`.
+
 If a check fails the fallback of DOC-11 §10 applies (Expo as a second workspace root installed with `--linker hoisted`, sharing `packages/*` by relative path).
 
 ## 3. Build keys
@@ -477,7 +479,7 @@ sequenceDiagram
 
 | Rule | Detail |
 | --- | --- |
-| Endpoints | E-22 `POST /me/devices` (resident), E-34 `POST /staff/devices` (staff); body `{ expoPushToken, platform: 'ios' \| 'android', appVersion }`; an upsert on the token, so calling it again is safe |
+| Endpoints (*not built yet, DR-265: the apps obtain the token and keep the permission and `pushEnabled`; the registration waits for the `notification` module*) | E-22 `POST /me/devices` (resident), E-34 `POST /staff/devices` (staff); body `{ expoPushToken, platform: 'ios' \| 'android', appVersion }`; an upsert on the token, so calling it again is safe |
 | When | after a successful sign-in, at every cold start (cheap, and it re-binds the token to the session), when `addPushTokenListener` fires, and when the user turns push on in `Account` |
 | Permission | never asked at first launch; an explanation first, then the OS prompt. The explanation is the `BottomSheet` of `Main` shown once, on the first home render after sign-in (DR-199, DOC-57); "Để sau" is not asked again until the user turns push on in `Account`. On Android 13+ the prompt appears only after at least one channel exists, so the channels `default` and `urgent` (DR-52) are created before `getExpoPushTokenAsync` (verified 2026-10-20 at <https://docs.expo.dev/versions/latest/sdk/notifications/>) |
 | Denied | no token, no registration; `Account` shows the state with a link to the OS settings. The in-app inbox still works |
@@ -571,7 +573,7 @@ Event to cache map (the web owns it; DOC-52 owns the event names):
 | Client | Hooks | `kind` sent |
 | --- | --- | --- |
 | Web | React error boundary per route (`render`); `window.onerror` (`crash`); `unhandledrejection` (`unhandled_rejection`) | |
-| Apps | **EAS Observe** (DR-264): JavaScript errors and the startup and screen metrics go to Expo; the app does not post to `POST /client-errors` unless P1-17 finds a case Observe misses (a repeated network failure of a screen's main query, `network`), and then through the `@rms/client-core` reporter below. Native crashes are not captured by Observe (checked 2026-10-25); the stores' crash reports cover them | |
+| Apps | **EAS Observe** (DR-264, DR-265): JavaScript errors, render errors (through `ObserveErrorBoundary`) and the startup and screen metrics go to Expo; **native crashes too, with `expo-observe` 57.0.21 or later, on Android and iOS and not on a simulator** (checked 2026-10-26 at docs.expo.dev/eas/observe/errors; the 2026-10-25 note that Observe does not capture them was wrong). The apps do not post to `POST /client-errors`: P1-17 found no case Observe misses. Error reporting is a preview feature; source maps need `uploadSourceMaps: true` on the production EAS profile (DOC-73) | |
 
 Reporting to `POST /client-errors` (E-04, DOC-42 §10): body `{ app, appVersion, platform, kind, screen, errorName, message, stack?, requestId? }`; `message` ≤ 500 characters, `stack` ≤ 4 KB, body ≤ 8 KB, unknown keys refused.
 
@@ -584,6 +586,8 @@ Rules (DR-192):
 - The reporter is fire-and-forget through the plain `fetch` (no authenticated fetcher, no refresh, no retry loops), so a failing API cannot start a report storm.
 - After a `render` error the boundary shows "Something went wrong" with the "Reference: {requestId}" and a Reload button; a `crash` on mobile is reported on the next start from a small record in AsyncStorage (the JS handler may not finish a network call).
 - Development builds log to the console and do not report.
+
+*As built for the apps (P1-17, DR-265):* the root layout of each app is `ObserveRoot.wrap(RootLayout)`; `markInteractive()` runs when the first screen is decided (the boot and the first reads are done), and the route tree sits in an `ObserveErrorBoundary` whose fallback is the "Something went wrong" screen with a reload. `expo-observe` has no config plugin; it is a native module, so a development or production build is needed (it does not run in Expo Go) and the first JavaScript error reaches the dashboard only from a build with an EAS project id (`EAS_PROJECT_ID`, DOC-73 §3).
 
 ## 16. Updates and the minimum version
 
@@ -690,4 +694,4 @@ Delegated design details (the Owner delegated documentation decisions that touch
 ## Open questions
 
 - The closed list of push `route` values is owned by DOC-31 (not written); §10.2 holds a provisional list (DR-193).
-- P1-01 confirms the shape of the Eden tree (`.api.v1`) and P1-17 the `User-Agent` and `File.upload` header behavior (§4.1, §4.2, §12); a different result changes only those lines.
+- P1-01 confirmed the shape of the Eden tree (`.api.v1`). P1-17 did not set a `User-Agent` (React Native's default stays; the server reads `X-App-Id` and `X-App-Version`); `File.upload` and the signed `Content-Type` (§12) wait for the first upload screen (P4).

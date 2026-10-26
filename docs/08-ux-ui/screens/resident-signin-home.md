@@ -439,6 +439,8 @@ As `Terms`. While the screen is open every other call of the app waits on the ga
 
 The reader and `res.terms.action.read-full` are shared with `Terms`.
 
+*As built (P1-17, DR-265):* the screen has no subtitle line: E-16 returns no publication date, so `res.terms-update.subtitle` is in the catalog and unused until it does. The routes are `terms` and `terms-full` at the top of the app (not a `(gates)` group). `Main` shows the greeting, the unit switcher and the "Liên hệ BQL" shortcut with no tab bar (UIRA-38 forbids a placeholder tab; the "Căn hộ" tab has no content before P4); the push sheet is shown once per device (`rms.push-asked`) and obtains the OS permission and the Expo token; the registration with E-22 waits for the `notification` module.
+
 ### 9. Acceptance criteria
 
 | ID | Given / When / Then | Level |

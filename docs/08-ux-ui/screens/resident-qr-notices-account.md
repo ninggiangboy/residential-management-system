@@ -110,6 +110,8 @@ Loading: skeleton rows (the persisted `['me']` shows first). Offline: persisted 
 
 The member-type labels also serve `Unit-Pick` and the unit screens. Error texts are `error.<code>` (DOC-68).
 
+*As built (P1-17, DR-265):* `Account` has the profile row (initials, name, phone), the homes, the language sheet, the push switch, the links to `Contact`, the terms reader and `Sessions`, a developer-only "Device check" row (hidden when `APP_ENV` is `production`) and the sign-out dialog. **Not built yet:** the pencil and the avatar (the upload waits for P4), the phone-change row (`Account-Phone`), the deletion row and banner (`Account-Deletion`; E-18 and E-19 are not built). The `Sessions` list shows no revoke button on the current row (UIRQ-17); signing out is on `Account`, so UIRQ-19 is met through UIRQ-07.
+
 ### 9. Acceptance criteria
 
 | ID | Given / When / Then | Level |

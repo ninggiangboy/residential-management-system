@@ -93,6 +93,8 @@ const config: ExpoConfig = {
 export default config
 ```
 
+*As built (P1-17, DR-265).* Each app has an `app.config.ts` of this shape with these differences: `version` is `1.0.0` (the API's `MIN_APP_VERSION` default refuses less); the bundle id is `vn.rms.<app>` with `.dev` while `APP_ENV` is `local` or `development` (the placeholder `<reverse-domain>` is `vn` until the Owner decides, DOC-70 §2); `EAS_PROJECT_ID` is read from the environment and `updates` and `extra.eas` are written only when it is set (no EAS project exists yet); the plugins are `expo-router`, `expo-dev-client`, `expo-secure-store`, `expo-localization`, `expo-notifications`, `expo-font` and, in the staff app, `expo-camera` with `cameraPermission: false`; the staff app has `locales/vi.json` and `en.json` with the camera string, the resident app none (it uses no permission in P1); `expo-image-picker` and `expo-build-properties` are not installed yet; `expo-observe` needs no plugin. The two apps read `API_BASE_URL` and `APP_ENV` from the environment (`apps/<app>/.env.local` locally). `eas.json` is not written yet (the first EAS build, with the Owner's login).
+
 ### 3.1 Rules
 
 - **`APP_ENV`, never `NODE_ENV`** (DOC-11 §6.4: Expo sets `NODE_ENV` from the command). The values are `local` (`bun run dev:resident`), `development`, `staging`, `production` (DR-69).
