@@ -1,0 +1,19 @@
+# UIRA-01, UIRA-03, UIRA-10, UIRA-12: an empty field sends nothing; an unknown number shows the contact row; typing again clears it.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: login-submit
+- assertVisible: "Enter your phone number."
+- tapOn:
+    id: phone-input
+- inputText: "0911 111 111"
+- tapOn:
+    id: login-submit
+- assertVisible: "This number is not in the system.*"
+- assertVisible:
+    id: call-office
+- tapOn:
+    id: phone-input
+- inputText: "2"
+- assertNotVisible: "This number is not in the system.*"

@@ -1,0 +1,13 @@
+# UIRQ-20: the contact screen shows the hotline and the working hours of the building.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0902 345 678"
+- tapOn:
+    id: login-submit
+- inputText: "123456"
+- tapOn:
+    id: tile-contact
+- assertVisible: "1900 1234"

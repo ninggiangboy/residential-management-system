@@ -1,0 +1,21 @@
+# UIRQ-01, UIRQ-02, UIRA-43, CL-24: switching homes drops the previous home's cached data; nothing of A-1508 shows under A-0703.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0901 234 567"
+- tapOn:
+    id: login-submit
+- inputText: "123456"
+- tapOn:
+    id: unit-A-1508
+- tapOn:
+    id: open-account
+- assertVisible: "Owner, selected"
+- tapOn:
+    id: account-unit-A-0703
+- assertVisible:
+    id: home-screen
+- assertVisible: "A-0703"
+- assertNotVisible: "A-1508"

@@ -1,0 +1,16 @@
+# UIRA-14, UIRA-20: a wrong code clears the input and shows the tries left; "Change phone number" returns with the phone kept.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0902 345 678"
+- tapOn:
+    id: login-submit
+- assertVisible: "Enter the OTP"
+- inputText: "654321"
+- assertVisible: "Wrong code. 4 tries left."
+- tapOn:
+    id: otp-change-phone
+- assertVisible: "Sign in"
+- assertVisible: "0902 345 678"
