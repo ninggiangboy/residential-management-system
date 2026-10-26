@@ -1,0 +1,20 @@
+# The development client opens on Expo's server picker after a clear state; this opens the Metro server of `bun run rapp` (port 8081)
+# and waits for the first screen. A production or staging build has no picker, and its flows start with `launchApp` alone.
+appId: vn.rms.resident.dev
+---
+- launchApp:
+    clearState: true
+- openLink: exp+rms-resident://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081&disableOnboarding=1
+# iOS asks before it hands the link to the app.
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Open"
+    optional: true
+- tapOn:
+    text: "Continue"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "phone-input"
+    timeout: 60000

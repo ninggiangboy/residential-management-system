@@ -1,0 +1,11 @@
+# UIRA-06: the language button switches every text at once.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- assertVisible: "Sign in"
+- tapOn:
+    id: language-switch
+- assertVisible: "Đăng nhập"
+- tapOn:
+    id: language-switch
+- assertVisible: "Sign in"

@@ -1,0 +1,20 @@
+# UIRQ-03: the language is saved on the account and kept after the app restarts.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0902 345 678"
+- tapOn:
+    id: login-submit
+- inputText: "123456"
+- tapOn:
+    id: open-account
+- tapOn:
+    id: account-language
+- tapOn:
+    id: language-vi
+- assertVisible: "Tài khoản"
+- stopApp
+- runFlow: helpers/reopen.yaml
+- assertVisible: "Tài khoản"

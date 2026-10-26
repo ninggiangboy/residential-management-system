@@ -1,0 +1,21 @@
+# UIRQ-07: signing out clears the session and returns to Login; the sessions list shows this device first.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0902 345 678"
+- tapOn:
+    id: login-submit
+- inputText: "123456"
+- tapOn:
+    id: open-account
+- tapOn:
+    id: account-sessions
+- assertVisible: "This device"
+- back
+- tapOn:
+    id: sign-out
+- tapOn:
+    id: signout-confirm
+- assertVisible: "Sign in"

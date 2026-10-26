@@ -1,6 +1,93 @@
-import { Stack } from 'expo-router'
+import {
+  MobileProvider,
+  setForegroundNotificationHandler,
+  setupConnectivity,
+  useRuntime,
+} from '@rms/mobile-core'
+import { FONT_SOURCES } from '@rms/ui-native'
+import { useFonts } from 'expo-font'
+import { ObserveErrorBoundary, ObserveRoot, useObserve } from 'expo-observe'
+import { Stack, useRouter } from 'expo-router'
+import * as SplashScreen from 'expo-splash-screen'
+import { StatusBar } from 'expo-status-bar'
+import { useEffect } from 'react'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { ErrorFallback } from '../src/features/error-fallback'
+import { UpgradeScreen } from '../src/features/upgrade-screen'
+import { useFlow } from '../src/features/use-flow'
+import { useUpgradeCheck } from '../src/features/use-upgrade'
+import { runtime } from '../src/runtime'
 import '../global.css'
 
-export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />
+void SplashScreen.preventAutoHideAsync()
+setForegroundNotificationHandler()
+
+function Routes() {
+  const { session } = useRuntime()
+  const router = useRouter()
+  const flow = useFlow()
+  const upgrade = useUpgradeCheck()
+  const { markInteractive } = useObserve()
+  const settled = flow.phase !== 'booting' && flow.phase !== 'loading'
+
+  useEffect(() => {
+    void session.boot()
+  }, [session])
+
+  useEffect(() => {
+    if (!settled) return
+    void SplashScreen.hideAsync()
+    markInteractive()
+  }, [settled, markInteractive])
+
+  // The gate of `terms_required` opens the update screen over whatever is open (DOC-57 `Terms-Update`).
+  useEffect(() => {
+    if (flow.gateOpen && flow.phase === 'ready') router.push('/terms?mode=update')
+  }, [flow.gateOpen, flow.phase, router])
+
+  if (upgrade) return <UpgradeScreen {...upgrade} />
+  if (!settled) return null
+
+  const { phase } = flow
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={phase === 'signedOut'}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+      <Stack.Protected guard={phase === 'error'}>
+        <Stack.Screen name="offline" />
+      </Stack.Protected>
+      <Stack.Protected guard={phase === 'terms' || (phase === 'ready' && flow.gateOpen)}>
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="terms-full" />
+      </Stack.Protected>
+      <Stack.Protected guard={phase === 'ready'}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={phase === 'unit' || phase === 'ready'}>
+        <Stack.Screen name="unit-pick" />
+        <Stack.Screen name="contact" />
+      </Stack.Protected>
+    </Stack>
+  )
 }
+
+function RootLayout() {
+  const [fontsLoaded] = useFonts(FONT_SOURCES)
+  useEffect(() => setupConnectivity(), [])
+  if (!fontsLoaded) return null
+  return (
+    <SafeAreaProvider>
+      <MobileProvider runtime={runtime}>
+        <StatusBar style="auto" />
+        <ObserveErrorBoundary
+          fallback={({ resetError }) => <ErrorFallback onReload={resetError} />}
+        >
+          <Routes />
+        </ObserveErrorBoundary>
+      </MobileProvider>
+    </SafeAreaProvider>
+  )
+}
+
+export default ObserveRoot.wrap(RootLayout)

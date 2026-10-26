@@ -1,0 +1,10 @@
+# A cold start that keeps the state of the app (the keychain and the cache): the development client still needs the server link.
+appId: vn.rms.resident.dev
+---
+- launchApp
+- openLink: exp+rms-resident://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081&disableOnboarding=1
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Open"
+    optional: true

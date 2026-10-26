@@ -1,0 +1,18 @@
+# UIRA-33, UIRA-34: two homes go to Unit-Pick in unit-code order; the tenant card says whether paying is allowed.
+# Account +84901234567: owner of A-1508 and tenant (cannot pay) of A-0703.
+appId: vn.rms.resident.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "0901 234 567"
+- tapOn:
+    id: login-submit
+- inputText: "123456"
+- assertVisible: "Choose a home"
+- assertVisible: "Not allowed to pay fees"
+- tapOn:
+    id: unit-A-1508
+- assertVisible:
+    id: home-screen
+- assertVisible: "A-1508"
