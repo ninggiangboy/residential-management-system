@@ -11,6 +11,8 @@
     "web": "bun run --cwd apps/cms-web dev",
     "rapp": "bun run --cwd apps/resident-app start",
     "sapp": "bun run --cwd apps/staff-app start",
+    "dev:resident": "bun run rapp",
+    "dev:staff": "bun run sapp",
     "dev": "bun scripts/dev.ts start",
     "dev:api": "bun run api",
     "stop": "bun scripts/dev.ts stop",
@@ -56,6 +58,7 @@
     "exp:10": "bun run --cwd apps/api exp:10",
     "config:example": "bun run --cwd apps/api config:example",
     "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
+    "test:mobile": "maestro test apps/resident-app/.maestro && maestro test apps/staff-app/.maestro",
     "test:e2e": "bun run --filter @app/cms-web e2e",
     "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"
   },
