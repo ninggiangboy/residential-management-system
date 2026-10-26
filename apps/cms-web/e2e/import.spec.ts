@@ -11,7 +11,8 @@ test.describe('W-Import (UIWR-30…42)', () => {
     const tag = unique('I').toUpperCase().slice(0, 6)
     await signInAndWait(page, 'manager')
     await page.goto('/units')
-    await page.getByRole('link', { name: 'Nhập từ Excel' }).click()
+    // First: an empty list repeats both actions in its empty state, below the header ones.
+    await page.getByRole('link', { name: 'Nhập từ Excel' }).first().click()
     await expect(page).toHaveURL(/\/import/)
 
     // 8 good rows (the first with an owner) and 2 bad ones.
