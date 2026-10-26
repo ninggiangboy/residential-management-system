@@ -1,0 +1,35 @@
+# UISM-14, UISM-15, UISM-16, UISM-18: edit the name with If-Match, switch the language, open the sessions view, sign out.
+appId: vn.rms.staff.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: email-input
+- inputText: "tech@mocmien.example"
+- tapOn:
+    id: password-input
+- inputText: "Sunrise2026!"
+- tapOn:
+    id: login-submit
+- tapOn:
+    id: edit-profile
+- tapOn:
+    id: name-input
+- eraseText
+- inputText: "Phạm Văn Kỹ Thuật"
+- tapOn:
+    id: save-profile
+- assertVisible: "Phạm Văn Kỹ Thuật"
+- tapOn:
+    id: account-language
+- tapOn:
+    id: language-vi
+- assertVisible: "Tài khoản"
+- tapOn:
+    id: account-sessions
+- assertVisible: "Thiết bị này"
+- back
+- tapOn:
+    id: sign-out
+- tapOn:
+    id: signout-confirm
+- assertVisible: "Đăng nhập"

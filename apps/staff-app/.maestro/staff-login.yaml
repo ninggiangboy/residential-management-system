@@ -1,0 +1,28 @@
+# UISM-01, UISM-02, UISM-06, UISM-13, UISM-17: a Technician signs in, lands on the account, and a wrong password says nothing about tries left.
+# Needs the API on :3000 with the demo seed (tech@mocmien.example / Sunrise2026!). The simulator language is English.
+appId: vn.rms.staff.dev
+---
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: email-input
+- inputText: "tech@mocmien.example"
+- tapOn:
+    id: password-input
+- inputText: "wrong-password"
+- tapOn: "Show"
+- assertVisible: "wrong-password"
+- tapOn:
+    id: login-submit
+- assertVisible: "The email or password is not correct."
+- assertNotVisible: ".*tries left.*"
+- tapOn:
+    id: password-input
+- eraseText
+- inputText: "Sunrise2026!"
+- tapOn:
+    id: login-submit
+- assertVisible:
+    id: staff-account-screen
+- assertVisible: "Technician"
+- assertVisible: "tech@mocmien.example"
+- assertVisible: "The app cannot change passwords.*"
