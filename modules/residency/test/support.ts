@@ -262,6 +262,8 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     purgeGraceMinutes: 0,
   })
   const files = new MemoryFiles()
+  /** The buildings that `assertDemo` accepts: none unless a test of the demo reset adds one. */
+  const demoBuildings = new Set<string>()
   /** What the module reported (DOC-40 §4.3). */
   const metrics = recordingMetrics()
   const identity = identityOn(database, ids, () => clock.now())
@@ -270,7 +272,13 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     clock,
     ids,
     database,
-    building: { getBuilding: async () => null, getSettings: async () => DEFAULT_SETTINGS },
+    building: {
+      getBuilding: async () => null,
+      getSettings: async () => DEFAULT_SETTINGS,
+      async assertDemo(buildingId) {
+        if (!demoBuildings.has(buildingId)) throw new NotFoundError()
+      },
+    },
     files,
     identity,
     // The import routes are not mounted in these tests: the guards are the host's.
@@ -373,6 +381,7 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     metrics,
     identity,
     residency,
+    demoBuildings,
     seedUnit,
     seedMembership,
     seedProfile,

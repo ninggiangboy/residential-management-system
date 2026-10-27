@@ -6,14 +6,16 @@ import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
-import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { type DemoResettable, type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { sql } from 'drizzle-orm'
 import { ResidencyApiImpl } from './application/api/residency-api-impl'
+import { ResidencyDemo } from './application/demo-residency'
 import { ClearProfileOnAccountDeletionHandler } from './application/handlers/clear-profile-on-account-deletion'
 import { ImportPlanner } from './application/import-planner'
 import { ImportQueries } from './application/queries/import-queries'
 import { LookupQueries } from './application/queries/lookup-queries'
 import { MembershipQueries } from './application/queries/membership-queries'
+import { PiiKeyQueries } from './application/queries/pii-key-queries'
 import { ResidentQueries } from './application/queries/resident-queries'
 import { UnitQueries } from './application/queries/unit-queries'
 import { ApproveAccountDeletion } from './application/use-cases/approve-account-deletion'
@@ -35,9 +37,11 @@ import {
 } from './infrastructure/excel/exceljs-workbook'
 import { importExpireJob, importPurgeJob } from './infrastructure/jobs/import-jobs'
 import { DrizzleAccountDeletionRepository } from './infrastructure/persistence/drizzle-account-deletion-repository'
+import { DrizzleDemoRepository } from './infrastructure/persistence/drizzle-demo-repository'
 import { DrizzleImportJobRepository } from './infrastructure/persistence/drizzle-import-job-repository'
 import { DrizzleMembershipReader } from './infrastructure/persistence/drizzle-membership-reader'
 import { DrizzleMembershipRepository } from './infrastructure/persistence/drizzle-membership-repository'
+import { DrizzlePiiKeyReader } from './infrastructure/persistence/drizzle-pii-key-reader'
 import { DrizzleResidentProfileRepository } from './infrastructure/persistence/drizzle-resident-profile-repository'
 import { DrizzleResidentReader } from './infrastructure/persistence/drizzle-resident-reader'
 import { DrizzleUnitHistoryRepository } from './infrastructure/persistence/drizzle-unit-history-repository'
@@ -51,7 +55,7 @@ import { residencyRoutes } from './presentation/residency-routes'
 
 export interface ResidencyDeps {
   /** The time zone of the building for "today" (DR-09). */
-  building: Pick<BuildingApi, 'getBuilding' | 'getSettings'>
+  building: Pick<BuildingApi, 'getBuilding' | 'getSettings' | 'assertDemo'>
   /** The files of an import: the upload is read, attached to its job and removed at the commit (DOC-37 §3). */
   files: Pick<FilesApi, 'read' | 'attach' | 'remove'>
   /**
@@ -117,6 +121,8 @@ export interface ResidencyUseCases {
 
 export interface ResidencyModule extends AppModule<'residency'> {
   readonly api: ResidencyApi
+  /** `residency`'s part of the demo reset, which the host hands to `building` (DOC-36 §10.2). */
+  readonly demo: DemoResettable
   readonly useCases: ResidencyUseCases
   /** The reads behind the staff routes: the imports (E-71, E-73, E-169), the units, the residents and the lookup. */
   readonly queries: {
@@ -274,7 +280,12 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
           'Staff-side management of units, residents, memberships and the Excel import of units and owners.',
       },
     ],
-    api: new ResidencyApiImpl(queries, lookups),
+    api: new ResidencyApiImpl(
+      queries,
+      lookups,
+      new PiiKeyQueries(new DrizzlePiiKeyReader(database)),
+    ),
+    demo: new ResidencyDemo(deps.building, new DrizzleDemoRepository(database)),
     useCases: {
       changeMembership,
       updateProfile,

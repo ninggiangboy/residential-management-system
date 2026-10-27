@@ -1,12 +1,14 @@
 import type { ResidencyApi } from '../../contracts'
 import type { LookupQueries } from '../queries/lookup-queries'
 import type { MembershipQueries } from '../queries/membership-queries'
+import type { PiiKeyQueries } from '../queries/pii-key-queries'
 
 /** The contract of DOC-27 §2.1: reads go to the query service, and there is no rule of its own here (DOC-12 §4.5 rule 3). */
 export class ResidencyApiImpl implements ResidencyApi {
   constructor(
     private readonly queries: MembershipQueries,
     private readonly lookups: LookupQueries,
+    private readonly piiKeys: PiiKeyQueries,
   ) {}
 
   getMembership: ResidencyApi['getMembership'] = (accountId, unitId) =>
@@ -25,6 +27,7 @@ export class ResidencyApiImpl implements ResidencyApi {
     this.queries.listActive(accountId)
   buildingIdsOfAccounts: ResidencyApi['buildingIdsOfAccounts'] = (accountIds) =>
     this.queries.buildingIdsOfAccounts(accountIds)
+  piiKeyIds: ResidencyApi['piiKeyIds'] = () => this.piiKeys.keyIds()
   lookup: ResidencyApi['lookup'] = (buildingId, q, opts) =>
     this.lookups.lookup(buildingId, q, opts?.limitPerKind)
 }

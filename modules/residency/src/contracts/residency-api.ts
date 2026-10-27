@@ -124,6 +124,11 @@ export interface ResidencyApi {
     accountIds: string[],
   ): Promise<Array<{ accountId: string; buildingId: string }>>
   /**
+   * The ids of the keys that seal the stored CCCD numbers (`cccd_enc`), distinct and across buildings: boot guard check 6 compares
+   * them with the PII ring (DOC-36 §10.1). An id is not a secret.
+   */
+  piiKeyIds(): Promise<string[]>
+  /**
    * The union search of DOC-27 §11 for units and residents: every strategy whose condition holds runs, each kind is capped at
    * `limitPerKind` (1…20, default 20). The phone is the full one; the caller maps it to its audience.
    */
