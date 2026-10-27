@@ -1,7 +1,9 @@
 # Local infrastructure (DOC-69 §6): PostgreSQL, an S3-compatible object store and Mailpit.
 # Started by `bun run infra:up`; every value below comes from .env.local (bun run keys:generate).
 # Ports are published on 127.0.0.1 only: nothing here has real credentials, and a LAN host must not reach it.
-name: rms
+# `RMS_STACK` (default `rms`) names the Compose project and the two volumes: a second clone beside a working copy sets it in
+# its `.env.local` (and the ports, DOC-69 §14.1), or it would share the other stack's database and files.
+name: ${RMS_STACK:-rms}
 
 services:
   postgres:
@@ -171,6 +173,6 @@ services:
 
 volumes:
   rms-pg:
-    name: rms-pg
+    name: ${RMS_STACK:-rms}-pg
   rms-s3:
-    name: rms-s3
+    name: ${RMS_STACK:-rms}-s3
