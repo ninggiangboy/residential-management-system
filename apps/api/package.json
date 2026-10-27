@@ -20,6 +20,7 @@
     "outbox:list": "bun --env-file=../../.env.local scripts/outbox.ts list",
     "outbox:requeue": "bun --env-file=../../.env.local scripts/outbox.ts requeue",
     "outbox:discard": "bun --env-file=../../.env.local scripts/outbox.ts discard",
+    "seed:demo": "bun --env-file=../../.env.local scripts/seed-demo.ts",
     "jobs:run": "bun --env-file=../../.env.local scripts/jobs.ts",
     "check:authz-metadata": "bun tests/authz/check-metadata.ts",
     "test:authz": "bun --env-file=../../.env.local test tests/authz --timeout 300000 --pass-with-no-tests",

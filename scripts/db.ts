@@ -2,7 +2,7 @@
  * Database commands that are not the migration itself:
  *   bun run db:generate   drizzle-kit generates the next migration of every module of the catalog (DOC-14 §14.1)
  *   bun run db:reset      empties the application database and migrates it again: every object of the fourteen schemas and
- *                         every `drizzle_<module>` history goes, the roles and the database stay (DOC-69 §11)
+ *                         every `drizzle_<module>` history goes, the roles and the database stay, then `seed:demo` (DOC-69 §11)
  * `reset` runs as `rms_migrator`, which owns everything; it refuses any profile but `local` and `test`.
  */
 import { resolve } from 'node:path'
@@ -51,6 +51,14 @@ async function reset() {
     stderr: 'inherit',
   })
   if ((await migrate.exited) !== 0) process.exit(1)
+  // The demo building comes back with the schemas (DOC-69 §11): `seed:demo` is safe to run on an empty database (P1-21).
+  const seed = Bun.spawn(['bun', 'run', 'seed:demo'], {
+    cwd: resolve(import.meta.dir, '..'),
+    env: process.env,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  })
+  if ((await seed.exited) !== 0) process.exit(1)
 }
 
 try {

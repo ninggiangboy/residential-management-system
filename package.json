@@ -57,6 +57,7 @@
     "db:migrate": "bun --env-file=.env.local scripts/migrate.ts",
     "db:generate": "bun --env-file=.env.local scripts/db.ts generate",
     "db:reset": "bun --env-file=.env.local scripts/db.ts reset",
+    "seed:demo": "bun run --cwd apps/api seed:demo",
     "test:grants": "bun run --cwd apps/api test:grants",
     "test:authz": "bun run --cwd apps/api test:authz",
     "exp:10": "bun run --cwd apps/api exp:10",

@@ -1,7 +1,7 @@
 /**
  * `bun run setup` (DOC-69 §4): an empty clone to a running local stack, stopping at the first failure.
- * Steps 5 and 6 belong to later tasks (`db:migrate` P1-06, `seed:demo` P1-12): until a target exists the step is reported as
- * skipped, so this file needs no edit when the task lands.
+ * Steps 5 and 6 came with later tasks (`db:migrate` P1-06, `seed:demo` P1-21): while a target does not exist the step is reported
+ * as skipped, so this file needed no edit when the task landed.
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -43,7 +43,7 @@ const steps: { n: number; label: string; target: string; cmd: string[]; task?: s
     label: 'demo data',
     target: 'seed:demo',
     cmd: ['bun', 'run', 'seed:demo'],
-    task: 'P1-12',
+    task: 'P1-21',
   },
 ]
 
