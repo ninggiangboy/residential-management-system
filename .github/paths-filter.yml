@@ -1,4 +1,4 @@
-# Path outputs of the `changes` job (DOC-71 §4.1); `e2e-web` and the mobile jobs read them.
+# Path outputs of the `changes` job (DOC-71 §4.1); the code jobs, `e2e-web` and the mobile jobs read them.
 #
 # `e2e` is what the flows of `apps/cms-web/e2e` can notice (DR-274): the API and the web CMS they start, what those import, the
 # local stack of `infra:up` and the scripts that start and migrate it. It has no `ops/**` (apart from the PostgreSQL files that
@@ -32,6 +32,19 @@ mobile:
   - bun.lock
 docs:
   - docs/**
+# `code` is everything but documents (DR-277): `verify`, `unit`, `integration`, `build` and the scanners of `security` other than
+# Gitleaks run only when it is true. The first pattern is negated, so a file matches it unless it is under `docs/` or a Markdown
+# file. The documents below are read by a test or a check as their source of truth, so a change to one still runs the code jobs;
+# `tools/ops-files/ci.test.ts` fails when code reads a document that is not listed here.
+code:
+  - '!{docs/**,*.md,**/*.md}'
+  - docs/06-design/audit-privacy-and-terms.md # check:audit, tools/audit-lint (DOC-35 §4)
+  - docs/06-design/configuration-reference.md # apps/api config.test.ts (DOC-41)
+  - docs/06-design/error-handling.md # check:i18n, packages/i18n-catalog content.test.ts (DOC-42)
+  - docs/06-design/jobs-and-outbox-runtime.md # apps/api jobs.integration.test.ts (DOC-38)
+  - docs/06-design/observability.md # apps/api metrics.test.ts, OB-01 (DOC-40 §4)
+  - docs/07-api/api-endpoints.md # test:authz route records (DOC-51)
+  - docs/10-testing/test-strategy.md # check:test-ids (DOC-88 §15; a warning only)
 e2e:
   - apps/api/**
   - apps/cms-web/**
