@@ -32,6 +32,7 @@
     "check": "bun scripts/check.ts",
     "check:commits": "bun scripts/check-commits.ts",
     "pr:merge": "bun scripts/merge-pr.ts",
+    "staging:push": "bun scripts/staging-push.ts",
     "check:test-ids": "bun scripts/check-test-ids.ts",
     "check:bundle": "bun scripts/check-bundle.ts",
     "dependabot:sync": "bun scripts/dependabot-sync.ts",

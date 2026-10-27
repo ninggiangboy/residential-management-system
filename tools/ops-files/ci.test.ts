@@ -324,6 +324,7 @@ describe('trusted-tree.sh (DR-274)', () => {
     gate?: string
     e2e?: string
     broken?: boolean
+    ref?: string
   }
 
   // The `gh` the script calls, answering as the real one does after `--jq`: the tree of a commit, the numbers of the merged
@@ -350,6 +351,7 @@ esac`,
         PATH: `${s.bin}:${process.env.PATH}`,
         GITHUB_REPOSITORY: 'acme/rms',
         GITHUB_SHA: SHA,
+        GITHUB_REF_NAME: c.ref ?? 'dev',
         GITHUB_OUTPUT: output,
         TREE: c.tree ?? 't1',
         HEAD_TREE: c.headTree ?? 't1',
@@ -389,6 +391,25 @@ esac`,
     expect(trusted({ gate: 'failure' }).out).toEqual(['tested=false', 'e2e=none'])
     expect(trusted({ gate: 'none' }).out).toEqual(['tested=false', 'e2e=none'])
     expect(trusted({ gate: 'cancelled' }).out).toEqual(['tested=false', 'e2e=none'])
+  })
+
+  // A push to `staging` is a fast-forward of `dev` (DR-276): the commit is the one `dev` already checked, so there is no pull request
+  // to look for and `gate` on the pushed commit itself is the answer.
+  test('a push to staging is tested when gate passed on that very commit, and e2e-web too when it ran', () => {
+    expect(trusted({ ref: 'staging', prs: '' })).toMatchObject({
+      code: 0,
+      out: ['tested=true', 'e2e=passed'],
+    })
+    expect(trusted({ ref: 'staging', prs: '', e2e: 'skipped' }).out).toEqual([
+      'tested=true',
+      'e2e=none',
+    ])
+    expect(trusted({ ref: 'staging', prs: '' }).said).toContain('already passed gate')
+  })
+
+  test('a push to staging whose commit has no green gate runs every check', () => {
+    expect(trusted({ ref: 'staging', gate: 'failure' }).out).toEqual(['tested=false', 'e2e=none'])
+    expect(trusted({ ref: 'staging', gate: 'none' }).out).toEqual(['tested=false', 'e2e=none'])
   })
 
   test('an API failure is not tested, exits 0 and leaves the workflow to run every check', () => {
