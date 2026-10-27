@@ -1,0 +1,10 @@
+# /etc/systemd/system/rms-backup@full.timer: Sunday 02:00 in building time (the host runs UTC)
+[Unit]
+Description=Weekly full pgBackRest backup
+
+[Timer]
+OnCalendar=Sun *-*-* 02:00:00 Asia/Ho_Chi_Minh
+Persistent=true
+
+[Install]
+WantedBy=timers.target

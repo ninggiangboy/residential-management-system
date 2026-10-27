@@ -1,0 +1,28 @@
+# /etc/pgbackrest/pgbackrest.conf (owner postgres, mode 0600; DOC-70 §8.4). The repository is the SeaweedFS S3 gateway of §5.5, over
+# TLS on the Docker bridge (DR-268 item 7). Filled in by `ops/pgbackrest/render.sh` from the secret files; the values are
+# `${NAME}` for envsubst.
+[global]
+repo1-type=s3
+repo1-s3-endpoint=${BACKUP_ENDPOINT}
+repo1-s3-bucket=rms-${RMS_ENV}-backup
+repo1-s3-region=auto
+repo1-s3-uri-style=path
+repo1-storage-ca-file=${BACKUP_CA_FILE}
+repo1-s3-key=${BACKUP_ACCESS_KEY}
+repo1-s3-key-secret=${BACKUP_SECRET_KEY}
+repo1-cipher-type=aes-256-cbc
+repo1-cipher-pass=${BACKUP_CIPHER_PASS}
+repo1-retention-full=4
+repo1-retention-diff=7
+archive-async=y
+spool-path=/var/spool/pgbackrest
+compress-type=zst
+start-fast=y
+process-max=2
+log-level-console=info
+
+[rms]
+pg1-path=/var/lib/postgresql/18/main
+pg1-socket-path=/var/run/postgresql
+pg1-database=rms
+pg1-user=rms_backup

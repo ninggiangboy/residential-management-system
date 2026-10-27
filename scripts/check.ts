@@ -37,6 +37,10 @@ const checks: Check[] = [
     target: 'check:ops',
     what: 'promtool rules and tests, amtool, Loki, Alloy, dashboards (OB-04, OB-05)',
   },
+  {
+    target: 'check:deploy',
+    what: 'compose files, Caddyfile, shell scripts, deploy.sh and the host files on real PostgreSQL and Caddy (DOC-70)',
+  },
   { target: 'check:test-ids', what: 'test IDs against the documents (DR-169)', warnOnly: true },
 ]
 

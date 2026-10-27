@@ -1,0 +1,152 @@
+# promtool test rules ops/prometheus/tests/rms-host.test.yml  (OB-05: a positive and a negative case for each rule of rms-host.yml)
+rule_files:
+  - ../rules/rms-host.yml
+evaluation_interval: 15s
+
+tests:
+  # --- PostgresDown
+  - name: PostgresDown fires a minute after pg_up drops to 0
+    interval: 15s
+    input_series:
+      - series: 'pg_up{job="postgres", instance="postgres-exporter:9187"}'
+        values: '1 1 0x20'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: PostgresDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "PostgreSQL does not answer its exporter (the database or the exporter is down)"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+      - eval_time: 45s
+        alertname: PostgresDown
+        exp_alerts: []
+
+  - name: PostgresDown fires when the exporter itself is down and stays quiet while the database answers
+    interval: 15s
+    input_series:
+      - series: 'up{job="postgres", instance="postgres-exporter:9187"}'
+        values: '1 1 0x20'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: PostgresDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "PostgreSQL does not answer its exporter (the database or the exporter is down)"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+  - name: PostgresDown stays quiet while pg_up is 1
+    interval: 15s
+    input_series:
+      - series: 'pg_up{job="postgres", instance="postgres-exporter:9187"}'
+        values: '1x40'
+      - series: 'up{job="postgres", instance="postgres-exporter:9187"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: PostgresDown
+        exp_alerts: []
+
+  # --- PostgresArchiveFailing: any failed archive command in 15 minutes
+  - name: PostgresArchiveFailing fires when the failed count rises and not when it is flat
+    interval: 15s
+    input_series:
+      - series: 'pg_stat_archiver_failed_count{job="postgres", instance="postgres-exporter:9187"}'
+        values: '0x10 1x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: PostgresArchiveFailing
+        exp_alerts:
+          - exp_labels: { severity: critical, job: postgres, instance: "postgres-exporter:9187" }
+            exp_annotations:
+              summary: "The WAL archive failed 1 times in 15 minutes: point-in-time recovery has a gap"
+              runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+      - eval_time: 2m
+        alertname: PostgresArchiveFailing
+        exp_alerts: []
+
+  # --- BackupMissing: OB-17, a backup that succeeded 27 hours ago
+  - name: BackupMissing fires 27 hours after the last success, resolves with a new file, and is quiet at 25 hours
+    interval: 1h
+    input_series:
+      - series: 'backup_last_success_timestamp{job="node", instance="node-exporter:9100"}'
+        values: '1800x28 100800x20' # a backup 30 minutes after the epoch; at hour 29 a new one, made at hour 28
+    alert_rule_test:
+      - eval_time: 27h
+        alertname: BackupMissing
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "No successful backup for 1d 2h 30m 0s"
+              runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+      - eval_time: 25h
+        alertname: BackupMissing
+        exp_alerts: []
+      - eval_time: 29h
+        alertname: BackupMissing
+        exp_alerts: []
+
+  # --- BackupMetricMissing: no series at all
+  - name: BackupMetricMissing fires after 26 hours of no series and not while one exists
+    interval: 1h
+    input_series:
+      - series: 'up{job="rms-api", instance="api-1:3001"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 27h
+        alertname: BackupMetricMissing
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "No backup_last_success_timestamp series: the backup never ran or the textfile is unreadable"
+              runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+      - eval_time: 10h
+        alertname: BackupMetricMissing
+        exp_alerts: []
+
+  - name: BackupMetricMissing is quiet while the backup file is there
+    interval: 1h
+    input_series:
+      - series: 'backup_last_success_timestamp{job="node", instance="node-exporter:9100"}'
+        values: '1000 2000x40'
+    alert_rule_test:
+      - eval_time: 30h
+        alertname: BackupMetricMissing
+        exp_alerts: []
+
+  # --- DiskUsage: a warning from 80% to 90%, critical above, the data volume included, tmpfs ignored
+  - name: DiskUsage warns at 85 percent of the data volume, is critical at 95 percent of the root, and ignores tmpfs and 50 percent
+    interval: 15s
+    input_series:
+      - series: 'node_filesystem_size_bytes{mountpoint="/srv/rms-data", fstype="ext4", instance="node-exporter:9100"}'
+        values: '100x80'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/srv/rms-data", fstype="ext4", instance="node-exporter:9100"}'
+        values: '15x80'
+      - series: 'node_filesystem_size_bytes{mountpoint="/", fstype="ext4", instance="node-exporter:9100"}'
+        values: '100x80'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", fstype="ext4", instance="node-exporter:9100"}'
+        values: '5x80'
+      - series: 'node_filesystem_size_bytes{mountpoint="/run", fstype="tmpfs", instance="node-exporter:9100"}'
+        values: '100x80'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/run", fstype="tmpfs", instance="node-exporter:9100"}'
+        values: '1x80'
+      - series: 'node_filesystem_size_bytes{mountpoint="/boot", fstype="ext4", instance="node-exporter:9100"}'
+        values: '100x80'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/boot", fstype="ext4", instance="node-exporter:9100"}'
+        values: '50x80'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: DiskUsage
+        exp_alerts:
+          - exp_labels: { severity: warning, mountpoint: /srv/rms-data, fstype: ext4, instance: "node-exporter:9100" }
+            exp_annotations:
+              summary: "/srv/rms-data is 85% full"
+              runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
+          - exp_labels: { severity: critical, mountpoint: /, fstype: ext4, instance: "node-exporter:9100" }
+            exp_annotations:
+              summary: "/ is 95% full"
+              runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
+      - eval_time: 5m
+        alertname: DiskUsage
+        exp_alerts: []

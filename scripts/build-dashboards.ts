@@ -221,7 +221,7 @@ const storageDatabase: Dashboard = {
   uid: 'rms-storage-database',
   title: 'RMS · Storage and database',
   description:
-    'File storage against the quota, the connection pool and the processes. PostgreSQL and host panels join with P1-20 and P1-21.',
+    'File storage against the quota, the connection pool, the processes, and (P1-20) PostgreSQL, the backup and the disks of the host.',
   panels: [
     timeseries(
       'File storage used against the quota',
@@ -252,6 +252,59 @@ const storageDatabase: Dashboard = {
       'CPU',
       [{ expr: 'rate(process_cpu_seconds_total[5m])', legend: '{{job}} {{instance}}' }],
       { unit: 'percentunit' },
+    ),
+    stat('PostgreSQL up', [{ expr: 'max(pg_up{job="postgres"})' }], {
+      thresholds: [
+        [null, 'red'],
+        [1, 'green'],
+      ],
+      supports: 'PostgresDown',
+      w: 6,
+    }),
+    stat('Time since the last backup', [{ expr: 'time() - max(backup_last_success_timestamp)' }], {
+      unit: 's',
+      thresholds: [
+        [null, 'green'],
+        [86400, 'orange'],
+        [93600, 'red'],
+      ],
+      supports: 'BackupMissing (26 h), RB-07',
+      w: 6,
+    }),
+    timeseries(
+      'WAL archive failures in 15 minutes',
+      [{ expr: 'increase(pg_stat_archiver_failed_count{job="postgres"}[15m])', legend: 'failed' }],
+      { min: 0, supports: 'PostgresArchiveFailing, RB-07' },
+    ),
+    timeseries(
+      'Connections by state',
+      [{ expr: 'sum by (state) (pg_stat_activity_count{job="postgres"})', legend: '{{state}}' }],
+      { supports: 'DOC-10 §6.3' },
+    ),
+    timeseries(
+      'Disk used',
+      [
+        {
+          expr: '1 - node_filesystem_avail_bytes{job="node", mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="node", mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}',
+          legend: '{{mountpoint}}',
+        },
+      ],
+      {
+        unit: 'percentunit',
+        min: 0,
+        thresholds: [
+          [null, 'transparent'],
+          [0.8, 'orange'],
+          [0.9, 'red'],
+        ],
+        thresholdLines: true,
+        supports: 'DiskUsage, RB-08',
+      },
+    ),
+    timeseries(
+      'Host memory available',
+      [{ expr: 'node_memory_MemAvailable_bytes{job="node"}', legend: 'available' }],
+      { unit: 'bytes', supports: 'EXP-07' },
     ),
     timeseries(
       'Gauges that failed to refresh',

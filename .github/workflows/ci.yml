@@ -1,5 +1,5 @@
 # The pull-request and trunk pipeline (DOC-71 §2, §4). `gate` is the one required check (DR-163). The trunk is `dev`
-# (DR-239). The deploy jobs (`deploy-staging`, `deploy-web-staging`, `mobile-staging`) are added by P1-20 and P6-10.
+# (DR-239). `deploy-staging` is P1-20; `deploy-web-staging` and `mobile-staging` are added by P6-10.
 # Actions are pinned by commit SHA with the tag in a comment (DR-95); the scanner images are pinned in `env` below and
 # refreshed by hand with DOC-11 §9 (Dependabot does not read `docker run` lines).
 name: ci
@@ -359,3 +359,46 @@ jobs:
           docker tag rms-api:ci "$image"
           docker push "$image"
           echo "pushed \`$image\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # DOC-71 §7.3: a push to `dev` whose `gate` is green and whose image is in GHCR deploys to staging, then the smoke test runs from
+  # here against the public hosts. A deploy gate, not a merge gate (DR-163). The job's own deployment record is what `promote`
+  # reads on a release tag (DOC-71 §7.4). Two deploys never overlap: the second waits for the first.
+  deploy-staging:
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.publish.result == 'success' && needs.e2e-web.result != 'failure' }}
+    needs: [publish, e2e-web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      DOMAIN: ${{ vars.DOMAIN }}
+      CLOUDFLARED_VERSION: 2026.10.1 # DOC-11 §7
+      CLOUDFLARED_SHA256: 200573c872174ab449965655febadef8edfbb144ebcaa391b700b2dedbadb3cd # the .deb of that release, as its notes list it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install cloudflared (checksum verified)
+        run: |
+          curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i cloudflared.deb
+          cloudflared --version
+      - name: Deploy sha-<7> over the Tunnel
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          tag="sha-${GITHUB_SHA::7}"
+          ops/deploy/ci-deploy.sh staging "$tag" | tee deploy.log
+          tail -n 1 deploy.log | sed 's/^/### /' >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test (DOC-71 §7.3)
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          STAGING_DEMO_PASSWORD: ${{ secrets.STAGING_DEMO_PASSWORD }}
+        run: ops/deploy/smoke.sh staging

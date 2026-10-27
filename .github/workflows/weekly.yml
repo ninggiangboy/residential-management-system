@@ -1,5 +1,6 @@
-# Weekly scans (DOC-71 §5, §10). `image-scan-running` (the image tag that runs, read from the host over the Tunnel) and the
-# GHCR retention cleanup are added by P1-20, when an environment runs an image.
+# Weekly scans and housekeeping (DOC-71 §5, §6.2, §10): `gitleaks-history`, `image-scan-running` (the tag that runs on staging, read
+# from the host over the Tunnel) and the GHCR retention (`ops/deploy/ghcr-cleanup.sh`). The two jobs that read the host use the
+# environment `staging` with `deployment: false`: its secrets, and no deployment record that `promote` could take for a deploy.
 name: weekly
 on:
   schedule:
@@ -9,6 +10,9 @@ permissions:
   contents: read
 env:
   GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
+  TRIVY_IMAGE: aquasec/trivy:0.76.1
+  CLOUDFLARED_VERSION: 2026.10.1
+  CLOUDFLARED_SHA256: 200573c872174ab449965655febadef8edfbb144ebcaa391b700b2dedbadb3cd
 
 jobs:
   gitleaks-history:
@@ -22,3 +26,75 @@ jobs:
         run: |
           docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" git /repo --config /repo/.gitleaks.toml --redact --no-banner
+
+  # The only scanner that finds a new vulnerability in a build nobody touched (DOC-39 §12): the image that runs on staging.
+  image-scan-running:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: staging
+      deployment: false
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DOMAIN: ${{ vars.DOMAIN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install cloudflared (checksum verified)
+        run: |
+          curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i cloudflared.deb
+      - id: running
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: echo "tag=$(ops/deploy/ci-deploy.sh staging --running-tag)" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trivy on the running image (HIGH and CRITICAL with a fix)
+        env:
+          TAG: ${{ steps.running.outputs.tag }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rms-api:${TAG}"
+          docker pull "$image"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" \
+            image --scanners vuln,secret --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 --no-progress "$image"
+
+  # DOC-71 §6.2: the 30 newest `sha-*` versions stay, every `v*` version stays, and so does the tag that runs in an environment,
+  # because a rollback needs it. The token needs `packages: write` on the package (a package linked to the repository).
+  ghcr-retention:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: staging
+      deployment: false
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DOMAIN: ${{ vars.DOMAIN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install cloudflared (checksum verified)
+        run: |
+          curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i cloudflared.deb
+      - name: Delete the old sha-* versions
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          # the tag that runs and `previous`, which is what `deploy.sh --rollback` redeploys
+          mapfile -t keep < <(ops/deploy/ci-deploy.sh staging --tags)
+          ops/deploy/ghcr-cleanup.sh "${GITHUB_REPOSITORY_OWNER,,}" "${keep[@]}"

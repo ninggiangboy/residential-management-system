@@ -1,0 +1,64 @@
+# The database, host and backup alerts of DOC-40 §5.2 and §5.3 (P1-20): they read `postgres_exporter` and `node_exporter`, which run
+# on the host (DOC-70 §6.1), and the textfile of `ops/backup/backup.sh`. One test per rule in ../tests/rms-host.test.yml (OB-05).
+groups:
+  - name: rms-host
+    interval: 15s
+    rules:
+      - alert: PostgresDown
+        # `pg_up` is 0 when the exporter cannot reach the database; when the exporter itself is down the series is gone and
+        # `up` carries the news.
+        expr: max(pg_up{job="postgres"}) == 0 or max(up{job="postgres"}) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "PostgreSQL does not answer its exporter (the database or the exporter is down)"
+          runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+      - alert: PostgresArchiveFailing
+        expr: increase(pg_stat_archiver_failed_count{job="postgres"}[15m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "The WAL archive failed {{ $value }} times in 15 minutes: point-in-time recovery has a gap"
+          runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+
+      - alert: BackupMissing
+        expr: time() - max(backup_last_success_timestamp) > 26 * 3600
+        labels: { severity: critical }
+        annotations:
+          summary: "No successful backup for {{ $value | humanizeDuration }}"
+          runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+
+      # `BackupMissing` is silent when the series does not exist (a textfile that node_exporter cannot read, a host whose first
+      # backup never ran), so the absence is its own alert, after the 26 hours that a first backup is allowed to take.
+      - alert: BackupMetricMissing
+        expr: absent(backup_last_success_timestamp)
+        for: 26h
+        labels: { severity: warning }
+        annotations:
+          summary: "No backup_last_success_timestamp series: the backup never ran or the textfile is unreadable"
+          runbook: docs/09-operations/runbooks/RB-07-backup-missing.md
+
+      # The root file system and the data volume (DOC-70 §5.5): the files and the backups share a host, so a full disk is a
+      # failed upload and a failed WAL archive (DOC-10 §6.4).
+      - alert: DiskUsage
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}) > 0.8
+          and
+          (1 - node_filesystem_avail_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}) <= 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full"
+          runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
+
+      - alert: DiskUsage
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"}) > 0.9
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full"
+          runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
