@@ -1982,6 +1982,7 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
 - **Performance:** ≤ 10 s on the staging host (planned, BD-40).
 - **Events:** one `building.file_delete_requested.v1` per demo file. Every demo session is revoked (the accounts are deleted with their families, no event). Audit: `building.demo.reset` (`details {durationMs, units}`); the nightly job writes none (DOC-35 §3.6).
 - **Tests:** BD-37…BD-43.
+- **Built (P1-21, 2026-10-27, DR-270):** `ResetDemo` in `building` and `DemoReset.run`, over HTTP in `apps/api/tests/integration/demo.integration.test.ts`. The 404 comes first: before the rate limit, so the bucket of a real building is never created, and before anything is read. The answer is exactly `{durationMs, deleted, created}`, with the counts of the modules built so far (`building.*`, `identity.*`, `residency.*`; the others join with their modules); the Admin's own session ends with the reset. The matrix of EXP-10 expects 404 for this route, because both of its buildings are real (`DEMO_ONLY` in `tests/authz/expected.ts`). A reset took 81 ms on a laptop (BD-40 is the staging host).
 
 ## 10. Residency, staff side (E-57…E-74, E-169)
 

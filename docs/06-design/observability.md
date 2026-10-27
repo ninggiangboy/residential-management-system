@@ -164,7 +164,7 @@ Rules for every metric (DR-154):
 | `auth_step_up_total` | counter | `action` (`gateway_config`, `admin_change`, `staff_email`), `outcome` (`requested`, `ok`, `failed`, `rate_limited`) | DOC-26 §10 | P1 |
 | `sms_provider_down` | gauge | none | DOC-26 §5.4 | P1 |
 | `sms_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_demo`, `skipped_unknown`, `not_allowlisted`, `failed`) | DOC-26 §10 | P1 |
-| `mail_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_unknown`, `failed`) | DOC-26 §10 | P1 |
+| `mail_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_demo`, `skipped_unknown`, `failed`) | DOC-26 §10 | P1 |
 | `membership_changes_total` | counter | `change`, `actor` | DOC-27 §15 | P1 |
 | `membership_guard_refusals_total` | counter | `reason` (`missing`, `locked`) | DOC-27 §15 | P1 |
 | `member_invitations_total` | counter | `outcome` (`queued`, `owner_cap`, `phone_bucket`) | DOC-27 §15 | P1 |
@@ -178,7 +178,7 @@ Rules for every metric (DR-154):
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
 | `gateway_check_ok` | gauge (1, 0) | `building` | DOC-36 §11; from `last_check_ok`, demo excluded | P3-01 (the gateway check) |
-| `demo_reset_duration_seconds` | histogram | none | DOC-36 §11 | P1-21 (the demo reset) |
+| `demo_reset_duration_seconds` | histogram, buckets 1, 2, 5, 10, 20, 60 (budget 10 s on the staging host, BD-40) | none | DOC-36 §11 | P1 |
 | `boot_guard_failures_total` | counter, **not scrapeable** (the process exits); the log line `boot_guard_failed` is the signal | none | DOC-36 §11 | P1 |
 | `audit_write_failures_total` | counter | none | DOC-35 §11 | P1 |
 | `audit_purge_rows_total` | counter | `class` (`finance`, `standard`) | DOC-35 §11 | P1 |

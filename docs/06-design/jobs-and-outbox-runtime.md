@@ -352,7 +352,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `otp_purge` | Deletes OTP challenges older than 24 hours | `{"deleted": n}` | DOC-20 §5 |
 | `token_purge` | Deletes consumed or expired tokens, expired or revoked families, idle buckets (identity and platform), expired idempotency keys, `job_run` rows older than 30 days | `{"deleted": {"password_token": n, …}}` | DOC-20 §5 |
 | `account_deletion` | Executes approved deletions after `accountDeletionDays`; refuses an owner of a unit; idempotent; writes `identity.account_deletion_executed.v1` | `{"executed": n, "refused": n}` | DOC-20 §8 |
-| `demo_reset` | For each building with `is_demo`: asserts the flag, calls every module's `resetDemo(buildingId)` in dependency order, reseeds | `{"buildings": n}` | DOC-36 (DR-60) |
+| `demo_reset` | For each building with `is_demo`: asserts the flag, calls every module's `resetDemo(buildingId)` in dependency order, reseeds (built in P1-21 with the modules that exist: `building`, `identity`, `residency`; one transaction under the job lock, the same lock as `POST /staff/demo/reset`) | `{"buildings": n}` | DOC-36 (DR-60, DR-270) |
 | `integrity_weekly` | Looks for the memberships that break their rules (two owners, a member of a removed or deleted account, a membership of a missing unit) and uuid columns that point at nothing it can check | `{"findings": n}` | DOC-27 (EXP-11) |
 | `integrity_notices` | Notices stuck in `sending` for more than 1 hour, `scheduled` past their time by more than 1 hour, or with a recipient count that differs from the rows | `{"findings": n}` | DOC-31 (EXP-11) |
 | `inbox_purge` | Deletes `inbox_entry` rows older than 180 days in batches of 1,000 | `{"deleted": n}` | DOC-20 §5 |
