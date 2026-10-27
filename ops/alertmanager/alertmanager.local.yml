@@ -1,0 +1,31 @@
+# Alertmanager of the local monitoring stack (`bun run monitor:up`): mail goes to Mailpit (http://localhost:8025), nothing leaves the
+# machine. Same routes and inhibition as alertmanager.yml, so the routing is tried locally; only the receivers differ (DR-228).
+global:
+  smtp_smarthost: mailpit:1025
+  smtp_from: rms-alerts@localhost
+  smtp_require_tls: false
+
+route:
+  receiver: owner
+  group_by: [alertname, env]
+  routes:
+    - matchers: [severity="critical"]
+      receiver: owner
+      group_wait: 10s
+      repeat_interval: 30m
+    - matchers: [severity="warning"]
+      receiver: owner
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+
+inhibit_rules:
+  - source_matchers: [alertname=~"ApiDown|PostgresDown|ReadinessFailing"]
+    target_matchers: [severity="warning"]
+    equal: [env]
+
+receivers:
+  - name: owner
+    email_configs:
+      - to: owner@localhost, admin@localhost
+        send_resolved: true

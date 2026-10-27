@@ -1,0 +1,24 @@
+# Prometheus of one host (DOC-40 §2, DOC-70 §10). `${RMS_ENV}` is replaced by the `expand-external-labels` feature flag (compose).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: ${RMS_ENV}
+
+rule_files:
+  - rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+scrape_configs:
+  # The label `job` is Prometheus's: the application's per-job metrics use `job_name` (DR-154).
+  # `api-2` exists in production only. Left in on staging it shows `down` and raises nothing: ApiDown takes `max(up)`.
+  - job_name: rms-api
+    static_configs:
+      - targets: [api-1:3001, api-2:3001]
+  - job_name: rms-worker
+    static_configs:
+      - targets: [worker:3001]

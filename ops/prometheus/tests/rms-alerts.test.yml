@@ -1,0 +1,367 @@
+# promtool test rules ops/prometheus/tests/rms-alerts.test.yml  (OB-05: a positive and a negative case for each rule)
+rule_files:
+  - ../rules/rms-alerts.yml
+  - ../rules/rms-jobs.yml
+evaluation_interval: 15s
+
+tests:
+  # --- OutboxLag: the oldest unpublished message is older than 2 minutes for 1 minute
+  - name: OutboxLag fires for the schema that lags and not for the one below 120 s
+    interval: 15s
+    input_series:
+      - series: 'outbox_oldest_unpublished_age_seconds{schema="identity", instance="worker:3001"}'
+        values: '0 0 150x20'
+      - series: 'outbox_oldest_unpublished_age_seconds{schema="residency", instance="worker:3001"}'
+        values: '90x20'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: OutboxLag
+        exp_alerts:
+          - exp_labels: { severity: warning, schema: identity }
+            exp_annotations:
+              summary: "The oldest unpublished message of identity is 150 s old"
+              runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+      - eval_time: 30s
+        alertname: OutboxLag
+        exp_alerts: []
+
+  # --- DeadLetters: any dead message
+  - name: DeadLetters fires at once for a schema with a dead letter
+    interval: 15s
+    input_series:
+      - series: 'outbox_dead_letters{schema="identity", instance="api-1:3001"}'
+        values: '0 0 2x10'
+      - series: 'outbox_dead_letters{schema="identity", instance="worker:3001"}'
+        values: '0 0 2x10'
+      - series: 'outbox_dead_letters{schema="building", instance="worker:3001"}'
+        values: '0x12'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DeadLetters
+        exp_alerts:
+          - exp_labels: { severity: warning, schema: identity }
+            exp_annotations:
+              summary: "2 dead-letter messages in identity"
+              runbook: docs/09-operations/runbooks/RB-05-dead-letters.md
+      - eval_time: 15s
+        alertname: DeadLetters
+        exp_alerts: []
+
+  # --- StorageQuota: above 80% in a building
+  - name: StorageQuota fires above 0.8 and not at 0.5
+    interval: 15s
+    input_series:
+      - series: 'storage_usage_ratio{building="b1", instance="worker:3001"}'
+        values: '0.5 0.5 0.85x10'
+      - series: 'storage_usage_ratio{building="b2", instance="worker:3001"}'
+        values: '0.5x12'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: StorageQuota
+        exp_alerts:
+          - exp_labels: { severity: warning, building: b1 }
+            exp_annotations:
+              summary: "File storage is at 85% of the quota"
+              runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
+      - eval_time: 15s
+        alertname: StorageQuota
+        exp_alerts: []
+
+  # --- ApiErrors: 5xx above 2% over 5 minutes, with a floor of 20 requests
+  - name: ApiErrors fires at 10% 5xx with traffic
+    interval: 15s
+    input_series:
+      # 10 requests a minute, one of them fails: 10%. 5 minutes = 20 steps; run 12 minutes.
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="200"}'
+        values: '0+9x60'
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="500"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ApiErrors
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "10% of API requests fail with 5xx"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+      - eval_time: 3m
+        alertname: ApiErrors
+        exp_alerts: []
+
+  - name: ApiErrors stays quiet when a third of three requests fail (below the traffic floor)
+    interval: 15s
+    input_series:
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="200"}'
+        values: '0 0 0 2x70'
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="500"}'
+        values: '0 0 0 1x70'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ApiErrors
+        exp_alerts: []
+
+  - name: ApiErrors stays quiet at 1% 5xx
+    interval: 15s
+    input_series:
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="200"}'
+        values: '0+99x60'
+      - series: 'http_request_duration_seconds_count{job="rms-api", instance="api-1:3001", route="/x", status="500"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ApiErrors
+        exp_alerts: []
+
+  # --- ApiDown: every API target down for a minute
+  - name: ApiDown fires when every api target is down and not when one still answers
+    interval: 15s
+    input_series:
+      - series: 'up{job="rms-api", instance="api-1:3001"}'
+        values: '1 1 0x20'
+      - series: 'up{job="rms-api", instance="api-2:3001"}'
+        values: '1 1 0x20'
+      - series: 'up{job="rms-worker", instance="worker:3001"}'
+        values: '1x22'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ApiDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "No API process answers its metrics port"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+      - eval_time: 45s
+        alertname: ApiDown
+        exp_alerts: []
+
+  - name: ApiDown stays quiet while api-2 answers
+    interval: 15s
+    input_series:
+      - series: 'up{job="rms-api", instance="api-1:3001"}'
+        values: '0x22'
+      - series: 'up{job="rms-api", instance="api-2:3001"}'
+        values: '1x22'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ApiDown
+        exp_alerts: []
+
+  # --- ReadinessFailing: the P1-18 acceptance (database stopped)
+  - name: ReadinessFailing fires 30 s after readiness_ok drops to 0
+    interval: 15s
+    input_series:
+      - series: 'readiness_ok{job="rms-api", instance="api-1:3001"}'
+        values: '1 1 0x20'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ReadinessFailing
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "The API is not ready: the database does not answer (or the process is stopping)"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+      - eval_time: 45s
+        alertname: ReadinessFailing
+        exp_alerts: []
+
+  - name: ReadinessFailing stays quiet while any api process is ready
+    interval: 15s
+    input_series:
+      - series: 'readiness_ok{job="rms-api", instance="api-1:3001"}'
+        values: '0x22'
+      - series: 'readiness_ok{job="rms-api", instance="api-2:3001"}'
+        values: '1x22'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ReadinessFailing
+        exp_alerts: []
+
+  # --- WorkerDown
+  - name: WorkerDown fires after 2 minutes of a down worker target
+    interval: 15s
+    input_series:
+      - series: 'up{job="rms-worker", instance="worker:3001"}'
+        values: '1 1 0x30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkerDown
+        exp_alerts:
+          - exp_labels: { severity: warning, job: rms-worker, instance: "worker:3001" }
+            exp_annotations:
+              summary: "The worker does not answer its metrics port"
+              runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+      - eval_time: 1m
+        alertname: WorkerDown
+        exp_alerts: []
+
+  # --- DbPoolWaiting
+  - name: DbPoolWaiting fires after a minute of waiting transactions
+    interval: 15s
+    input_series:
+      - series: 'db_pool_waiting{job="rms-api", instance="api-1:3001"}'
+        values: '0 0 3x20'
+      - series: 'db_pool_waiting{job="rms-api", instance="api-2:3001"}'
+        values: '0x22'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: DbPoolWaiting
+        exp_alerts:
+          - exp_labels: { severity: warning, instance: "api-1:3001" }
+            exp_annotations:
+              summary: "api-1:3001 has 3 transactions waiting for a database connection"
+              runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+      - eval_time: 30s
+        alertname: DbPoolWaiting
+        exp_alerts: []
+
+  # --- MetricsCollectionFailing: more than 5 failed refreshes in 15 minutes
+  - name: MetricsCollectionFailing fires above 5 failures and not at 3
+    interval: 15s
+    input_series:
+      - series: 'metrics_collection_errors_total{gauge="outbox_dead_letters", instance="api-1:3001"}'
+        values: '0+1x60'
+      - series: 'metrics_collection_errors_total{gauge="outbox_dead_letters", instance="worker:3001"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: MetricsCollectionFailing
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "40 database-derived gauges failed to refresh in 15 minutes"
+              runbook: table of DOC-74
+      - eval_time: 45s
+        alertname: MetricsCollectionFailing
+        exp_alerts: []
+
+  # --- JobStale: a job that has not succeeded for longer than its threshold
+  - name: JobStale fires for a job past its threshold and not for one inside it
+    interval: 1m
+    input_series:
+      # last success at t=0 for both; the threshold of notice_scheduler is 120 s, of storage_quota 7200 s
+      - series: 'job_last_success_timestamp{job="rms-worker", job_name="notice_scheduler"}'
+        values: '0x10'
+      - series: 'job_last_success_timestamp{job="rms-worker", job_name="storage_quota"}'
+        values: '0x10'
+      # invariant_check has its own rule (InvariantCheckStale, P2-11), so JobStale ignores it
+      - series: 'job_last_success_timestamp{job="rms-worker", job_name="invariant_check"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: JobStale
+        exp_alerts:
+          - exp_labels: { severity: warning, job_name: notice_scheduler }
+            exp_annotations:
+              summary: "Job notice_scheduler has not succeeded for 5m 0s"
+              runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+      - eval_time: 1m
+        alertname: JobStale
+        exp_alerts: []
+
+  # --- SmsFailures: more than 10% failed over 15 minutes, with a floor of 5 messages
+  - name: SmsFailures fires at 50% failures with traffic
+    interval: 15s
+    input_series:
+      - series: 'sms_sent_total{outcome="sent", instance="worker:3001"}'
+        values: '0+1x80'
+      - series: 'sms_sent_total{outcome="failed", instance="worker:3001"}'
+        values: '0+1x80'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: SmsFailures
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "More than 10% of SMS failed in 15 minutes"
+              runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+      - eval_time: 15s
+        alertname: SmsFailures
+        exp_alerts: []
+
+  - name: SmsFailures stays quiet below the floor of 5 messages
+    interval: 15s
+    input_series:
+      - series: 'sms_sent_total{outcome="sent", instance="worker:3001"}'
+        values: '0 0 1x70'
+      - series: 'sms_sent_total{outcome="failed", instance="worker:3001"}'
+        values: '0 0 1x70'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SmsFailures
+        exp_alerts: []
+
+  # --- OtpDailyCapReached
+  - name: OtpDailyCapReached fires when the counter rises and not while it is flat
+    interval: 15s
+    input_series:
+      - series: 'otp_daily_cap_reached_total{instance="api-1:3001"}'
+        values: '0 0 0 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OtpDailyCapReached
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "The daily OTP cap refused a request: residents cannot sign in until the window moves"
+              runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+      - eval_time: 8m
+        alertname: OtpDailyCapReached
+        exp_alerts: []
+
+  # --- SmsProviderDown: down for 5 minutes
+  - name: SmsProviderDown fires after 5 minutes down and not after 2
+    interval: 15s
+    input_series:
+      - series: 'sms_provider_down{instance="api-1:3001"}'
+        values: '0 0 1x40'
+      - series: 'sms_provider_down{instance="worker:3001"}'
+        values: '0 0 1x40'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SmsProviderDown
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "The SMS provider counts as down: residents are told to try later"
+              runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+      - eval_time: 2m
+        alertname: SmsProviderDown
+        exp_alerts: []
+
+  # --- RefreshTokenReuse: more than 5 in 10 minutes
+  - name: RefreshTokenReuse fires above 5 reuses and not at 3
+    interval: 15s
+    input_series:
+      - series: 'auth_refresh_total{outcome="reuse", instance="api-1:3001"}'
+        values: '0 0 0+1x12 12x20'
+      - series: 'auth_refresh_total{outcome="ok", instance="api-1:3001"}'
+        values: '0+10x40'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: RefreshTokenReuse
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "10 refresh tokens were presented twice in 10 minutes: possible token theft"
+              runbook: table of DOC-74
+      - eval_time: 30s
+        alertname: RefreshTokenReuse
+        exp_alerts: []
+
+  # --- LockoutSpike: more than 10 in 15 minutes
+  - name: LockoutSpike fires above 10 lockouts and not at 3
+    interval: 15s
+    input_series:
+      - series: 'auth_lockouts_total{instance="api-1:3001"}'
+        values: '0 0 0+1x20 20x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: LockoutSpike
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "18 staff accounts were locked in 15 minutes: possible password guessing"
+              runbook: table of DOC-74
+      - eval_time: 30s
+        alertname: LockoutSpike
+        exp_alerts: []

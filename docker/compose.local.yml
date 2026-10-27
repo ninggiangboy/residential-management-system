@@ -77,6 +77,98 @@ services:
       timeout: 3s
       retries: 30
 
+  # --- The monitoring stack of DOC-40 (profile `monitoring`, `bun run monitor:up`): the same configuration files as staging, with the
+  # API on the host as the scrape target and Mailpit in place of the SMTP relay. Ports are on 127.0.0.1 only.
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d
+      - --enable-feature=expand-external-labels
+    environment:
+      RMS_ENV: local
+    # `bun run --filter @app/api dev` listens on OPS_PORT (3001) of the host and holds both roles, so one process answers for
+    # `api-1` and `worker`; `api-2` stays unresolved and shows as a down target, as on staging.
+    extra_hosts:
+      - api-1:host-gateway
+      - worker:host-gateway
+    ports:
+      - 127.0.0.1:${RMS_PROMETHEUS_PORT:-9090}:9090
+    volumes:
+      - ../ops/prometheus:/etc/prometheus:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:9090/-/ready']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  alertmanager:
+    profiles: [monitoring]
+    image: prom/alertmanager:v0.34.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${RMS_ALERTMANAGER_PORT:-9093}:9093
+    volumes:
+      - ../ops/alertmanager/alertmanager.local.yml:/etc/alertmanager/alertmanager.yml:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:9093/-/ready']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  loki:
+    profiles: [monitoring]
+    image: grafana/loki:3.7.9
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ../ops/loki:/etc/loki:ro
+    # No healthcheck: the image has no shell tools. Alloy retries its pushes until Loki answers.
+
+  # Reads the logs of the containers of this project. The API on the host writes to its terminal, so locally only the containers
+  # (and the image of `docker/Dockerfile.api`, when run in this project) reach Loki.
+  alloy:
+    profiles: [monitoring]
+    image: grafana/alloy:v1.21.2
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    environment:
+      RMS_ENV: local
+    depends_on:
+      - loki
+    volumes:
+      - ../ops/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:13.2.4
+    environment:
+      # Local only: no sign-in. Staging and production keep the sign-in behind Cloudflare Access (DR-88).
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${RMS_GRAFANA_PORT:-3030}:3000
+    volumes:
+      - ../ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/api/health']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
 volumes:
   rms-pg:
     name: rms-pg

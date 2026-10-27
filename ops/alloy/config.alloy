@@ -1,0 +1,76 @@
+// Grafana Alloy of one host (DOC-40 §3.2, DOC-70 §10): reads the Docker logs of the compose project `rms`, keeps four labels
+// (env, service, container, level) and ships them to Loki. Everything else stays in the JSON line and is read with `| json`.
+// Version 1.21.2; every block and attribute below is checked by `alloy validate` in `bun run check:ops`.
+
+discovery.docker "rms" {
+	host = "unix:///var/run/docker.sock"
+
+	filter {
+		name   = "label"
+		values = ["com.docker.compose.project=rms"]
+	}
+}
+
+discovery.relabel "rms" {
+	targets = discovery.docker.rms.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "service"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	rule {
+		target_label = "env"
+		replacement  = sys.env("RMS_ENV")
+	}
+}
+
+loki.source.docker "rms" {
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.rms.output
+	forward_to = [loki.process.rms.receiver]
+}
+
+loki.process "rms" {
+	// pino writes `level` as a word and `time` as ISO 8601 (DOC-40 §3.1); a line that is not JSON passes through unchanged.
+	stage.json {
+		expressions = {
+			level = "level",
+			msg   = "msg",
+			route = "route",
+			time  = "time",
+		}
+	}
+
+	// The probes call /health/ready every few seconds: their request lines are dropped here, never at the source.
+	stage.drop {
+		source     = "msg,route"
+		separator  = ";"
+		expression = "request;.*/health/.*"
+	}
+
+	stage.timestamp {
+		source = "time"
+		format = "RFC3339"
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}
