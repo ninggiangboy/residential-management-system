@@ -143,3 +143,4 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 - Identifiers follow master plan §0.2; a number once assigned is never reused.
 - A behavior change edits the docs in the same PR. A decision change gets a new ADR that supersedes the old one.
 - File and folder names are English kebab-case.
+
