@@ -99,6 +99,60 @@ describe('the process (`bun src/main.ts`)', () => {
     )
   })
 
+  test('DR-272 SIGTERM during a request: readiness is 503 first, the request in flight is answered in full, then the process exits 0', async () => {
+    const [port, opsPort] = [freePort(), freePort()]
+    const main = startMain({
+      DATABASE_URL: db.url,
+      PORT: String(port),
+      OPS_PORT: String(opsPort),
+      SHUTDOWN_DRAIN_SECONDS: '1',
+      LOG_LEVEL: 'info',
+    })
+    let status: number | undefined
+    for (let i = 0; i < 50 && status !== 200; i++) {
+      status = await main.readyStatus(opsPort)
+      if (status !== 200) await Bun.sleep(100)
+    }
+    expect(status).toBe(200)
+
+    // A request whose body is still on its way: the server has the connection open and is waiting for the rest.
+    const body = JSON.stringify({ email: 'nobody@example.com', password: 'not-a-password-1' })
+    let answer = ''
+    let closed!: () => void
+    const done = new Promise<void>((resolve) => {
+      closed = resolve
+    })
+    const socket = await Bun.connect({
+      hostname: '127.0.0.1',
+      port,
+      socket: {
+        data: (_socket, data) => {
+          answer += new TextDecoder().decode(data)
+        },
+        close: () => closed(),
+        error: () => closed(),
+      },
+    })
+    socket.write(
+      `POST /api/v1/auth/staff/login HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n${body.slice(0, 10)}`,
+    )
+    await Bun.sleep(200)
+
+    main.proc.kill('SIGTERM')
+    // During the drain the port is open and readiness says `stopping`.
+    await Bun.sleep(300)
+    expect(await main.readyStatus(opsPort)).toBe(503)
+    expect(main.proc.exitCode).toBeNull()
+    // The drain (1 s) is over and the listener is closed; the process still waits for the request.
+    await Bun.sleep(1500)
+    expect(main.proc.exitCode, `answered early: ${answer.slice(0, 200)}`).toBeNull()
+    socket.write(body.slice(10))
+    await done
+
+    expect(answer).toMatch(/^HTTP\/1\.1 \d{3} /)
+    expect(await main.proc.exited).toBe(0)
+  })
+
   test('DR-161 with no database it answers 503 on the ops port for 30 s, then exits 1 (not 78)', async () => {
     const [port, opsPort] = [freePort(), freePort()]
     const dead = `postgres://rms_app:x@127.0.0.1:${freePort()}/rms`
