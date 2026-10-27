@@ -21,15 +21,17 @@ bun run keys:generate      # writes .env.local (throw-away local passwords); ide
 bun run seed:demo          # the demo building DEMO-A (240 units, 4 staff, 8 residents; DOC-36 §9); safe to run again; `db:reset` runs it
 bun run infra:up           # docker compose: postgres 18.6 :5432, SeaweedFS S3 :9000, Mailpit :1025/:8025
 bun run infra:down | infra:reset   # reset DELETES the local database and object store
-bun run monitor:up | monitor:down  # Prometheus :9090, Alertmanager :9093, Loki, Alloy and Grafana :3030 beside infra:up; scrapes the API on the host (:3001), alerts mail to Mailpit
+bun run monitor:up | monitor:down  # Prometheus :9090, Alertmanager :9093, Loki, Alloy, the two exporters and Grafana :3030 beside infra:up; scrapes the API on the host (:3001), alerts mail to Mailpit
 
-bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, ops (promtool/amtool/Loki/Alloy via Docker), test-ids)
+bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, ops (promtool/amtool/Loki/Alloy via Docker), deploy, test-ids)
 bun run lint               # Biome; `bun run format` applies the fixes
 bun run typecheck          # tsc in every workspace + scripts/
 bun run check:arch         # dependency-cruiser, three configs (apps, modules, packages)
 bun run check:scope        # every query on a table with building_id carries the scope (AST, TypeScript 6 of tools/depcruise)
 bun run check:audit        # every audit action written in code is declared in its manifest and listed in DOC-35 §4
 bun run check:layout       # module layout (DR-254): one command per file with one `execute`, reads in query services, one handler per file, repository interfaces in domain/, a staff use case calls requireRole
+bun run check:deploy       # the files of a host (DOC-70): compose, Caddy, shellcheck, deploy.sh and the PostgreSQL files on real PostgreSQL 18 and Caddy (needs Docker, ~40 s)
+bun run test:backup-repo   # SeaweedFS over TLS + pgBackRest end to end, a point-in-time restore (needs Docker and the network, ~70 s; not in `check`)
 bun run test               # unit tests of every workspace (bun test, no database)
 bun run test:coverage      # the same with lcov (CI `unit` job)
 bun run dev:web            # Vite for apps/cms-web on :5173
