@@ -34,8 +34,11 @@ export interface TokenFactory {
  * reports a provider failure as an exception, so the outbox retries. The `allowlist` driver answers `not_allowlisted` for a number
  * it did not text, so the counter `sms_sent_total` does not call it `sent`.
  */
+// biome-ignore lint/suspicious/noConfusingVoidType: a sender that has nothing to say returns nothing, which `undefined` would not accept
+export type SmsSendResult = void | 'not_allowlisted'
+
 export interface SmsSender {
-  send(message: { to: string; text: string; requestId: string }): Promise<void | 'not_allowlisted'>
+  send(message: { to: string; text: string; requestId: string }): Promise<SmsSendResult>
 }
 
 /** A phone as the product stores it. The parser is `libphonenumber-js`, which the application layer may not import. */

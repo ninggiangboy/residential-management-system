@@ -5,7 +5,7 @@ import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-ty
 import { IDENTITY_EVENTS, type SmsRequestedPayload } from '../../contracts'
 import { ResidentAccount } from '../../domain/resident-account'
 import type { ResidentAccountRepository } from '../../domain/resident-account-repository'
-import type { SmsSender } from '../ports'
+import type { SmsSender, SmsSendResult } from '../ports'
 import { smsAad } from '../sms-commands'
 
 type SentOutcome = Exclude<CounterLabels['sms_sent_total']['outcome'], 'failed'>
@@ -63,7 +63,7 @@ export class SendSmsHandler implements IntegrationEventHandler {
       brand: texts.brand,
       appUrl: texts.appUrl,
     })
-    let sent: void | 'not_allowlisted'
+    let sent: SmsSendResult
     try {
       sent = await sender.send({ to: record.phone, text, requestId: command.requestId })
     } catch (error) {
