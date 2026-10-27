@@ -1,12 +1,14 @@
 # The pull-request and trunk pipeline (DOC-71 §2, §4). `gate` is the one required check (DR-163). The trunk is `dev`
-# (DR-239). `deploy-staging` is P1-20 and prepares the host itself (DR-273); `deploy-web-staging` and `mobile-staging` are added by P6-10.
+# (DR-239). A push to `dev` is checked and built; only a push to `staging`, a fast-forward of `dev`, publishes and deploys (DR-276).
+# `deploy-staging` is P1-20 and prepares the host itself (DR-273); `deploy-web-staging` and `mobile-staging` are added by P6-10.
 # Actions are pinned by commit SHA with the tag in a comment (DR-95); the scanner images are pinned in `env` below and
 # refreshed by hand with DOC-11 §9 (Dependabot does not read `docker run` lines).
 name: ci
 on:
   pull_request:
+    branches: [dev] # `staging` takes no pull request: `bun run staging:push` moves it (DR-276)
   push:
-    branches: [dev]
+    branches: [dev, staging]
 permissions:
   contents: read
 concurrency:
@@ -37,7 +39,8 @@ jobs:
         with:
           filters: .github/paths-filter.yml
 
-  # A push to `dev` whose tree already passed `gate` on its pull request skips the checks that would repeat (DOC-71 §4.3, DR-274).
+  # A push to `dev` whose tree already passed `gate` on its pull request skips the checks that would repeat (DOC-71 §4.3, DR-274), and
+  # so does a push to `staging` whose commit already passed `gate` on `dev` (DR-276).
   # `ops/deploy/trusted-tree.sh` decides and never fails: anything it cannot establish is `tested=false`, and then every check runs.
   # On a pull request the job is skipped and its outputs are empty, which every `if` below reads as "not tested".
   trusted:
@@ -56,6 +59,7 @@ jobs:
       - id: tree
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           set -o pipefail
           ops/deploy/trusted-tree.sh 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
@@ -301,10 +305,10 @@ jobs:
           done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/health/ready)
           test "$code" = 503 || { echo "ready answered $code, expected 503 without a database"; docker logs api; exit 1; }
-      # On `dev` the image that was scanned is handed to `publish`, which pushes it only when `gate` is green.
-      - if: github.event_name == 'push'
+      # On `staging` the image that was scanned is handed to `publish`, which pushes it only when `gate` is green (DR-276).
+      - if: github.ref == 'refs/heads/staging'
         run: docker save rms-api:ci | gzip -1 > rms-api.tar.gz
-      - if: github.event_name == 'push'
+      - if: github.ref == 'refs/heads/staging'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rms-api-image
@@ -366,12 +370,12 @@ jobs:
         run: |
           echo "gate is green; merge with \`bun run pr:merge $PR_NUMBER\` (DR-241)" >> "$GITHUB_STEP_SUMMARY"
 
-  # Is there a staging host? The variable `HOST_IP` of the environment `staging` is its address (DOC-70 §11), so a non-empty value is
+  # Is there a staging host? Asked on a push to `staging` only (DR-276). The variable `HOST_IP` of the environment `staging` is its address (DOC-70 §11), so a non-empty value is
   # the answer (DR-275). A job's `if` cannot read an environment's variables, hence this job: it runs in the environment with
   # `deployment: false`, which gives it the variables and writes no deployment record. Until the host exists `publish` and
   # `deploy-staging` do not start, and no `failure` record is left on every push.
   staging-host:
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     environment:
@@ -391,9 +395,9 @@ jobs:
             echo "No staging host yet (the variable HOST_IP of the environment staging is empty): nothing is published or deployed." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # `sha-<7>` reaches GHCR only for a commit of `dev` whose `gate` is green (DOC-71 §7.5) and only when there is a staging host (DR-275).
+  # `sha-<7>` reaches GHCR only for a commit pushed to `staging` whose `gate` is green (DOC-71 §7.5) and only when there is a staging host (DR-275, DR-276).
   publish:
-    if: ${{ github.event_name == 'push' && needs.staging-host.outputs.ready == 'true' }}
+    if: ${{ github.ref == 'refs/heads/staging' && needs.staging-host.outputs.ready == 'true' }}
     needs: [gate, staging-host]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -417,11 +421,11 @@ jobs:
           docker push "$image"
           echo "pushed \`$image\`" >> "$GITHUB_STEP_SUMMARY"
 
-  # DOC-71 §7.3: a push to `dev` whose `gate` is green and whose image is in GHCR deploys to staging, then the smoke test runs from
+  # DOC-71 §7.3: a push to `staging` whose `gate` is green and whose image is in GHCR deploys to staging, then the smoke test runs from
   # here against the public hosts. A deploy gate, not a merge gate (DR-163). The job's own deployment record is what `promote`
   # reads on a release tag (DOC-71 §7.4). Two deploys never overlap: the second waits for the first.
   deploy-staging:
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.staging-host.outputs.ready == 'true' && needs.publish.result == 'success' && needs.e2e-web.result != 'failure' }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/staging' && needs.staging-host.outputs.ready == 'true' && needs.publish.result == 'success' && needs.e2e-web.result != 'failure' }}
     needs: [publish, e2e-web, staging-host]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
