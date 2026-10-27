@@ -59,7 +59,13 @@ export function buildApp(container: Container) {
     routePlugin({ prefix: API_PREFIX })
       .use(requestContextPlugin)
       .use(clientInfoPlugin(clientIpOf(container)))
-      .use(requestLogPlugin({ logger, clientIp: clientIpOf(container) }))
+      .use(
+        requestLogPlugin({
+          logger,
+          clientIp: clientIpOf(container),
+          observe: container.metrics.request,
+        }),
+      )
       .use(errorHandlerPlugin({ logger }))
       .use(
         corsPlugin({
@@ -104,22 +110,38 @@ export function buildApp(container: Container) {
 export type App = ReturnType<typeof buildApp>
 
 /**
- * The ops port (`OPS_PORT`): `/health/live`, `/health/ready` with every check, and later `/metrics` (P1-18). Bound to the
+ * The ops port (`OPS_PORT`): `/health/live`, `/health/ready` with every check, and `/metrics` (DOC-40 §2). Bound to the
  * Docker network and never routed by Caddy or the Tunnel (DR-07), so it has no prefix, no CORS and no maintenance gate.
  */
-export function buildOpsApp({ config, database, maintenance, lifecycle, runtime }: Container) {
+export function buildOpsApp({
+  config,
+  database,
+  maintenance,
+  lifecycle,
+  runtime,
+  metrics,
+}: Container) {
   // The worker also answers for its relay: a stalled loop is not ready (DOC-38 §5.2).
   const checks = config.core.APP_ROLES.includes('worker') ? [runtime.relayCheck] : []
-  return new Elysia().group('/health', (health) =>
-    health.use(liveRoute()).use(
-      readyRoute({
-        database,
-        checks,
-        maintenance,
-        stopping: () => lifecycle.stopping,
-        timeoutMs: config.core.READINESS_DB_TIMEOUT_MS,
-        exposeChecks: true,
-      }),
-    ),
+  return (
+    new Elysia()
+      .group('/health', (health) =>
+        health.use(liveRoute()).use(
+          readyRoute({
+            database,
+            checks,
+            maintenance,
+            stopping: () => lifecycle.stopping,
+            timeoutMs: config.core.READINESS_DB_TIMEOUT_MS,
+            exposeChecks: true,
+          }),
+        ),
+      )
+      // The text format of Prometheus (DOC-40 §2); only here, so `PORT` answers 404 (OB-03).
+      .get('/metrics', async ({ set }) => {
+        set.headers['content-type'] = metrics.metrics.contentType
+        set.headers['cache-control'] = 'no-store'
+        return metrics.metrics.render()
+      })
   )
 }

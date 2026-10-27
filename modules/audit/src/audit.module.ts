@@ -49,6 +49,6 @@ export function createAuditModule(deps: AuditModuleDeps): AuditModule {
     name: 'audit',
     api,
     audited: createAudited(api),
-    jobs: [auditPurgeJob(database, deps.purgeGraceMinutes)],
+    jobs: [auditPurgeJob(database, deps.purgeGraceMinutes, deps.metrics)],
   }
 }

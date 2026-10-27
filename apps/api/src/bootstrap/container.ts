@@ -10,6 +10,7 @@ import {
   UuidV7Generator,
 } from '@core/kernel'
 import type { Mailer } from '@core/mail'
+import { OutboxStats } from '@core/messaging'
 import { type AppModule, createRuntime, type MaintenanceStore, SqlJobRunStore } from '@core/runtime'
 import { createObjectStorage, type ObjectStorage } from '@core/storage'
 import type { Logger } from '@core/telemetry'
@@ -24,7 +25,9 @@ import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
 import { createGuards, type GuardDeps } from './guards'
 import { createMailerFor } from './mailer'
+import { createAppMetrics, registerPulledMetrics } from './metrics'
 import { MODULE_CATALOG } from './module-catalog'
+import { outboxSourcesOf } from './outbox-sources'
 import { createSmsSenderFor } from './sms'
 import { createTermsGate } from './terms-gate'
 
@@ -93,6 +96,12 @@ export function createContainer(
 ) {
   const clock = overrides.clock ?? new SystemClock()
   const ids = overrides.ids ?? new UuidV7Generator()
+  // The registry of this process (DOC-40 §2): modules receive their counters from it, `/metrics` on the ops port serves it.
+  const metricsSettings = {
+    cacheSeconds: config.observability.METRICS_CACHE_SECONDS,
+    queryTimeoutMs: config.observability.METRICS_QUERY_TIMEOUT_MS,
+  }
+  const metrics = createAppMetrics(metricsSettings)
 
   // One pool + one transaction context for all modules; modules differ only by PostgreSQL schema.
   const database = new Database({
@@ -113,6 +122,7 @@ export function createContainer(
     database,
     actions: auditActionCatalogOf(MODULE_CATALOG),
     purgeGraceMinutes: jobsConfig.JOB_AUDIT_PURGE_GRACE_MINUTES,
+    metrics: metrics.audit,
   })
   installed.push(audit)
 
@@ -143,18 +153,20 @@ export function createContainer(
     identity: { getStaff: (ids) => identity.api.getStaff(ids) },
     residency: { getMembership: (...args) => residency.api.getMembership(...args) },
     termsGate,
+    metrics: metrics.port,
   }
   const realGuards = createGuards(guardDeps)
   const guards = overrides.guards ? overrides.guards(realGuards, guardDeps) : realGuards
   // The wrapper of DOC-50 §8 for every route marked `R`; its store is `platform.idempotency_key` (DOC-17 §3).
   const idempotencyStore = new SqlIdempotencyStore(database)
-  const idempotent = createIdempotent(idempotencyStore, clock)
+  const idempotent = createIdempotent(idempotencyStore, clock, metrics.idempotency)
   const building = installBuilding({
     idempotent,
     logger,
     clock,
     ids,
     database,
+    usage: metrics.usage,
     storage,
     secretBox,
     // `identity` is installed after `building` (it reads the lockout settings), so the proof is forwarded to it (DOC-12 §4.4).
@@ -231,6 +243,7 @@ export function createContainer(
     audited: audit.audited,
     guards,
     idempotent,
+    metrics: metrics.port,
     // `tickets` joins with P3 (DOC-28); until then no staff member has an open ticket, so nothing blocks a lock (DOC-26 §2.1).
     tickets: overrides.tickets ?? noTicketsYet,
     config: {
@@ -292,6 +305,7 @@ export function createContainer(
       return piiBox
     },
     audited: audit.audited,
+    metrics: metrics.port,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
   })
   installed.push(residency)
@@ -326,14 +340,42 @@ export function createContainer(
         (await building.api.listBuildings()).map(({ buildingId }) => ({ buildingId })),
       timeZone: core.JOBS_TIME_ZONE,
       tickSeconds: jobsConfig.JOBS_SCHEDULER_TICK_SECONDS,
+      onRun: metrics.jobRun,
     },
     dbPoolMax: db.DB_POOL_MAX,
+    onHandler: metrics.handler,
     maintenance: {
       pollIntervalMs: core.MAINTENANCE_POLL_INTERVAL_MS,
       store: overrides.maintenanceStore,
     },
   })
   const lifecycle: Lifecycle = { stopping: false }
+
+  const isWorker = core.APP_ROLES.includes('worker')
+  // The gauges the modules define from their own tables (`otp_challenges_24h`, `units_without_owner`, …).
+  for (const gauge of installed.flatMap((module) => module.gauges ?? []))
+    metrics.metrics.pulled(gauge.name, gauge.help, gauge.labelNames ?? [], gauge.read)
+  registerPulledMetrics(
+    metrics,
+    {
+      database,
+      outboxes: new OutboxStats(database, outboxSourcesOf(MODULE_CATALOG)),
+      // The same answer as `/health/ready` on the ops port, so `ReadinessFailing` and the probe never disagree.
+      ready: async () => {
+        if (lifecycle.stopping) return false
+        await database.ping()
+        if (isWorker) await runtime.relayCheck.ping()
+        return true
+      },
+      worker: isWorker
+        ? {
+            relayLastPassAt: () => runtime.relay.lastPassAt,
+            jobLastSuccess: () => runtime.jobs.lastSuccess,
+          }
+        : undefined,
+    },
+    metricsSettings,
+  )
 
   // The idempotency sweep of DOC-38 §4.2: hourly, in the process that answers requests; `token_purge` is the second net.
   const sweep = setInterval(() => {
@@ -349,6 +391,7 @@ export function createContainer(
     clock,
     ids,
     database,
+    metrics,
     building,
     identity,
     residency,

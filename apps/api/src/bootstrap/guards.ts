@@ -2,19 +2,21 @@ import { requestContext } from '@core/context'
 import { ForbiddenError, UnauthorizedError, ValidationError } from '@core/kernel'
 import type { AccessTokenVerifier, IdentityApi, StaffDto } from '@mod/identity/contracts'
 import { can, type ResidencyApi } from '@mod/residency/contracts'
-import type {
-  BuildingId,
-  Capability,
-  GuardContext,
-  Guards,
-  MembershipId,
-  ResidentAccountId,
-  ResidentSession,
-  StaffId,
-  StaffRole,
-  StaffSession,
-  UnitContext,
-  UnitId,
+import {
+  type BuildingId,
+  type Capability,
+  type GuardContext,
+  type Guards,
+  type MembershipId,
+  type MetricsPort,
+  NO_METRICS,
+  type ResidentAccountId,
+  type ResidentSession,
+  type StaffId,
+  type StaffRole,
+  type StaffSession,
+  type UnitContext,
+  type UnitId,
 } from '@rms/shared-types'
 import type { TermsGate } from './terms-gate'
 
@@ -25,6 +27,8 @@ export interface GuardDeps {
   residency: Pick<ResidencyApi, 'getMembership'>
   /** The terms gate of DOC-35 §9.2, which the `unit(capability)` guard runs once it knows the building. */
   termsGate: TermsGate
+  /** `membership_guard_refusals_total` (DOC-40 §4.3). */
+  metrics?: MetricsPort
 }
 
 const BEARER = 'Bearer '
@@ -67,7 +71,13 @@ function recordResident(accountId: string, buildingId?: string): void {
  * no row and for a locked one alike (so a caller learns nothing about a unit that is not theirs), runs the terms gate now that the
  * building is known, and asks the policy table for `capability` (403 `forbidden`).
  */
-export function createGuards({ verifier, identity, residency, termsGate }: GuardDeps): Guards {
+export function createGuards({
+  verifier,
+  identity,
+  residency,
+  termsGate,
+  metrics = NO_METRICS,
+}: GuardDeps): Guards {
   /** The staff row a valid staff token names, or 401. */
   async function prove(header: string | null): Promise<{ row: StaffDto; sessionId: string }> {
     if (!header?.startsWith(BEARER)) throw unauthenticated()
@@ -108,8 +118,13 @@ export function createGuards({ verifier, identity, residency, termsGate }: Guard
             { path: 'header.X-Unit-Id', code: 'required', message: 'X-Unit-Id is required' },
           ])
         const membership = await residency.getMembership(accountId, unitId)
-        if (membership?.status !== 'active')
+        if (membership?.status !== 'active') {
+          // A spike after a lock is normal; a spike with no lock is a client bug or probing (DOC-27 §15).
+          metrics.inc('membership_guard_refusals_total', {
+            reason: membership ? 'locked' : 'missing',
+          })
           throw new ForbiddenError('membership_inactive', 'You no longer have access to this home.')
+        }
         await termsGate(accountId, membership.buildingId)
         const buildingId = membership.buildingId as BuildingId
         const unit: UnitContext = {

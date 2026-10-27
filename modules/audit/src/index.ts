@@ -1,4 +1,5 @@
 export { auditActionCatalogOf } from './application/action-catalog'
+export type { AuditMetrics } from './application/ports'
 export type { AuditDeps, AuditModule } from './audit.module'
 export type { AuditHost } from './install'
 export { installAudit } from './install'
