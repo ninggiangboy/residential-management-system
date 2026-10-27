@@ -1,6 +1,6 @@
 # Messaging contracts
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: R2 named as the S3 store) · 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (DR-272: R8 and MC-21, the worker restarts first) · 2026-10-26 (DR-268: R2 named as the S3 store) · 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
 > Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 
@@ -1200,7 +1200,7 @@ Each rule has a check (MC- tests of §9, or CI).
 | R5 | A new event or handler needs, in one change: a row in §5, a schema, an example, a handler idempotency test (MC-07), a line in `outboxPolicies` if it is not `default`, and the consumer's template key if it feeds the inbox (§5.3). | Review checklist, DOC-12 §14 |
 | R6 | A producer writes an event **only in the transaction of the state change**; a handler writes follow-up messages only in its own inbox transaction. | `OutboxWriter.add` throws outside a transaction (MC-03) |
 | R7 | A synchronous contract changes the same way: add an optional parameter or a field; for anything else add a new method (`getMembershipV2`) and migrate the callers before removing the old one. A DTO field is never removed in the release that stops filling it. | TypeScript compile of all callers; a contract diff in review |
-| R8 | The two sides of a deploy run together for a short time (`api-1`, `api-2`, then `worker` restarts one after another, DOC-07 §4.3). A message written by the new `api` can be read by the old `worker` and the reverse, so R1–R3 hold between **adjacent releases**, not only across majors. | MC-13 runs the previous release's handlers against the current producers' fixtures |
+| R8 | The two sides of a deploy run together for a short time (`worker`, then `api-1`, then `api-2` restart one after another, DOC-07 §4.3, DR-272). A message written by the old `api` is read by the new `worker`, and one written by the new `api` can still be read by the old one, so R1–R3 hold between **adjacent releases**, not only across majors. The `worker` goes first so that a **new type** has its handler before anything writes it; a type that a worker does not know is deferred by the relay and never marked published (MC-21). | MC-13 runs the previous release's handlers against the current producers' fixtures |
 
 ## 9. Required tests
 
@@ -1228,6 +1228,7 @@ Prefix `MC-` (messaging contracts). They run in the `messaging` suite of the cor
 | MC-18 | Two messages of one aggregate and two of another | One relay pass runs | The aggregates run in parallel; within one aggregate the handlers start in id order |
 | MC-19 | `tickets.ticket_changed.v1` with `messageVisibility = internal` | The notification handler runs | No inbox entry and no push request (FR-24.2) |
 | MC-20 | `finance.money_unposted.v1` for a gateway event | The handlers run | Every active Manager and Admin gets one `finance.money_unposted` entry, the resident gets none (FR-46.4, FR-09.2) |
+| MC-21 | A message of a type that the relay's `knownTypes` does not hold, and one of a catalogued type that has no handler | The relay drains | The first is given back with `attempts` unchanged and `next_attempt_at` later, and is published once the type is known; the second is published (DR-272) |
 
 ## 10. Decisions made while writing
 

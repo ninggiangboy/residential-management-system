@@ -1,6 +1,6 @@
 # System context and containers
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: SeaweedFS on the VPS replaces R2 in the `vn` profile; `files.<domain>` host; earlier 2026-10-22 (DR-245: `fee_notice_job`; DOC-15 names `debt_reminder` and `fake_gateway_link`; DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (DR-272: the rolling order is worker, api-1, api-2) · 2026-10-26 (DR-268: SeaweedFS on the VPS replaces R2 in the `vn` profile; `files.<domain>` host; earlier 2026-10-22 (DR-245: `fee_notice_job`; DOC-15 names `debt_reminder` and `fake_gateway_link`; DR-239: the trunk is `dev`; earlier 2026-10-20: DR-160 decided: TB1 revised; earlier: DR-88 decided; DR-111, DR-114, DR-116, DR-119, DR-122) · DOC-07
 > Depends on: original SDD §4, §16, §19, [DR](../00-decision-register.md) (DR-02…08, 33, 36, 42, 48, 52, 55, 56, 58, 61…68, 74, 75, 83, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-01](../01-product/vision-and-scope.md), [DOC-03](../01-product/requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-08…12, DOC-14…17 (table owners), DOC-19, DOC-37…41, DOC-69…72, P0-21, P1-02, P1-03, P1-18, P1-20
 
@@ -221,7 +221,7 @@ The VPS firewall denies all inbound traffic, SSH included. Operators and the dep
 | Web CMS | none (static on Pages) | — | — | Static files | — |
 | Migration step | `rms-api` image, one-shot, role `rms_migrator` | — | before each rollout | drizzle-kit migrations per module (expand/contract, DR-08) | — |
 
-A second worker is safe by design (singleton jobs take a transaction-level advisory lock, DR-62) but is not deployed in phase 1. A rolling deploy restarts `api-1`, waits for `/health/ready`, then `api-2`, then `worker`. The maintenance flag `platform.maintenance` is not part of routine deploys; it stays available for a contract migration that cannot be backward compatible (DR-05).
+A second worker is safe by design (singleton jobs take a transaction-level advisory lock, DR-62) but is not deployed in phase 1. A rolling deploy restarts `worker` first and waits for `/health/ready`, then `api-1`, then `api-2`: the consumer goes before the producer, so that an event of a new type written by the new `api` finds its handler (DR-272). An `api` waits `SHUTDOWN_DRAIN_SECONDS` before it closes its port, and Caddy retries a refused connection for 5 s, so a deploy costs no request. The maintenance flag `platform.maintenance` is not part of routine deploys; it stays available for a contract migration that cannot be backward compatible (DR-05).
 
 ### 4.4 Operator access to monitoring
 
