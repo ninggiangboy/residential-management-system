@@ -33,7 +33,7 @@ Option **6** (DR-62, DR-05).
 
 **Positive**
 
-- A worker restart never touches a webhook or a request; a deploy restarts `api-1`, then `api-2`, then `worker`.
+- A worker restart never touches a webhook or a request; a deploy restarts `worker`, then `api-1`, then `api-2` (order changed by DR-272: the consumer goes before the producer).
 - Singleton safety needs no extra component and works if a pooler is added.
 - The "last success" metrics give the alerts of DOC-40 something to measure.
 

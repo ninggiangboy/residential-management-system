@@ -59,6 +59,7 @@ Read by `api` and `worker` unless the column says otherwise.
 | `MAINTENANCE_POLL_INTERVAL_MS` | int | 1000 | | Poll of `platform.maintenance` (DOC-38 §3.7, DOC-17 §3.4) |
 | `READINESS_DB_TIMEOUT_MS` | int | 2000 | | The database ping of `/health/ready` (DOC-38 §5.2, DOC-10 §6.3) |
 | `WORKER_STOP_TIMEOUT_SECONDS` | int | 40 | | Wait for running jobs at shutdown; read by `worker` (DOC-38 §5.4) |
+| `SHUTDOWN_DRAIN_SECONDS` | int 0…30 | 0 | `staging`, `production` 7 (set in `docker/compose.base.yml`, like `DB_POOL_MAX`) | Wait at shutdown between the 503 `stopping` of `/health/ready` and closing the HTTP port, so that Caddy's active health check (5 s) stops routing to the process; read by `api` (DOC-38 §5.4, DR-272) |
 | `JOBS_TIME_ZONE` | string (IANA) | `Asia/Ho_Chi_Minh` | | Zone of the clock jobs; read by `worker` (DOC-38 §3.3, ADR-0013). The process itself runs in UTC |
 
 ## 5. Database

@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the store is SeaweedFS in `vn`; DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (DR-272: an unknown type is deferred, the worker restarts first, the drain of the api) · 2026-10-26 (DR-268: the store is SeaweedFS in `vn`; DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -103,6 +103,8 @@ UPDATE finance.outbox_messages
 With `:base` 5 and `:cap` 900 the waits after attempts 1 to 8 were 5, 10, 20, 40, 80, 160, 320 and (on the eighth, which dies) 640 seconds (JB-03). A dead row is not claimed; `outbox:requeue` makes it claimable again (JB-04). A deferred row returned with `attempts` unchanged and a wait of 60 to 66 seconds, and the one older than 24 hours died (JB-05). A mix of a deferral and a real error counts as a real failure.
 
 **Bus.** `InProcessMessageBus.publish` runs every handler of the type with `Promise.allSettled`; if any failed it throws an `AggregateError` and the relay retries the whole message. Handlers that already succeeded are skipped by their inbox row. A handler sets its own client timeout (Expo, SMS, SMTP, payOS, the S3 store: 10 to 30 seconds, in the driver documents) so that a pass stays well under the 60-second lease.
+
+**A type this build does not know (DR-272).** A bus with no handler for a type reports success, and the relay would then mark the message published: an event written by a newer `api` and read by an older `worker` in the middle of a deploy would be lost with no error. `OutboxRelay` therefore takes `knownTypes`, the `outboxPolicies` of the installed manifests plus every type a handler of the build consumes. A message of another type is given back like a `RetryLater` (`attempts` unchanged, `outbox_unknown_type` warning, claimed again after `unknownTypeDeferMs`, 10 s) and dies only after `OUTBOX_DEFER_BUDGET_HOURS`, when `DeadLetters` fires. A type that is catalogued but has no handler is published: an event may have no consumer yet (MC-21). The deploy restarts the worker first so that the window is short.
 
 ### 2.4 Settings per event type
 
@@ -393,7 +395,8 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 
 ### 5.4 Graceful shutdown
 
-On `SIGTERM` (a deploy restarts `api-1`, then `api-2`, then `worker`, DOC-07 §4.3):
+On `SIGTERM` (a deploy restarts `worker`, then `api-1`, then `api-2`, DOC-07 §4.3, DR-272). The steps below are the worker's; the `api` role does its own first, in `main.ts`: set `stopping` (readiness answers 503), wait `SHUTDOWN_DRAIN_SECONDS` with the port open so that Caddy's health check (5 s) stops routing to it, close the streams that hold the server open (`closeLive()`, SSE), stop the HTTP server, which waits for the requests in flight (a request whose body is still arriving included, `boot.integration.test.ts`), then close the pool.
+
 
 1. Mark the worker stopping; `/health/ready` answers 503 `stopping`.
 2. Stop the scheduler loop and clear every interval timer: no run starts.
