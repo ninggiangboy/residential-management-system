@@ -16,8 +16,9 @@ A residential (apartment building) management system: an Elysia API, a web CMS f
 The toolchain is pinned in `.tool-versions` (bun 1.4.3, node 24.22.0). Run every command from the repository root.
 
 ```sh
-bun run setup              # fresh clone → running local stack (tools, install, keys, infra; later migrate, seed)
+bun run setup              # fresh clone → running local stack (tools, install, keys, infra, migrate, demo seed)
 bun run keys:generate      # writes .env.local (throw-away local passwords); idempotent
+bun run seed:demo          # the demo building DEMO-A (240 units, 4 staff, 8 residents; DOC-36 §9); safe to run again; `db:reset` runs it
 bun run infra:up           # docker compose: postgres 18.6 :5432, SeaweedFS S3 :9000, Mailpit :1025/:8025
 bun run infra:down | infra:reset   # reset DELETES the local database and object store
 bun run monitor:up | monitor:down  # Prometheus :9090, Alertmanager :9093, Loki, Alloy and Grafana :3030 beside infra:up; scrapes the API on the host (:3001), alerts mail to Mailpit
@@ -47,7 +48,7 @@ Running tests:
 - Integration tests (`bun run test:integration`, `bun run test:grants`) need the stack and `.env.local`; each file clones a migrated template database. The files tests of `@mod/building` use SeaweedFS when `S3_ENDPOINT` answers and an in-memory store otherwise; `bun --env-file=.env.local test tools/compat/uploads.test.ts` runs the upload checks (U1…U11) against the store that `S3_*` names.
 - `bun run check:arch:fixtures` tests the cruiser rules against the deliberately broken trees in `tools/arch-fixtures/cases/`.
 
-Several targets named in the docs (`dev`, `seed:demo`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
+Several targets named in the docs (`dev`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
 
 ## Architecture
 

@@ -1,6 +1,6 @@
 # Local development
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (P1-18: `monitor:up`, `monitor:down`, `check:ops`, `ops:dashboards`, the ports of the monitoring profile; earlier 2026-10-22 (P1-06: `db:migrate`, `db:generate`, `db:reset`, `test:grants`, setup step 5 run; P1-05: `outbox:*` and `jobs:run`; P1-04: the API targets, the five application keys, §13 check 3 run; DR-248; DR-246: the Git hooks in §4; P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-250; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31)) · DOC-69
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (P1-21: `seed:demo` built, `db:reset` seeds the demo, setup steps 5 and 6 run, the demo content that exists today, DR-270; P1-18: `monitor:up`, `monitor:down`, `check:ops`, `ops:dashboards`, the ports of the monitoring profile; earlier 2026-10-22 (P1-06: `db:migrate`, `db:generate`, `db:reset`, `test:grants`, setup step 5 run; P1-05: `outbox:*` and `jobs:run`; P1-04: the API targets, the five application keys, §13 check 3 run; DR-248; DR-246: the Git hooks in §4; P1-19: the CI targets of §5, DR-240; P1-09: `uv` for DS-05, `tokens:build`, `check:i18n`, `dev:web`, `build`; DR-250; P1-03: the local infrastructure exists and the dry run is recorded in §14; DR-231, DR-233; earlier: DR-227: the dry run is the acceptance of P1-03; P0-31)) · DOC-69
 > Depends on: original SDD §4.3, §23, [DR](../00-decision-register.md) (DR-01, 04, 26, 36, 37, 60, 65, 68, 69, 77, 82, 94, 95, DR-157, DR-227), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.2, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §6.4, §10, [DOC-12](../03-architecture/code-architecture.md) §2.1, [DOC-19](../05-data/db-roles-and-grants.md) §3, [DOC-26](../06-design/identity-and-sessions.md) §5.5, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §3, §6, §16
 > Main readers: P1-01, P1-03, P1-04, P1-09, P1-12, P1-17; every developer on a new machine; [DOC-71](ci-cd.md) (the same commands run in CI)
 
@@ -93,7 +93,7 @@ bun run setup
 bun run dev
 ```
 
-`bun run setup` (`scripts/setup.ts`) is one command that runs, in order, and stops at the first failure. A step whose target does not exist yet is reported as skipped, so the file needs no edit when P1-06 and P1-12 land:
+`bun run setup` (`scripts/setup.ts`) is one command that runs, in order, and stops at the first failure. A step whose target does not exist yet is reported as skipped, so the file needed no edit when P1-06 and P1-21 landed:
 
 | Step | What | Expected output (the line P1-03 prints) |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ bun run dev
 | 3 | `bun run keys:generate`: creates `.env.local` (§8) when it does not exist | `created .env.local (26 keys)` (21 infrastructure keys of P1-03 and the 5 application keys of P1-04); on a second run `kept .env.local` and no change |
 | 4 | `bun run infra:up` (§6) | A table of three services, each `healthy`, and `infra up in <n> s`; 3 minutes or less |
 | 5 | `bun run db:migrate`: the migrations of every module in catalog order, then the grants step (DOC-19 §3.1, steps 2 to 4) | `bootstrap applied`, one `✔ <module> migrated (<n> applied)` per module that has migrations, `migrated: <n> pending applied, 14 schemas`, `grants applied` (run in P1-06: `migrated: 0 pending applied, 14 schemas`, since no module has a migration yet) |
-| 6 | `bun run seed:demo` (§9) | `demo seeded: 240 units, 8 residents, 4 staff`. Until P1-12: `skipped: …` as in step 5 |
+| 6 | `bun run seed:demo` (§9) | `demo seeded (building created): 240 units, 8 residents, 4 staff in <n> ms (local)`; on a second run the same line without `(building created)`. Built in P1-21; before it, `skipped: …` as in step 5 |
 
 **Git hooks (DR-246).** Step 2 also installs the hooks: `bun install` runs the root `prepare` script, `husky`, which points `core.hooksPath` at `.husky/_`. Each hook is a fast subset of CI, which stays the gate:
 
@@ -149,8 +149,8 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `db:migrate` | `scripts/migrate.ts`: `0000-bootstrap.sql`, then the pending migrations of every module in catalog order on one connection with `prepare: false`, then `0900-grants.sql`; as `rms_migrator` (DOC-19 §3.1). Idempotent; exit 1 and a message on the first failure | P1-06 (done) |
 | `outbox:list`, `outbox:requeue`, `outbox:discard` | Dead letters of the modules' outboxes: `bun run --filter @app/api outbox:list`; `outbox:requeue -- --id <uuid>` (or `--type`); `outbox:discard -- --id <uuid>` (DOC-38 §2.7, RB-05) | P1-05 (done) |
 | `jobs:run` | `bun run --filter @app/api jobs:run -- --name <job>`: one run of one job now, `details.manual = true` (DOC-38 §7) | P1-05 (done) |
-| `seed:demo` | Runs `resetDemo` then `seedDemo` of every module for the demo building (DOC-36 §10.2). Safe to run again | P1-12 |
-| `db:reset` | Drops every object of the fourteen schemas and every `drizzle_<module>` history as `rms_migrator`, then runs `db:migrate` (and `seed:demo` once it exists); refuses any profile but `local` and `test` (§11) | P1-06 (done) |
+| `seed:demo` | Creates the demo building `DEMO-A` when the database has none, then runs `resetDemo` and `seedDemo` of every module for it in one transaction (DOC-36 §10.2). Safe to run again: it deletes what the first run created and seeds it with the same ids | P1-21 (done) |
+| `db:reset` | Drops every object of the fourteen schemas and every `drizzle_<module>` history as `rms_migrator`, then runs `db:migrate` and `seed:demo`; refuses any profile but `local` and `test` (§11) | P1-06 (done), P1-21 |
 | `payos:sim` | Signs and POSTs a gateway webhook to the local API (§9.3) | P3-03 |
 | `lint`, `typecheck`, `check:arch`, `check:scope`, `check:audit`, `check:layout`, `check:i18n` | Biome (with the color-literal plugin, DR-237); TypeScript; the three dependency-cruiser configs plus knip and jscpd; the building-scope lint (P1-07: `scripts/check-scope.ts` plus the fixtures of `tools/scope-lint`); the audit-action check (P1-08, AD-06: `scripts/check-audit.ts` plus `tools/audit-lint`); the module-layout check (DR-254: `scripts/check-layout.ts` plus the fixtures of `tools/layout-lint`); catalog parity and content tests (`bun test packages/i18n-catalog`, DOC-68 §9; run by `verify` too) (DOC-71 §4.1, stage `verify`) | P1-01, P1-07 (`check:scope`), P1-08 (`check:audit`), P1-09 (`check:i18n`) |
 | `tokens:build` | Writes `packages/design-tokens/generated/` from `tokens.json` (DOC-54 §2.1); `--check` only reports. A test fails when the committed files differ | P1-09 |
@@ -247,7 +247,7 @@ Rules:
 
 ### 9.1 The data
 
-`bun run seed:demo` fills the **demo building** `DEMO-A` (DOC-36 §9.1): 240 units `A-0101…A-1516`, a published batch with 120 paid charges, 6 tickets, 3 notices, 5 vehicles, a small library, and the accounts below. The seed is versioned (`DEMO_SEED_VERSION`) and uses fixed ids, so a link in a note keeps working after a reset.
+`bun run seed:demo` fills the **demo building** `DEMO-A` (DOC-36 §9.1): 240 units `A-0101…A-1516`, a published batch with 120 paid charges, 6 tickets, 3 notices, 5 vehicles, a small library, and the accounts below. The seed is versioned (`DEMO_SEED_VERSION`) and uses fixed ids, so a link in a note keeps working after a reset. **Since P1-21 it holds** the building with its settings, the `fake` payment gateway and the two terms, the 240 units (200 occupied, 25 rented, 15 vacant), the four staff and the eight residents below with their nine memberships; the batch, tickets, notices, vehicles and library join with the modules that own them (DOC-36 §9.1). The seed is the data of `apps/api/src/demo/plan.ts`; the same data is reset every night at 04:00 and by `POST /staff/demo/reset` (the Admin of the demo building, once a minute).
 
 | Role | Sign in | Credential |
 | --- | --- | --- |
@@ -369,15 +369,15 @@ The camera QR scan and the push token need a **physical device** (`expo-device`,
 
 ## 13. Checks of this document
 
-These are the checks a reviewer runs after P1-03. Checks 1 and 2 were run on 2026-10-21 for steps 1 to 4 (§14); check 3 was run in P1-04 for the two `ready` commands (`/metrics` waits for P1-18); checks 4 and 5 need P1-06 and P1-12; checks 6 and 7 are open until the later targets exist. Check 1 is the dry run of DR-227: it is the acceptance of P1-03, not of the M0 review. They are not test cases and take no test ID.
+These are the checks a reviewer runs after P1-03. Checks 1 and 2 were run on 2026-10-21 for steps 1 to 4 (§14); check 3 was run in P1-04 for the two `ready` commands (`/metrics` waits for P1-18); checks 4 and 5 were run in P1-21 (2026-10-27, below); checks 6 and 7 are open until the later targets exist. Check 1 is the dry run of DR-227: it is the acceptance of P1-03, not of the M0 review. They are not test cases and take no test ID.
 
 | # | Check | Expected |
 | --- | --- | --- |
 | 1 | On a clean user account (no Bun, no Node, Docker only): install the tools of §3, clone, run `bun run setup` | Steps 1 to 6 pass; `infra:up` healthy in 3 minutes or less (P1-03) |
 | 2 | `bun run setup` a second time | No file changes (`git status` clean); `.env.local` kept; the seed does not duplicate |
 | 3 | The curl commands of §4 | `ready` on both ports (run in P1-04: `{"status":"ok","maintenance":false}` and the same with `checks.database`); `/metrics` text (P1-18) |
-| 4 | Sign in as `admin@demo.rms.invalid`, then as `+12025550101` with `123456` in the resident app | Both succeed; the resident sees unit `A-1508` |
-| 5 | `bun run db:reset` | The schemas are dropped and migrated again (run in P1-06: `dropped 14 schemas`, then the output of step 5); the seed is back once `seed:demo` exists; the sessions of check 4 no longer work |
+| 4 | Sign in as `admin@demo.rms.invalid`, then as `+12025550101` with `123456` in the resident app | Both succeed; the resident sees unit `A-1508` (run in P1-21 with the API on the host and `curl`: the staff sign-in answers a token, the resident's answer holds `A-1508`; the apps were not opened) |
+| 5 | `bun run db:reset` | The schemas are dropped and migrated again (run in P1-06: `dropped 14 schemas`, then the output of step 5); the seed is back (run in P1-21: `dropped 14 schemas`, the migrations, then `demo seeded (building created): 240 units, 8 residents, 4 staff`); the sessions of check 4 no longer work (BD-38, over HTTP: the refresh tokens of a reset answer 401) |
 | 6 | Every command in §5 marked P1-xx exists once that task is done | `bun run <target>` exits 0 or prints its usage |
 | 7 | Every port of §7 | Is the one in use; no other port appears in the repository's documents (`grep`) |
 
@@ -416,7 +416,7 @@ Differences between the first draft of this document and what the dry run showed
 3. The Mailpit healthcheck is the binary's own `readyz`, not an HTTP probe (the image has no shell tools) (§6).
 4. `infra:up` is a script (`scripts/infra.ts`) that wraps Compose, prints the table and the elapsed time and fails early without `.env.local` (§5).
 5. `keys:generate` also writes `RMS_POSTGRES_PASSWORD` (the superuser needs a password; there is no trust login from the host) and the ports; its URLs use dotenv references so a changed port needs no second run (§6, §8).
-6. `setup` cannot run steps 5 and 6 before P1-06 and P1-12; it reports them as skipped (§4).
+6. `setup` cannot run steps 5 and 6 before P1-06 and P1-21; it reports them as skipped (§4). Both exist now.
 7. The machine's Node (24.21.0 in the clone, 26.10.0 in the working copy) differs from the pin 24.22.0 in `.tool-versions`: Node only warns when Expo SDK 58 accepts it (§3).
 8. Docker 29.8.2 and Compose 5.5.0 are older than the pins and work (§2).
 9. Ports are bound to `127.0.0.1` (§6).
