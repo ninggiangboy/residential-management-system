@@ -544,7 +544,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `FN-` | Flows: notices, access, vehicles | DOC-48 | not written | planned (P4, P5) | P4, P5 |
 | `FA-` | Flows: admin, reports, library | DOC-49 | not written | planned (P5, P6) | P5, P6 |
 | `SC-` | Security | [DOC-39](../06-design/security.md) §16 | `SC-01…31` | Draft | P1-15, P1-16, P1-20, P3, P6-08 |
-| `OB-` | Observability | [DOC-40](../06-design/observability.md) §10 | `OB-01…18` | Draft | P1-18 |
+| `OB-` | Observability | [DOC-40](../06-design/observability.md) §10 | `OB-01…18` | OB-01…08, 12, 13 run in P1-18 (2026-10-27); OB-14 run locally; the rest wait for P1-20, P2-20, P3-09, P6-06 | P1-18 |
 | `CF-` | Configuration | [DOC-41](../06-design/configuration-reference.md) §19 | `CF-01…18` | Draft | P1-04 |
 | `DS-` | Design system (tokens, contrast, status table) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…08` | Review | P1-09 |
 | `CL-` | Clients (fetcher, refresh, unit context, offline, push) | [DOC-55](../08-ux-ui/client-architecture.md) §18 | `CL-01…30` | Review | P1-16, P1-17 |

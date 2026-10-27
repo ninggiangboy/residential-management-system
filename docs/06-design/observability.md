@@ -1,12 +1,12 @@
 # Observability
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-21 (DR-228: alert addresses are placeholders; earlier: DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
-> Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-27 (P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
 This document says what the system reports about itself and who is told when it goes wrong: the logs and their fields, the metric catalog, the alert rules in PromQL linked to the runbooks, the dashboards, and how an alert reaches a person. It does not hold the install of the stack (DOC-70), the pins (DOC-11 §7), the budgets (DOC-10 §6), the runbook steps (DOC-74…87) or the configuration keys (DOC-41).
 
-**State of this skeleton.** The log fields (§3), the catalog (§4) with every metric the earlier documents promised, the alert rules (§5) with their PromQL, the delivery rules (§6) and the dashboards' panel list (§7) are written. The rules of the payment alerts are final only after P3-09 and all of them after the drills of P6-06; every rule has a row in §10 saying when it is proven. The thresholds are the originals of §19.2 of the SDD unless a decision says otherwise.
+**State.** P1-18 built the baseline on 2026-10-27 (DR-269): `/metrics` on the ops port, the metrics of §4 marked `P1` (the others are re-phased in the tables), the nine alerts' PromQL that can be live (§5), Alertmanager, Loki, Alloy and the dashboards under `ops/` (§7). What waits for staging is said in §10 and in the open questions. The log fields (§3), the catalog (§4) with every metric the earlier documents promised, the alert rules (§5) with their PromQL, the delivery rules (§6) and the dashboards' panel list (§7) are written. The rules of the payment alerts are final only after P3-09 and all of them after the drills of P6-06; every rule has a row in §10 saying when it is proven. The thresholds are the originals of §19.2 of the SDD unless a decision says otherwise.
 
 ## 1. Purpose and scope
 
@@ -53,20 +53,20 @@ flowchart LR
 
 | Component | Version (DOC-11 §7) | Job | Budget |
 | --- | --- | --- | --- |
-| Prometheus | 3.15.0 | Scrape every 15 s, evaluate rules every 15 s, keep 15 days (about 2 GB reserved, DOC-10 §6.4) | inside the 1 GB monitoring ceiling of DR-06 with the others |
+| Prometheus | 3.15.1 | Scrape every 15 s, evaluate rules every 15 s, keep 15 days (about 2 GB reserved, DOC-10 §6.4) | inside the 1 GB monitoring ceiling of DR-06 with the others |
 | Alertmanager | 0.34.1 | Group, route, repeat, silence | |
 | Grafana | 13.2.4 | Dashboards from files in the repository (provisioned, not clicked together) | |
-| Loki | 3.7.8 | Logs, 14 days (up to 3 GB reserved in production) | |
-| Grafana Alloy | 1.20.1 (re-verified on the day P1-18 uses it) | Reads Docker container logs, ships to Loki | |
+| Loki | 3.7.9 | Logs, 14 days (up to 3 GB reserved in production) | |
+| Grafana Alloy | 1.21.2 (verified on 2026-10-27, P1-18) | Reads Docker container logs, ships to Loki | |
 | `postgres_exporter` | 0.20.1 | PostgreSQL basics; connects as `rms_readonly` (DR-113) | |
 | `node_exporter` | 1.12.1 | CPU, memory, disk of the host; the textfile collector carries the backup timestamp | |
-| App metrics library | `prom-client` 15.1.3 (npm, Apache-2.0, checked 2026-10-20), **not yet in DOC-11** | Counters, gauges, histograms on the ops port | |
+| App metrics library | `prom-client` 15.1.3 (npm, Apache-2.0; in DOC-11 §3) | Counters, gauges, histograms on the ops port; `collectDefaultMetrics` is **not** called (below) | |
 
-**Two things P1-18 verifies before pinning**, because the earlier documents did not (DOC-11 row owed): (1) `prom-client` on Bun: its default metrics (event-loop lag, GC) use `perf_hooks` functions that Bun implemented only in part, so `collectDefaultMetrics` may throw; the fallback is to register only CPU, resident memory and the metrics of this catalog, or a small exposition writer in `@core/telemetry` (about 150 lines: three metric types and the text format). (2) The keys of Alertmanager's `telegram_configs` in 0.34.1 (the skeleton of §6 uses the names the documentation gave for 0.26 and later).
+**Two things P1-18 verified** (2026-10-27). (1) `prom-client` 15.1.3 on Bun 1.4.3: counters, gauges and histograms work and the text format is right; `collectDefaultMetrics` does not throw but prints `Nan` and a minimum of 9.2e9 for the event-loop figures, and Prometheus rejects `Nan`, so it is not called. `Metrics.registerProcessMetrics` registers `process_cpu_seconds_total` and `process_resident_memory_bytes` from `process.cpuUsage()` and `process.memoryUsage.rss()`, the only two the catalog needs (`packages/core-telemetry/src/metrics.ts`; test in `metrics.test.ts`). (2) The keys of Alertmanager 0.34.1 `telegram_configs`: `bot_token_file` and `chat_id` (an integer) are accepted by `amtool check-config`, with `send_resolved`; the SMTP secret is `smtp_auth_password_file`.
 
 **No traces and no third-party error tracker in phase 1** (DR-63, DR-103). The request id is the whole of request tracing (§3.4).
 
-**Scrape jobs** (Prometheus `job` label): `rms-api` (targets `api-1`, `api-2` at `OPS_PORT`), `rms-worker`, `postgres`, `node`. The label `job` belongs to Prometheus, which is why the application's per-job metrics use `job_name` (DR-154).
+**Scrape jobs** (Prometheus `job` label): `rms-api` (targets `api-1`, `api-2` at `OPS_PORT`), `rms-worker`, and from P1-20/P1-21 `postgres` and `node`. `api-2` is listed on staging too and shows `down` there: `ApiDown` takes `max(up)`, so a target that never existed raises nothing (P1-18 chose this over a template per environment). The label `job` belongs to Prometheus, which is why the application's per-job metrics use `job_name` (DR-154).
 
 ## 3. Logs
 
@@ -87,7 +87,7 @@ Other fields (`route`, `status`, `code`, `durationMs`, `err`, `sql`) follow DOC-
 
 ### 3.2 Collection and retention
 
-Alloy reads the Docker log files of the containers `api-1`, `api-2` and `worker` (and `caddy`), parses the JSON, and sends to Loki with **four labels only**: `env` (`staging`, `production`), `service`, `container`, `level`. Everything else stays in the JSON and is read with `| json` at query time; a field is never promoted to a label (cardinality). Debug lines from `/health/*` are dropped in Alloy. Loki keeps 14 days (DR-63). **Staging runs without Loki and Alloy** (the compose profile `logs`, DOC-70 §6.1, DR-161): there, logs are read with `docker logs`; production runs both. Alloy's `config.alloy` is a file of DOC-70; its stages are: docker source → relabel to the four labels → `stage.json` for `level` → `stage.drop` on `msg="request"` with `route=~"/health.*"` → Loki write.
+Alloy reads the Docker log files of the containers `api-1`, `api-2` and `worker` (and `caddy`), parses the JSON, and sends to Loki with **four labels only**: `env` (`staging`, `production`, `local`), `service`, `container`, `level`. `service` is the Compose service (`api-1`, `api-2`, `worker`, `caddy`), so the field `service` of the JSON line (`api`, `worker` or `api,worker`) is read as `service_extracted`. Everything else stays in the JSON and is read with `| json` at query time; a field is never promoted to a label (cardinality). The request lines of `/health/*` are dropped in Alloy. Loki keeps 14 days (DR-63). **Staging runs without Loki and Alloy** (the compose profile `logs`, DOC-70 §6.1, DR-161): there, logs are read with `docker logs`; production runs both. Alloy's `config.alloy` is a file of DOC-70; the file is `ops/alloy/config.alloy` and its stages are: docker source → relabel to `env`, `service`, `container` → `stage.json` (`level`, `msg`, `route`, `time`) → `stage.drop` on `msg="request"` with a route containing `/health/` → `stage.timestamp` from `time` → `stage.labels` for `level` → Loki write. Checked with Loki and Alloy running: a test container labelled as `api-1` shipped JSON lines with the four labels, `| json | requestId="…"` found the line, and the `/health/` request lines did not arrive (P1-18).
 
 ### 3.3 Levels and volume
 
@@ -100,11 +100,11 @@ There are no traces, so a request is followed by its id. These LogQL queries are
 | Purpose | Query |
 | --- | --- |
 | Everything one request did, in `api` and in the worker | `{env="production"} \| json \| requestId="0192f3c4-9d02-7000-8000-00000000f001"` |
-| Every 5xx in the last hour | `{service="api", level="error"} \| json \| msg="request" \| status >= 500` |
-| Sign-in failures from one address | `{service="api"} \| json \| msg="auth.staff_login" \| outcome="invalid" \| ip="203.0.113.7"` |
+| Every 5xx in the last hour | `{service=~"api-.*", level="error"} \| json \| msg="request" \| status >= 500` |
+| Sign-in failures from one address | `{service=~"api-.*"} \| json \| msg="auth.staff_login" \| outcome="invalid" \| ip="203.0.113.7"` |
 | Why an outbox message died | `{service="worker", level=~"warn\|error"} \| json \| msg=~"outbox\\..*" \| requestId="<correlationId of the row>"` |
 | A job that failed | `{service="worker"} \| json \| msg="job.failed" \| job_name="invariant_check"` |
-| Unknown gateway callers | `{service="api"} \| json \| msg="webhook.unknown_ip"` |
+| Unknown gateway callers | `{service=~"api-.*"} \| json \| msg="webhook.unknown_ip"` |
 
 ## 4. The metric catalog
 
@@ -112,9 +112,10 @@ Rules for every metric (DR-154):
 
 1. **Names** are `snake_case`, base units in the name (`_seconds`, `_bytes`), `_total` for a counter, `_timestamp` for a Unix time in seconds. A gauge that is a time of last success is a **timestamp**, never an age (an age is stale the moment it is written; the alert computes `time() - …`).
 2. **Labels** are a closed set of values listed here. `route` is always the route template. A label never holds an id of a person, an email, a phone, a name or a free text (OB-02). `job_name` is the name of the job (DOC-38 §4.1); the label `job` is not used, because Prometheus overwrites it.
-3. **Where it is exported.** The ops port of every process serves `/metrics` (never routed, DR-07). HTTP and process metrics come from the process that did the work. **Database-derived gauges are exported by every process** (`api-1`, `api-2` and `worker`), so that they exist when the worker is down; the alerts take `max(...)`, so two copies are one value. A gauge reads the database at most once per `METRICS_CACHE_SECONDS` and gives up after `METRICS_QUERY_TIMEOUT_MS` (keeps the last value, raises `metrics_collection_errors_total{gauge}`; DOC-41 §13).
+3. **Where it is exported.** The ops port of every process serves `/metrics` (never routed, DR-07). HTTP and process metrics come from the process that did the work. **Database-derived gauges are exported by every process** (`api-1`, `api-2` and `worker`), so that they exist when the worker is down; the alerts take `max(...)`, so two copies are one value. A gauge reads the database at most once per `METRICS_CACHE_SECONDS` and gives up after `METRICS_QUERY_TIMEOUT_MS` (keeps the last value, raises `metrics_collection_errors_total{gauge}`; DOC-41 §13). A gauge that was never read has **no series**, not `0`; the readiness, pool and process gauges are read at every scrape. A module defines the gauges that read its own tables (`AppModule.gauges`: `otp_challenges_24h`, `sms_provider_down`, `units_without_owner`); the host registers them (P1-18, DR-269).
 4. **Demo buildings are excluded** from the system-wide business gauges (`money_log_open`, `payment_intents_pending_overdue`, `payment_intents_creating_stale`, `ledger_invariant_violations`, `storage_usage_ratio`): every query has `WHERE NOT b.is_demo` (DOC-36 §11, BD-36). The operational gauges (outbox, jobs, backup) are system-wide.
-5. **A metric is added here** in the same change as its code (DOC-12 §14 rule 13); OB-01 fails when the registry and this table differ.
+5. **A metric is added here** in the same change as its code (DOC-12 §14 rule 13); OB-01 fails when the registry and this table differ: the registry holds exactly the rows whose phase is `P1`, so a row whose code does not exist yet carries the task that builds it.
+6. **Modules report through `MetricsPort`** (`@rms/shared-types`): the names and the label values of the counters they increment are types, so a value this document does not list does not compile. The registry behind it is `apps/api/src/bootstrap/metrics.ts` (DR-269).
 
 ### 4.1 Platform and HTTP
 
@@ -123,17 +124,17 @@ Rules for every metric (DR-154):
 | `http_request_duration_seconds` | histogram, buckets 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.5, 3, 6, 12 (NFR-03: p95 ≤ 0.3, p99 ≤ 0.8) | `method`, `route`, `status` | `api` | DOC-50 §16 | P1 |
 | `api_errors_total` | counter | `code`, `status` | `api` | DOC-42 §8.5 | P1 |
 | `idempotency_total` | counter | `outcome` (`first`, `replay`, `reuse`, `in_progress`) | `api` | DOC-50 §16 | P1 |
-| `upgrade_required_total` | counter | `app` (`resident`, `staff`) | `api` | DOC-50 §16 | P1 |
+| `upgrade_required_total` | counter | `app` (`resident`, `staff`) | `api` | DOC-50 §16 | the version gate (DOC-50 §7 gate 5), not built yet |
 | `app_version_requests_total` | counter | `app` (`resident`, `staff`), `version` (the semantic version of `X-App-Version`, or `invalid`) | `api` | DOC-73 §9 (DR-168) | P1 |
-| `rate_limited_total` | counter | `scope` (the bucket family: `otp_ip`, `otp_phone`, `staff_login_ip`, `reset_email`, `reset_ip`, `stepup`, `upload`, `webhook`, `qr`, `intent`, `reminder`, `client_errors`) | `api` | DOC-50 §16, DOC-39 §6 | P1 |
-| `client_errors_total` | counter | `app`, `kind` | `api` | DOC-42 §8.5 | P1 |
+| `rate_limited_total` | counter | `scope`: the `details.scope` of the 429 answer, so the label and the body agree (today `staff-login`, `otp`, `otp:resend`, `reset`, `stepup`, `client_errors`, `upload`; written with `_` for any non-alphanumeric; later `webhook`, `qr`, `intent`, `reminder`) | `api` | DOC-50 §16, DOC-39 §6 | P1 |
+| `client_errors_total` | counter | `app` (`resident`, `staff`, `web`), `kind` (`crash`, `unhandled_rejection`, `render`, `network`) | `api` | DOC-42 §8.5 | P1 |
 | `readiness_ok` | gauge (1 or 0) | none | `api`, `worker` | DOC-51 §3 | P1 |
-| `db_pool_waiting` | gauge | none | `api`, `worker` | DOC-10 §6.3 | P1 |
-| `sse_streams_open` | gauge | none | `api` | DOC-52 (DR-75) | P1 |
+| `db_pool_waiting` | gauge | none (top-level transactions in flight beyond `DB_POOL_MAX`: each holds a connection from `begin`, so the excess waits for one; a single statement outside a transaction is not counted, so it is a lower bound) | `api`, `worker` | DOC-10 §6.3 | P1 |
+| `sse_streams_open` | gauge | none | `api` | DOC-52 (DR-75) | P4 (with the SSE stream) |
 | `metrics_collection_errors_total` | counter | `gauge` (the metric that timed out or failed) | all | §4 rule 3 | P1 |
-| `provider_auth_failed_total` | counter | `provider` (`sms`, `mail`, `push`, `payos`, `storage`) | `worker`, `api` | DOC-42 §7.1 | P1 |
-| `handler_outcomes_total` | counter | `handler`, `outcome` (`ok`, `deferred`, `skipped`, `failed`) | `worker` | DOC-42 §8.5 | P1 |
-| `delivery_failed_total` | counter | `channel` (`sms`, `mail`, `push`), `reason` | `worker` | DOC-42 §8.5 | P1 |
+| `provider_auth_failed_total` | counter | `provider` (`sms`, `mail`, `push`, `payos`, `storage`) | `worker`, `api` | DOC-42 §7.1 | P1-22 (the provider adapters) |
+| `handler_outcomes_total` | counter | `handler`, `outcome` (`ok`, `deferred`, `failed`; `skipped`, an inbox hit, is not seen by the bus) | `worker` | DOC-42 §8.5 | P1 |
+| `delivery_failed_total` | counter | `channel` (`sms`, `mail`, `push`), `reason` | `worker` | DOC-42 §8.5 | P1-22 (the provider adapters) |
 | `process_cpu_seconds_total`, `process_resident_memory_bytes` | counter, gauge | none | all | the library's default process metrics (§2, verified in P1-18) | P1 |
 
 ### 4.2 Outbox and jobs
@@ -146,7 +147,7 @@ Rules for every metric (DR-154):
 | `job_last_success_timestamp` | gauge | `job_name` | `worker` | DOC-38 §3.5; restored at boot from `job_run` | P1 |
 | `job_runs_total` | counter | `job_name`, `status` (`succeeded`, `failed`) | `worker` | DOC-38 §8 | P1 |
 | `job_duration_seconds` | histogram, buckets 0.1, 0.5, 1, 5, 30, 120, 600 | `job_name` | `worker` | DOC-38 §8 | P1 |
-| `integrity_findings` | gauge | `job_name` (`integrity_weekly`, `integrity_notices`) | `worker` | the job sets it to `details.findings` at the end of each run (DR-154) | P1 for `integrity_weekly`, P3 for the other |
+| `integrity_findings` | gauge | `job_name` (`integrity_weekly`, `integrity_notices`) | `worker` | the job sets it to `details.findings` at the end of each run (DR-154) | with the job (DOC-38 §4.2); the jobs do not exist yet |
 
 ### 4.3 Identity and residency
 
@@ -162,27 +163,28 @@ Rules for every metric (DR-154):
 | `auth_sessions_revoked_total` | counter | `reason` (the ten of DOC-26 §3.8) | DOC-26 §10 | P1 |
 | `auth_step_up_total` | counter | `action` (`gateway_config`, `admin_change`, `staff_email`), `outcome` (`requested`, `ok`, `failed`, `rate_limited`) | DOC-26 §10 | P1 |
 | `sms_provider_down` | gauge | none | DOC-26 §5.4 | P1 |
-| `sms_sent_total`, `mail_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_demo`, `not_allowlisted`, `failed`) | DOC-26 §10 | P1 |
+| `sms_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_demo`, `skipped_unknown`, `not_allowlisted`, `failed`) | DOC-26 §10 | P1 |
+| `mail_sent_total` | counter | `outcome` (`sent`, `expired`, `skipped_unknown`, `failed`) | DOC-26 §10 | P1 |
 | `membership_changes_total` | counter | `change`, `actor` | DOC-27 §15 | P1 |
 | `membership_guard_refusals_total` | counter | `reason` (`missing`, `locked`) | DOC-27 §15 | P1 |
 | `member_invitations_total` | counter | `outcome` (`queued`, `owner_cap`, `phone_bucket`) | DOC-27 §15 | P1 |
-| `owner_transfers_total` | counter | `keep_members` | DOC-27 §15 | P1 |
+| `owner_transfers_total` | counter | `keep_members` (`true`, `false`) | DOC-27 §15 | P1 |
 | `import_commits_total` | counter | `outcome` (`committed`, `expired`, `stale`, `not_ready`) | DOC-27 §15 | P1 |
-| `import_validate_duration_seconds` | histogram, buckets 0.5, 1, 2, 5, 10, 20 (NFR-12: 2,000 rows ≤ 10 s) | none | DOC-27 §15 | P1 |
+| `import_validate_duration_seconds` | histogram, buckets 0.5, 1, 2, 5, 10, 20 (NFR-12: 2,000 rows ≤ 10 s); the whole call, the file read included | none | DOC-27 §15 | P1 |
 | `units_without_owner` | gauge | none | DOC-27 §15 | P1 |
 
 ### 4.4 Building, audit, files
 
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
-| `gateway_check_ok` | gauge (1, 0) | `building` | DOC-36 §11; from `last_check_ok`, demo excluded | P1 |
-| `demo_reset_duration_seconds` | histogram | none | DOC-36 §11 | P1 |
+| `gateway_check_ok` | gauge (1, 0) | `building` | DOC-36 §11; from `last_check_ok`, demo excluded | P3-01 (the gateway check) |
+| `demo_reset_duration_seconds` | histogram | none | DOC-36 §11 | P1-21 (the demo reset) |
 | `boot_guard_failures_total` | counter, **not scrapeable** (the process exits); the log line `boot_guard_failed` is the signal | none | DOC-36 §11 | P1 |
 | `audit_write_failures_total` | counter | none | DOC-35 §11 | P1 |
 | `audit_purge_rows_total` | counter | `class` (`finance`, `standard`) | DOC-35 §11 | P1 |
-| `account_deletion_blocked` | gauge | none | DOC-35 §11 | P1 |
-| `account_deletions_executed_total` | counter | none | DOC-35 §11 | P1 |
-| `storage_usage_ratio` | gauge | `building` | DOC-37 §11; set by `storage_quota`, demo excluded | P1 |
+| `account_deletion_blocked` | gauge | none | DOC-35 §11 | P6-04 (the deletion job) |
+| `account_deletions_executed_total` | counter | none | DOC-35 §11 | P6-04 (the deletion job) |
+| `storage_usage_ratio` | gauge | `building` (the building's id: one per deployment, a building is not a person) | DOC-37 §11; set by `storage_quota`, demo excluded | P1 |
 
 ### 4.5 Money (specified here, built in P2 and P3)
 
@@ -217,6 +219,7 @@ The names come from DR-63; the owning document confirms the labels.
 - A `for` is the smallest that avoids a flap. The P1-18 acceptance (database stopped → alert on email and Telegram within 2 minutes) is the sum: scrape 15 s + evaluation 15 s + `for` 30 s + group wait 10 s + delivery ≈ 90 s at worst.
 - Business gauges are demo-free (§4 rule 3); the expressions take `max(...)` over the copies of a database gauge.
 - A rule is written against a metric of §4 and nothing else. Adding an alert adds a row to §10 (its `promtool` test).
+- **As built (P1-18).** The files are `ops/prometheus/rules/rms-alerts.yml` and `rms-jobs.yml`, the tests `ops/prometheus/tests/rms-alerts.test.yml`, run by `bun run check:ops` (in `verify`) with `promtool` from the image that Compose pins. Live: `OutboxLag`, `DeadLetters`, `SmsFailures`, `StorageQuota`, `ApiErrors`, `ApiDown`, `ReadinessFailing`, `WorkerDown`, `JobStale`, `DbPoolWaiting`, `MetricsCollectionFailing`, `OtpDailyCapReached`, `SmsProviderDown`, `RefreshTokenReuse`, `LockoutSpike`; each has a positive and a negative case. The YAML below remains the specification of the rest; a rule joins the files with the metric it reads. `OtpDailyCapReached` sums the processes (`sum(increase(...))`), so two copies are one alert.
 
 ### 5.2 The nine alerts of the original SDD
 
@@ -227,12 +230,12 @@ Linked to the runbooks RB-01…09 (master plan §3.2). `Ready` is the task after
 | `LedgerInvariantViolation` | Critical | The nightly check returns any row | RB-01 | P2-11 |
 | `PaymentsStuck` | Critical | `pending` older than 60 min not moving to `expired`, or more than 5 `creating` older than 2 min | RB-02 | P3-09 |
 | `WebhookSignatures` | Warning | More than 3 rows in `webhook_rejection` in 10 min | RB-03 | P3-09 |
-| `OutboxLag` | Warning | The oldest unpublished message is older than 2 min | RB-04 | P1-18 |
-| `DeadLetters` | Warning | Any message in the dead-letter state | RB-05 | P1-18 |
-| `SmsFailures` | Warning | More than 10% failures over 15 min | RB-06 | P1-22 |
+| `OutboxLag` | Warning | The oldest unpublished message is older than 2 min | RB-04 | live (P1-18) |
+| `DeadLetters` | Warning | Any message in the dead-letter state | RB-05 | live (P1-18) |
+| `SmsFailures` | Warning | More than 10% failures over 15 min | RB-06 | live (P1-18); the provider adapter is P1-22 |
 | `BackupMissing` | Critical | No successful backup in 26 h | RB-07 | P1-21 |
-| `StorageQuota` | Warning | Bucket use above 80% of the quota | RB-08 | P1-18 |
-| `ApiErrors` | Critical | 5xx above 2% over 5 min | RB-09 | P1-18 |
+| `StorageQuota` | Warning | Bucket use above 80% of the quota | RB-08 | live (P1-18) |
+| `ApiErrors` | Critical | 5xx above 2% over 5 min | RB-09 | live (P1-18) |
 
 ```yaml
 # rules/rms-alerts.yml  (promtool check rules; one test per rule in rules/rms-alerts.test.yml)
@@ -319,26 +322,26 @@ groups:
 
 | Alert | Level | Expression (shape) | `for` | Runbook | Source · ready |
 | --- | --- | --- | --- | --- | --- |
-| `ApiDown` | Critical | `up{job="rms-api"} == 0` for every target (`max(up{job="rms-api"}) == 0`) | 1m | RB-09 | DR-63 · P1-18 |
-| `ReadinessFailing` | Critical | `max(readiness_ok{job="rms-api"}) == 0` | 30s | RB-09 | P1-18 acceptance |
+| `ApiDown` | Critical | `up{job="rms-api"} == 0` for every target (`max(up{job="rms-api"}) == 0`) | 1m | RB-09 | DR-63 · live (P1-18) |
+| `ReadinessFailing` | Critical | `max(readiness_ok{job="rms-api"}) == 0` | 30s | RB-09 | P1-18 acceptance · live |
 | `PostgresDown` | Critical | `pg_up == 0` | 1m | RB-09 | DOC-10 §7 · P1-21 |
 | `PostgresArchiveFailing` | Critical | `increase(pg_stat_archiver_failed_count[15m]) > 0` | none | RB-07 | DOC-10 §7 · P1-21 |
-| `WorkerDown` | Warning | `up{job="rms-worker"} == 0` | 2m | RB-04 | SDD §19.3 · P1-18 |
-| `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · P1-18 |
+| `WorkerDown` | Warning | `up{job="rms-worker"} == 0` | 2m | RB-04 | SDD §19.3 · live (P1-18) |
+| `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · live (P1-18) |
 | `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · P2-11 |
 | `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
 | `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P3-09 |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |
 | `ProviderAuthFailed` | Warning | `sum by (provider) (increase(provider_auth_failed_total[10m])) > 0` | none | RB-12 | DOC-42 §8.5 · P1-22 |
-| `OtpDailyCapReached` | Warning | `increase(otp_daily_cap_reached_total[5m]) > 0` | none | RB-06 | DOC-26 §10 · P1-11 |
-| `SmsProviderDown` | Warning | `max(sms_provider_down) == 1` | 5m | RB-06 | DOC-26 §10 · P1-22 |
-| `RefreshTokenReuse` | Warning | `increase(auth_refresh_total{outcome="reuse"}[10m]) > 5` | none | table of DOC-74 | DOC-26 §10 · P1-10 |
-| `LockoutSpike` | Warning | `increase(auth_lockouts_total[15m]) > 10` | none | table of DOC-74 | DOC-26 §10 · P1-10 |
+| `OtpDailyCapReached` | Warning | `sum(increase(otp_daily_cap_reached_total[5m])) > 0` | none | RB-06 | DOC-26 §10 · live (P1-18) |
+| `SmsProviderDown` | Warning | `max(sms_provider_down) == 1` | 5m | RB-06 | DOC-26 §10 · live (P1-18) |
+| `RefreshTokenReuse` | Warning | `sum(increase(auth_refresh_total{outcome="reuse"}[10m])) > 5` | none | table of DOC-74 | DOC-26 §10 · live (P1-18) |
+| `LockoutSpike` | Warning | `sum(increase(auth_lockouts_total[15m])) > 10` | none | table of DOC-74 | DOC-26 §10 · live (P1-18) |
 | `AccountDeletionBlocked` | Warning | `max(account_deletion_blocked) > 0` | 7d | table of DOC-74 | DOC-35 §11 · P6-04 |
-| `DbPoolWaiting` | Warning | `max by (instance) (db_pool_waiting) > 0` | 1m | RB-09 | DOC-10 §6.3 · P1-18 |
+| `DbPoolWaiting` | Warning | `max by (instance) (db_pool_waiting) > 0` | 1m | RB-09 | DOC-10 §6.3 · live (P1-18) |
 | `DiskUsage` | Warning, Critical above 90% | `1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} > 0.8` | 10m | RB-08 | DOC-10 §6.4 · P1-21 |
 | `WorkerMemoryHigh` | Warning | `process_resident_memory_bytes{job="rms-worker"} > 1.2e9` | 10m | RB-09 | NFR-05 (≤ 1 GB), DR-06 (kill at 1.5 GB) · P2-13 |
-| `MetricsCollectionFailing` | Warning | `sum(increase(metrics_collection_errors_total[15m])) > 5` | none | table of DOC-74 | §4 rule 3 · P1-18 |
+| `MetricsCollectionFailing` | Warning | `sum(increase(metrics_collection_errors_total[15m])) > 5` | none | table of DOC-74 | §4 rule 3 · live (P1-18) |
 
 ### 5.4 A job that stopped
 
@@ -387,13 +390,13 @@ A job that has never reported has no series, so it raises nothing; on a fresh da
 | Critical | Route `severity="critical"`: both channels, `group_wait: 10s`, `repeat_interval: 30m`. It repeats until **acknowledged** |
 | Warning | Route `severity="warning"`: both channels, `group_wait: 30s`, `group_interval: 5m`, `repeat_interval: 12h` |
 | Acknowledge | Create a silence on the alert in Alertmanager for a stated time (`amtool silence add alertname=… --duration=4h --comment=…` or the Grafana UI). Alertmanager has no other acknowledgement (DR-155) |
-| Inhibition | While `ApiDown` or `PostgresDown` fires, Warning alerts of the same `env` are held (they are consequences) |
+| Inhibition | While `ApiDown`, `PostgresDown` or `ReadinessFailing` fires, Warning alerts of the same `env` are held (they are consequences). `ReadinessFailing` was added in P1-18: with the database down every pulled gauge fails, and `MetricsCollectionFailing` arrived before the Critical alert in the first local run |
 | Resolved | `send_resolved: true` on both channels |
 | The host is down | Alertmanager is down with it. The **external uptime probe** calls `GET /api/v1/health/ready` every 60 s and sends its own email and Telegram message after two failures (NFR-10 is measured from it). This is the only alert that survives the host (ADR-0021) |
 | A test | On the first of each month the Owner or Admin runs `amtool alert add TestAlert severity=warning` on staging and confirms the email and the Telegram message (a manual routine, P6-06) |
 
 ```yaml
-# alertmanager.yml (skeleton; the keys are verified against Alertmanager 0.34.1 in P1-18)
+# alertmanager.yml (the keys are verified against Alertmanager 0.34.1; the files are ops/alertmanager/alertmanager.yml and alertmanager.local.yml)
 route:
   receiver: owner
   group_by: [alertname, env]
@@ -408,7 +411,7 @@ route:
       group_interval: 5m
       repeat_interval: 12h
 inhibit_rules:
-  - source_matchers: [alertname=~"ApiDown|PostgresDown"]
+  - source_matchers: [alertname=~"ApiDown|PostgresDown|ReadinessFailing"]
     target_matchers: [severity="warning"]
     equal: [env]
 receivers:
@@ -418,6 +421,8 @@ receivers:
 ```
 
 The Telegram token, the SMTP password and the Grafana admin password are infrastructure secrets listed in DOC-70 (DOC-07 §7.2).
+
+**As built (P1-18).** `ops/alertmanager/alertmanager.yml` is the staging and production file: the secrets are read from `/run/secrets/telegram-bot-token` and `/run/secrets/alertmanager-smtp-password`, and the addresses (`owner@example.invalid`), the SMTP host and the chat id (`1`) are placeholders that deliver nothing until the Owner's input of DOC-70 §2 rows 11 and 12 replaces them (DR-228). `alertmanager.local.yml` has the same routes and inhibition and sends to Mailpit, so the routing is tried on a laptop: `bun run monitor:up`, then Mailpit at `localhost:8025`. Run on 2026-10-27 with the API on the host: the database stopped, `readiness_ok` fell to 0 at the next scrape, `ReadinessFailing` fired and its mail reached Mailpit **65 seconds** after the stop (budget 2 minutes), the warning `MetricsCollectionFailing` 55 seconds after; both `RESOLVED` messages followed once the database was back. The Telegram message and a real mailbox are proven on staging (OB-14).
 
 ## 7. Dashboards
 
@@ -432,6 +437,8 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Storage and database** | `storage_usage_ratio`; disk used; `pg_stat_activity_count` against `max_connections`; `db_pool_waiting`; archive failures and age; WAL size | `StorageQuota`, `DiskUsage`, `DbPoolWaiting`, `PostgresArchiveFailing` |
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
 | **Logs** | The saved queries of §3.4 as panels with a `requestId` variable | RB-09 |
+
+**As built (P1-18).** Five dashboards exist: Overview, Worker and jobs, Identity, Storage and database (without the PostgreSQL and host panels, which wait for the exporters of P1-20 and P1-21) and Logs. They are generated from `scripts/build-dashboards.ts` (`bun run ops:dashboards`; `check:ops` fails when a JSON file is stale), every panel names what it supports, and all 42 queries of the Prometheus panels and the four of Logs were run against the local stack without an error. Money (P2, P3) and Backup (P1-21) join with their metrics. Locally Grafana is at `localhost:3030` with no sign-in.
 
 Dashboards are reached at `monitor.<domain>` (staging `monitor-staging.<domain>`), a Tunnel public hostname for the `grafana` container behind a Cloudflare Access application (DR-88). Prometheus, Loki and Alertmanager have no host; alerts are listed and silenced in Grafana through its Alertmanager data source.
 
@@ -454,12 +461,12 @@ Logs: `config_invalid` (DOC-41 §17), `boot_guard_failed` (DOC-36 §10.1), `job.
 
 ## 10. Required tests
 
-Prefix `OB-` (observability; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). Written in P1-18 unless the third column says another task. All are **not run** yet.
+Prefix `OB-` (observability; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). Written in P1-18 unless the third column says another task. **Run on 2026-10-27 (P1-18):** OB-01 to OB-08, OB-12, OB-13 and the local run of OB-14, in `apps/api/src/bootstrap/metrics.test.ts`, `ops-rules.test.ts`, `packages/core-telemetry/src/metrics.test.ts`, the integration tests `apps/api/tests/integration/metrics.integration.test.ts` (the ops port after real requests, the outbox gauges with rows, a database that is gone), `modules/identity/test/metrics.integration.test.ts` and `modules/residency/test/metrics.integration.test.ts` (each counter of DOC-26 §10 and DOC-27 §15 where its use case reports it), `bun run check:ops` and the stack of `bun run monitor:up`. OB-06 checks the form of the annotation only (RB-01…13 or the table of DOC-74): the runbook files are written in P2-20 and P3-09. OB-08 was read from the local Prometheus. **Not run:** OB-09 (needs the finance gauges), OB-10 and OB-11 (a suite-wide scan of the log lines and the LogQL join need the API in a container with Alloy; the correlation id itself is tested by JB- in DOC-38), OB-14 on staging, OB-15 to OB-18 (P3-09, P1-21, P6-06).
 
 | ID | Scenario | Expected |
 | --- | --- | --- |
 | OB-01 | Compare the metrics registered by `api` and `worker` with the first column of §4 | The sets are equal (except `boot_guard_failures_total`, the process metrics of the library and the `pg_*`/`node_*` families) |
-| OB-02 | Scrape `/metrics` after the test suite ran | No label is named `id`, `accountId`, `unitId`, `requestId`, `email`, `phone`; every `route` value is a template listed in DOC-51 §2; no label value matches a UUID or a phone number |
+| OB-02 | Scrape `/metrics` after the test suite ran | No label is named `id`, `accountId`, `unitId`, `requestId`, `email`, `phone`; every `route` value is a template listed in DOC-51 §2 (or `unmatched`); no label value looks like a phone number or an email (the `building` label holds a building's id, which is not a person) |
 | OB-03 | `GET /metrics` on `PORT` and on `OPS_PORT` | 404 on `PORT`; 200 text format on `OPS_PORT` |
 | OB-04 | `promtool check rules rules/*.yml` | Exit 0 |
 | OB-05 | `promtool test rules` with a positive and a negative case for **each** alert of §5.2 and §5.3 (input series, `eval_time`, expected alerts) | Every case passes; example below |
@@ -508,6 +515,7 @@ tests:
 | --- | --- | --- |
 | DR-154 | Metric naming: `job_name` instead of the reserved `job`; the backup gauge is a timestamp; DB gauges are exported by every process and alerted with `max`; the metrics that replace `push_failures_total` and `sms_failures_ratio`; the worker's `requestId` is the message's `correlationId`; four Loki labels | §3, §4 |
 | DR-155 | Alert rules: stale thresholds per job, traffic floors, repeat and acknowledgement through silences, "alerts without a runbook" table in DOC-74, the extra alerts | §5, §6 |
+| DR-269 | The baseline as built: `prom-client` without its default metrics, `MetricsPort` typed from §4, pulled gauges and module gauges, `db_pool_waiting` as a lower bound, `rate_limited_total` by the `scope` of the 429, the rows re-phased to the task that builds them, `ReadinessFailing` in the inhibition, the `service` label of Loki | §2, §4, §6 |
 
 ## 12. Not in this document
 
@@ -533,5 +541,6 @@ tests:
 ## Open questions
 
 - **The Access policy of `monitor.<domain>`** (allowed emails, session length) is set in DOC-70 (DR-88, decided).
-- **The metrics library on Bun** and **the Alertmanager Telegram keys** are verified in P1-18 (§2); the pin goes to DOC-11 §3 and §7 then.
-- **The addresses and chat id of §6** are Owner input, decided as placeholders (`<alert-email>`, `<telegram-chat-id>`) until the acceptance of P1-18 on staging; locally the alerts go to Mailpit (DR-228, Owner, 2026-10-21; DOC-70 §2 rows 11 and 12).
+- **The metrics library on Bun** and **the Alertmanager Telegram keys** were verified in P1-18 (§2); the pins are in DOC-11 §3 and §7.
+- **The addresses and chat id of §6** are Owner input, decided as placeholders until the acceptance of P1-18 on staging (P1-20); locally the alerts go to Mailpit (DR-228, Owner, 2026-10-21; DOC-70 §2 rows 11 and 12).
+- **Left for the staging acceptance (P1-20)** because they need the host: the database stopped on staging with the email and the Telegram message arriving (OB-14), `monitor.<domain>` behind Access, Loki on production, and the PostgreSQL and host panels and alerts (`PostgresDown`, `DiskUsage`, `BackupMissing`).

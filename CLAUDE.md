@@ -20,8 +20,9 @@ bun run setup              # fresh clone → running local stack (tools, install
 bun run keys:generate      # writes .env.local (throw-away local passwords); idempotent
 bun run infra:up           # docker compose: postgres 18.6 :5432, SeaweedFS S3 :9000, Mailpit :1025/:8025
 bun run infra:down | infra:reset   # reset DELETES the local database and object store
+bun run monitor:up | monitor:down  # Prometheus :9090, Alertmanager :9093, Loki, Alloy and Grafana :3030 beside infra:up; scrapes the API on the host (:3001), alerts mail to Mailpit
 
-bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, test-ids)
+bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, ops (promtool/amtool/Loki/Alloy via Docker), test-ids)
 bun run lint               # Biome; `bun run format` applies the fixes
 bun run typecheck          # tsc in every workspace + scripts/
 bun run check:arch         # dependency-cruiser, three configs (apps, modules, packages)
@@ -34,6 +35,7 @@ bun run dev:web            # Vite for apps/cms-web on :5173
 bun run test:e2e            # Playwright flows of the web CMS: a cloned seeded database, the API on :3100 and Vite on :5173 (stop dev:web first); needs infra:up
 bun run --filter @app/api dev      # API on :3000 (skeleton until P1-04)
 bun run tokens:build       # regenerate packages/design-tokens/generated/ from tokens.json
+bun run ops:dashboards     # regenerate ops/grafana/dashboards/*.json from scripts/build-dashboards.ts (check:ops fails on a stale file)
 ```
 
 Running tests:
@@ -70,6 +72,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
 - The change, its outbox events and its audit row commit in one transaction, with no network call inside it; side effects go through the outbox (`@core/messaging`).
 - Use `Money` for amounts, and `LocalDate` with the building's "today" for days.
 - Behavior is selected by `APP_ENV`, never `NODE_ENV`.
+- A metric is a row of DOC-40 §4 first. A module reports through `MetricsPort` (`@rms/shared-types`: names and label values are types) and never imports `prom-client`; a gauge that reads its tables is `AppModule.gauges`. A label never holds a person. `apps/api/src/bootstrap/metrics.test.ts` (OB-01) fails when the registry and the rows of phase `P1` differ. An alert is a rule in `ops/prometheus/rules/` with a `promtool` test.
 - Migrations (drizzle-kit, one folder per module) are never edited after merge, and they stay backward compatible for one release.
 
 **Design tokens.** Colors come only from `@rms/design-tokens`. A Biome GritQL plugin (`tools/biome/no-color-literal.grit`) rejects color literals everywhere except inside that package. The files in `packages/design-tokens/generated/` are generated and committed, and a test fails when they are stale.

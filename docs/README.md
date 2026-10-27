@@ -55,7 +55,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Approved |
 | DOC-38 | [Jobs and outbox runtime](06-design/jobs-and-outbox-runtime.md) | Approved |
 | DOC-39 | [Security](06-design/security.md) (skeleton: final in P6) | Approved |
-| DOC-40 | [Observability](06-design/observability.md) (skeleton: payment alerts P3, all P6) | Approved |
+| DOC-40 | [Observability](06-design/observability.md) (baseline built in P1-18; payment alerts P3, all P6) | Approved |
 | DOC-41 | [Configuration reference](06-design/configuration-reference.md) (skeleton) | Approved |
 | DOC-42 | [Error handling](06-design/error-handling.md) | Approved |
 | DOC-43 | [Flows index](06-design/flows/README.md) | Approved |
