@@ -305,7 +305,7 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 
 ## 19. Required tests
 
-Prefix `CF-` (configuration; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). Written and **run in P1-04 (2026-10-21)**: CF-01, 02 and 17 in `apps/api/src/bootstrap/config/config.test.ts` read this document; CF-03, 04 and 14 also run `main.ts` as a process (`apps/api/src/main.test.ts`: exit 78, one `config_invalid` line, no secret in stdout or stderr); CF-16 is run on the script by P1-20 (`keys:generate --out`).
+Prefix `CF-` (configuration; unused before this document; master plan §0.2, DR-156; DOC-88 indexes it). Written and **run in P1-04 (2026-10-21)**: CF-01, 02 and 17 in `apps/api/src/bootstrap/config/config.test.ts` read this document; CF-03, 04 and 14 also run `main.ts` as a process (`apps/api/src/main.test.ts`: exit 78, one `config_invalid` line, no secret in stdout or stderr); CF-16 is run on the script by P1-20: `keys:generate --out` in `apps/api/src/bootstrap/config/keys-out.test.ts` (15 files with their modes, each URL built from the password beside it, the files loaded through the real `staging` configuration, a second run keeps them, a missing file is made again) and inside the built image (DR-271).
 
 | ID | Scenario | Expected |
 | --- | --- | --- |
@@ -324,7 +324,7 @@ Prefix `CF-` (configuration; unused before this document; master plan §0.2, DR-
 | CF-13 | `TRUSTED_PROXY_HOPS=1` with `TRUSTED_PROXY_CIDRS` empty | Exit 78, rule 12 |
 | CF-14 | A boot error caused by a `secret` of 40 characters | The line names the key and the rule; the 40 characters appear nowhere in stdout, stderr or the log |
 | CF-15 | `MIGRATION_DATABASE_URL_FILE` set in the `worker` environment in `staging` | Exit 78, rule 5 |
-| CF-16 | `bun run keys:generate` in an empty directory | Every `secret` of §6 that `local` needs exists with the stated format; running it again changes nothing. *Run by hand in P1-04 on the existing `.env.local`: the five application keys were appended, the second run printed `kept .env.local`; the empty-directory form needs `--out` (P1-20)* |
+| CF-16 | `bun run keys:generate` in an empty directory | Every `secret` of §6 that `local` needs exists with the stated format; running it again changes nothing. *Run by hand in P1-04 on the existing `.env.local`: the five application keys were appended, the second run printed `kept .env.local`. The empty-directory form is `--out`, run in P1-20 (above)* |
 | CF-17 | The generated `.env.example` | Holds every key of §4 to §13 with its default and no `secret` value |
 | CF-18 | A job grace key for each of the 12 clock jobs of §11 | The schema has it; an hourly job has none; `JOB_INVARIANT_CHECK_GRACE_MINUTES=0` turns the catch-up off |
 

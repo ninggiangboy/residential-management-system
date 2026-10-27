@@ -1,6 +1,6 @@
 # Observability
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-27 (P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
@@ -66,7 +66,7 @@ flowchart LR
 
 **No traces and no third-party error tracker in phase 1** (DR-63, DR-103). The request id is the whole of request tracing (§3.4).
 
-**Scrape jobs** (Prometheus `job` label): `rms-api` (targets `api-1`, `api-2` at `OPS_PORT`), `rms-worker`, and from P1-20/P1-21 `postgres` and `node`. `api-2` is listed on staging too and shows `down` there: `ApiDown` takes `max(up)`, so a target that never existed raises nothing (P1-18 chose this over a template per environment). The label `job` belongs to Prometheus, which is why the application's per-job metrics use `job_name` (DR-154).
+**Scrape jobs** (Prometheus `job` label): `rms-api` (targets `api-1`, `api-2` at `OPS_PORT`), `rms-worker`, and, since P1-20, `postgres` (`postgres-exporter:9187`) and `node` (`node-exporter:9100`); the local monitoring stack runs both exporters too, so the shared file has targets there. `api-2` is listed on staging too and shows `down` there: `ApiDown` takes `max(up)`, so a target that never existed raises nothing (P1-18 chose this over a template per environment). The label `job` belongs to Prometheus, which is why the application's per-job metrics use `job_name` (DR-154).
 
 ## 3. Logs
 
@@ -219,7 +219,7 @@ The names come from DR-63; the owning document confirms the labels.
 - A `for` is the smallest that avoids a flap. The P1-18 acceptance (database stopped → alert on email and Telegram within 2 minutes) is the sum: scrape 15 s + evaluation 15 s + `for` 30 s + group wait 10 s + delivery ≈ 90 s at worst.
 - Business gauges are demo-free (§4 rule 3); the expressions take `max(...)` over the copies of a database gauge.
 - A rule is written against a metric of §4 and nothing else. Adding an alert adds a row to §10 (its `promtool` test).
-- **As built (P1-18).** The files are `ops/prometheus/rules/rms-alerts.yml` and `rms-jobs.yml`, the tests `ops/prometheus/tests/rms-alerts.test.yml`, run by `bun run check:ops` (in `verify`) with `promtool` from the image that Compose pins. Live: `OutboxLag`, `DeadLetters`, `SmsFailures`, `StorageQuota`, `ApiErrors`, `ApiDown`, `ReadinessFailing`, `WorkerDown`, `JobStale`, `DbPoolWaiting`, `MetricsCollectionFailing`, `OtpDailyCapReached`, `SmsProviderDown`, `RefreshTokenReuse`, `LockoutSpike`; each has a positive and a negative case. The YAML below remains the specification of the rest; a rule joins the files with the metric it reads. `OtpDailyCapReached` sums the processes (`sum(increase(...))`), so two copies are one alert.
+- **As built (P1-18).** The files are `ops/prometheus/rules/rms-alerts.yml` and `rms-jobs.yml`, the tests `ops/prometheus/tests/rms-alerts.test.yml`, run by `bun run check:ops` (in `verify`) with `promtool` from the image that Compose pins. Live: `OutboxLag`, `DeadLetters`, `SmsFailures`, `StorageQuota`, `ApiErrors`, `ApiDown`, `ReadinessFailing`, `WorkerDown`, `JobStale`, `DbPoolWaiting`, `MetricsCollectionFailing`, `OtpDailyCapReached`, `SmsProviderDown`, `RefreshTokenReuse`, `LockoutSpike`; each has a positive and a negative case. The YAML below remains the specification of the rest; a rule joins the files with the metric it reads. `OtpDailyCapReached` sums the processes (`sum(increase(...))`), so two copies are one alert. **P1-20 added** `ops/prometheus/rules/rms-host.yml` and `tests/rms-host.test.yml` (also run by `check:ops`): `PostgresDown`, `PostgresArchiveFailing`, `BackupMissing`, `DiskUsage` (warning above 80%, critical above 90%, for `/` and `/srv/rms-data`) and **`BackupMetricMissing`**, each with a positive and a negative case; the scrape jobs `postgres` and `node` are in `prometheus.yml` (DR-271).
 
 ### 5.2 The nine alerts of the original SDD
 
@@ -233,7 +233,7 @@ Linked to the runbooks RB-01…09 (master plan §3.2). `Ready` is the task after
 | `OutboxLag` | Warning | The oldest unpublished message is older than 2 min | RB-04 | live (P1-18) |
 | `DeadLetters` | Warning | Any message in the dead-letter state | RB-05 | live (P1-18) |
 | `SmsFailures` | Warning | More than 10% failures over 15 min | RB-06 | live (P1-18); the provider adapter is P1-22 |
-| `BackupMissing` | Critical | No successful backup in 26 h | RB-07 | P1-21 |
+| `BackupMissing` | Critical | No successful backup in 26 h | RB-07 | live (P1-20) |
 | `StorageQuota` | Warning | Bucket use above 80% of the quota | RB-08 | live (P1-18) |
 | `ApiErrors` | Critical | 5xx above 2% over 5 min | RB-09 | live (P1-18) |
 
@@ -324,8 +324,9 @@ groups:
 | --- | --- | --- | --- | --- | --- |
 | `ApiDown` | Critical | `up{job="rms-api"} == 0` for every target (`max(up{job="rms-api"}) == 0`) | 1m | RB-09 | DR-63 · live (P1-18) |
 | `ReadinessFailing` | Critical | `max(readiness_ok{job="rms-api"}) == 0` | 30s | RB-09 | P1-18 acceptance · live |
-| `PostgresDown` | Critical | `pg_up == 0` | 1m | RB-09 | DOC-10 §7 · P1-21 |
-| `PostgresArchiveFailing` | Critical | `increase(pg_stat_archiver_failed_count[15m]) > 0` | none | RB-07 | DOC-10 §7 · P1-21 |
+| `PostgresDown` | Critical | `max(pg_up{job="postgres"}) == 0 or max(up{job="postgres"}) == 0` (the second term is the exporter being down: its series is gone) | 1m | RB-09 | DOC-10 §7 · live (P1-20) |
+| `PostgresArchiveFailing` | Critical | `increase(pg_stat_archiver_failed_count{job="postgres"}[15m]) > 0` | none | RB-07 | DOC-10 §7 · live (P1-20) |
+| `BackupMetricMissing` | Warning | `absent(backup_last_success_timestamp)`: `BackupMissing` is silent when its series does not exist (an unreadable textfile, a first backup that never ran) | 26h | RB-07 | DR-271 · live (P1-20) |
 | `WorkerDown` | Warning | `up{job="rms-worker"} == 0` | 2m | RB-04 | SDD §19.3 · live (P1-18) |
 | `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · live (P1-18) |
 | `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · P2-11 |
@@ -339,7 +340,7 @@ groups:
 | `LockoutSpike` | Warning | `sum(increase(auth_lockouts_total[15m])) > 10` | none | table of DOC-74 | DOC-26 §10 · live (P1-18) |
 | `AccountDeletionBlocked` | Warning | `max(account_deletion_blocked) > 0` | 7d | table of DOC-74 | DOC-35 §11 · P6-04 |
 | `DbPoolWaiting` | Warning | `max by (instance) (db_pool_waiting) > 0` | 1m | RB-09 | DOC-10 §6.3 · live (P1-18) |
-| `DiskUsage` | Warning, Critical above 90% | `1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} > 0.8` | 10m | RB-08 | DOC-10 §6.4 · P1-21 |
+| `DiskUsage` | Warning from 80%, Critical above 90% (two rules, so a disk above 90% raises one alert) | `1 - node_filesystem_avail_bytes{mountpoint=~"/|/srv/rms-data", fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{…} > 0.8` (the data volume of DOC-70 §5.5 holds the files **and** the backups) | 10m | RB-08 | DOC-10 §6.4 · live (P1-20) |
 | `WorkerMemoryHigh` | Warning | `process_resident_memory_bytes{job="rms-worker"} > 1.2e9` | 10m | RB-09 | NFR-05 (≤ 1 GB), DR-06 (kill at 1.5 GB) · P2-13 |
 | `MetricsCollectionFailing` | Warning | `sum(increase(metrics_collection_errors_total[15m])) > 5` | none | table of DOC-74 | §4 rule 3 · live (P1-18) |
 
@@ -438,7 +439,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
 | **Logs** | The saved queries of §3.4 as panels with a `requestId` variable | RB-09 |
 
-**As built (P1-18).** Five dashboards exist: Overview, Worker and jobs, Identity, Storage and database (without the PostgreSQL and host panels, which wait for the exporters of P1-20 and P1-21) and Logs. They are generated from `scripts/build-dashboards.ts` (`bun run ops:dashboards`; `check:ops` fails when a JSON file is stale), every panel names what it supports, and all 42 queries of the Prometheus panels and the four of Logs were run against the local stack without an error. Money (P2, P3) and Backup (P1-21) join with their metrics. Locally Grafana is at `localhost:3030` with no sign-in.
+**As built (P1-18).** Five dashboards exist: Overview, Worker and jobs, Identity, Storage and database (with, since P1-20, PostgreSQL up, the time since the last backup, WAL archive failures, connections by state, disk used and host memory) and Logs. They are generated from `scripts/build-dashboards.ts` (`bun run ops:dashboards`; `check:ops` fails when a JSON file is stale), every panel names what it supports, and all 42 queries of the Prometheus panels and the four of Logs were run against the local stack without an error. Money (P2, P3) joins with its metrics. The new host panels were run against the local stack (both exporters up; their queries answer; the disk query is empty there because the Linux VM of Docker has no `/` file system under `--path.rootfs`, so its labels are checked on the host). Locally Grafana is at `localhost:3030` with no sign-in.
 
 Dashboards are reached at `monitor.<domain>` (staging `monitor-staging.<domain>`), a Tunnel public hostname for the `grafana` container behind a Cloudflare Access application (DR-88). Prometheus, Loki and Alertmanager have no host; alerts are listed and silenced in Grafana through its Alertmanager data source.
 
@@ -481,7 +482,7 @@ Prefix `OB-` (observability; unused before this document; master plan §0.2, DR-
 | OB-14 | Staging: stop the database | `readiness_ok` is 0; `ReadinessFailing` fires; the email and the Telegram message arrive within 2 minutes (P1-18 acceptance) |
 | OB-15 | Staging: stop the worker | `WorkerDown` after 2 minutes; `OutboxLag` after a message waits 2 minutes; after the start the alerts resolve (P3-09 drill) |
 | OB-16 | A Critical alert left open | Repeats every 30 minutes; a silence stops the repeats; the alert stays visible (P6-06) |
-| OB-17 | A backup that succeeded 27 hours ago (textfile edited) | `BackupMissing` fires; after a new `backup.prom` it resolves (P1-21) |
+| OB-17 | A backup that succeeded 27 hours ago (textfile edited) | `BackupMissing` fires; after a new `backup.prom` it resolves. **Run** as a `promtool` case (P1-20: fires at 27 h, quiet at 25 h and after a new file); `backup.sh` writing the file only after a success ran with a real pgBackRest (DOC-70 §8.4). The real Prometheus on the host is P1-20's last step |
 | OB-18 | The monthly test alert (`TestAlert`) | Email and Telegram both arrive (P6-06) |
 
 Example for OB-05, the case for `OutboxLag` (`rules/rms-alerts.test.yml`, run with `promtool test rules`; **not run**):
@@ -543,4 +544,4 @@ tests:
 - **The Access policy of `monitor.<domain>`** (allowed emails, session length) is set in DOC-70 (DR-88, decided).
 - **The metrics library on Bun** and **the Alertmanager Telegram keys** were verified in P1-18 (§2); the pins are in DOC-11 §3 and §7.
 - **The addresses and chat id of §6** are Owner input, decided as placeholders until the acceptance of P1-18 on staging (P1-20); locally the alerts go to Mailpit (DR-228, Owner, 2026-10-21; DOC-70 §2 rows 11 and 12).
-- **Left for the staging acceptance (P1-20)** because they need the host: the database stopped on staging with the email and the Telegram message arriving (OB-14), `monitor.<domain>` behind Access, Loki on production, and the PostgreSQL and host panels and alerts (`PostgresDown`, `DiskUsage`, `BackupMissing`).
+- **Left for the staging acceptance (P1-20)** because they need the host: the database stopped on staging with the email and the Telegram message arriving (OB-14), `monitor.<domain>` behind Access, Loki on production, and the first real `backup.prom` (OB-17 on the host); the labels of `DiskUsage` on the host's file systems.
