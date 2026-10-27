@@ -1,19 +1,20 @@
 # UIRA-02, UIRA-13, UIRA-21, UIRA-22, CL-23 (online part): a demo account signs in with the fixed code and lands on the owner's home.
 # The simulator language is English (the app follows the device before sign-in, DOC-55 §11). Needs the API on :3000 with the demo seed
-# (account +84902345678: one unit, A-1508, family member).
+# (account +12025550101, Demo Owner: one unit, A-1508).
 appId: vn.rms.resident.dev
 ---
 - runFlow: helpers/launch.yaml
 - assertVisible: "Sign in"
 - tapOn:
     id: phone-input
-- inputText: "0902 345 678"
+- inputText: "+12025550101"
 # Enter on the keyboard sends the code like the button, which the keyboard covers on Android.
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Enter the OTP"
     timeout: 30000
 - inputText: "123456"
+- runFlow: helpers/accept-terms.yaml
 - runFlow: helpers/dismiss-push-prompt.yaml
 # One verify, then the single home opens with no Unit-Pick (UIRA-32).
 - assertVisible:

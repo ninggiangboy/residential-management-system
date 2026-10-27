@@ -6,11 +6,11 @@ appId: vn.rms.staff.dev
     id: login-forgot
 - tapOn:
     id: forgot-email
-- inputText: "nobody@mocmien.example"
+- inputText: "nobody@demo.rms.invalid"
 # Enter on the keyboard sends the form like the button; `hideKeyboard` taps a spot of its own on iOS and hit "Forgot password".
 - pressKey: Enter
 - assertVisible: "Check your email"
-- assertVisible: ".*no\\*\\*\\*@mocmien.example.*"
+- assertVisible: ".*no\\*\\*\\*@demo.rms.invalid.*"
 - tapOn:
     id: forgot-back
 - assertVisible: "Sign in"

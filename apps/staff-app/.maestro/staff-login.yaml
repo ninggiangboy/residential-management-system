@@ -1,11 +1,11 @@
 # UISM-01, UISM-02, UISM-06, UISM-13, UISM-17: a Technician signs in, lands on the account, and a wrong password says nothing about tries left.
-# Needs the API on :3000 with the demo seed (tech@mocmien.example / Sunrise2026!). The simulator language is English.
+# Needs the API on :3000 with the demo seed (technician@demo.rms.invalid / demo-password-1). The simulator language is English.
 appId: vn.rms.staff.dev
 ---
 - runFlow: helpers/launch.yaml
 - tapOn:
     id: email-input
-- inputText: "tech@mocmien.example"
+- inputText: "technician@demo.rms.invalid"
 # "Next" on the keyboard moves to the password; with the keyboard up, that field is out of view and a tap on it reaches the footer.
 - pressKey: Enter
 - inputText: "wrong-password"
@@ -18,12 +18,12 @@ appId: vn.rms.staff.dev
 - tapOn:
     id: password-input
 - eraseText
-- inputText: "Sunrise2026!"
+- inputText: "demo-password-1"
 # Enter on the keyboard sends the form like the button; `hideKeyboard` taps a spot of its own on iOS and hit "Forgot password".
 - pressKey: Enter
 - runFlow: helpers/dismiss-save-password.yaml
 - assertVisible:
     id: staff-account-screen
 - assertVisible: "Technician"
-- assertVisible: "tech@mocmien.example"
+- assertVisible: "technician@demo.rms.invalid"
 - assertVisible: "The app cannot change passwords.*"

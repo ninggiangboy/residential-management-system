@@ -1,26 +1,27 @@
-# UIRQ-01, UIRQ-02, UIRA-43, CL-24: switching homes drops the previous home's cached data; nothing of A-1508 shows under A-0703.
+# UIRQ-01, UIRQ-02, UIRA-43, CL-24: switching homes drops the previous home's cached data; nothing of A-0505 shows under A-0506.
 appId: vn.rms.resident.dev
 ---
 - runFlow: helpers/launch.yaml
 - tapOn:
     id: phone-input
-- inputText: "0901 234 567"
+- inputText: "+12025550107"
 # Enter on the keyboard sends the number like the button; `hideKeyboard` finds nothing to press on iOS.
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Enter the OTP"
     timeout: 30000
 - inputText: "123456"
+- runFlow: helpers/accept-terms.yaml
 - tapOn:
-    id: unit-A-1508
+    id: unit-A-0505
 - runFlow: helpers/dismiss-push-prompt.yaml
 - tapOn:
     id: open-account
-# A row is one element for the accessibility tree: "A-1508. Owner, selected".
+# A row is one element for the accessibility tree: "A-0505. Owner, selected".
 - assertVisible: ".*Owner, selected.*"
 - tapOn:
-    id: account-unit-A-0703
+    id: account-unit-A-0506
 - assertVisible:
     id: home-screen
-- assertVisible: ".*A-0703.*"
-- assertNotVisible: ".*A-1508.*"
+- assertVisible: ".*A-0506.*"
+- assertNotVisible: ".*A-0505.*"

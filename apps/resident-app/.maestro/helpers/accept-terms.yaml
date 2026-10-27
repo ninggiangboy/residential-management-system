@@ -1,0 +1,18 @@
+# The first sign-in of an account that has not accepted the latest terms opens `Terms` (the demo seed accepts nothing, DOC-36 §9.1);
+# a flow that is not about the terms ticks the box and accepts, then goes on. It is not there for an account that accepted already.
+appId: vn.rms.resident.dev
+---
+- extendedWaitUntil:
+    visible:
+      id: "terms-screen"
+    timeout: 15000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "terms-screen"
+    commands:
+      - tapOn:
+          id: "terms-consent"
+      - tapOn:
+          id: "terms-accept"

@@ -4,10 +4,10 @@ appId: vn.rms.staff.dev
 - runFlow: helpers/launch.yaml
 - tapOn:
     id: email-input
-- inputText: "admin@mocmien.example"
+- inputText: "admin@demo.rms.invalid"
 # "Next" on the keyboard moves to the password; with the keyboard up, that field is out of view and a tap on it reaches the footer.
 - pressKey: Enter
-- inputText: "Sunrise2026!"
+- inputText: "demo-password-1"
 # Enter on the keyboard sends the form like the button; `hideKeyboard` taps a spot of its own on iOS and hit "Forgot password".
 - pressKey: Enter
 - runFlow: helpers/dismiss-save-password.yaml

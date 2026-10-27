@@ -1,0 +1,45 @@
+# UIRA-23, UIRA-24, UIRA-27: the first sign-in of an account that has not accepted the latest terms opens `Terms` with the box unticked and
+# the button disabled; the full text opens and Back keeps the box; accepting goes on to the home. The Admin publishes a new version first,
+# so the account is "not accepted" on every run (the seed accepts nothing, but a run before this one did). Account +12025550108 (Store review).
+appId: vn.rms.resident.dev
+---
+- runScript: helpers/publish-terms.js
+- runFlow: helpers/launch.yaml
+- tapOn:
+    id: phone-input
+- inputText: "+12025550108"
+# Enter on the keyboard sends the number like the button, which the keyboard covers on Android.
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Enter the OTP"
+    timeout: 30000
+- inputText: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "terms-screen"
+    timeout: 30000
+- assertVisible: "Before you start"
+- assertVisible:
+    id: "terms-accept"
+    enabled: false
+# UIRA-27: the box ticked, the reader opened and closed, the box still ticked.
+- tapOn:
+    id: "terms-consent"
+- assertVisible:
+    id: "terms-accept"
+    enabled: true
+- tapOn:
+    id: "terms-read"
+- assertVisible:
+    id: "terms-full"
+- tapOn: "Back"
+- assertVisible:
+    id: "terms-accept"
+    enabled: true
+# UIRA-24: one tap accepts and the app goes on to the unit step; one unit, so the home opens.
+- tapOn:
+    id: "terms-accept"
+- runFlow: helpers/dismiss-push-prompt.yaml
+- assertVisible:
+    id: home-screen
+- assertVisible: ".*A-0101.*"
