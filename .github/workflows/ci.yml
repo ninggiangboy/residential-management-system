@@ -6,7 +6,7 @@
 name: ci
 on:
   pull_request:
-    branches: [dev] # `staging` takes no pull request: `bun run staging:push` moves it (DR-276)
+    branches: [dev, ci/docs-only-skip] # TEMP probe of DR-277, dropped before merge. `staging` takes no pull request: `bun run staging:push` moves it (DR-276)
   push:
     branches: [dev, staging]
 permissions:
