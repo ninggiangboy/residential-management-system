@@ -89,6 +89,8 @@ export function expected(route: RouteRecord, actor: Actor, scope: Scope): Expect
     if (!role || !audience.roles.includes(role)) return '403 forbidden'
     if (route.scopeOfObject === 'building' && route.objectParams.length > 0)
       return objectBuilding(scope) === actorBuilding(actor) ? 'ALLOW' : '404 not_found'
+    // Both buildings of the matrix are real ones, so a route reserved for the demo building does not exist for them (DOC-36 §10.4).
+    if (DEMO_ONLY.has(route.endpointId)) return '404 not_found'
     return ALWAYS_STEP_UP.has(route.endpointId) && role === 'admin'
       ? '403 step_up_required'
       : 'ALLOW'
@@ -114,6 +116,13 @@ export function expected(route: RouteRecord, actor: Actor, scope: Scope): Expect
  * request of the matrix is not (the step-up pass of EXP-10 §7.1 sends those).
  */
 const ALWAYS_STEP_UP = new Set(['E-50'])
+
+/**
+ * Routes that exist only for a demo building: for a building that is not one the answer is 404, not 403, so the endpoint does not
+ * reveal itself (E-56). The world of the matrix has no demo building; `tests/integration/demo.integration.test.ts` runs the route
+ * on one (BD-42).
+ */
+const DEMO_ONLY = new Set(['E-56'])
 
 /** The actors whose `foreign` cell exists: those that pass the gate of the route (DOC-39 §4.3). */
 export function hasForeignCell(route: RouteRecord, actor: Actor): boolean {

@@ -61,6 +61,10 @@ const HISTOGRAMS: { [N in HistogramName]: { help: string; buckets: number[] } } 
     help: 'Duration of the synchronous validation of an import (NFR-12: 2,000 rows in 10 s).',
     buckets: [0.5, 1, 2, 5, 10, 20],
   },
+  demo_reset_duration_seconds: {
+    help: 'Duration of a reset of the demo building (DOC-36 §10.2: 10 s on the staging host).',
+    buckets: [1, 2, 5, 10, 20, 60],
+  },
 }
 
 export interface MetricsSettings {

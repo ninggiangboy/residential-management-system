@@ -22,6 +22,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     )
     expect(defined.map(({ job }) => job.name).sort()).toEqual([
       'audit_purge',
+      'demo_reset',
       'import_expire',
       'import_purge',
       'orphan_uploads',
@@ -34,7 +35,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     }
   })
 
-  test('the audit purge catches up for 168 hours, the import purge for 24, the hourly jobs not at all', () => {
+  test('the audit purge catches up for 168 hours, the demo reset for 2, the import purge for 24, the hourly jobs not at all', () => {
     const graces = Object.fromEntries(
       container.modules.flatMap((module) =>
         (module.jobs ?? []).map((job) => [job.name, job.graceMinutes]),
@@ -42,6 +43,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     )
     expect(graces).toEqual({
       audit_purge: 10_080,
+      demo_reset: 120,
       storage_quota: 0,
       orphan_uploads: 0,
       import_expire: 0,

@@ -21,12 +21,13 @@ import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/id
 import type { OpenTicketsProbe } from '@mod/identity/contracts'
 import { installResidency } from '@mod/residency'
 import type { Guards } from '@rms/shared-types'
+import { buildDemoPlan } from '../demo/plan'
 import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
 import { createGuards, type GuardDeps } from './guards'
 import { createMailerFor } from './mailer'
 import { createAppMetrics, registerPulledMetrics } from './metrics'
-import { MODULE_CATALOG } from './module-catalog'
+import { MODULE_CATALOG, MODULE_NAMES } from './module-catalog'
 import { outboxSourcesOf } from './outbox-sources'
 import { createSmsSenderFor } from './sms'
 import { createTermsGate } from './terms-gate'
@@ -127,6 +128,7 @@ export function createContainer(
   installed.push(audit)
 
   const { files: filesConfig, secrets, http } = config
+  const demoPlan = buildDemoPlan()
   const storage =
     overrides.storage ??
     createObjectStorage({
@@ -222,6 +224,13 @@ export function createContainer(
     uploadRatePerHour: filesConfig.UPLOAD_RATE_PER_HOUR,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
     features: { ticketDeadlines: http.FEATURE_TICKET_DEADLINES },
+    metrics: metrics.port,
+    // The seed is data (DOC-36 §9.1); the modules that own demo rows are installed after `building`, hence the function.
+    demo: {
+      source: { plan: demoPlan, password: secrets.DEMO_STAFF_PASSWORD },
+      modules: () => [identity.demo, residency.demo],
+      graceMinutes: jobsConfig.JOB_DEMO_RESET_GRACE_MINUTES,
+    },
   })
   installed.push(building)
 
@@ -395,6 +404,8 @@ export function createContainer(
     building,
     identity,
     residency,
+    /** The seed of the demo building (DOC-36 §9.1). */
+    demoPlan,
     guards,
     termsGate,
     /** What `bootGuard` reads (DOC-36 §10.1). */
@@ -405,6 +416,20 @@ export function createContainer(
           (await residency.api.buildingIdsOfAccounts([...accountIds])).map((row) => row.buildingId),
       },
       building: building.api,
+      piiKeyIds: () => residency.api.piiKeyIds(),
+      rings: {
+        settings: Object.keys(secrets.SETTINGS_ENCRYPTION_KEYS),
+        pii: secrets.PII_ENCRYPTION_KEYS ? Object.keys(secrets.PII_ENCRYPTION_KEYS) : null,
+      },
+      // A stand-in is right until the module that answers for the port is installed (check 5, DOC-36 §10.1): then it must be bound.
+      standIns: [
+        ...(overrides.probe === undefined && MODULE_NAMES.includes('finance')
+          ? ['ActiveIntentProbe']
+          : []),
+        ...(overrides.tickets === undefined && MODULE_NAMES.includes('tickets')
+          ? ['OpenTicketsProbe']
+          : []),
+      ],
     },
     /** The installed modules, in install order. */
     modules: installed as readonly AppModule[],
