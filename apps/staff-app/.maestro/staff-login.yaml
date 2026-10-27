@@ -11,6 +11,7 @@ appId: vn.rms.staff.dev
 - inputText: "wrong-password"
 - tapOn: "Show"
 - assertVisible: "wrong-password"
+- hideKeyboard
 - tapOn:
     id: login-submit
 - assertVisible: "The email or password is not correct."
@@ -19,6 +20,7 @@ appId: vn.rms.staff.dev
     id: password-input
 - eraseText
 - inputText: "Sunrise2026!"
+- hideKeyboard
 - tapOn:
     id: login-submit
 - assertVisible:

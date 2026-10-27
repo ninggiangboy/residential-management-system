@@ -8,6 +8,7 @@ appId: vn.rms.staff.dev
 - tapOn:
     id: password-input
 - inputText: "Sunrise2026!"
+- hideKeyboard
 - tapOn:
     id: login-submit
 - tapOn:
@@ -16,6 +17,7 @@ appId: vn.rms.staff.dev
     id: name-input
 - eraseText
 - inputText: "Phạm Văn Kỹ Thuật"
+- hideKeyboard
 - tapOn:
     id: save-profile
 - assertVisible: "Phạm Văn Kỹ Thuật"

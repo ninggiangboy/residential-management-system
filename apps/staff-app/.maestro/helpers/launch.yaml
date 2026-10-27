@@ -4,6 +4,11 @@ appId: vn.rms.staff.dev
 ---
 - launchApp:
     clearState: true
+# The link is only taken when the launcher is up; sent at once after the launch it is dropped and the run stays on the server list.
+- extendedWaitUntil:
+    visible: "DEVELOPMENT SERVERS"
+    timeout: 30000
+    optional: true
 - openLink: exp+rms-staff://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8082&disableOnboarding=1
 # iOS asks before it hands the link to the app.
 - waitForAnimationToEnd:
