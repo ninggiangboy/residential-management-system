@@ -1,4 +1,5 @@
 export * from './catalog'
+export * from './create-translator'
 export * from './error-text'
 export * from './icu'
 export * from './translator'

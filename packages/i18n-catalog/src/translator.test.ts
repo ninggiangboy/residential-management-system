@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { daysLeft, localDate, relativeTime } from '@rms/shared-types'
-import { createTranslator } from './translator'
+import { createTranslator } from './create-translator'
 
 const vi = createTranslator('vi')
 const en = createTranslator('en')

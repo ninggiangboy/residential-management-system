@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ERROR_CODES, RULE_CODES } from '@rms/shared-types'
 import { CATALOGS, type MessageKey, SCREEN_FAMILIES, SHARED_FAMILIES } from './catalog'
-import { createTranslator } from './translator'
+import { createTranslator } from './create-translator'
 
 const keys = Object.keys(CATALOGS.en)
 const entries = (prefix: string) =>

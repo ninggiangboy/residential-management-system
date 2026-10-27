@@ -1,5 +1,5 @@
 import { statusRow, type Tone } from '@rms/design-tokens'
-import type { MessageKey } from '@rms/i18n-catalog'
+import type { MessageKey } from '@rms/i18n-catalog/web'
 import type { ReactNode } from 'react'
 import { useT } from '../../lib/i18n'
 import { cn } from '../../lib/utils'

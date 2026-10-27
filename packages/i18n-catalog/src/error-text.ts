@@ -1,4 +1,3 @@
-import { isMessageKey, type MessageKey } from './catalog'
 import type { Translator } from './translator'
 
 /** `error.<code>` with the parameters of `details`, else the server's message (DOC-55 §6, DOC-50 §11). */
@@ -8,7 +7,7 @@ export function errorText(
   extra: Record<string, string | number> = {},
 ): string {
   const key = `error.${error.code}`
-  if (!isMessageKey(key)) return error.message || t('common.error.page.body')
+  if (!t.has(key)) return error.message || t('common.error.page.body')
   const params: Record<string, string | number> = { ...extra }
   if (error.code === 'account_locked') {
     const seconds = Number(
@@ -21,7 +20,7 @@ export function errorText(
       if ((typeof value === 'string' || typeof value === 'number') && !(name in params))
         params[name] = value
   try {
-    return t(key as MessageKey, params)
+    return t(key, params)
   } catch {
     return error.message || t('common.error.page.body')
   }
