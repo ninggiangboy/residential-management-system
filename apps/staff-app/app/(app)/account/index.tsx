@@ -234,6 +234,9 @@ export default function StaffAccount() {
         <TextField
           testID="name-input"
           label={t('staff.account.field.name.label')}
+          returnKeyType="done"
+          // Enter on the keyboard saves like the button, which a tap right after the typing can miss while the sheet still moves.
+          onSubmitEditing={saveName}
           value={name}
           onChangeText={setName}
           error={nameError ?? undefined}

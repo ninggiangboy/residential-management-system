@@ -2,8 +2,8 @@ import { apiErrorOf } from '@rms/client-core'
 import { buildingName, useCountdown, useI18n, useOnline } from '@rms/mobile-core'
 import { Banner, Button, Screen, Text, TextField } from '@rms/ui-native'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { View } from 'react-native'
+import { type ComponentRef, useRef, useState } from 'react'
+import { type TextInput, View } from 'react-native'
 import { useConfig, useStaffLogin } from '../../src/api/hooks'
 import { emailDraft } from '../../src/features/email-draft'
 
@@ -24,6 +24,7 @@ export default function Login() {
   const [email, setEmail] = useState(emailDraft.get())
   const [password, setPassword] = useState('')
   const [reveal, setReveal] = useState(false)
+  const passwordInput = useRef<ComponentRef<typeof TextInput>>(null)
   const [problem, setProblem] = useState<Problem | null>(null)
   const [until, setUntil] = useState<number | null>(null)
   const left = useCountdown(until)
@@ -143,11 +144,16 @@ export default function Login() {
         autoCorrect={false}
         textContentType="username"
         autoComplete="email"
+        returnKeyType="next"
+        // The keyboard covers most of the form, so "Next" moves to the password the way a tap on it would.
+        submitBehavior="submit"
+        onSubmitEditing={() => passwordInput.current?.focus()}
         value={email}
         onChangeText={setEmail}
         error={problem?.kind === 'fields' ? problem.email : undefined}
       />
       <TextField
+        ref={passwordInput}
         testID="password-input"
         label={t('staff.login.field.password.label')}
         secureTextEntry={!reveal}
