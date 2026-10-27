@@ -1,5 +1,5 @@
 import type { IconName } from '@rms/design-tokens'
-import { type ReactNode, useState } from 'react'
+import { type ComponentRef, type ReactNode, type Ref, useState } from 'react'
 import { Pressable, TextInput, type TextInputProps, View } from 'react-native'
 import { Icon } from './icon'
 import { Text } from './text'
@@ -17,6 +17,8 @@ export interface TextFieldProps
   suffix?: { label: string; onPress: () => void; accessibilityLabel?: string }
   testID?: string
   footer?: ReactNode
+  /** A plain prop since React 19; lets the previous field move the focus here. */
+  ref?: Ref<ComponentRef<typeof TextInput>>
 }
 
 /** A visible label, the field, then help or error text tied to it (A8, DOC-54 §12). */

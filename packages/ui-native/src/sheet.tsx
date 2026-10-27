@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Modal, Pressable, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, View } from 'react-native'
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { IconButton } from './button'
@@ -18,7 +18,8 @@ export interface BottomSheetProps {
 
 /**
  * Scrim, a 32 dp top radius, a grip, a title and a close button (DOC-54 §8.2). The React Native `Modal` carries it and Reanimated
- * animates it (no extra sheet library, DOC-54 §7.1); the hardware back button closes it (A9).
+ * animates it (no extra sheet library, DOC-54 §7.1); the hardware back button closes it (A9). On iOS the sheet rises above the
+ * keyboard, or a field in it and its action would sit under the keys.
  */
 export function BottomSheet({
   visible,
@@ -31,7 +32,11 @@ export function BottomSheet({
 }: BottomSheetProps) {
   return (
     <Modal transparent visible={visible} onRequestClose={onClose} statusBarTranslucent>
-      <View className="flex-1 justify-end" testID={testID}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 justify-end"
+        testID={testID}
+      >
         <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-0 bg-scrim">
           <Pressable accessibilityLabel={closeLabel} className="flex-1" onPress={onClose} />
         </Animated.View>
@@ -53,7 +58,7 @@ export function BottomSheet({
             {actions ? <View className="gap-3 pt-2">{actions}</View> : null}
           </SafeAreaView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
