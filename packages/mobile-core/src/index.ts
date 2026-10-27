@@ -1,3 +1,5 @@
+import './intl'
+
 export * from './contact'
 export * from './countdown'
 export * from './device-runtime'
