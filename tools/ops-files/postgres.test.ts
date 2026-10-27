@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from '
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Cleanup, must, sh, unique, waitFor } from './docker'
+import { Cleanup, createSubnetNetwork, must, sh, unique, waitFor } from './docker'
 import { repo } from './host'
 
 /**
@@ -62,17 +62,8 @@ const client = (user: string, password: string, database = 'rms', host = serverI
 
 beforeAll(() => {
   if (!image) throw new Error('docker/compose.local.yml pins no postgres image')
-  must(sh(['docker', 'network', 'create', network]), 'setup')
+  const { subnet, gateway } = createSubnetNetwork(network)
   cleanup.network(network)
-  const net = sh([
-    'docker',
-    'network',
-    'inspect',
-    '-f',
-    '{{(index .IPAM.Config 0).Subnet}} {{(index .IPAM.Config 0).Gateway}}',
-    network,
-  ]).out
-  const [subnet, gateway] = net.split(' ') as [string, string]
   const prefix = gateway.split('.').slice(0, 3).join('.')
   serverIp = `${prefix}.2`
   clientIp = `${prefix}.3`
