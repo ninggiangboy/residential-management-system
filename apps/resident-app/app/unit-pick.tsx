@@ -80,7 +80,9 @@ export default function UnitPick() {
             selected={unit.get() === membership.unitId}
             onPress={() => {
               unit.select(membership.unitId)
+              // The first sign-in has no screen behind this one (the stack opened on it), so it goes to Home by name.
               if (router.canGoBack()) router.back()
+              else router.replace('/')
             }}
           >
             <View className="gap-2">
