@@ -16,8 +16,15 @@
 #
 # A snippet takes no subdirective as an argument (`import upstream "flush_interval -1"` is one token), so the options are
 # shared and the one that differs is written at the call.
+#
+# `lb_try_*`: the health check sees a stopped `api` up to 5 s late (`health_interval`), and a container being replaced refuses
+# connections in between. Without a retry window the request that was routed there fails; with it Caddy picks another upstream
+# (or waits for this one) for up to 5 s. Only a connection that was never made is tried again, so a request that reached an
+# `api` is never sent twice (DR-272).
 (upstream_options) {
 	lb_policy least_conn
+	lb_try_duration 5s
+	lb_try_interval 250ms
 	health_uri /health/ready
 	health_port 3001
 	health_interval 5s

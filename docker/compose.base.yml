@@ -15,7 +15,7 @@ x-app: &app
   extra_hosts: ['host.docker.internal:172.30.0.1'] # the bridge gateway: PostgreSQL listens there (DOC-70 §8.2)
   env_file: [/opt/rms/env/app.env]
   volumes: ['/etc/rms/tls/ca.pem:/etc/rms/seaweedfs-ca.pem:ro'] # the private CA of DOC-70 §5.5, read through NODE_EXTRA_CA_CERTS
-  stop_grace_period: 60s # longer than WORKER_STOP_TIMEOUT_SECONDS 40 + close (DOC-38 §5.4)
+  stop_grace_period: 60s # longer than SHUTDOWN_DRAIN_SECONDS 7 + the requests in flight, and than WORKER_STOP_TIMEOUT_SECONDS 40 + close (DOC-38 §5.4)
   healthcheck:
     test: ['CMD', 'bun', 'scripts/healthcheck.ts']
     interval: 10s
@@ -59,12 +59,12 @@ volumes: { caddy-data: {}, prometheus-data: {}, alertmanager-data: {}, grafana-d
 services:
   api-1:
     <<: *app
-    environment: { APP_ROLES: api, DATABASE_URL_FILE: /run/secrets/db-app-url }
+    environment: { APP_ROLES: api, DATABASE_URL_FILE: /run/secrets/db-app-url, SHUTDOWN_DRAIN_SECONDS: '7' }
     secrets: &api-secrets [db-app-url, jwt-keys, qr-keys, otp-hmac-key, settings-encryption-keys, pii-encryption-keys, s3-access-key-id, s3-secret-access-key, demo-staff-password]
   api-2:
     <<: *app
     profiles: [api2]
-    environment: { APP_ROLES: api, DATABASE_URL_FILE: /run/secrets/db-app-url }
+    environment: { APP_ROLES: api, DATABASE_URL_FILE: /run/secrets/db-app-url, SHUTDOWN_DRAIN_SECONDS: '7' }
     secrets: *api-secrets
   worker:
     <<: *app

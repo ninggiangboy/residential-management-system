@@ -188,6 +188,70 @@ describe('the Caddyfile (DOC-70 §7.1)', () => {
     )
   })
 
+  test('a stopped upstream of two costs no request: Caddy tries the other one before its health check notices (DR-272)', async () => {
+    const second = unique('rms-caddy-up2')
+    const pair = unique('rms-caddy-pair')
+    must(
+      sh([
+        'docker',
+        'run',
+        '-d',
+        '--name',
+        second,
+        '--network',
+        network,
+        '--network-alias',
+        'api-2',
+        bunImage,
+        'bun',
+        '-e',
+        UPSTREAM_SERVER,
+      ]),
+      'second upstream',
+    )
+    cleanup.container(second)
+    must(
+      sh([
+        'docker',
+        'run',
+        '-d',
+        '--name',
+        pair,
+        '--network',
+        network,
+        '-p',
+        '127.0.0.1::80',
+        '--user',
+        '10001:10001',
+        '--read-only',
+        '--tmpfs',
+        '/config',
+        '--cap-drop',
+        'ALL',
+        '--cap-add',
+        'NET_BIND_SERVICE',
+        '--security-opt',
+        'no-new-privileges:true',
+        '-e',
+        'RMS_UPSTREAMS=api-1:3000 api-2:3000',
+        '-v',
+        `${join(repo, 'ops/caddy/Caddyfile')}:/etc/caddy/Caddyfile:ro`,
+        caddyImage,
+      ]),
+      'second proxy',
+    )
+    cleanup.container(pair)
+    const url = `http://127.0.0.1:${sh(['docker', 'port', pair, '80/tcp']).out.split(':').at(-1)}/api/v1/ping`
+    const status = () => sh(['curl', '-s', '-o', '/dev/null', '-w', '%{http_code}', url]).out
+    waitFor(() => status() === '200', 30, 'the pair to answer')
+    // Both are in rotation once the first health pass is done (5 s).
+    Bun.sleepSync(6000)
+    // A kill, not a stop: the container is gone at once and the next health check is up to 5 s away.
+    expect(sh(['docker', 'kill', second]).code).toBe(0)
+    const answers = Array.from({ length: 40 }, status)
+    expect(answers.filter((code) => code !== '200')).toEqual([])
+  })
+
   test('the health port is not routed to the application and answers on its own', async () => {
     expect(
       sh(['docker', 'exec', proxy, 'wget', '-q', '-O-', 'http://127.0.0.1:8081/healthz']).out,

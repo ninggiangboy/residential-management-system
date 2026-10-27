@@ -44,23 +44,23 @@ describe('deploy.sh', () => {
     const order = (needle: string) => calls.findIndex((call) => call.includes(needle))
     expect(order('run --rm -T migrate')).toBeGreaterThan(order('pull --quiet'))
     expect(order('up -d --no-deps caddy')).toBeGreaterThan(order('run --rm -T migrate'))
-    expect(order('--force-recreate api-1')).toBeGreaterThan(order('up -d --no-deps caddy'))
-    expect(order('--force-recreate worker')).toBeGreaterThan(order('--force-recreate api-1'))
+    expect(order('--force-recreate worker')).toBeGreaterThan(order('up -d --no-deps caddy'))
+    expect(order('--force-recreate api-1')).toBeGreaterThan(order('--force-recreate worker'))
   })
 
-  test('staging recreates api-1 and the worker, production api-1, api-2 and the worker in that order, and starts the logs', () => {
+  test('the worker is recreated first, then api-1 (staging) or api-1 and api-2 (production), and production starts the logs (DR-272)', () => {
     const staging = makeHost('staging')
     staging.upload(A)
     staging.run('deploy.sh', [A])
     const recreated = (calls: string[]) =>
       composeCalls(calls, 'up').flatMap((call) => call.match(/--force-recreate (\S+)/)?.[1] ?? [])
-    expect(recreated(staging.calls())).toEqual(['api-1', 'worker'])
+    expect(recreated(staging.calls())).toEqual(['worker', 'api-1'])
     expect(staging.calls().some((call) => call.includes('loki alloy'))).toBe(false)
 
     const production = makeHost('production')
     production.upload(A)
     expect(production.run('deploy.sh', [A]).code).toBe(0)
-    expect(recreated(production.calls())).toEqual(['api-1', 'api-2', 'worker'])
+    expect(recreated(production.calls())).toEqual(['worker', 'api-1', 'api-2'])
     expect(production.calls().some((call) => call.includes('loki alloy'))).toBe(true)
   })
 
@@ -83,15 +83,15 @@ describe('deploy.sh', () => {
     expect(host.deployState()).toBe(`current=${A}\nprevious=none\n`)
   })
 
-  test('an api that does not become healthy stops at step 5 before the worker', () => {
+  test('a worker that does not become healthy stops at step 5 before any api is recreated', () => {
     const host = makeHost()
     host.upload(A)
-    host.unhealthy('rms-api-1-1')
+    host.unhealthy('rms-worker-1')
     const result = host.run('deploy.sh', [A], { RMS_HEALTH_SECONDS: '1' })
     expect(result.code).toBe(1)
-    expect(result.out).toContain('api-1 not healthy')
+    expect(result.out).toContain('worker not healthy')
     expect(result.out.split('\n').at(-1)).toBe('deploy failed at step 5')
-    expect(host.calls().some((call) => call.includes('--force-recreate worker'))).toBe(false)
+    expect(host.calls().some((call) => call.includes('--force-recreate api-1'))).toBe(false)
     expect(host.deployState()).toBe('')
   })
 
