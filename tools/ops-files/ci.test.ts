@@ -420,6 +420,53 @@ esac`,
 })
 
 describe('the workflows', () => {
+  // A change of documents only skips the code jobs (DR-277), so a document that a test or a check reads must be in `code`.
+  test('every document that code reads is in the `code` paths of paths-filter.yml', () => {
+    const filter = readFileSync(join(repo, '.github/paths-filter.yml'), 'utf8')
+    const code = filter.slice(filter.indexOf('\ncode:'), filter.indexOf('\ne2e:'))
+    const listed = new Set([...code.matchAll(/^ {2}- (docs\/\S+)/gm)].map((m) => m[1]))
+    const files = Bun.spawnSync(['git', 'ls-files', '*.ts', '*.cjs', '*.sh'], { cwd: repo })
+      .stdout.toString()
+      .split('\n')
+    const read = new Set<string>()
+    // This file names documents as cases of the next test; it reads none.
+    for (const file of files.filter((f) => f && f !== 'tools/ops-files/ci.test.ts')) {
+      for (const m of readFileSync(join(repo, file), 'utf8').matchAll(/\bdocs\/[\w./-]+\.md\b/g))
+        read.add(m[0])
+    }
+    expect(read.size).toBeGreaterThan(0)
+    expect([...read].filter((doc) => !listed.has(doc)).sort()).toEqual([])
+  })
+
+  test('the `code` paths leave out documents and Markdown and keep what code reads', () => {
+    const picomatch = require('picomatch') as (
+      glob: string,
+      options: { dot: boolean },
+    ) => (path: string) => boolean
+    const filter = readFileSync(join(repo, '.github/paths-filter.yml'), 'utf8')
+    const code = filter.slice(filter.indexOf('\ncode:'), filter.indexOf('\ne2e:'))
+    // dorny/paths-filter compiles each pattern with picomatch and `dot: true`; one match is enough (the default quantifier).
+    const globs = [...code.matchAll(/^ {2}- '?([^'\s]+)'?/gm)].map((m) =>
+      picomatch(m[1] as string, { dot: true }),
+    )
+    const matches = (path: string) => globs.some((glob) => glob(path))
+    for (const path of [
+      'docs/README.md',
+      'docs/09-operations/ci-cd.md',
+      'README.md',
+      'CLAUDE.md',
+      'packages/core-db/README.md',
+    ])
+      expect(`${path} ${matches(path)}`).toBe(`${path} false`)
+    for (const path of [
+      'apps/api/src/main.ts',
+      '.github/workflows/ci.yml',
+      'bun.lock',
+      'docs/06-design/observability.md',
+    ])
+      expect(`${path} ${matches(path)}`).toBe(`${path} true`)
+  })
+
   // GitHub runs a `run` step with `bash -e {0}`: no pipefail, so `command | tee file` exits 0 when `command` fails. A deploy that
   // failed would then end the step green and the job could record a successful deployment, which `promote` reads (DOC-71 §7.4).
   test('every run step that pipes into tee sets pipefail first', () => {

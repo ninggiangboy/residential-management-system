@@ -32,6 +32,9 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       mobile: ${{ steps.filter.outputs.mobile }}
       e2e: ${{ steps.filter.outputs.e2e }}
+      # Documents only gives `false` and the code jobs skip (DR-277). A push to `staging` is always `true`: it builds the image
+      # it publishes, and what it does not need to check again `trusted` decides.
+      code: ${{ steps.filter.outputs.code == 'true' || github.ref == 'refs/heads/staging' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: filter
@@ -64,11 +67,14 @@ jobs:
           set -o pipefail
           ops/deploy/trusted-tree.sh 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
 
+  # On a change of documents only, `verify` checks the commit messages and nothing else (DR-277): `check:commits` needs no install.
   verify:
-    needs: trusted
+    needs: [changes, trusted]
     if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      CODE: ${{ needs.changes.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -76,14 +82,18 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .tool-versions
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: env.CODE == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
-      - run: bun install --frozen-lockfile
-      - run: git diff --exit-code bun.lock
-      - run: bun run check
+      - if: env.CODE == 'true'
+        run: bun install --frozen-lockfile
+      - if: env.CODE == 'true'
+        run: git diff --exit-code bun.lock
+      - if: env.CODE == 'true'
+        run: bun run check
       # The commit and OpenAPI checks run even when `check` failed, so a pull request sees every broken rule.
       - if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
@@ -91,14 +101,14 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bun run check:commits
       # A breaking OpenAPI change against the base needs /api/v2 (DR-144, AG-26); the document exists from P1-04.
-      - if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+      - if: ${{ !cancelled() && github.event_name == 'pull_request' && env.CODE == 'true' }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.sha }}
         run: bun scripts/run-if-defined.ts check:openapi P1-04
 
   unit:
-    needs: trusted
-    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
+    needs: [changes, trusted]
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -128,8 +138,8 @@ jobs:
           if-no-files-found: ignore
 
   integration:
-    needs: trusted
-    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
+    needs: [changes, trusted]
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
@@ -174,48 +184,57 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # On a change of documents only, Gitleaks alone runs (DR-277): a document can hold a secret, and Trivy and Semgrep read code.
   security:
-    needs: trusted
+    needs: [changes, trusted]
     if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      CODE: ${{ needs.changes.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - if: env.CODE == 'true'
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .tool-versions
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: env.CODE == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       # Trivy reads the licences from node_modules.
-      - run: bun install --frozen-lockfile
-      - id: day
+      - if: env.CODE == 'true'
+        run: bun install --frozen-lockfile
+      - if: env.CODE == 'true'
+        id: day
         run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: env.CODE == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ steps.day.outputs.date }}
           restore-keys: trivy-db-
       # Each scanner runs even when one before it failed, so a pull request sees every finding.
-      - name: Trivy vulnerabilities (bun.lock; HIGH and CRITICAL with a fix)
+      - if: env.CODE == 'true'
+        name: Trivy vulnerabilities (bun.lock; HIGH and CRITICAL with a fix)
         run: |
           mkdir -p ~/.cache/trivy
           docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
             fs --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 \
             --skip-dirs '**/node_modules' --no-progress /src
-      - if: ${{ !cancelled() }}
+      - if: ${{ !cancelled() && env.CODE == 'true' }}
         name: Trivy licences (forbidden for linked packages, trivy.yaml)
         run: |
           docker run --rm -v "$PWD:/src:ro" -v "$HOME/.cache/trivy:/root/.cache/trivy" "$TRIVY_IMAGE" \
             fs --config /src/trivy.yaml --scanners license --severity CRITICAL --exit-code 1 --no-progress /src
       # Trivy runs as root in its container; the cache step saves the database as the runner user.
-      - if: always()
+      - if: ${{ always() && env.CODE == 'true' }}
         run: sudo chown -R "$(id -u):$(id -g)" ~/.cache/trivy
-      - if: ${{ !cancelled() }}
+      - if: ${{ !cancelled() && env.CODE == 'true' }}
         name: Semgrep (p/default and .semgrep/rules.yml; ERROR, HIGH and CRITICAL fail)
         run: |
           docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
@@ -242,7 +261,7 @@ jobs:
           docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" \
             git /repo --config /repo/.gitleaks.toml --redact --no-banner --log-opts="--no-merges $RANGE"
-      - if: always()
+      - if: ${{ always() && env.CODE == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: semgrep
@@ -250,7 +269,10 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # A change of documents only cannot change the image (`.dockerignore` drops `docs`; a README in a package runs nothing): no build (DR-277).
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
