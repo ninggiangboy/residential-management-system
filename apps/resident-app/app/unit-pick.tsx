@@ -72,36 +72,43 @@ export default function UnitPick() {
     >
       {lost ? <Banner tone="danger">{t('error.membership_inactive')}</Banner> : null}
       <View className="gap-4">
-        {memberships.map((membership) => (
-          <Card
-            key={membership.unitId}
-            testID={`unit-${membership.unitCode}`}
-            accessibilityLabel={`${membership.unitCode}, ${t(`common.member-type.${membership.memberType}` as 'common.member-type.owner')}`}
-            selected={unit.get() === membership.unitId}
-            onPress={() => {
-              unit.select(membership.unitId)
-              // The first sign-in has no screen behind this one (the stack opened on it), so it goes to Home by name.
-              if (router.canGoBack()) router.back()
-              else router.replace('/')
-            }}
-          >
-            <View className="gap-2">
-              <Plate size="lg">{membership.unitCode}</Plate>
-              <Text variant="title-3">
-                {t(`common.member-type.${membership.memberType}` as 'common.member-type.owner')}
-              </Text>
-              {membership.memberType === 'tenant' ? (
-                <Text variant="secondary" tone="muted">
-                  {t(
-                    membership.canPay
-                      ? 'res.unit-pick.card.tenant-can-pay'
-                      : 'res.unit-pick.card.tenant-no-pay',
-                  )}
-                </Text>
-              ) : null}
-            </View>
-          </Card>
-        ))}
+        {memberships.map((membership) => {
+          const type = t(
+            `common.member-type.${membership.memberType}` as 'common.member-type.owner',
+          )
+          const note =
+            membership.memberType === 'tenant'
+              ? t(
+                  membership.canPay
+                    ? 'res.unit-pick.card.tenant-can-pay'
+                    : 'res.unit-pick.card.tenant-no-pay',
+                )
+              : null
+          return (
+            <Card
+              key={membership.unitId}
+              testID={`unit-${membership.unitCode}`}
+              accessibilityLabel={[membership.unitCode, type, note].filter(Boolean).join(', ')}
+              selected={unit.get() === membership.unitId}
+              onPress={() => {
+                unit.select(membership.unitId)
+                // The first sign-in has no screen behind this one (the stack opened on it), so it goes to Home by name.
+                if (router.canGoBack()) router.back()
+                else router.replace('/')
+              }}
+            >
+              <View className="gap-2">
+                <Plate size="lg">{membership.unitCode}</Plate>
+                <Text variant="title-3">{type}</Text>
+                {note ? (
+                  <Text variant="secondary" tone="muted">
+                    {note}
+                  </Text>
+                ) : null}
+              </View>
+            </Card>
+          )
+        })}
       </View>
       <Text variant="secondary" tone="muted">
         {t('res.unit-pick.note')}
