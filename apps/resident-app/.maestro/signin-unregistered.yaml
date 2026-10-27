@@ -8,9 +8,8 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0911 111 111"
-- hideKeyboard
-- tapOn:
-    id: login-submit
+# Enter on the keyboard sends the number like the button; `hideKeyboard` finds nothing to press on iOS.
+- pressKey: Enter
 - assertVisible: "This number is not in the system.*"
 - assertVisible:
     id: call-office

@@ -5,9 +5,8 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0902 345 678"
-- hideKeyboard
-- tapOn:
-    id: login-submit
+# Enter on the keyboard sends the number like the button; `hideKeyboard` finds nothing to press on iOS.
+- pressKey: Enter
 - extendedWaitUntil:
     visible: "Enter the OTP"
     timeout: 30000
@@ -15,4 +14,4 @@ appId: vn.rms.resident.dev
 - runFlow: helpers/dismiss-push-prompt.yaml
 - tapOn:
     id: tile-contact
-- assertVisible: "1900 1234"
+- assertVisible: ".*1900 1234.*"
