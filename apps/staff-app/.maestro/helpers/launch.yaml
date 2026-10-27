@@ -2,6 +2,13 @@
 # and waits for the first screen. A production or staging build has no picker, and its flows start with `launchApp` alone.
 appId: vn.rms.staff.dev
 ---
+# `clearState` leaves the iOS keychain alone, where the secure store keeps the session; without this a flow that starts after a
+# sign-in opens on Home, not on the sign-in screen.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - clearKeychain
 - launchApp:
     clearState: true
 # The link is only taken when the launcher is up; sent at once after the launch it is dropped and the run stays on the server list.
@@ -58,3 +65,40 @@ appId: vn.rms.staff.dev
     visible:
       id: "email-input"
     timeout: 60000
+# On iOS the first touch after a launch does not focus a field, and the text of the next `inputText` is lost with no error;
+# this one is spent here so that the tap a flow makes on the same field takes.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "email-input"
+# iOS opens no menu of its own, and the tools button (top-right corner) covers the language switch and the account button, so the
+# menu is opened with that button, the button is turned off and the menu is closed with its X (`xmark`). The setting is lost with `clearState`.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      # The button is drawn a moment after the screen, and a tap before that reaches nothing; so the open is tried again.
+      - retry:
+          maxRetries: 2
+          commands:
+            - tapOn:
+                point: "91%,10%"
+            - extendedWaitUntil:
+                visible: "Toggle performance monitor"
+                timeout: 6000
+      - scrollUntilVisible:
+          element: "Tools button"
+      # A tap on the label or `rightOf` does nothing on iOS, only one on the switch itself; after the scroll the sheet is
+      # always open to the same height, so the switch of the row is where this point is.
+      - tapOn:
+          point: "85%,67%"
+      - tapOn:
+          id: "xmark"
+      # The menu slides down and the button goes with it; a tap in the corner before that opens the menu again.
+      - extendedWaitUntil:
+          notVisible: "Toggle performance monitor"
+          timeout: 5000
+      - waitForAnimationToEnd:
+          timeout: 3000

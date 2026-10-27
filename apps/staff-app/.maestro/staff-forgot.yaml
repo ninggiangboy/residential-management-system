@@ -7,9 +7,8 @@ appId: vn.rms.staff.dev
 - tapOn:
     id: forgot-email
 - inputText: "nobody@mocmien.example"
-- hideKeyboard
-- tapOn:
-    id: forgot-submit
+# Enter on the keyboard sends the form like the button; `hideKeyboard` taps a spot of its own on iOS and hit "Forgot password".
+- pressKey: Enter
 - assertVisible: "Check your email"
 - assertVisible: ".*no\\*\\*\\*@mocmien.example.*"
 - tapOn:
