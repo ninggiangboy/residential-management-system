@@ -47,6 +47,7 @@
     "tokens:build": "bun packages/design-tokens/scripts/build.ts",
     "check:tools": "bun scripts/check-tools.ts",
     "keys:generate": "bun scripts/keys-generate.ts",
+    "secrets:push": "bun scripts/secrets-push.ts",
     "infra:up": "bun scripts/infra.ts up",
     "infra:down": "bun scripts/infra.ts down",
     "infra:reset": "bun scripts/infra.ts reset",
