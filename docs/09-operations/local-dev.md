@@ -168,6 +168,7 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `check:test-ids` | Compares the IDs of every "Required tests" table with the test titles; **warns, never fails** (DOC-88 §5, DR-169) | P1-19 |
 | `check:commits` | Validates the pull-request title and the commit messages against the pattern of DOC-71 §11.2 | P1-19 |
 | `pr:merge <n>` | Rebase-merges pull request `<n>` into `dev` only when `gate` is green on its head and the branch is up to date (DOC-71 §11.1, DR-241); needs `gh` signed in | P1-19 |
+| `staging:push [sha]` | Moves `staging` forward to the tip of `dev` (or `sha`) only when the commit is on `dev`, ahead of `staging` and `gate` is green on it; that push publishes the image and deploys staging (DOC-71 §11.1, DR-276); needs `gh` signed in | P1-20 |
 | `check:authz-metadata` | Fails when a route has no audience metadata (AG-01, SC-01) | P1-15 |
 | `db:provision-ci` | Runs `0001-provision.sql` as `postgres` with the generated passwords: the CI twin of the `initdb.d` script of §6 (DOC-71 §4.2) | P1-19 |
 | `exp:<nn>` | One experiment run, for example `exp:09` (DOC-98) | per experiment |
