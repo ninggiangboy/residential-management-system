@@ -1,15 +1,8 @@
 import { type Database, inBuilding } from '@core/db'
 import type { BuildingScope, DemoCounts } from '@rms/shared-types'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { DemoRepository, DemoResidentRow, DemoStaffRow } from '../../domain/demo-repository'
-import {
-  otpChallenge,
-  passwordToken,
-  refreshFamily,
-  refreshToken,
-  residentAccount,
-  staffAccount,
-} from './schema'
+import { otpChallenge, passwordToken, refreshFamily, residentAccount, staffAccount } from './schema'
 
 export class DrizzleDemoRepository implements DemoRepository {
   constructor(private readonly database: Database) {}
