@@ -32,7 +32,7 @@ export interface CounterLabels {
     outcome: 'sent' | 'expired' | 'skipped_demo' | 'skipped_unknown' | 'not_allowlisted' | 'failed'
   }
   mail_sent_total: {
-    outcome: 'sent' | 'expired' | 'skipped_unknown' | 'failed'
+    outcome: 'sent' | 'expired' | 'skipped_demo' | 'skipped_unknown' | 'failed'
   }
   membership_changes_total: {
     change: 'added' | 'removed' | 'type_changed' | 'can_pay_changed' | 'locked' | 'unlocked'
@@ -49,7 +49,7 @@ export interface CounterLabels {
 }
 
 /** The histograms, observed in seconds. */
-export type HistogramName = 'import_validate_duration_seconds'
+export type HistogramName = 'import_validate_duration_seconds' | 'demo_reset_duration_seconds'
 
 export type CounterName = keyof CounterLabels
 
