@@ -1,0 +1,122 @@
+# Alert rules of DOC-40 §5.2 and §5.3 that are live from P1-18; the others join with the task named in the "Ready" column of DOC-40.
+# One test per rule in ../tests/rms-alerts.test.yml (OB-04, OB-05): `bun run check:ops` runs promtool over both.
+groups:
+  - name: rms-original-nine
+    interval: 15s
+    rules:
+      - alert: OutboxLag
+        expr: max by (schema) (outbox_oldest_unpublished_age_seconds) > 120
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "The oldest unpublished message of {{ $labels.schema }} is {{ $value }} s old"
+          runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+
+      - alert: DeadLetters
+        expr: max by (schema) (outbox_dead_letters) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} dead-letter messages in {{ $labels.schema }}"
+          runbook: docs/09-operations/runbooks/RB-05-dead-letters.md
+
+      - alert: SmsFailures
+        expr: |
+          sum(increase(sms_sent_total{outcome="failed"}[15m]))
+            / sum(increase(sms_sent_total{outcome=~"sent|failed"}[15m])) > 0.10
+          and sum(increase(sms_sent_total{outcome=~"sent|failed"}[15m])) >= 5
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 10% of SMS failed in 15 minutes"
+          runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+
+      - alert: StorageQuota
+        expr: max by (building) (storage_usage_ratio) > 0.8
+        labels: { severity: warning }
+        annotations:
+          summary: "File storage is at {{ $value | humanizePercentage }} of the quota"
+          runbook: docs/09-operations/runbooks/RB-08-storage-quota.md
+
+      - alert: ApiErrors
+        expr: |
+          sum(rate(http_request_duration_seconds_count{job="rms-api", status=~"5.."}[5m]))
+            / sum(rate(http_request_duration_seconds_count{job="rms-api"}[5m])) > 0.02
+          and sum(increase(http_request_duration_seconds_count{job="rms-api"}[5m])) >= 20
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of API requests fail with 5xx"
+          runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+  - name: rms-platform
+    interval: 15s
+    rules:
+      - alert: ApiDown
+        expr: max(up{job="rms-api"}) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "No API process answers its metrics port"
+          runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+      - alert: ReadinessFailing
+        expr: max(readiness_ok{job="rms-api"}) == 0
+        for: 30s
+        labels: { severity: critical }
+        annotations:
+          summary: "The API is not ready: the database does not answer (or the process is stopping)"
+          runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+      - alert: WorkerDown
+        expr: up{job="rms-worker"} == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "The worker does not answer its metrics port"
+          runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+
+      - alert: DbPoolWaiting
+        expr: max by (instance) (db_pool_waiting) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} has {{ $value }} transactions waiting for a database connection"
+          runbook: docs/09-operations/runbooks/RB-09-api-errors.md
+
+      - alert: MetricsCollectionFailing
+        expr: sum(increase(metrics_collection_errors_total[15m])) > 5
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} database-derived gauges failed to refresh in 15 minutes"
+          runbook: table of DOC-74
+
+  - name: rms-identity
+    interval: 15s
+    rules:
+      - alert: OtpDailyCapReached
+        expr: sum(increase(otp_daily_cap_reached_total[5m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "The daily OTP cap refused a request: residents cannot sign in until the window moves"
+          runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+
+      - alert: SmsProviderDown
+        expr: max(sms_provider_down) == 1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "The SMS provider counts as down: residents are told to try later"
+          runbook: docs/09-operations/runbooks/RB-06-sms-failures.md
+
+      - alert: RefreshTokenReuse
+        expr: sum(increase(auth_refresh_total{outcome="reuse"}[10m])) > 5
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} refresh tokens were presented twice in 10 minutes: possible token theft"
+          runbook: table of DOC-74
+
+      - alert: LockoutSpike
+        expr: sum(increase(auth_lockouts_total[15m])) > 10
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} staff accounts were locked in 15 minutes: possible password guessing"
+          runbook: table of DOC-74

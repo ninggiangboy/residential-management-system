@@ -16,6 +16,7 @@
       "!**/tools/arch-fixtures",
       "!**/.expo",
       "!**/packages/design-tokens/generated",
+      "!**/ops/grafana/dashboards",
       "!**/docs"
     ]
   },

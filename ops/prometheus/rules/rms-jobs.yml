@@ -1,0 +1,85 @@
+# Silence a job may keep before JobStale fires (DOC-40 §5.4): twice its interval, at least 120 s; 36 h for invariant_check.
+# One line per job of DOC-38 §4.1; the test OB-07 compares the names with the job catalog.
+groups:
+  - name: rms-job-thresholds
+    rules:
+      - record: job_stale_after_seconds
+        expr: vector(120)
+        labels: { job_name: notice_scheduler }
+      - record: job_stale_after_seconds
+        expr: vector(120)
+        labels: { job_name: intent_requery }
+      - record: job_stale_after_seconds
+        expr: vector(120)
+        labels: { job_name: export_run }
+      - record: job_stale_after_seconds
+        expr: vector(120)
+        labels: { job_name: fee_notice_run }
+      - record: job_stale_after_seconds
+        expr: vector(120)
+        labels: { job_name: notice_reclaim }
+      - record: job_stale_after_seconds
+        expr: vector(600)
+        labels: { job_name: push_receipts }
+      - record: job_stale_after_seconds
+        expr: vector(7200)
+        labels: { job_name: storage_quota }
+      - record: job_stale_after_seconds
+        expr: vector(7200)
+        labels: { job_name: orphan_uploads }
+      - record: job_stale_after_seconds
+        expr: vector(7200)
+        labels: { job_name: import_expire }
+      - record: job_stale_after_seconds
+        expr: vector(7200)
+        labels: { job_name: export_purge }
+      - record: job_stale_after_seconds
+        expr: vector(7200)
+        labels: { job_name: realtime_purge }
+      - record: job_stale_after_seconds
+        expr: vector(129600)
+        labels: { job_name: invariant_check }
+      - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: qr_scan_purge }
+      - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: otp_purge }
+      - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: token_purge }
+      - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: account_deletion }
+      - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: demo_reset }
+      - record: job_stale_after_seconds
+        expr: vector(1209600)
+        labels: { job_name: integrity_weekly }
+      - record: job_stale_after_seconds
+        expr: vector(1209600)
+        labels: { job_name: integrity_notices }
+      - record: job_stale_after_seconds
+        expr: vector(1209600)
+        labels: { job_name: inbox_purge }
+      - record: job_stale_after_seconds
+        expr: vector(1209600)
+        labels: { job_name: import_purge }
+      - record: job_stale_after_seconds
+        expr: vector(1209600)
+        labels: { job_name: finance_purge }
+      - record: job_stale_after_seconds
+        expr: vector(5356800)
+        labels: { job_name: audit_purge }
+  - name: rms-jobs
+    interval: 15s
+    rules:
+      - alert: JobStale
+        expr: |
+          (time() - max by (job_name) (job_last_success_timestamp{job_name!="invariant_check"}))
+            > on (job_name) max by (job_name) (job_stale_after_seconds)
+        labels: { severity: warning }
+        annotations:
+          summary: "Job {{ $labels.job_name }} has not succeeded for {{ $value | humanizeDuration }}"
+          runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
