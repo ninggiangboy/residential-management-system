@@ -8,7 +8,7 @@ import {
 import type { Logger } from '@core/telemetry'
 import { ValueErrorType } from '@sinclair/typebox/errors'
 import { Elysia, type ValidationError as ElysiaValidationError } from 'elysia'
-import { errorCodes } from './error-codes'
+import { errorCodes, errorScopes } from './error-codes'
 
 const STATUS: Record<ErrorKind, number> = {
   validation: 400,
@@ -188,6 +188,9 @@ export const errorHandlerPlugin = ({ logger, constraintErrors = {} }: ErrorHandl
         )
       }
       errorCodes.set(request, answer.code)
+      const scope = (answer.details as { scope?: unknown } | undefined)?.scope
+      if (answer.code === 'rate_limited' && typeof scope === 'string')
+        errorScopes.set(request, scope)
       set.status = answer.status
       set.headers['cache-control'] = 'no-store'
       if (answer.retryAfterSeconds !== undefined)

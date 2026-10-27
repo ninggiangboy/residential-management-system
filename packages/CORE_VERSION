@@ -79,3 +79,8 @@ local-changes:
     error handler reports a value outside it as the rule `enum` with the allowed values; test in `error-handler.plugin.test.ts`; core-runtime: `readyRoute`
     describes its 503 `status` the same way (AG-02a, AG-02b)
   - core-http: `strictObject(properties, { description })` takes the description of the object; `IdParams.id` has a description (AG-02c)
+  - core-db: `Database.poolWaiting`, the top-level transactions in flight beyond the pool size, for `db_pool_waiting` (DOC-40 §4.1) (P1-18)
+  - core-telemetry: `Metrics` over `prom-client` 15.1.3 (counter, gauge, histogram, `pulled` gauges with a cache, a timeout and no series before the first read, the two process metrics, `render`); `prom-client` is a dependency (P1-18)
+  - core-http: `requestLogPlugin` takes `observe(sample)`, called once per request with the route template, status, error code, the scope of a 429 and the app headers; `createIdempotent` takes `onOutcome(first|replay|reuse|in_progress)` (P1-18)
+  - core-messaging: `InProcessMessageBus` takes `observe(handler, outcome)`; new `OutboxStats` (oldest unpublished age and dead letters per source) (P1-18)
+  - core-runtime: `createRuntime` takes `onHandler`; `AppModule.gauges` (`ModuleGauge`): gauges a module reads from its own tables at a scrape (P1-18)

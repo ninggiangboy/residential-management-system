@@ -35,6 +35,8 @@ export interface RuntimeOptions {
   }
   /** The pool size: the relay keeps its parallelism below it. */
   dbPoolMax: number
+  /** `handler_outcomes_total` (DOC-40 §4.1): called once per handler per message. */
+  onHandler?: (handler: string, outcome: 'ok' | 'deferred' | 'failed') => void
   maintenance: {
     pollIntervalMs: number
     /** Replaces where the maintenance flag is read from (tests: no shared state with other processes on the database). */
@@ -56,11 +58,12 @@ export function createRuntime({
   relay: relaySettings,
   jobs: jobSettings,
   dbPoolMax,
+  onHandler,
   maintenance: m,
 }: RuntimeOptions) {
   const docs = modules.flatMap((module) => module.docs ?? [])
 
-  const bus = new InProcessMessageBus(logger)
+  const bus = new InProcessMessageBus(logger, onHandler)
   for (const handler of modules.flatMap((module) => module.handlers ?? [])) bus.subscribe(handler)
 
   // A type that is not named in any `outboxPolicies` is `default`.
