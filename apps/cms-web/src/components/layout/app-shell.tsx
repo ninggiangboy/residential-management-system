@@ -1,5 +1,5 @@
 import type { IconName } from '@rms/design-tokens'
-import type { MessageKey } from '@rms/i18n-catalog'
+import type { MessageKey } from '@rms/i18n-catalog/web'
 import type { StaffRole } from '@rms/shared-types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useMatches } from '@tanstack/react-router'

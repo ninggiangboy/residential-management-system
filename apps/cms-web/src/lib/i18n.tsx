@@ -1,4 +1,4 @@
-import { createTranslator, type Translator } from '@rms/i18n-catalog'
+import { createTranslator, type Translator } from '@rms/i18n-catalog/web'
 import {
   formatDate,
   formatDateTime,
@@ -89,4 +89,4 @@ export function useI18n(): I18n {
 
 export const useT = (): T => useI18n().t
 
-export { errorText } from '@rms/i18n-catalog'
+export { errorText } from '@rms/i18n-catalog/web'
