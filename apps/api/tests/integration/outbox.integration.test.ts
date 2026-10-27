@@ -200,6 +200,29 @@ describe('failure, back-off and the class limit (DOC-38 §2.3)', () => {
     expect(b).toMatchObject({ attempts: 0, dead: true })
   })
 
+  test('MC-21 a type this build does not know is deferred and not lost; a known type with no handler is published (DR-272)', async () => {
+    const [unknown] = await seed(1, { type: 'probe.written_by_a_newer_release.v1' })
+    const [catalogued] = await seed(1)
+    const { publisher, seen } = recorder()
+    const known = new Set(['probe.thing_happened.v1'])
+    await relayOf(publisher, { knownTypes: known, unknownTypeDeferMs: 60_000 }).drain(source)
+    expect(seen.map((message) => message.type)).toEqual(['probe.thing_happened.v1'])
+    expect(await row(unknown as string)).toMatchObject({
+      attempts: 0,
+      published: false,
+      dead: false,
+    })
+    expect((await row(unknown as string)).wait).toBeGreaterThan(59)
+    expect((await row(catalogued as string)).published).toBe(true)
+
+    // The new worker knows the type: the message is claimed again and goes through.
+    known.add('probe.written_by_a_newer_release.v1')
+    await db.sql`UPDATE probe.outbox_messages SET next_attempt_at = now()`
+    await relayOf(publisher, { knownTypes: known }).drain(source)
+    expect((await row(unknown as string)).published).toBe(true)
+    expect(seen.map((message) => message.type)).toContain('probe.written_by_a_newer_release.v1')
+  })
+
   test('MC-16 the class limit is per type: three attempts for an sms command, eight for the rest', async () => {
     const [sms] = await seed(1, { type: 'probe.sms_requested.v1' })
     const [other] = await seed(1)

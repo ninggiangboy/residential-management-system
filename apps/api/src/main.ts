@@ -66,7 +66,13 @@ async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting_down')
   // Readiness answers 503 `stopping` from here on, so the proxy drains this process before it stops (DOC-38 §5.4).
   container.lifecycle.stopping = true
-  await api?.stop()
+  if (api) {
+    // The proxy sees the 503 within one health interval: the port stays open until then, and the streams that hold the server
+    // open are closed after it, so that their clients reconnect to the other process and not to this one (DR-272).
+    if (core.SHUTDOWN_DRAIN_SECONDS > 0) await Bun.sleep(core.SHUTDOWN_DRAIN_SECONDS * 1000)
+    await container.runtime.closeLive()
+    await api.stop()
+  }
   // The relay finishes the batch in flight and running jobs get WORKER_STOP_TIMEOUT_SECONDS to return (DOC-38 §5.4).
   const stillRunning = worker
     ? await container.runtime.stopWorker(core.WORKER_STOP_TIMEOUT_SECONDS * 1000)

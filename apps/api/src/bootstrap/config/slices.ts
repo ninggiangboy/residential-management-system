@@ -47,6 +47,9 @@ const processConfig = defineSlice({
     WORKER_STOP_TIMEOUT_SECONDS: int(40, { min: 1 }).describe(
       'Wait for running jobs at shutdown (`worker`).',
     ),
+    SHUTDOWN_DRAIN_SECONDS: int(0, { min: 0, max: 30 }).describe(
+      'Wait at shutdown, after `/health/ready` answers 503 and before the HTTP port closes, so that the proxy stops routing here (`api`).',
+    ),
     JOBS_TIME_ZONE: timeZone('Asia/Ho_Chi_Minh').describe(
       'Zone of the clock jobs (`worker`); the process itself runs in UTC.',
     ),

@@ -84,6 +84,11 @@ export function createRuntime({
       backoffBaseSeconds: relaySettings.backoffBaseSeconds,
       backoffMaxSeconds: relaySettings.backoffMaxSeconds,
       deferBudgetMs: relaySettings.deferBudgetHours * 3600_000,
+      // The catalog, and every type a handler of this build consumes: a build that has a handler for a type knows it.
+      knownTypes: new Set([
+        ...classOf.keys(),
+        ...modules.flatMap((module) => (module.handlers ?? []).map((handler) => handler.eventType)),
+      ]),
       retentionDays: relaySettings.retentionDays,
       cleanupIntervalMs: relaySettings.cleanupIntervalMinutes * 60_000,
     },

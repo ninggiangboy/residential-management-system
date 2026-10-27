@@ -41,6 +41,15 @@ export interface OutboxRelayOptions {
   deferBudgetMs?: number
   /** Default delay when RetryLaterError carries no retryAfterMs. */
   defaultDeferMs?: number
+  /**
+   * The message types this build knows (the `outboxPolicies` of its modules). A message of another type was written by a newer
+   * release, during a deploy: this build has no handler to run, and a bus with no handler for a type reports success, so the
+   * message would be marked published and lost. It is deferred instead, until a build that knows the type claims it.
+   * A known type with no handler is still published: a catalogued event may have no consumer yet.
+   */
+  knownTypes?: ReadonlySet<string>
+  /** How long a message of an unknown type waits before it is claimed again. */
+  unknownTypeDeferMs?: number
 }
 
 type ClaimedRow = {
@@ -78,6 +87,8 @@ export class OutboxRelay {
   private readonly cleanupIntervalMs: number
   private readonly deferBudgetMs: number
   private readonly defaultDeferMs: number
+  private readonly knownTypes: ReadonlySet<string> | undefined
+  private readonly unknownTypeDeferMs: number
 
   constructor(
     private database: Database,
@@ -97,6 +108,8 @@ export class OutboxRelay {
     this.cleanupIntervalMs = options.cleanupIntervalMs ?? 10 * 60_000
     this.deferBudgetMs = options.deferBudgetMs ?? 24 * 3600_000
     this.defaultDeferMs = options.defaultDeferMs ?? 30_000
+    this.knownTypes = options.knownTypes
+    this.unknownTypeDeferMs = options.unknownTypeDeferMs ?? 10_000
   }
 
   start(): void {
@@ -222,6 +235,15 @@ export class OutboxRelay {
 
   private async process(source: OutboxSource, row: ClaimedRow): Promise<void> {
     const { table } = source
+    if (this.knownTypes && !this.knownTypes.has(row.type)) {
+      this.logger.warn({ messageId: row.id, type: row.type }, 'outbox_unknown_type')
+      const reason = new RetryLaterError(
+        `no build of this worker knows the type ${row.type}`,
+        this.unknownTypeDeferMs,
+      )
+      await this.safely(row, () => this.defer(source, row, [reason]))
+      return
+    }
     const envelope: Envelope = {
       id: row.id,
       type: row.type,
