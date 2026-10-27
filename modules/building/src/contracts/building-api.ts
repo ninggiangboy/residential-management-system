@@ -60,10 +60,22 @@ export interface BuildingApi {
   /** `false` for an unknown id: callers that act on it first have a row from another read. */
   isDemo(buildingId: string): Promise<boolean>
   /**
+   * The first statement of every `resetDemo` (DOC-36 §10.2, BD-37): reads the row, never the cache, and throws a 404 `not_found`
+   * unless `building.is_demo` is true. An unknown id, a real building and a flag set on another row all refuse.
+   */
+  assertDemo(buildingId: string): Promise<void>
+  /**
    * The active row of `(buildingId, provider)`, decrypted. With no option it may answer from a 60 s cache; with
    * `{ lock: 'share' }` it skips the cache and takes `SELECT … FOR SHARE` inside the caller's transaction, which is how
    * an intent being created and a change of the receiving account exclude each other (DOC-36 §7.3).
    */
+  /**
+   * The ids of the gateway configurations with the `fake` driver that belong to a building that is not a demo building (DR-26):
+   * boot guard check 2 refuses to start on any (DOC-36 §10.1).
+   */
+  fakeGatewaysOutsideDemo(): Promise<string[]>
+  /** The ids of the keys that seal the stored gateway secrets, distinct and across buildings: boot guard check 6 compares them with the ring. An id is not a secret. */
+  gatewayKeyIds(): Promise<string[]>
   getGatewayConfig(
     buildingId: string,
     provider: GatewayProvider,

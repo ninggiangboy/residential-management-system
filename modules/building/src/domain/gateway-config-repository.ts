@@ -38,4 +38,10 @@ export interface GatewayConfigRepository {
   ): Promise<number | null>
   /** The compare-and-set of the key rotation (RB-12): zero rows when someone else wrote first. */
   replaceBlob(scope: BuildingScope, id: string, oldBlob: string, newBlob: string): Promise<boolean>
+  /** Boot guard check 2 (DOC-36 §10.1): the `fake` configurations of buildings that are not demo buildings, across buildings by design. */
+  // scope-ok: the boot guard looks across buildings by design
+  idsOfFakeOutsideDemo(): Promise<string[]>
+  /** Boot guard check 6: the key ids of the stored blobs. */
+  // scope-ok: the boot guard looks across buildings by design
+  keyIds(): Promise<string[]>
 }

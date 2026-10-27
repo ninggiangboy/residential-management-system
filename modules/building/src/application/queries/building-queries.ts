@@ -64,6 +64,16 @@ export class BuildingQueries {
     return this.reader.config(buildingId, provider, opts)
   }
 
+  /** `BuildingApi.fakeGatewaysOutsideDemo`: boot guard check 2 (DOC-36 §10.1). */
+  fakeGatewaysOutsideDemo(): Promise<string[]> {
+    return this.gateways.idsOfFakeOutsideDemo()
+  }
+
+  /** `BuildingApi.gatewayKeyIds`: boot guard check 6 (DOC-36 §10.1). */
+  gatewayKeyIds(): Promise<string[]> {
+    return this.gateways.keyIds()
+  }
+
   /** `GET /staff/terms` (E-52): every published version, newest first, with the number of accounts that accepted it. */
   async termsVersions(staff: StaffContext, kind: TermsKind | null) {
     requireRole(staff, LIST_TERMS_ROLES)

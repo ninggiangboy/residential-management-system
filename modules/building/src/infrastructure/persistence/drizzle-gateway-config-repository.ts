@@ -129,4 +129,19 @@ export class DrizzleGatewayConfigRepository implements GatewayConfigRepository {
       .returning({ id: gatewayConfig.id })
     return rows.length === 1
   }
+
+  // scope-ok: the boot guard looks across buildings by design (DOC-36 §10.1 check 2)
+  async idsOfFakeOutsideDemo(): Promise<string[]> {
+    const rows = await this.database.executor.execute<{ id: string }>(sql`
+      SELECT g.id FROM building.gateway_config g JOIN building.building b ON b.id = g.building_id
+       WHERE g.driver = 'fake' AND NOT b.is_demo`)
+    return rows.map((row) => row.id)
+  }
+
+  // scope-ok: the boot guard looks across buildings by design (DOC-36 §10.1 check 6)
+  async keyIds(): Promise<string[]> {
+    const rows = await this.database.executor.execute<{ kid: string }>(sql`
+      SELECT DISTINCT split_part(secrets_enc, ':', 2) AS kid FROM building.gateway_config`)
+    return rows.map((row) => row.kid)
+  }
 }

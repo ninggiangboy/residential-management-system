@@ -31,6 +31,18 @@ export class BuildingApiImpl implements BuildingApi {
     return this.directory.isDemo(buildingId)
   }
 
+  assertDemo(buildingId: string): Promise<void> {
+    return this.directory.assertDemo(buildingId)
+  }
+
+  fakeGatewaysOutsideDemo(): Promise<string[]> {
+    return this.queries.fakeGatewaysOutsideDemo()
+  }
+
+  gatewayKeyIds(): Promise<string[]> {
+    return this.queries.gatewayKeyIds()
+  }
+
   getGatewayConfig(
     buildingId: string,
     provider: GatewayProvider,

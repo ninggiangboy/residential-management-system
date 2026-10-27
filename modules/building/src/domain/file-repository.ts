@@ -20,6 +20,8 @@ export interface FileRepository {
   usedBytes(scope: BuildingScope): Promise<number>
   /** `pending` and `verified` rows created before `cutoff`, oldest first, one batch. */
   unattachedBefore(scope: BuildingScope, cutoff: Date, limit: number): Promise<FileObject[]>
+  /** The rows that are not `deleted`, oldest first, one batch: what the demo reset removes (DOC-36 §10.2). */
+  listLive(scope: BuildingScope, limit: number): Promise<FileObject[]>
   /** `deleted` rows older than the cutoff are removed for good (DOC-20 §3). */
   purgeDeleted(scope: BuildingScope, cutoff: Date, limit: number): Promise<number>
 }

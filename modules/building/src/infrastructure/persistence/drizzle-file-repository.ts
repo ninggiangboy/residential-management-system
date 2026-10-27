@@ -125,6 +125,16 @@ export class DrizzleFileRepository implements FileRepository {
     return rows.map(toRecord)
   }
 
+  async listLive(scope: BuildingScope, limit: number): Promise<FileObject[]> {
+    const rows = await this.database.executor
+      .select()
+      .from(fileObject)
+      .where(and(inBuilding(fileObject, scope), ne(fileObject.status, 'deleted')))
+      .orderBy(asc(fileObject.createdAt))
+      .limit(limit)
+    return rows.map(toRecord)
+  }
+
   async purgeDeleted(scope: BuildingScope, cutoff: Date, limit: number): Promise<number> {
     const doomed = this.database.executor
       .select({ id: fileObject.id })

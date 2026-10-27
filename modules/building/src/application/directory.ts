@@ -2,6 +2,7 @@ import type { Clock, Log } from '@core/kernel'
 import type { BuildingId } from '@rms/shared-types'
 import type { BuildingDto, BuildingSettings } from '../contracts'
 import type { BuildingRecord, BuildingRepository } from '../domain/building-repository'
+import { DemoResetRefusedError } from '../domain/errors'
 import { resolveSettings } from '../domain/settings'
 import type { SettingsRepository } from '../domain/settings-repository'
 import { TtlCache } from './ttl-cache'
@@ -58,6 +59,12 @@ export class BuildingDirectory {
 
   async isDemo(buildingId: string): Promise<boolean> {
     return (await this.record(buildingId))?.isDemo ?? false
+  }
+
+  /** `BuildingApi.assertDemo`: one primary-key read that skips the cache, so a flag read a minute ago never opens a reset. */
+  async assertDemo(buildingId: string): Promise<void> {
+    const record = await this.buildings.find(buildingId)
+    if (!record?.isDemo) throw new DemoResetRefusedError()
   }
 
   record(buildingId: string): Promise<BuildingRecord | null> {

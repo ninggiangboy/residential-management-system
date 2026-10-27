@@ -9,10 +9,12 @@ import {
 import type { AppModule } from '@core/runtime'
 import type { ObjectStorage } from '@core/storage'
 import type { Audited } from '@mod/audit/contracts'
-import type { Guards } from '@rms/shared-types'
+import { type DemoResettable, type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { BuildingApiImpl } from './application/api/building-api-impl'
 import { FilesApiImpl } from './application/api/files-api-impl'
 import { BuildingDocumentLoader } from './application/building-document'
+import { BuildingDemo } from './application/demo-building'
+import { DemoReset, type DemoSeedSource } from './application/demo-reset'
 import { BuildingDirectory } from './application/directory'
 import { FileDeleter } from './application/file-deleter'
 import type { FilesConfig } from './application/files-config'
@@ -24,12 +26,14 @@ import { BuildingQueries } from './application/queries/building-queries'
 import { FileQueries } from './application/queries/file-queries'
 import { AcceptTerms } from './application/use-cases/accept-terms'
 import { AttachFile } from './application/use-cases/attach-file'
+import { EnsureDemoBuilding } from './application/use-cases/ensure-demo-building'
 import { ExpireOrphanUploads } from './application/use-cases/expire-orphan-uploads'
 import { PublishTerms } from './application/use-cases/publish-terms'
 import { PurgeDeletedFiles } from './application/use-cases/purge-deleted-files'
 import { RegisterFile } from './application/use-cases/register-file'
 import { RemoveFile } from './application/use-cases/remove-file'
 import { ReportStorageQuota } from './application/use-cases/report-storage-quota'
+import { ResetDemo } from './application/use-cases/reset-demo'
 import { SaveGatewayConfig } from './application/use-cases/save-gateway-config'
 import { StoreGeneratedFile } from './application/use-cases/store-generated-file'
 import { UpdateBuildingSettings } from './application/use-cases/update-building-settings'
@@ -41,11 +45,14 @@ import type {
   FilesApi,
   StepUpVerifier,
 } from './contracts'
+import { SqlDemoResetLimiter, SqlDemoResetLock } from './infrastructure/demo/sql-demo-reset'
 import { CoreObjectStore } from './infrastructure/files/core-object-store'
 import { SharpThumbnailer } from './infrastructure/files/sharp-thumbnailer'
 import { SqlUploadRateLimiter } from './infrastructure/files/sql-upload-rate-limiter'
+import { demoResetJob } from './infrastructure/jobs/demo-jobs'
 import { orphanUploadsJob, storageQuotaJob } from './infrastructure/jobs/file-jobs'
 import { DrizzleBuildingRepository } from './infrastructure/persistence/drizzle-building-repository'
+import { DrizzleDemoRepository } from './infrastructure/persistence/drizzle-demo-repository'
 import { DrizzleFileRepository } from './infrastructure/persistence/drizzle-file-repository'
 import { DrizzleGatewayConfigRepository } from './infrastructure/persistence/drizzle-gateway-config-repository'
 import { DrizzleSettingsRepository } from './infrastructure/persistence/drizzle-settings-repository'
@@ -97,8 +104,19 @@ export interface BuildingDeps {
   outboxMaxPayloadBytes: number
   /** The `FEATURE_*` flags read at boot (DOC-36 §3.3). */
   features: Record<string, boolean>
+  /**
+   * The demo reset (DOC-36 §10): the seed, the modules to reset and the catch-up window of the nightly job
+   * (`JOB_DEMO_RESET_GRACE_MINUTES`). The modules are a function because `building` is installed before the ones it resets.
+   */
+  demo: {
+    source: DemoSeedSource
+    modules: () => readonly DemoResettable[]
+    graceMinutes: number
+  }
   thumbnailer?: Thumbnailer
   usage?: UsageReporter
+  /** `MetricsPort` of the host (DOC-40 §4.3); none in the tests of a module that does not look at it. */
+  metrics?: MetricsPort
 }
 
 export interface BuildingModuleDeps extends BuildingDeps {
@@ -116,12 +134,21 @@ export interface BuildingUseCases {
   saveGatewayConfig: SaveGatewayConfig
   /** `POST /staff/terms` (DOC-35 §9). */
   publishTerms: PublishTerms
+  /** `POST /staff/demo/reset` (E-56). */
+  resetDemo: ResetDemo
   /** `POST /me/terms` (DOC-35 §9.3). */
   acceptTerms: AcceptTerms
 }
 
 export interface BuildingModule extends AppModule<'building'> {
   readonly api: BuildingApi
+  /** The nightly job and the route call this; `seed:demo` creates the building row first with `ensureDemoBuilding`. */
+  readonly demo: {
+    reset: DemoReset
+    ensureBuilding: EnsureDemoBuilding
+    /** `building`'s own part of the reset, which the module list of the host includes. */
+    resettable: DemoResettable
+  }
   readonly features: FeatureApi
   readonly files: FilesApi
   /** The reads behind `GET /staff/settings` and `GET /staff/gateway` (DOC-36 §4, §7.1). */
@@ -218,6 +245,27 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
 
   const queries = new BuildingQueries(documents, gateways, terms, directory, reader)
 
+  // The demo reset (DOC-36 §10): `building` runs every module's part, its own included.
+  const demoRows = new DrizzleDemoRepository(database)
+  const demoResettable = new BuildingDemo(
+    directory,
+    demoRows,
+    fileRows,
+    fileDeleter,
+    deps.secretBox,
+    clock,
+  )
+  const demoReset = new DemoReset(
+    database,
+    directory,
+    new SqlDemoResetLock(database),
+    () => [demoResettable, ...deps.demo.modules()],
+    deps.demo.source,
+    clock,
+    logger,
+    deps.metrics ?? NO_METRICS,
+  )
+
   const useCases: BuildingUseCases = {
     updateBuildingSettings: new UpdateBuildingSettings(
       database,
@@ -241,6 +289,13 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       ids,
     ),
     publishTerms: new PublishTerms(database, terms, directory, deps.audited, ids),
+    resetDemo: new ResetDemo(
+      database,
+      directory,
+      demoReset,
+      new SqlDemoResetLimiter(database),
+      deps.audited,
+    ),
     acceptTerms: new AcceptTerms(database, terms),
   }
 
@@ -280,6 +335,11 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
       },
     ],
     api,
+    demo: {
+      reset: demoReset,
+      ensureBuilding: new EnsureDemoBuilding(database, demoRows),
+      resettable: demoResettable,
+    },
     features: { get: async () => ({ ...deps.features }) },
     files,
     queries,
@@ -304,6 +364,7 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
         new ExpireOrphanUploads(fileRows, database, fileDeleter, clock, deps.files),
         new PurgeDeletedFiles(fileRows, database, clock, deps.files),
       ),
+      demoResetJob(directory, demoReset, deps.demo.graceMinutes),
     ],
   }
 }
