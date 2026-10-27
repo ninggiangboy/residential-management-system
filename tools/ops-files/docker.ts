@@ -45,3 +45,16 @@ export function must(run: Run, what: string): Run {
   if (run.code !== 0) throw new Error(`${what} failed (${run.code}): ${run.out}`)
   return run
 }
+
+/**
+ * A network with a subnet of its own, which Docker on Linux requires before a container can be given an address (`--ip`). The
+ * subnet is random in 10.200.0.0/16 to 10.250.0.0/16 and tried again when another network holds it.
+ */
+export function createSubnetNetwork(name: string): { subnet: string; gateway: string } {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const prefix = `10.${200 + Math.floor(Math.random() * 51)}.${Math.floor(Math.random() * 256)}`
+    const created = sh(['docker', 'network', 'create', '--subnet', `${prefix}.0/24`, name])
+    if (created.code === 0) return { subnet: `${prefix}.0/24`, gateway: `${prefix}.1` }
+  }
+  throw new Error(`no free subnet for the network ${name}`)
+}
