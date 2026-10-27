@@ -1,4 +1,4 @@
-import { IdParams, routePlugin, staffRoute, strictObject } from '@core/http'
+import { describedEnum, IdParams, routePlugin, staffRoute, strictObject } from '@core/http'
 import { ValidationError } from '@core/kernel'
 import { type Guards, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
@@ -17,10 +17,26 @@ export interface MembershipRouteDeps {
 /** Exactly one of the three keys (DR-139); `memberType` is only the two a retype may reach. */
 const UpdateBody = strictObject({
   status: Type.Optional(
-    Type.Union([Type.Literal('locked'), Type.Literal('active'), Type.Literal('removed')]),
+    describedEnum(
+      {
+        locked:
+          'Lock the membership, the owner one included; the owner cannot undo a lock set by a manager',
+        active: 'Unlock a locked membership',
+        removed:
+          'Remove a membership other than the owner one; the owner is removed only by a transfer',
+      },
+      'The new status of the membership. Send exactly one of `status`, `memberType` and `canPay`.',
+    ),
   ),
-  memberType: Type.Optional(Type.Union([Type.Literal('family'), Type.Literal('tenant')])),
-  canPay: Type.Optional(Type.Boolean()),
+  memberType: Type.Optional(
+    describedEnum(
+      { family: 'A family member', tenant: 'A tenant' },
+      'Retype between family member and tenant.',
+    ),
+  ),
+  canPay: Type.Optional(
+    Type.Boolean({ description: 'Whether the membership may pay fees. Only for a tenant' }),
+  ),
 })
 
 function editOf(body: Static<typeof UpdateBody>): MembershipEdit {
@@ -60,6 +76,9 @@ export function membershipRoutes(d: MembershipRouteDeps) {
     ...staffRoute(d.guards, 'residency', CHANGE_MEMBERSHIP_ROLES, {
       endpoint: 'E-69',
       operationId: 'updateMembership',
+      summary: 'Update a membership',
+      description:
+        'Locks, unlocks, removes or retypes one membership, or sets `canPay`. The owner has their own household endpoints for the same actions.',
     }),
     params: IdParams,
     body: UpdateBody,

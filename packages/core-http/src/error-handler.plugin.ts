@@ -110,12 +110,17 @@ interface TypeBoxIssue {
   type: number
   path: string
   message: string
-  schema?: { minimum?: number; maximum?: number }
+  schema?: { minimum?: number; maximum?: number; enum?: unknown[] }
   value?: unknown
 }
 
+/** A value outside a `describedEnum` fails as the custom kind `UnionEnum`, whose schema lists the allowed values. */
+const isEnumIssue = (issue: TypeBoxIssue) =>
+  issue.type === ValueErrorType.Kind && Array.isArray(issue.schema?.enum)
+
 /** Rule code of a schema violation (DOC-42 §5.2). A `t.Integer` fails as a union, so the bound is read from the schema. */
 function ruleOf(issue: TypeBoxIssue): string {
+  if (isEnumIssue(issue)) return 'enum'
   if (issue.type === ValueErrorType.Union && typeof issue.value === 'number') {
     const { minimum, maximum } = issue.schema ?? {}
     if (minimum !== undefined && issue.value < minimum) return 'minimum'
@@ -144,7 +149,10 @@ function validationDetails(error: ElysiaValidationError): ValidationDetail[] {
     if (seen.has(key)) continue
     seen.add(key)
     // Property 'a' is missing → required; a type error on the same path would only repeat it.
-    details.push({ path, code, message: issue.message })
+    const message = isEnumIssue(issue)
+      ? `Expected one of: ${issue.schema?.enum?.join(', ')}`
+      : issue.message
+    details.push({ path, code, message })
   }
   // A missing property also reports its type error: keep the `required` one only.
   return details.filter(

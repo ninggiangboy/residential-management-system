@@ -1,4 +1,5 @@
 import {
+  describedEnum,
   type Idempotent,
   IdParams,
   type RouteInfo,
@@ -34,48 +35,115 @@ export interface UnitRouteDeps {
   idempotent: Idempotent
 }
 
-const Occupancy = Type.Union([
-  Type.Literal('occupied'),
-  Type.Literal('rented'),
-  Type.Literal('vacant'),
-])
+const Occupancy = describedEnum(
+  {
+    occupied: 'The owner lives in the unit',
+    rented: 'The unit is let to a tenant',
+    vacant: 'Nobody lives in the unit',
+  },
+  'Who lives in the unit. Set by the manager and never derived from the memberships.',
+)
 const Nullable = <T extends ReturnType<typeof Type.String> | ReturnType<typeof Type.Integer>>(
   schema: T,
 ) => Type.Union([schema, Type.Null()])
 
+const Code = (required: boolean) =>
+  Type.String({
+    maxLength: 64,
+    description: `The unit code, letters, digits and \`. _ / -\`, at most 20 characters, stored upper-case${required ? '' : '. Cannot be cleared'}`,
+  })
+const Floor = Type.Optional(
+  Nullable(Type.Integer({ description: 'The floor, −5…150. `null` clears it' })),
+)
+const Bedrooms = Type.Optional(
+  Nullable(Type.Integer({ description: 'The number of bedrooms, 0…20. `null` clears it' })),
+)
+const AreaM2 = Type.Optional(
+  Nullable(
+    Type.String({
+      maxLength: 16,
+      description:
+        'The area in square metres as a decimal string above 0, at most `"2000"` with 2 decimals. `null` clears it',
+    }),
+  ),
+)
+const UnitNote = Type.Optional(
+  Nullable(
+    Type.String({
+      maxLength: 2000,
+      description: 'A note of the manager, at most 500 characters. `null` clears it',
+    }),
+  ),
+)
+const CursorParam = Type.Optional(
+  Type.String({
+    maxLength: 300,
+    description:
+      'The `next` cursor of the previous page. Opaque; one that does not decode is 400 `invalid_cursor`',
+  }),
+)
 const CreateBody = strictObject({
-  code: Type.String({ maxLength: 64 }),
-  floor: Type.Optional(Nullable(Type.Integer())),
-  bedrooms: Type.Optional(Nullable(Type.Integer())),
-  areaM2: Type.Optional(Nullable(Type.String({ maxLength: 16 }))),
+  code: Code(true),
+  floor: Floor,
+  bedrooms: Bedrooms,
+  areaM2: AreaM2,
   occupancy: Type.Optional(Occupancy),
-  note: Type.Optional(Nullable(Type.String({ maxLength: 2000 }))),
+  note: UnitNote,
 })
 const UpdateBody = strictObject({
-  code: Type.Optional(Type.String({ maxLength: 64 })),
-  floor: Type.Optional(Nullable(Type.Integer())),
-  bedrooms: Type.Optional(Nullable(Type.Integer())),
-  areaM2: Type.Optional(Nullable(Type.String({ maxLength: 16 }))),
+  code: Type.Optional(Code(false)),
+  floor: Floor,
+  bedrooms: Bedrooms,
+  areaM2: AreaM2,
   occupancy: Type.Optional(Occupancy),
-  note: Type.Optional(Nullable(Type.String({ maxLength: 2000 }))),
+  note: UnitNote,
 })
 const TransferBody = strictObject({
-  phone: Type.String({ maxLength: 40 }),
-  fullName: Type.String({ maxLength: 200 }),
-  keepMembers: Type.Optional(Type.Boolean()),
-  reason: Type.String({ maxLength: 2000 }),
+  phone: Type.String({
+    maxLength: 40,
+    description:
+      'The phone of the new owner, Vietnamese or international. An invalid one is 400 `phone_invalid`',
+  }),
+  fullName: Type.String({
+    maxLength: 200,
+    description:
+      'The name of the new owner for the building record. An existing account keeps its own name',
+  }),
+  keepMembers: Type.Optional(
+    Type.Boolean({
+      description:
+        '`true` removes only the old owner and keeps the other members (default `false`)',
+    }),
+  ),
+  reason: Type.String({
+    maxLength: 2000,
+    description: 'Why the ownership changes, 5…500 characters',
+  }),
 })
 const ListQuery = strictObject({
-  q: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+  q: Type.Optional(
+    Type.String({
+      minLength: 1,
+      maxLength: 100,
+      description:
+        'Searches by unit code prefix (at least 2 characters, exact match first). A search returns at most 20 rows and no cursor',
+    }),
+  ),
   occupancy: Type.Optional(Occupancy),
-  floor: Type.Optional(Type.String({ maxLength: 8 })),
-  bedrooms: Type.Optional(Type.String({ maxLength: 8 })),
-  cursor: Type.Optional(Type.String({ maxLength: 300 })),
-  limit: Type.Optional(Type.String({ maxLength: 8 })),
+  floor: Type.Optional(Type.String({ maxLength: 8, description: 'Only this floor, −5…150' })),
+  bedrooms: Type.Optional(
+    Type.String({ maxLength: 8, description: 'Only units with this number of bedrooms, 0…20' }),
+  ),
+  cursor: CursorParam,
+  limit: Type.Optional(
+    Type.String({ maxLength: 8, description: 'Rows per page, 1…200 (default 50)' }),
+  ),
 })
 const HistoryQuery = strictObject({
-  cursor: Type.Optional(Type.String({ maxLength: 300 })),
-  limit: Type.Optional(Type.String({ maxLength: 8 })),
+  cursor: CursorParam,
+  limit: Type.Optional(
+    Type.String({ maxLength: 8, description: 'Rows per page, 1…100 (default 50)' }),
+  ),
 })
 
 /** A body with an `undefined` key is the same as one without it; `null` is a value. */
@@ -191,23 +259,44 @@ export function unitRoutes(d: UnitRouteDeps) {
   const read = (info: RouteInfo) => staffRoute(d.guards, 'residency', UNIT_READ_ROLES, info)
 
   return routePlugin({ prefix: '/staff/units' })
-    .get('/', list, { ...read({ endpoint: 'E-57', operationId: 'listUnits' }), query: ListQuery })
+    .get('/', list, {
+      ...read({
+        endpoint: 'E-57',
+        operationId: 'listUnits',
+        summary: 'List units',
+        description:
+          'The unit list and search, with filters and cursor pagination, used by the units page and the unit pickers.',
+      }),
+      query: ListQuery,
+    })
     .post('/', d.idempotent({ account: staffAccount }, create), {
       ...staffRoute(d.guards, 'residency', CREATE_UNIT_ROLES, {
         endpoint: 'E-58',
         operationId: 'createUnit',
+        summary: 'Create a unit',
+        description:
+          'Adds one unit by hand. A unit is never deleted; a unit made by mistake is set `vacant`. Needs an `Idempotency-Key`.',
         idempotent: true,
       }),
       body: CreateBody,
     })
     .get('/:id', get, {
-      ...read({ endpoint: 'E-59', operationId: 'getUnit' }),
+      ...read({
+        endpoint: 'E-59',
+        operationId: 'getUnit',
+        summary: 'Get a unit',
+        description:
+          'The unit, its owner, its members and the open debt in one answer. The `ETag` is the value to send back as `If-Match` when editing the unit or transferring its ownership.',
+      }),
       params: IdParams,
     })
     .patch('/:id', update, {
       ...staffRoute(d.guards, 'residency', UPDATE_UNIT_ROLES, {
         endpoint: 'E-60',
         operationId: 'updateUnit',
+        summary: 'Update a unit',
+        description:
+          'Edits the code, floor, bedrooms, area, occupancy or note. `occupancy` is set by the manager and never derived from memberships. Needs `If-Match`.',
       }),
       params: IdParams,
       body: UpdateBody,
@@ -216,12 +305,20 @@ export function unitRoutes(d: UnitRouteDeps) {
       ...staffRoute(d.guards, 'residency', TRANSFER_OWNERSHIP_ROLES, {
         endpoint: 'E-61',
         operationId: 'transferOwnership',
+        summary: 'Transfer the ownership of a unit',
+        description:
+          'Transfers the ownership to a person given by phone. In one transaction it removes the old owner and, unless `keepMembers` is set, the other members, promotes or inserts the new owner, and writes the unit history, the events and the audit row. Needs `If-Match`.',
       }),
       params: IdParams,
       body: TransferBody,
     })
     .get('/:id/history', history, {
-      ...read({ endpoint: 'E-62', operationId: 'listUnitHistory' }),
+      ...read({
+        endpoint: 'E-62',
+        operationId: 'listUnitHistory',
+        summary: 'List the history of a unit',
+        description: 'Who owned or lived in the unit and when, newest first.',
+      }),
       params: IdParams,
       query: HistoryQuery,
     })

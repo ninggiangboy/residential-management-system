@@ -1,4 +1,4 @@
-import { type TObject, type TProperties, Type } from '@sinclair/typebox'
+import { Kind, type TObject, type TProperties, Type } from '@sinclair/typebox'
 import { type Context, Elysia, type ElysiaConfig } from 'elysia'
 
 /**
@@ -9,15 +9,43 @@ import { type Context, Elysia, type ElysiaConfig } from 'elysia'
 export const routePlugin = <const Prefix extends string = ''>(config: ElysiaConfig<Prefix> = {}) =>
   new Elysia({ ...config, normalize: false })
 
+/**
+ * A string that is one of the keys of `values`, with what each value means. The OpenAPI document carries the `enum` (a list to
+ * choose from in the API reference), the meanings in `x-enumDescriptions` and again as a Markdown list in `description`, for
+ * the readers that ignore the extension. The type is the union of the keys, as with `Type.Union` of `Type.Literal`.
+ *
+ * It is Elysia's `UnionEnum` kind and not a union of literals on purpose: the OpenAPI plugin rewrites a union of literals to a
+ * bare `enum` and drops its `description` and extensions. `t.UnionEnum` itself adds a `default`, which would fill a missing key.
+ */
+export const describedEnum = <const Values extends Record<string, string>>(
+  values: Values,
+  description?: string,
+) => {
+  const list = Object.entries(values)
+    .map(([value, meaning]) => `- \`${value}\`: ${meaning}`)
+    .join('\n')
+  return Type.Unsafe<Extract<keyof Values, string>>({
+    [Kind]: 'UnionEnum',
+    type: 'string',
+    enum: Object.keys(values),
+    description: description ? `${description}\n\n${list}` : list,
+    'x-enumDescriptions': values,
+  })
+}
+
 /** A request body that refuses unknown keys (DOC-50 §6). */
-export const strictObject = <T extends TProperties>(properties: T): TObject<T> =>
-  Type.Object(properties, { additionalProperties: false })
+export const strictObject = <T extends TProperties>(
+  properties: T,
+  options: { description?: string } = {},
+): TObject<T> => Type.Object(properties, { ...options, additionalProperties: false })
 
 /** The `set` of a route handler (status and headers), for a handler written outside the chain of its route. */
 export type RouteSet = Context['set']
 
 /** The path parameter of a route that names one row. */
-export const IdParams = strictObject({ id: Type.String({ format: 'uuid' }) })
+export const IdParams = strictObject({
+  id: Type.String({ format: 'uuid', description: 'The id of the record in the path' }),
+})
 
 /**
  * What a route says about itself beyond its guard (DOC-50 §2, DOC-39 §4.1): the catalog number and `operationId` of DOC-51 §2, which
@@ -28,6 +56,10 @@ export interface RouteInfo {
   /** `E-57`: the number in DOC-51 §2 (AG-02 compares the mounted routes with the catalog). */
   endpoint: string
   operationId: string
+  /** The name of the endpoint in the docs: one line, in the imperative (`List units`). */
+  summary: string
+  /** What the endpoint does beyond its name: who calls it, what it changes, what it refuses. Markdown. */
+  description?: string
   /** `Idempotency-Key` is required (the `R` of the catalog). */
   idempotent?: true
   /** The step-up actions the route may demand (DOC-26 §4.5), one or several. */
@@ -40,11 +72,14 @@ export interface RouteInfo {
 
 /** The route metadata of DOC-12 §5.3, as the vendor extensions the OpenAPI document carries (DOC-50 §2). */
 const routeMeta = (tag: string, audience: object, info: RouteInfo) => {
-  const { endpoint, operationId, idempotent, stepUp, byPurpose, credential } = info
+  const { endpoint, operationId, summary, description, idempotent, stepUp, byPurpose, credential } =
+    info
   return {
     detail: {
       tags: [tag],
       operationId,
+      summary,
+      ...(description ? { description } : {}),
       'x-endpoint-id': endpoint,
       'x-audience': {
         ...audience,

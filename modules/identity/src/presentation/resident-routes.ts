@@ -1,4 +1,5 @@
 import {
+  describedEnum,
   IdParams,
   type RouteInfo,
   type RouteSet,
@@ -23,8 +24,12 @@ export interface ResidentRouteDeps {
 
 /** At least one key is checked by the use case; unknown keys are refused, so `displayName` and `phone` are 400 (UIRQ-04). */
 const UpdateMeBody = strictObject({
-  language: Type.Optional(Type.Union([Type.Literal('vi'), Type.Literal('en')])),
-  pushEnabled: Type.Optional(Type.Boolean()),
+  language: Type.Optional(
+    describedEnum({ vi: 'Vietnamese', en: 'English' }, 'The interface language.'),
+  ),
+  pushEnabled: Type.Optional(
+    Type.Boolean({ description: 'Whether push notifications are on for this account' }),
+  ),
 })
 
 /**
@@ -52,14 +57,45 @@ export function residentRoutes(d: ResidentRouteDeps) {
   const route = (info: RouteInfo) => residentRoute(d.guards, 'resident', info)
 
   return routePlugin({ prefix: '/me' })
-    .get('/', me, route({ endpoint: 'E-13', operationId: 'getMe' }))
+    .get(
+      '/',
+      me,
+      route({
+        endpoint: 'E-13',
+        operationId: 'getMe',
+        summary: 'Get the signed-in resident',
+        description:
+          'The account of the signed-in resident and their active memberships. Called at app start, after a unit switch and when the app returns to the foreground.',
+      }),
+    )
     .patch('/', updateMe, {
-      ...route({ endpoint: 'E-14', operationId: 'updateMe' }),
+      ...route({
+        endpoint: 'E-14',
+        operationId: 'updateMe',
+        summary: 'Update the signed-in resident',
+        description:
+          'Changes the language, the push notification toggle or the avatar. The phone and the name are changed by the building manager, not here.',
+      }),
       body: UpdateMeBody,
     })
-    .get('/sessions', listSessions, route({ endpoint: 'E-20', operationId: 'listMySessions' }))
+    .get(
+      '/sessions',
+      listSessions,
+      route({
+        endpoint: 'E-20',
+        operationId: 'listMySessions',
+        summary: 'List my sessions',
+        description: 'The live sessions of the signed-in resident, with the current one marked.',
+      }),
+    )
     .delete('/sessions/:id', revokeSession, {
-      ...route({ endpoint: 'E-21', operationId: 'revokeMySession' }),
+      ...route({
+        endpoint: 'E-21',
+        operationId: 'revokeMySession',
+        summary: 'Revoke one of my sessions',
+        description:
+          'Ends one of the resident sessions, or the current one, which equals a sign-out.',
+      }),
       params: IdParams,
     })
 }

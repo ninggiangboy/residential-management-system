@@ -33,6 +33,9 @@ export function residentContactRoutes(d: ResidentContactRouteDeps) {
     residentRoute(d.guards, 'building', {
       endpoint: 'E-15',
       operationId: 'getBuildingContact',
+      summary: 'Get the building contact',
+      description:
+        'The manager contact for a signed-in resident who cannot do something themselves, such as changing a phone number, fixing a name, or having no unit linked.',
     }),
   )
 }

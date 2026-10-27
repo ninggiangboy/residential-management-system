@@ -138,6 +138,7 @@ beforeAll(async () => {
       unitRoute(built.container.guards, 'test', 'broadcast_notices', {
         endpoint: 'T-01',
         operationId: 'probeNotices',
+        summary: 'probeNotices',
       }),
     )
   admin = await signInStaff('admin@sunrise.example')

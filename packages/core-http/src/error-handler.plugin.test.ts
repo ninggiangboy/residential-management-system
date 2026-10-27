@@ -21,6 +21,7 @@ import { createLogger, serializeError } from '@core/telemetry'
 import { Elysia, t } from 'elysia'
 import { errorHandlerPlugin } from './error-handler.plugin'
 import { requestContextPlugin } from './request-context.plugin'
+import { describedEnum } from './routes'
 
 const lines: Record<string, unknown>[] = []
 const logger = createLogger('error')
@@ -45,6 +46,9 @@ function app(constraintErrors = {}) {
     .use(errorHandlerPlugin({ logger, constraintErrors }))
     .get('/throw/:what', ({ params }) => {
       throw THROWN[params.what]?.()
+    })
+    .post('/enum', () => 'ok', {
+      body: t.Object({ kind: describedEnum({ a: 'The first', b: 'The second' }) }),
     })
     .post('/body', () => 'ok', {
       body: t.Object(
@@ -209,6 +213,18 @@ describe('schema violations', () => {
       expect.objectContaining({ path: 'lines[0].amount', code: 'minimum' }),
     )
     expect(details).toContainEqual(expect.objectContaining({ path: 'foo', code: 'unknown_key' }))
+  })
+
+  test('a value outside a described enum is the rule enum and lists the allowed values', async () => {
+    const { res, body } = await call(app(), '/enum', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'c' }),
+    })
+    expect(res.status).toBe(400)
+    expect(body.error.details).toEqual([
+      { path: 'kind', code: 'enum', message: 'Expected one of: a, b' },
+    ])
   })
 
   test('a title over the maximum is max_length and a missing property is required (once)', async () => {

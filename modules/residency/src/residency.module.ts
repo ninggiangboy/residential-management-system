@@ -258,6 +258,13 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
 
   return {
     name: 'residency',
+    docs: [
+      {
+        name: 'residency',
+        description:
+          'Staff-side management of units, residents, memberships and the Excel import of units and owners.',
+      },
+    ],
     api: new ResidencyApiImpl(queries, lookups),
     useCases: {
       changeMembership,

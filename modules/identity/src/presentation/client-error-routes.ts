@@ -1,5 +1,12 @@
 import { requestContext } from '@core/context'
-import { bucketIp, publicRoute, type RouteSet, routePlugin, strictObject } from '@core/http'
+import {
+  bucketIp,
+  describedEnum,
+  publicRoute,
+  type RouteSet,
+  routePlugin,
+  strictObject,
+} from '@core/http'
 import { PayloadTooLargeError, ValidationError } from '@core/kernel'
 import { type Static, Type } from '@sinclair/typebox'
 import type { ReportClientError } from '../application/use-cases/report-client-error'
@@ -14,29 +21,42 @@ export interface ClientErrorRouteDeps {
 const MAX_BODY_BYTES = 8 * 1024
 const MAX_STACK_BYTES = 4 * 1024
 
-const Text = (maxLength: number, minLength = 0) => Type.String({ minLength, maxLength })
+const Text = (maxLength: number, minLength: number, description: string) =>
+  Type.String({ minLength, maxLength, description })
 const Nullable = <T extends ReturnType<typeof Text>>(schema: T) =>
   Type.Optional(Type.Union([schema, Type.Null()]))
 
 const Body = strictObject({
-  app: Type.Union([Type.Literal('resident'), Type.Literal('staff'), Type.Literal('web')]),
+  app: describedEnum(
+    { resident: 'The resident app', staff: 'The staff app', web: 'The web CMS' },
+    'The app that reports the error.',
+  ),
   appVersion: Type.String({
     pattern: '^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$',
     maxLength: 20,
+    description: 'The version of the app, for example `1.0.3`',
   }),
-  platform: Type.Union([Type.Literal('ios'), Type.Literal('android'), Type.Literal('web')]),
-  kind: Type.Union([
-    Type.Literal('crash'),
-    Type.Literal('unhandled_rejection'),
-    Type.Literal('render'),
-    Type.Literal('network'),
-  ]),
-  screen: Nullable(Text(60)),
-  errorName: Text(100, 1),
-  message: Text(500, 1),
+  platform: describedEnum(
+    { ios: 'iOS', android: 'Android', web: 'A web browser' },
+    'The platform the app runs on.',
+  ),
+  kind: describedEnum(
+    {
+      crash: 'The app crashed',
+      unhandled_rejection: 'A promise was rejected and nothing handled it',
+      render: 'A screen failed while rendering',
+      network: 'A request failed at the network level',
+    },
+    'The kind of error.',
+  ),
+  screen: Nullable(Text(60, 0, 'The screen the user was on, if known')),
+  errorName: Text(100, 1, 'The name of the error, for example `TypeError`'),
+  message: Text(500, 1, 'The message of the error'),
   // Characters here; the bytes are counted in the handler because a stack can hold more bytes than characters.
-  stack: Nullable(Text(MAX_STACK_BYTES)),
-  requestId: Nullable(Text(64)),
+  stack: Nullable(
+    Text(MAX_STACK_BYTES, 0, 'The stack trace, at most 4 KB. Keep it free of personal data'),
+  ),
+  requestId: Nullable(Text(64, 0, 'The `X-Request-Id` of the failed request, if there was one')),
 })
 
 /** A bearer token that verifies names the account; anything else is ignored, never a 401 (DOC-51 E-04). */
@@ -81,7 +101,13 @@ export function clientErrorRoutes(d: ClientErrorRouteDeps) {
   }
 
   return routePlugin({ prefix: '/client-errors' }).post('/', report, {
-    ...publicRoute('client-errors', { endpoint: 'E-04', operationId: 'reportClientError' }),
+    ...publicRoute('client-errors', {
+      endpoint: 'E-04',
+      operationId: 'reportClientError',
+      summary: 'Report a client error',
+      description:
+        'The apps and the web CMS report a crash or an unexpected error here, because there is no hosted error tracker. May be called before sign-in. A body larger than the limit is refused with 413 before it is validated.',
+    }),
     // Before the body is validated: the declared length decides, so an oversized body is a 413 and never a list of 400 findings.
     transform: ({ request }: { request: Request }) => {
       if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES)

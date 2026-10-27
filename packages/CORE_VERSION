@@ -73,3 +73,9 @@ local-changes:
     as `operationId`, `x-endpoint-id`, `x-audience`, `x-idempotent` and `x-step-up` of the operation, so the authorization-matrix generator and test AG-02 join the
     mounted routes with DOC-51 §2; `idempotent` and `stepUp` leave `x-audience`, where they were `extra` (P1-15); core-runtime: `readyRoute` carries the same
     record for E-02
+  - core-http: `RouteInfo` takes a required `summary` and an optional `description`, written as the same keys of the operation (the name and the text of the
+    endpoint in the API reference); `describedEnum(values, description?)` is a string enum whose OpenAPI schema carries the meaning of each value
+    (`x-enumDescriptions` and a Markdown list), as Elysia's `UnionEnum` kind because the OpenAPI plugin drops the description of a union of literals; the
+    error handler reports a value outside it as the rule `enum` with the allowed values; test in `error-handler.plugin.test.ts`; core-runtime: `readyRoute`
+    describes its 503 `status` the same way (AG-02a, AG-02b)
+  - core-http: `strictObject(properties, { description })` takes the description of the object; `IdParams.id` has a description (AG-02c)

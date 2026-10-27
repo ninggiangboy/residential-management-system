@@ -133,17 +133,26 @@ beforeAll(async () => {
       unitRoute(guards, 'test', 'broadcast_notices', {
         endpoint: 'T-01',
         operationId: 'probeNotices',
+        summary: 'probeNotices',
       }),
     )
     .get(
       '/me/fees',
       (context) => ({ startedAt: unitOf(context).startedAt.toISOString() }),
-      unitRoute(guards, 'test', 'view_fees', { endpoint: 'T-02', operationId: 'probeFees' }),
+      unitRoute(guards, 'test', 'view_fees', {
+        endpoint: 'T-02',
+        operationId: 'probeFees',
+        summary: 'probeFees',
+      }),
     )
     .get(
       '/me/payments',
       () => ({ ok: true }),
-      unitRoute(guards, 'test', 'pay', { endpoint: 'T-03', operationId: 'probePay' }),
+      unitRoute(guards, 'test', 'pay', {
+        endpoint: 'T-03',
+        operationId: 'probePay',
+        summary: 'probePay',
+      }),
     )
     .get(
       '/me/members',
@@ -151,6 +160,7 @@ beforeAll(async () => {
       unitRoute(guards, 'test', 'manage_members', {
         endpoint: 'T-04',
         operationId: 'probeMembers',
+        summary: 'probeMembers',
       }),
     )
 })

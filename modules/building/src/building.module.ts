@@ -263,6 +263,22 @@ export function createBuildingModule(deps: BuildingModuleDeps): BuildingModule {
 
   return {
     name: 'building',
+    docs: [
+      {
+        name: 'public',
+        description: 'Configuration an app reads before anyone signs in.',
+      },
+      {
+        name: 'building',
+        description:
+          'The building: its settings, payment gateway configuration and terms versions for staff; the manager contact and the terms acceptance for residents.',
+      },
+      {
+        name: 'files',
+        description:
+          'File uploads in two steps: register the file and get a presigned URL, then verify it after the upload.',
+      },
+    ],
     api,
     features: { get: async () => ({ ...deps.features }) },
     files,

@@ -19,7 +19,12 @@ export interface ResidentTermsRouteDeps {
 }
 
 const AcceptBody = strictObject({
-  versionIds: Type.Array(Type.String({ format: 'uuid' }), { minItems: 1, maxItems: 10 }),
+  versionIds: Type.Array(Type.String({ format: 'uuid' }), {
+    minItems: 1,
+    maxItems: 10,
+    description:
+      'The ids of the versions being accepted, the `versionId` values returned by `getMyTerms` (the latest terms of use and the latest privacy notice)',
+  }),
 })
 
 /** `en` when the caller asks for it and the version has an English text; Vietnamese otherwise (DR-71). */
@@ -70,9 +75,25 @@ export function residentTermsRoutes(d: ResidentTermsRouteDeps) {
   const route = (info: RouteInfo) => residentRoute(d.guards, 'building', info)
 
   return routePlugin({ prefix: '/me/terms' })
-    .get('/', list, route({ endpoint: 'E-16', operationId: 'getMyTerms' }))
+    .get(
+      '/',
+      list,
+      route({
+        endpoint: 'E-16',
+        operationId: 'getMyTerms',
+        summary: 'Get the current terms',
+        description:
+          'The current terms of use and privacy notice, each with whether the signed-in resident has accepted the latest version.',
+      }),
+    )
     .post('/', accept, {
-      ...route({ endpoint: 'E-17', operationId: 'acceptTerms' }),
+      ...route({
+        endpoint: 'E-17',
+        operationId: 'acceptTerms',
+        summary: 'Accept the terms',
+        description:
+          'The resident accepts the latest versions of the terms of use and the privacy notice. Until they do, other resident routes answer 403 `terms_required`.',
+      }),
       body: AcceptBody,
     })
 }
