@@ -155,6 +155,11 @@ export default function Login() {
         autoCorrect={false}
         textContentType="password"
         autoComplete="current-password"
+        returnKeyType="go"
+        // Enter on the keyboard signs in like the button does, which the keyboard may cover.
+        onSubmitEditing={() => {
+          if (online && !locked && !login.isPending) submit()
+        }}
         value={password}
         onChangeText={setPassword}
         suffix={{
