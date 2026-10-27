@@ -5,11 +5,16 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0901 234 567"
+- hideKeyboard
 - tapOn:
     id: login-submit
+- extendedWaitUntil:
+    visible: "Enter the OTP"
+    timeout: 30000
 - inputText: "123456"
 - tapOn:
     id: unit-A-1508
+- runFlow: helpers/dismiss-push-prompt.yaml
 - tapOn:
     id: open-account
 - assertVisible: "Owner, selected"

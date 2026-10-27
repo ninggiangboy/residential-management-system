@@ -8,9 +8,11 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0902 345 678"
-- tapOn:
-    id: login-submit
-- assertVisible: "Enter the OTP"
+# Enter on the keyboard sends the code like the button, which the keyboard covers on Android.
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Enter the OTP"
+    timeout: 30000
 - inputText: "123456"
 - runFlow: helpers/dismiss-push-prompt.yaml
 # One verify, then the single home opens with no Unit-Pick (UIRA-32).
