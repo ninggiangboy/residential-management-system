@@ -675,6 +675,8 @@ Building settings that matter here are in DOC-17 §1.2: `accountDeletionDays`, a
 | `import_validate_duration_seconds` | histogram | none | NFR-12: 2,000 rows ≤ 10 s |
 | `units_without_owner` | gauge | none | Informational; units that are not `vacant` and have no owner |
 
+**As built (P1-18, DOC-40 §4.3, DR-269).** `membership_changes_total` is counted where the event is written: `ChangeMembership` (any change by staff), `CreateResident` (`added`) and `TransferOwnership` (the removed members, and `added` for an owner who had no row); `owner_transfers_total` in `TransferOwnership`; `membership_guard_refusals_total` in the `unit(capability)` guard (`locked` for a row that is not `active`, `missing` for none); `import_commits_total` and `import_validate_duration_seconds` in `CommitUnitOwnerImport` (the three refusals) and `ValidateUnitOwnerImport` (the whole call); `member_invitations_total` in `QueueMemberInvitation` (`queued`, `phone_bucket`); `units_without_owner` is a gauge read at the scrape (a unit whose `occupancy` is not `vacant` and that has no membership of type `owner` other than `removed`). `owner_cap` and the owner's own changes (`actor` `resident`) come with P4-10.
+
 Logs carry ids only: `unitId`, `membershipId`, `accountId`, the route template. Never a phone, a name, a CCCD or a query string (DOC-35 §6 rule 6; DOC-42). A lookup logs the length of `q` and the kinds that ran, not `q`. The metrics and alerts go to DOC-40 with the others.
 
 ## 16. Errors and handling

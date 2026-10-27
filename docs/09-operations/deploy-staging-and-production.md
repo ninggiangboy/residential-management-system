@@ -1,6 +1,6 @@
 # Deploy: staging and production
 
-> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-26 (DR-268: SeaweedFS replaces R2 for the `vn` profile; earlier 2026-10-22, DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
+> Status: **Approved** (Owner, 2026-10-21, as the first version for staging (gate P1); final in P6) · Updated: 2026-10-27 (P1-18: the monitoring files exist, pins refreshed, §10); earlier 2026-10-26 (DR-268: SeaweedFS replaces R2 for the `vn` profile; earlier 2026-10-22, DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: placeholders and the *Blocking?* column of §2; DR-68: providers picked at P1-22; stale open question removed) · DOC-70
 > Depends on: original SDD §19.1, §19.3, [DR](../00-decision-register.md) (DR-05, 06, 07, 08, 33, 61, 63, 64, 65, 66, 67, 68, 69, 83, 88, 93, 95, 102, 113, 152, 154, 156, DR-158…162, DR-228, DR-268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §4, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, §7, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §7, [DOC-19](../05-data/db-roles-and-grants.md) §3, §7, §8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §5.4, [DOC-39](../06-design/security.md) §5, §7, [DOC-40](../06-design/observability.md) §2, §6, [DOC-41](../06-design/configuration-reference.md) §4…16, [DOC-71](ci-cd.md) §7
 > Main readers: P0-03, P1-18, P1-20, P1-22, P6-05, P6-13; the Owner and the operator who builds a host; [DOC-72](backup-restore.md) (backup, restore), [DOC-71](ci-cd.md) (calls the deploy command)
 
@@ -586,11 +586,12 @@ services:
     depends_on: [caddy, seaweedfs]
   prometheus:
     <<: *third
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.15.1
     command: >
       --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus
       --storage.tsdb.retention.time=15d --storage.tsdb.retention.size=1800MB --web.enable-lifecycle
-    environment: { RMS_CONFIG_HASH: "${RMS_CFG_PROMETHEUS:-}" }
+      --enable-feature=expand-external-labels
+    environment: { RMS_ENV: "${RMS_ENV}", RMS_CONFIG_HASH: "${RMS_CFG_PROMETHEUS:-}" }
     volumes:
       - /opt/rms/current/ops/prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
@@ -636,14 +637,14 @@ services:
   loki:
     <<: *third
     profiles: [logs]
-    image: grafana/loki:3.7.8
+    image: grafana/loki:3.7.9
     command: -config.file=/etc/loki/config.yml
     environment: { RMS_CONFIG_HASH: "${RMS_CFG_LOKI:-}" }
     volumes: ["/opt/rms/current/ops/loki:/etc/loki:ro", "loki-data:/loki"]
   alloy:
     <<: *third
     profiles: [logs]
-    image: grafana/alloy:v1.20.1
+    image: grafana/alloy:v1.21.2
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     environment: { RMS_ENV: "${RMS_ENV}", RMS_CONFIG_HASH: "${RMS_CFG_ALLOY:-}" }
     volumes:
@@ -1268,7 +1269,7 @@ The behavior, metrics, rules and dashboards are DOC-40; the files and their moun
 | --- | --- | --- |
 | `prometheus/prometheus.yml` | Prometheus | `global: scrape_interval: 15s, evaluation_interval: 15s`, `external_labels: {env: staging}`, `rule_files: [rules/*.yml]`, `alerting` to `alertmanager:9093`; scrape jobs below |
 | `prometheus/rules/*.yml` | Prometheus | The alert rules of DOC-40 §5, one file per group; `promtool check rules` runs in `verify` |
-| `alertmanager/alertmanager.yml` | Alertmanager | The skeleton of DOC-40 §6 (routes, inhibition, receivers) with `bot_token_file` and `smtp_auth_password_file` |
+| `alertmanager/alertmanager.yml` | Alertmanager | DOC-40 §6 as built: routes, the inhibition (`ApiDown`, `PostgresDown`, `ReadinessFailing`), one receiver with email and Telegram, `bot_token_file` and `smtp_auth_password_file`. The addresses, the SMTP host and the chat id are placeholders until DOC-70 §2 rows 11 and 12 are filled. `alertmanager.local.yml` is the same routing with Mailpit, for `monitor:up` |
 | `loki/config.yml` | Loki | Single binary, filesystem storage, schema v13 (`tsdb`), `compactor.retention_enabled: true`, `limits_config.retention_period: 336h` (14 days), `auth_enabled: false` |
 | `alloy/config.alloy` | Alloy | The stages of DOC-40 §3.2 |
 | `grafana/provisioning/datasources/*.yml` | Grafana | Prometheus `http://prometheus:9090`, Loki `http://loki:3100`, Alertmanager `http://alertmanager:9093` (type `alertmanager`, implementation `prometheus`) |
@@ -1288,34 +1289,11 @@ scrape_configs:
     static_configs: [{ targets: ["node-exporter:9100"] }]
 ```
 
-`api-2:3001` is absent on staging: the file is generated from a template by `deploy.sh` for the environment (`prometheus.yml.tmpl`, `RMS_ENV`), or the target is left in and shows `down`; P1-18 chooses (an `up == 0` alert for a target that never existed would fire, so the template form is the proposal). Prometheus keeps 15 days and at most 1,800 MB (§6.1).
+`api-2:3001` stays in the file on staging and shows `down` there: no rule fires on a single target of `rms-api` (`ApiDown` takes `max(up)`), so P1-18 kept one file for both environments and dropped the template `prometheus.yml.tmpl`. The file takes its `env` label from `${RMS_ENV}`, which the `expand-external-labels` flag of the command replaces. Prometheus keeps 15 days and at most 1,800 MB (§6.1).
 
-`alloy/config.alloy` (skeleton; **P1-18 checks** every option name against Alloy 1.20.1, DOC-40 §2):
+`alloy/config.alloy` is written and checked (P1-18, Alloy 1.21.2): `alloy validate` and `alloy fmt` run in `bun run check:ops`, and Alloy shipped the JSON lines of a test container to Loki with the labels `env`, `service` (the Compose service), `container` and `level`, dropped the `/health/` request lines and kept `time` as the timestamp. Its stages are listed in DOC-40 §3.2. The file in the repository is the source; the earlier skeleton of this section is gone.
 
-```
-discovery.docker "rms" {
-  host = "unix:///var/run/docker.sock"
-  filter { name = "label", values = ["com.docker.compose.project=rms"] }
-}
-discovery.relabel "rms" {
-  targets = discovery.docker.rms.targets
-  rule { source_labels = ["__meta_docker_container_label_com_docker_compose_service"], target_label = "service" }
-  rule { source_labels = ["__meta_docker_container_name"], regex = "/(.*)", target_label = "container" }
-  rule { target_label = "env", replacement = sys.env("RMS_ENV") }
-}
-loki.source.docker "rms" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = discovery.relabel.rms.output
-  forward_to = [loki.process.rms.receiver]
-}
-loki.process "rms" {
-  stage.json   { expressions = { level = "level" } }
-  stage.labels { values = { level = "" } }                 // the four labels: env, service, container, level
-  // drop the request lines of /health*: the stage that matches {msg="request", route=~"/health.*"}
-  forward_to = [loki.write.local.receiver]
-}
-loki.write "local" { endpoint { url = "http://loki:3100/loki/api/v1/push" } }
-```
+The files of this section as built: `ops/prometheus/{prometheus.yml, rules/rms-alerts.yml, rules/rms-jobs.yml, tests/rms-alerts.test.yml}`, `ops/alertmanager/{alertmanager.yml, alertmanager.local.yml}`, `ops/loki/config.yml`, `ops/alloy/config.alloy`, `ops/grafana/provisioning/{datasources,dashboards}/*.yml` and `ops/grafana/dashboards/*.json` (generated by `bun run ops:dashboards`). The `postgres` and `node` scrape jobs, their exporters and the host alerts join with P1-20 and P1-21. The Loki service has no healthcheck (the image has no shell tools); Alloy starts after it and retries its pushes.
 
 Grafana's public host is `monitor(-staging).<domain>` behind Access (§5.2); its own sign-in (the admin password) stays (DR-88). Alert delivery needs the two secrets of §9.1 and the test of DOC-40 §6 (the first of each month).
 
