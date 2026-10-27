@@ -1,11 +1,14 @@
 import type { Clock, Log, SecretBox } from '@core/kernel'
 import type { Envelope, InboxGuard, IntegrationEventHandler } from '@core/messaging'
 import { createTranslator, type MessageKey } from '@rms/i18n-catalog'
+import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { IDENTITY_EVENTS, type SmsRequestedPayload } from '../../contracts'
 import { ResidentAccount } from '../../domain/resident-account'
 import type { ResidentAccountRepository } from '../../domain/resident-account-repository'
 import type { SmsSender } from '../ports'
 import { smsAad } from '../sms-commands'
+
+type SentOutcome = Exclude<CounterLabels['sms_sent_total']['outcome'], 'failed'>
 
 /**
  * `identity.send_sms` (DOC-26 §5.4): turns `identity.sms_requested.v1` into a message. A command past its `expiresAt` returns
@@ -26,6 +29,7 @@ export class SendSmsHandler implements IntegrationEventHandler {
     private readonly logger: Log,
     /** `SMS_BRAND` and `APP_DOWNLOAD_URL`: the texts name them. */
     private readonly texts: { brand: string; appUrl: string },
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async handle(message: Envelope): Promise<void> {
@@ -34,12 +38,14 @@ export class SendSmsHandler implements IntegrationEventHandler {
   }
 
   private async send(command: SmsRequestedPayload): Promise<void> {
-    const { residents, secretBox, sender, clock, logger, texts } = this
-    const log = (outcome: string, level: 'info' | 'warn' = 'info') =>
+    const { residents, secretBox, sender, clock, logger, texts, metrics } = this
+    const log = (outcome: SentOutcome, level: 'info' | 'warn' = 'info') => {
+      metrics.inc('sms_sent_total', { outcome })
       logger[level](
         { event: 'auth.sms', kind: command.kind, outcome, accountId: command.accountId },
         'auth.sms',
       )
+    }
     if (new Date(command.expiresAt) <= clock.now()) return log('expired')
 
     const [record] = await residents.findByIds([command.accountId])
@@ -57,7 +63,17 @@ export class SendSmsHandler implements IntegrationEventHandler {
       brand: texts.brand,
       appUrl: texts.appUrl,
     })
-    await sender.send({ to: record.phone, text, requestId: command.requestId })
+    let sent: void | 'not_allowlisted'
+    try {
+      sent = await sender.send({ to: record.phone, text, requestId: command.requestId })
+    } catch (error) {
+      // The outbox retries; each try that fails is one failure (RB-06 reads the ratio).
+      metrics.inc('sms_sent_total', { outcome: 'failed' })
+      throw error
+    }
+    // The line of the allowlist driver says why nothing was sent; this one only counts it apart from `sent`.
+    if (sent === 'not_allowlisted')
+      return void metrics.inc('sms_sent_total', { outcome: 'not_allowlisted' })
     log('sent')
   }
 }

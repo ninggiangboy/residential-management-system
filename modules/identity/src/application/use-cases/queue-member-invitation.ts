@@ -1,4 +1,5 @@
-import { type Clock, NotFoundError } from '@core/kernel'
+import { type Clock, NotFoundError, RateLimitedError } from '@core/kernel'
+import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { ResidentAccount } from '../../domain/resident-account'
 import type { ResidentAccountRepository } from '../../domain/resident-account-repository'
 import type { IdentityConfig } from '../config'
@@ -21,19 +22,27 @@ export class QueueMemberInvitation {
     private readonly sms: SmsCommands,
     private readonly clock: Clock,
     private readonly config: Pick<IdentityConfig, 'otpPerPhonePerHour'>,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(accountId: string, params: { unitCode: string }): Promise<void> {
     const record = await this.residents.findById(accountId)
     if (!record || !new ResidentAccount(record).canSignIn) throw new NotFoundError()
-    await this.limiter.take({
-      key: `otp:phone:${record.phone}`,
-      capacity: this.config.otpPerPhonePerHour,
-      perSeconds: HOUR_SECONDS,
-    })
+    await this.limiter
+      .take({
+        key: `otp:phone:${record.phone}`,
+        capacity: this.config.otpPerPhonePerHour,
+        perSeconds: HOUR_SECONDS,
+      })
+      .catch((error: unknown) => {
+        if (error instanceof RateLimitedError)
+          this.metrics.inc('member_invitations_total', { outcome: 'phone_bucket' })
+        throw error
+      })
     await this.sms.request(record, 'member_invitation', {
       params: { unitCode: params.unitCode },
       expiresAt: new Date(this.clock.now().getTime() + INVITATION_TTL_MS),
     })
+    this.metrics.inc('member_invitations_total', { outcome: 'queued' })
   }
 }

@@ -1,6 +1,7 @@
 import type { Clock, Log, UnitOfWork } from '@core/kernel'
 import { LockedError } from '@core/kernel'
 import type { BuildingApi } from '@mod/building/contracts'
+import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { InvalidCredentialsError } from '../../domain/errors'
 import { normalizePassword } from '../../domain/password-policy'
 import type { Client } from '../../domain/refresh-family'
@@ -44,6 +45,7 @@ export class SignInStaff {
     private readonly clock: Clock,
     private readonly logger: Log,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(input: StaffSignInInput): Promise<StaffSignInResult> {
@@ -58,12 +60,18 @@ export class SignInStaff {
       clock,
       logger,
       config,
+      metrics,
     } = this
-    const outcome = (result: string, staffId?: string) =>
+    const outcome = (
+      result: CounterLabels['auth_staff_login_total']['outcome'],
+      staffId?: string,
+    ) => {
+      metrics.inc('auth_staff_login_total', { outcome: result })
       logger.info(
         { event: 'auth.staff_login', outcome: result, staffId, ip: input.ip },
         'auth.staff_login',
       )
+    }
 
     // 1. Every attempt spends a token of the IP bucket, successful or not. It is not part of any transaction below.
     await limiter
@@ -101,6 +109,7 @@ export class SignInStaff {
       const { lockout } = await building.getSettings(record.buildingId)
       const counted = await failures.count(record.id, lockout, now)
       if (counted && counted.lockedSeconds > 0) {
+        metrics.inc('auth_lockouts_total')
         outcome('locked', record.id)
         throw new LockedError(counted.lockedSeconds)
       }

@@ -9,7 +9,7 @@ import {
 import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
-import type { Guards } from '@rms/shared-types'
+import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { IdentityApiImpl } from './application/api/identity-api-impl'
 import type { IdentityConfig } from './application/config'
 import { FailureCounter } from './application/failure-counter'
@@ -109,6 +109,8 @@ export interface IdentityDeps {
   tickets: OpenTicketsProbe
   /** `OUTBOX_MAX_PAYLOAD_BYTES`. */
   outboxMaxPayloadBytes: number
+  /** `MetricsPort` of the host (DOC-40 §4.3); none in the tests of a module that does not look at it. */
+  metrics?: MetricsPort
   /** Tests replace the hasher and the wait; production builds both. */
   hasher?: PasswordHasher
   delay?: Delay
@@ -195,6 +197,7 @@ export interface IdentityModule extends AppModule<'identity'> {
 /** Builds the module from what it needs; `install.ts` narrows the host to this (DOC-12 §4.2, §4.3). */
 export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
   const { database, clock, ids, logger, config } = deps
+  const metrics = deps.metrics ?? NO_METRICS
 
   const staffAccounts = new DrizzleStaffAccountRepository(database)
   const passwordTokens = new DrizzlePasswordTokenRepository(database)
@@ -220,7 +223,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
   })
   const inbox = new DrizzleInboxGuard(database, identityInbox)
 
-  const events = new SessionEvents(outbox)
+  const events = new SessionEvents(outbox, metrics)
   const mail = new MailCommands(outbox, deps.secretBox, clock)
   const sms = new SmsCommands(outbox, deps.secretBox, clock, ids)
   const issuer = new SessionIssuer(sessions, events, factory, tokens, clock, ids, config)
@@ -238,6 +241,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     clock,
     logger,
     config,
+    metrics,
   )
   const owners = new SessionOwners(sessions, staffAccounts, residents, events, config)
   const refreshSession = new RefreshSession(
@@ -251,13 +255,15 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     ids,
     logger,
     config,
+    metrics,
   )
+  const smsProvider = new OutboxSmsProviderProbe(database, clock, config.smsDownFailures)
   const requestOtp = new RequestOtp(
     new LibphonenumberPhones(),
     residents,
     challenges,
     limiter,
-    new OutboxSmsProviderProbe(database, clock, config.smsDownFailures),
+    smsProvider,
     factory,
     sms,
     database,
@@ -265,6 +271,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     ids,
     logger,
     config,
+    metrics,
   )
   const verifyOtp = new VerifyOtp(
     challenges,
@@ -276,6 +283,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     clock,
     logger,
     config,
+    metrics,
   )
   const revokeResidentSession = new RevokeResidentSession(sessions, events, database, clock)
   const updateResidentMe = new UpdateResidentMe(residents, clock)
@@ -319,6 +327,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     clock,
     ids,
     config,
+    metrics,
   )
   const verifyStepUp = new VerifyStepUp(
     staffAccounts,
@@ -331,6 +340,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     autonomous,
     clock,
     config,
+    metrics,
   )
 
   const safeguards = new StaffSafeguards(staffAccounts, deps.tickets)
@@ -387,14 +397,24 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       clock,
       logger,
       config.adminBaseUrl,
+      metrics,
     ),
-    new SendSmsHandler(residents, deps.secretBox, deps.sms, inbox, clock, logger, {
-      brand: config.smsBrand,
-      appUrl: config.appDownloadUrl,
-    }),
+    new SendSmsHandler(
+      residents,
+      deps.secretBox,
+      deps.sms,
+      inbox,
+      clock,
+      logger,
+      {
+        brand: config.smsBrand,
+        appUrl: config.appDownloadUrl,
+      },
+      metrics,
+    ),
   ]
 
-  const reportClientError = new ReportClientError(limiter, accountLimiter, logger, config)
+  const reportClientError = new ReportClientError(limiter, accountLimiter, logger, config, metrics)
   const useCases: IdentityUseCases = {
     signInStaff,
     refreshSession,
@@ -447,7 +467,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       verifyStepUp,
       new EnsureResidentAccount(new LibphonenumberPhones(), residents, clock, ids),
       new ChangeResidentPhone(new LibphonenumberPhones(), residents, sessions, events, clock),
-      new QueueMemberInvitation(residents, limiter, sms, clock, config),
+      new QueueMemberInvitation(residents, limiter, sms, clock, config, metrics),
       new ApproveResidentDeletion(residents, clock, deps.audited),
     ),
     useCases,
@@ -467,5 +487,19 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     handlers,
     outbox: { name: 'identity', table: identityOutbox, inboxTable: identityInbox },
     jobs: [],
+    gauges: [
+      {
+        name: 'otp_challenges_24h',
+        help: 'OTP challenges issued in the last 24 hours, against OTP_DAILY_CAP (DOC-26 §5.1 step 6).',
+        read: async () => [
+          { value: await challenges.countSince(new Date(clock.now().getTime() - 86_400_000)) },
+        ],
+      },
+      {
+        name: 'sms_provider_down',
+        help: '1 while the SMS provider counts as down (DOC-26 §5.4).',
+        read: async () => [{ value: (await smsProvider.isDown()) ? 1 : 0 }],
+      },
+    ],
   }
 }

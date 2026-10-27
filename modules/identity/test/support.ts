@@ -6,7 +6,7 @@ import { FakeClock } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
 import { DEFAULT_SETTINGS } from '@mod/building/contracts'
 import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
-import { cloneTemplate, type TestDb } from '@rms/test-support'
+import { cloneTemplate, recordingMetrics, type TestDb } from '@rms/test-support'
 import { type IdentityConfig, type IdentityModule, identityManifest, installIdentity } from '../src'
 import type { ActiveMembership, PasswordHasher } from '../src/application/ports'
 import type { OpenTicketsProbe } from '../src/contracts'
@@ -105,6 +105,8 @@ export async function createHarness(options: HarnessOptions = {}) {
   const secretBox = createSecretBox({ k1: new Uint8Array(32).fill(1) })
   const hasher = new CountingHasher(new Argon2PasswordHasher(TEST_ARGON2))
   const sent: SentMail[] = []
+  /** What the module reported (DOC-40 §4.3): `metrics.count('auth_refresh_total', { outcome: 'reuse' })`. */
+  const metrics = recordingMetrics()
   const texts: SentSms[] = []
   /** The provider of the test: `fail` makes the next sends throw, as a provider outage does. */
   const provider = { fail: false }
@@ -196,6 +198,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     },
     audited: audit.audited,
     guards: NO_GUARDS,
+    metrics,
     // The routes are not mounted here: the use cases are called directly.
     idempotent: (_spec, handler) => handler,
     tickets,
@@ -350,6 +353,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     identity,
     config,
     hasher,
+    metrics,
     sent,
     secretBox,
     seedStaff,

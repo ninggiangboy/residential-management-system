@@ -1,4 +1,5 @@
 import type { Log } from '@core/kernel'
+import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import type { IdentityConfig } from '../config'
 import type { RateLimiter } from '../ports'
 
@@ -62,6 +63,7 @@ export class ReportClientError {
       IdentityConfig,
       'clientErrorsPerMinutePerIp' | 'clientErrorsPerHourPerAccount'
     >,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute({ report, ip, account }: ReportClientErrorInput): Promise<void> {
@@ -76,6 +78,7 @@ export class ReportClientError {
         capacity: this.config.clientErrorsPerHourPerAccount,
         perSeconds: HOUR_SECONDS,
       })
+    this.metrics.inc('client_errors_total', { app: report.app, kind: report.kind })
     this.logger.warn(
       {
         event: 'client_error',

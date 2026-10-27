@@ -1,4 +1,5 @@
 import type { OutboxWriter } from '@core/messaging'
+import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { IDENTITY_EVENTS, type RevocationReason, type SessionRevokedPayload } from '../contracts'
 import type { RevokedFamily } from '../domain/refresh-family'
 
@@ -7,13 +8,18 @@ import type { RevokedFamily } from '../domain/refresh-family'
  * the streams of the session and `notification` drops its device token.
  */
 export class SessionEvents {
-  constructor(private readonly outbox: OutboxWriter) {}
+  constructor(
+    private readonly outbox: OutboxWriter,
+    private readonly metrics: MetricsPort = NO_METRICS,
+  ) {}
 
   async revoked(
     families: readonly RevokedFamily[],
     reason: RevocationReason,
     at: Date,
   ): Promise<void> {
+    if (families.length > 0)
+      this.metrics.add('auth_sessions_revoked_total', families.length, { reason })
     await this.outbox.add(
       families.map((family) => ({
         type: IDENTITY_EVENTS.sessionRevoked,

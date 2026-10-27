@@ -1,7 +1,7 @@
 import type { Clock } from '@core/kernel'
 import { decide, requireRole } from '@core/kernel'
 import type { BuildingApi } from '@mod/building/contracts'
-import type { StaffContext, StaffRole } from '@rms/shared-types'
+import { type MetricsPort, NO_METRICS, type StaffContext, type StaffRole } from '@rms/shared-types'
 import type { StepUpAction } from '../../contracts'
 import { StepUpFailedError } from '../../domain/errors'
 import { normalizePassword } from '../../domain/password-policy'
@@ -35,6 +35,7 @@ export class VerifyStepUp {
     private readonly autonomous: AutonomousTransaction,
     private readonly clock: Clock,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(
@@ -70,6 +71,7 @@ export class VerifyStepUp {
         const { lockout } = await building.getSettings(record.buildingId)
         await autonomous.run(() => failures.count(record.id, lockout, now))
       }
+      this.metrics.inc('auth_step_up_total', { action, outcome: 'failed' })
       throw new StepUpFailedError(await this.attemptsLeft(staff, action))
     }
 
@@ -84,6 +86,7 @@ export class VerifyStepUp {
       : null
     if (!spend || !(await passwordTokens.apply(spend))) {
       await autonomous.run(() => this.countFailure(record.id, action, now))
+      this.metrics.inc('auth_step_up_total', { action, outcome: 'failed' })
       throw new StepUpFailedError(await this.attemptsLeft(staff, action))
     }
 
@@ -93,6 +96,7 @@ export class VerifyStepUp {
       await mail.request(admin, 'step_up_notice', {
         params: { action, actorName: record.fullName },
       })
+    this.metrics.inc('auth_step_up_total', { action, outcome: 'ok' })
   }
 
   /** Every wrong code is counted, so a lost race decides again on the count the winner left (DR-255). */

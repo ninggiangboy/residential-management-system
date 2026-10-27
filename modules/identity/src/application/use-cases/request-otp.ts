@@ -1,6 +1,7 @@
 import { isIP } from 'node:net'
 import type { Clock, IdGenerator, Log, UnitOfWork } from '@core/kernel'
 import { RateLimitedError } from '@core/kernel'
+import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import {
   PhoneInvalidError,
   PhoneNotRegisteredError,
@@ -57,6 +58,7 @@ export class RequestOtp {
     private readonly ids: IdGenerator,
     private readonly logger: Log,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(input: RequestOtpInput): Promise<OtpRequested> {
@@ -73,11 +75,13 @@ export class RequestOtp {
       ids,
       config,
     } = this
-    const outcome = (result: string) =>
+    const outcome = (result: CounterLabels['auth_otp_requested_total']['outcome']) => {
+      this.metrics.inc('auth_otp_requested_total', { outcome: result })
       this.logger.info(
         { event: 'auth.otp_requested', outcome: result, ip: input.ip },
         'auth.otp_requested',
       )
+    }
     const phone = phones.toE164(input.phone)
     if (!phone) throw new PhoneInvalidError()
 
@@ -128,6 +132,7 @@ export class RequestOtp {
       throw new SmsUnavailableError()
     }
     if ((await challenges.countSince(new Date(now.getTime() - DAY_MS))) >= config.otpDailyCap) {
+      this.metrics.inc('otp_daily_cap_reached_total')
       this.logger.warn({ event: 'otp_daily_cap_reached' }, 'otp_daily_cap_reached')
       outcome('daily_cap')
       throw new SmsUnavailableError()
