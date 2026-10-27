@@ -77,6 +77,11 @@ export default function Forgot() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
+        returnKeyType="send"
+        // Enter on the keyboard sends the link like the button does, which the keyboard may cover.
+        onSubmitEditing={() => {
+          if (online && left === 0 && !reset.isPending) submit()
+        }}
         value={email}
         onChangeText={setEmail}
         error={fieldError ?? undefined}
