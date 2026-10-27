@@ -545,3 +545,4 @@ tests:
 - **The metrics library on Bun** and **the Alertmanager Telegram keys** were verified in P1-18 (§2); the pins are in DOC-11 §3 and §7.
 - **The addresses and chat id of §6** are Owner input, decided as placeholders until the acceptance of P1-18 on staging (P1-20); locally the alerts go to Mailpit (DR-228, Owner, 2026-10-21; DOC-70 §2 rows 11 and 12).
 - **Left for the staging acceptance (P1-20)** because they need the host: the database stopped on staging with the email and the Telegram message arriving (OB-14), `monitor.<domain>` behind Access, Loki on production, and the first real `backup.prom` (OB-17 on the host); the labels of `DiskUsage` on the host's file systems.
+
