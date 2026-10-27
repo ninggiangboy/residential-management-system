@@ -1,4 +1,8 @@
 # Path outputs of the `changes` job (DOC-71 §4.1); `e2e-web` and the mobile jobs read them.
+#
+# `e2e` is what the flows of `apps/cms-web/e2e` can notice (DR-274): the API and the web CMS they start, what those import, the
+# local stack of `infra:up` and the scripts that start and migrate it. It has no `ops/**` (apart from the PostgreSQL files that
+# provision the template database), no other `docker/**`, no check script and no mobile package: a change there cannot move a flow.
 api:
   - apps/api/**
   - modules/**
@@ -28,3 +32,27 @@ mobile:
   - bun.lock
 docs:
   - docs/**
+e2e:
+  - apps/api/**
+  - apps/cms-web/**
+  - modules/**
+  - packages/core-*/**
+  - packages/shared-types/**
+  - packages/i18n-catalog/**
+  - packages/design-tokens/**
+  - packages/client-core/**
+  - packages/test-support/**
+  - docker/compose.local.yml
+  - docker/postgres/**
+  - ops/postgres/**
+  - scripts/keys-generate.ts
+  - scripts/infra.ts
+  - scripts/migrate.ts
+  - scripts/db.ts
+  - scripts/lib/**
+  - package.json
+  - bunfig.toml
+  - .tool-versions
+  - bun.lock
+  - .github/workflows/ci.yml
+  - .github/paths-filter.yml

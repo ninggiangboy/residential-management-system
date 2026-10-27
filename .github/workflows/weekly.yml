@@ -27,8 +27,26 @@ jobs:
           docker run --rm -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" git /repo --config /repo/.gitleaks.toml --redact --no-banner
 
+  # Is there a staging host? The variable `HOST_IP` of the environment `staging` is its address; empty means there is none (DR-275).
+  # `deployment: false`: the job reads the environment's variables and writes no deployment record.
+  staging-host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    environment:
+      name: staging
+      deployment: false
+    outputs:
+      ready: ${{ steps.host.outputs.ready }}
+    steps:
+      - id: host
+        env:
+          HOST_IP: ${{ vars.HOST_IP }}
+        run: echo "ready=$([ -n "$HOST_IP" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   # The only scanner that finds a new vulnerability in a build nobody touched (DOC-39 §12): the image that runs on staging.
   image-scan-running:
+    needs: staging-host
+    if: ${{ needs.staging-host.outputs.ready == 'true' }} # no staging host, nothing runs there (DR-275)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:
@@ -70,6 +88,8 @@ jobs:
   # DOC-71 §6.2: the 30 newest `sha-*` versions stay, every `v*` version stays, and so does the tag that runs in an environment,
   # because a rollback needs it. The token needs `packages: write` on the package (a package linked to the repository).
   ghcr-retention:
+    needs: staging-host
+    if: ${{ needs.staging-host.outputs.ready == 'true' }} # it asks the host which tags run (DR-275)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
