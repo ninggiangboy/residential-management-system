@@ -31,8 +31,11 @@ export class Database implements UnitOfWork {
   private readonly txStorage = new AsyncLocalStorage<Transaction>()
   readonly client: postgres.Sql
   readonly db: DrizzleDb
+  private readonly poolMax: number
+  private openTransactions = 0
 
   constructor(options: DatabaseOptions) {
+    this.poolMax = options.poolMax
     this.client = postgres(options.url, {
       max: options.poolMax,
       prepare: options.prepare,
@@ -67,7 +70,22 @@ export class Database implements UnitOfWork {
       outer
         ? outer.transaction(body)
         : this.db.transaction((tx) => body(tx as unknown as Transaction), options)
-    return begin((tx) => this.txStorage.run(tx, fn))
+    if (outer) return begin((tx) => this.txStorage.run(tx, fn))
+    this.openTransactions++
+    try {
+      return await begin((tx) => this.txStorage.run(tx, fn))
+    } finally {
+      this.openTransactions--
+    }
+  }
+
+  /**
+   * `db_pool_waiting` (DOC-40 §4.1): top-level transactions started beyond the pool size. Each holds a connection from `begin` to the
+   * end, so the excess is waiting for one. The driver does not expose its queue, and a single statement outside a transaction is not
+   * counted: this is a lower bound that reaches 0 only when the pool has room.
+   */
+  get poolWaiting(): number {
+    return Math.max(0, this.openTransactions - this.poolMax)
   }
 
   /**

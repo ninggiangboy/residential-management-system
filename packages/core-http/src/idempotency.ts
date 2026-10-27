@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto'
-import { type Clock, ConflictError, RuleViolationError, ValidationError } from '@core/kernel'
+import {
+  type Clock,
+  ConflictError,
+  DomainError,
+  RuleViolationError,
+  ValidationError,
+} from '@core/kernel'
 
 /** Whose key it is: keys are scoped by `(kind, id)`, so another account's key is unrelated (DOC-50 §8.3). */
 export interface IdempotencyAccount {
@@ -102,6 +108,8 @@ const statusOf = (context: IdempotentContext): number => {
   return Number.isFinite(status) ? status : 200
 }
 
+export type IdempotencyOutcome = 'first' | 'replay' | 'reuse' | 'in_progress'
+
 const reuse = () =>
   new RuleViolationError(
     'idempotency_key_reuse',
@@ -116,7 +124,12 @@ const reuse = () =>
  * duplicate with another request is 422 `idempotency_key_reuse`. Only a committed 2xx is ever stored. A route that takes no key is
  * not wrapped, and a key sent to it is ignored.
  */
-export function createIdempotent(store: IdempotencyStore, clock: Clock): Idempotent {
+export function createIdempotent(
+  store: IdempotencyStore,
+  clock: Clock,
+  /** `idempotency_total{outcome}` (DOC-40 §4.1): once per request that carried a valid key. */
+  onOutcome?: (outcome: IdempotencyOutcome) => void,
+): Idempotent {
   return <C extends IdempotentContext, R>(
     spec: IdempotentSpec<C>,
     handler: (context: C) => Promise<R>,
@@ -237,9 +250,18 @@ export function createIdempotent(store: IdempotencyStore, clock: Clock): Idempot
         ])
       const account = spec.account(context)
       const hash = requestHash(context)
-      return spec.mode === 'external'
-        ? outside(context, account, key, hash)
-        : inTransaction(context, account, key, hash)
+      try {
+        const result = await (spec.mode === 'external'
+          ? outside(context, account, key, hash)
+          : inTransaction(context, account, key, hash))
+        onOutcome?.(context.set.headers['idempotent-replayed'] === 'true' ? 'replay' : 'first')
+        return result
+      } catch (error) {
+        const code = error instanceof DomainError ? error.code : undefined
+        if (code === 'idempotency_key_reuse') onOutcome?.('reuse')
+        else if (code === 'request_in_progress') onOutcome?.('in_progress')
+        throw error
+      }
     }
   }
 }

@@ -22,6 +22,8 @@ export interface AppModule<Name extends string = string, Routes = unknown> {
   readonly outbox?: OutboxSource
   /** Its jobs (DOC-38 §3): started, paused for maintenance and stopped by the runtime as a group. */
   readonly jobs?: readonly JobDefinition[]
+  /** Gauges read from the module's tables at a scrape (DOC-40 §4 rule 3); the host registers them and caches, times out and counts failures. */
+  readonly gauges?: readonly ModuleGauge[]
   /** Releases live resources (SSE connections, LISTEN). Called BEFORE the HTTP server is stopped. */
   close?(): Promise<void>
 }
@@ -31,6 +33,14 @@ export interface AppModule<Name extends string = string, Routes = unknown> {
  * and its configuration. Static data, so CLI scripts (`db:migrate`, `outbox:list`) and drizzle-kit can read it without
  * pulling in the container. Every module package exports one as `@mod/<name>/manifest`.
  */
+/** A gauge whose value is a query: `otp_challenges_24h`, `units_without_owner`. */
+export interface ModuleGauge {
+  readonly name: string
+  readonly help: string
+  readonly labelNames?: readonly string[]
+  read(): Promise<ReadonlyArray<{ labels?: Record<string, string>; value: number }>>
+}
+
 export interface ModuleManifest {
   readonly name: string
   /** The module's folder: it holds its own `drizzle.config.ts`. */

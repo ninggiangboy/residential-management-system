@@ -12,7 +12,11 @@ import type { IntegrationEventHandler, MessagePublisher } from './ports'
 export class InProcessMessageBus implements MessagePublisher {
   private handlers = new Map<string, IntegrationEventHandler[]>()
 
-  constructor(private logger: Logger) {}
+  constructor(
+    private logger: Logger,
+    /** `handler_outcomes_total{handler,outcome}` (DOC-40 §4.1): one call per handler per message. */
+    private observe?: (handler: string, outcome: 'ok' | 'deferred' | 'failed') => void,
+  ) {}
 
   subscribe(handler: IntegrationEventHandler): void {
     const list = this.handlers.get(handler.eventType) ?? []
@@ -41,8 +45,13 @@ export class InProcessMessageBus implements MessagePublisher {
     )
     const errors: unknown[] = []
     results.forEach((result, i) => {
+      if (result.status === 'fulfilled') this.observe?.(handlers[i]?.name ?? 'unknown', 'ok')
       if (result.status === 'rejected') {
         errors.push(result.reason)
+        this.observe?.(
+          handlers[i]?.name ?? 'unknown',
+          result.reason instanceof RetryLaterError ? 'deferred' : 'failed',
+        )
         // A deferral (rate limit) is expected, not a failure: warn without the stack.
         if (result.reason instanceof RetryLaterError) {
           this.logger.warn(
