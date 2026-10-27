@@ -1,0 +1,19 @@
+# Production limits on top of `compose.base.yml` (DOC-70 §6.1; DR-06, DR-102, DOC-10 §6.1). The `cloudflared` limit stays
+# open until EXP-07 measures it (DR-06).
+services:
+  api-1: { mem_limit: 1g, memswap_limit: 1g, environment: { DB_POOL_MAX: '20' } }
+  api-2: { mem_limit: 1g, memswap_limit: 1g, environment: { DB_POOL_MAX: '20' } }
+  caddy: { environment: { RMS_UPSTREAMS: 'api-1:3000 api-2:3000' } }
+  worker:
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 2.0
+    environment: { DB_POOL_MAX: '15', PDF_CONCURRENCY: '2' }
+  prometheus: { mem_limit: 400m, memswap_limit: 400m }
+  alertmanager: { mem_limit: 50m, memswap_limit: 50m }
+  grafana: { mem_limit: 200m, memswap_limit: 200m }
+  loki: { mem_limit: 200m, memswap_limit: 200m }
+  alloy: { mem_limit: 80m, memswap_limit: 80m }
+  postgres-exporter: { mem_limit: 50m, memswap_limit: 50m }
+  node-exporter: { mem_limit: 50m, memswap_limit: 50m }
+  seaweedfs: { mem_limit: 768m, memswap_limit: 768m } # provisional, as on staging

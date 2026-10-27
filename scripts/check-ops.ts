@@ -56,8 +56,15 @@ promtool(
   'rules',
   '/p/rules/rms-alerts.yml',
   '/p/rules/rms-jobs.yml',
+  '/p/rules/rms-host.yml',
 )
-promtool('promtool test rules (OB-05)', 'test', 'rules', '/p/tests/rms-alerts.test.yml')
+promtool(
+  'promtool test rules (OB-05)',
+  'test',
+  'rules',
+  '/p/tests/rms-alerts.test.yml',
+  '/p/tests/rms-host.test.yml',
+)
 
 // The secrets are files on the host (DOC-70 §9.1); the check reads them, so it gets empty ones.
 const secrets = mkdtempSync(join(tmpdir(), 'rms-secrets-'))

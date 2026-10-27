@@ -22,3 +22,11 @@ scrape_configs:
   - job_name: rms-worker
     static_configs:
       - targets: [worker:3001]
+  # The exporters of the host (DOC-70 §6.1, §10): the database and the machine. `postgres-exporter` reads as `rms_readonly`
+  # (`pg_monitor`, DR-113); `node-exporter` also reads the textfile of `ops/backup/backup.sh` (DR-154).
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+  - job_name: node
+    static_configs:
+      - targets: [node-exporter:9100]

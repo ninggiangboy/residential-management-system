@@ -1,0 +1,28 @@
+{
+  "identities": [
+    {
+      "name": "rms-${RMS_ENV}-files",
+      "credentials": [{ "accessKey": "${FILES_ACCESS_KEY}", "secretKey": "${FILES_SECRET_KEY}" }],
+      "actions": [
+        "Read:rms-${RMS_ENV}-files",
+        "Write:rms-${RMS_ENV}-files",
+        "List:rms-${RMS_ENV}-files",
+        "Tagging:rms-${RMS_ENV}-files"
+      ]
+    },
+    {
+      "name": "rms-${RMS_ENV}-backup",
+      "credentials": [{ "accessKey": "${BACKUP_ACCESS_KEY}", "secretKey": "${BACKUP_SECRET_KEY}" }],
+      "actions": [
+        "Read:rms-${RMS_ENV}-backup",
+        "Write:rms-${RMS_ENV}-backup",
+        "List:rms-${RMS_ENV}-backup"
+      ]
+    },
+    {
+      "name": "rms-${RMS_ENV}-admin",
+      "credentials": [{ "accessKey": "${ADMIN_ACCESS_KEY}", "secretKey": "${ADMIN_SECRET_KEY}" }],
+      "actions": ["Admin"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# /etc/systemd/system/rms-backup@diff.timer: Monday to Saturday 02:00 in building time
+[Unit]
+Description=Daily differential pgBackRest backup
+
+[Timer]
+OnCalendar=Mon..Sat *-*-* 02:00:00 Asia/Ho_Chi_Minh
+Persistent=true
+
+[Install]
+WantedBy=timers.target

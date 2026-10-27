@@ -1,0 +1,18 @@
+# Staging limits on top of `compose.base.yml` (DOC-70 §6.1; DR-06, DR-102, DOC-10 §6.1). `memswap_limit` equal to `mem_limit`
+# gives a container no swap.
+services:
+  api-1:
+    mem_limit: 1g
+    memswap_limit: 1g
+    environment: { DB_POOL_MAX: '15' }
+  worker:
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 1.0
+    environment: { DB_POOL_MAX: '10', PDF_CONCURRENCY: '1' }
+  prometheus: { mem_limit: 300m, memswap_limit: 300m }
+  alertmanager: { mem_limit: 50m, memswap_limit: 50m }
+  grafana: { mem_limit: 200m, memswap_limit: 200m }
+  postgres-exporter: { mem_limit: 50m, memswap_limit: 50m }
+  node-exporter: { mem_limit: 50m, memswap_limit: 50m }
+  seaweedfs: { mem_limit: 512m, memswap_limit: 512m } # provisional: P1-20 and EXP-07 set it (DR-268)

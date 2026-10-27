@@ -1,0 +1,75 @@
+# Rollback of the API (DOC-71 §7.6, DOC-70 §6.5): the same streamed command with `--rollback` redeploys the tag stored as
+# `previous` on the host, or, with `tag`, that release (uploaded again from its commit). No migration is run backward: the
+# previous image works against the expanded schema (expand then contract, DR-08). The web and the mobile rollbacks are added by
+# P6-10. The job does not create a deployment record: `promote` must not read a rollback as a deploy of the commit it checked out.
+name: rollback
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment
+        type: choice
+        options: [staging, production]
+        required: true
+      target:
+        description: What to roll back (web and mobile arrive with P6-10)
+        type: choice
+        options: [api]
+        default: api
+      tag:
+        description: Release tag to redeploy (sha-<7> or vX.Y.Z); empty means the previous tag of the host
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: deploy-${{ inputs.env }}
+  cancel-in-progress: false
+jobs:
+  rollback-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.env }}
+      deployment: false
+    env:
+      DOMAIN: ${{ vars.DOMAIN }}
+      CLOUDFLARED_VERSION: 2026.10.1
+      CLOUDFLARED_SHA256: 200573c872174ab449965655febadef8edfbb144ebcaa391b700b2dedbadb3cd
+      TAG: ${{ inputs.tag }}
+    steps:
+      # A named tag is deployed from the commit that built it, so the script and the files are the release's own.
+      - id: ref
+        run: |
+          case "$TAG" in
+            '') echo "ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT" ;;
+            sha-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) echo "ref=${TAG#sha-}" >> "$GITHUB_OUTPUT" ;;
+            v[0-9]*.[0-9]*.[0-9]*) echo "ref=refs/tags/${TAG}" >> "$GITHUB_OUTPUT" ;;
+            *) echo "not a release tag: $TAG"; exit 1 ;;
+          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+      - name: Install cloudflared (checksum verified)
+        run: |
+          curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i cloudflared.deb
+      - name: Roll back (timed against the 10 minutes of DR-08)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          ENVIRONMENT: ${{ inputs.env }}
+        run: |
+          started=$(date +%s)
+          ops/deploy/ci-deploy.sh "$ENVIRONMENT" "${TAG:---rollback}"
+          echo "### rollback of ${ENVIRONMENT}: $(( $(date +%s) - started )) s (target 600 s)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test
+        env:
+          ENVIRONMENT: ${{ inputs.env }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          STAGING_DEMO_PASSWORD: ${{ secrets.STAGING_DEMO_PASSWORD }}
+        run: ops/deploy/smoke.sh "$ENVIRONMENT"

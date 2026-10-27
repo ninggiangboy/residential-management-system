@@ -1,0 +1,64 @@
+# The edge of a host (DOC-70 §7.1): plain HTTP inside the host, TLS ends at Cloudflare (DR-83 item 3, DR-07). Caddy trusts the
+# private Docker ranges and passes `CF-Connecting-IP`, which the application reads (DOC-39 §5.3). The headers are DOC-39 §5.1.
+# `RMS_UPSTREAMS` is `api-1:3000` on staging and `api-1:3000 api-2:3000` on production (docker/compose.*.yml).
+{
+	auto_https off
+	admin off
+	servers {
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+}
+
+# No `fail_duration`: it turns on passive health checks, and a request that Caddy itself ends (a body over `max_size` is a 413
+# raised while the body is read) then counts as a failure of the upstream and takes it out of rotation for that long. The active
+# check above is the one health signal.
+#
+# A snippet takes no subdirective as an argument (`import upstream "flush_interval -1"` is one token), so the options are
+# shared and the one that differs is written at the call.
+(upstream_options) {
+	lb_policy least_conn
+	health_uri /health/ready
+	health_port 3001
+	health_interval 5s
+	health_timeout 2s
+	health_status 200
+}
+
+:80 {
+	request_body {
+		max_size 2MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	@notdocs not path /api/v1/docs*
+	header @notdocs Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+
+	log {
+		output stdout
+		format json
+	}
+
+	@sse path /api/v1/staff/events
+	handle @sse {
+		reverse_proxy {$RMS_UPSTREAMS} {
+			import upstream_options
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy {$RMS_UPSTREAMS} {
+			import upstream_options
+		}
+	}
+}
+
+# The health check of the container (docker/compose.base.yml). Nothing routes this port: the Tunnel names `caddy:80` only.
+:8081 {
+	respond /healthz "ok" 200
+}

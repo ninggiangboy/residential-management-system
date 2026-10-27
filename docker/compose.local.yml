@@ -125,6 +125,24 @@ services:
       timeout: 3s
       retries: 30
 
+  # The two exporters of DOC-70 §6.1, so that the jobs `postgres` and `node` of the shared Prometheus file have targets here too (the
+  # same images as staging). On Docker Desktop and OrbStack `node-exporter` reports the Linux VM, not the Mac.
+  postgres-exporter:
+    profiles: [monitoring]
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    environment:
+      DATA_SOURCE_NAME: postgres://rms_readonly:${RMS_READONLY_PASSWORD:?run bun run keys:generate}@postgres:5432/rms?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  node-exporter:
+    profiles: [monitoring]
+    image: prom/node-exporter:v1.12.1
+    command: --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+
   loki:
     profiles: [monitoring]
     image: grafana/loki:3.7.9
