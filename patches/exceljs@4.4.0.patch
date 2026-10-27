@@ -1,0 +1,22 @@
+diff --git a/lib/utils/iterate-stream.js b/lib/utils/iterate-stream.js
+index 08b974e9a1425d85a96f30eb7869920ed8644b80..786a97a91ea1200b19a804f2b4b22c25b359d38d 100644
+--- a/lib/utils/iterate-stream.js
++++ b/lib/utils/iterate-stream.js
+@@ -17,11 +17,15 @@ module.exports = async function* iterateStream(stream) {
+     resolveStreamEndedPromise();
+   });
+ 
+-  while (!ended || contents.length > 0) {
++  // `end` can come while the paused stream still holds data in its buffer (unzipper's Parse does): keep it flowing until that
++  // buffer is empty too, or the entries left in it are lost and the workbook reader parses a sheet with no workbook (RMS DR-278).
++  while (!ended || contents.length > 0 || stream.readableLength > 0) {
+     if (contents.length === 0) {
+       stream.resume();
+       // eslint-disable-next-line no-await-in-loop
+-      await Promise.race([once(stream, 'data'), streamEndedPromise]);
++      if (ended) await new Promise(resolve => setImmediate(resolve));
++      // eslint-disable-next-line no-await-in-loop
++      else await Promise.race([once(stream, 'data'), streamEndedPromise]);
+     } else {
+       stream.pause();
+       const data = contents.shift();
