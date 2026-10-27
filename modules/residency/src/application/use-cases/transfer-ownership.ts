@@ -10,7 +10,7 @@ import {
 import type { OutboxWriter } from '@core/messaging'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
-import type { StaffContext, StaffRole } from '@rms/shared-types'
+import { type MetricsPort, NO_METRICS, type StaffContext, type StaffRole } from '@rms/shared-types'
 import {
   type MembershipChangedPayload,
   type OwnerChangedPayload,
@@ -67,6 +67,7 @@ export class TransferOwnership {
     audited: Audited,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {
     this.auditedTransfer = this.buildAudited(audited)
   }
@@ -196,6 +197,15 @@ export class TransferOwnership {
       },
       ...removed.map((row) => removedEvent(staff.buildingId, row, now)),
     ])
+    this.metrics.inc('owner_transfers_total', {
+      keep_members: input.keepMembers ? 'true' : 'false',
+    })
+    if (removed.length > 0)
+      this.metrics.add('membership_changes_total', removed.length, {
+        change: 'removed',
+        actor: 'staff',
+      })
+    if (!promoted) this.metrics.inc('membership_changes_total', { change: 'added', actor: 'staff' })
     return {
       unit: { unitId, code: stored.code, version: bumped.version },
       owner: { membershipId: owner.id, accountId },

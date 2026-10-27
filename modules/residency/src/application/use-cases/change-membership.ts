@@ -8,7 +8,13 @@ import {
 } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
-import type { MemberType, StaffContext, StaffRole } from '@rms/shared-types'
+import {
+  type MemberType,
+  type MetricsPort,
+  NO_METRICS,
+  type StaffContext,
+  type StaffRole,
+} from '@rms/shared-types'
 import { type MembershipChangedPayload, RESIDENCY_EVENTS } from '../../contracts'
 import {
   Membership,
@@ -71,6 +77,7 @@ export class ChangeMembership {
     audited: Audited,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {
     this.audited = {
       update: this.buildAudited(audited, 'residency.membership.update'),
@@ -142,6 +149,7 @@ export class ChangeMembership {
           occurredAt: now,
         },
       ])
+      this.metrics.inc('membership_changes_total', { change, actor: 'staff' })
       return { done: true as const, value: { after, changes: fieldsOf(before, after) } }
     })
   }

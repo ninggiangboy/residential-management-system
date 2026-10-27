@@ -10,7 +10,13 @@ import type { OutboxWriter } from '@core/messaging'
 import type { Audited } from '@mod/audit/contracts'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
-import { buildingToday, type StaffContext, type StaffRole } from '@rms/shared-types'
+import {
+  buildingToday,
+  type MetricsPort,
+  NO_METRICS,
+  type StaffContext,
+  type StaffRole,
+} from '@rms/shared-types'
 import { type OwnerChangedPayload, RESIDENCY_EVENTS } from '../../contracts'
 import { type ImportPlan, type PlannedRow, sameCounts } from '../../domain/import/plan'
 import {
@@ -95,8 +101,15 @@ export class CommitUnitOwnerImport {
     private readonly uow: UnitOfWork,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {
     this.auditedWrite = this.buildAudited(audited)
+  }
+
+  /** `import_commits_total{outcome}`: what a refused "Save" came to. */
+  private refused<E extends Error>(outcome: 'expired' | 'stale' | 'not_ready', error: E): E {
+    this.metrics.inc('import_commits_total', { outcome })
+    return error
   }
 
   async execute(staff: StaffContext, importId: string): Promise<CommitResult> {
@@ -117,7 +130,7 @@ export class CommitUnitOwnerImport {
     const today = buildingToday(now, building?.timeZone ?? 'Asia/Ho_Chi_Minh')
     const read = await this.planner.read(bytes, today)
     // The stored job was `validated`, so the file read well then; a file that no longer does cannot match its preview.
-    if (read.kind !== 'read') throw new ImportStaleError(0)
+    if (read.kind !== 'read') throw this.refused('stale', new ImportStaleError(0))
 
     return this.uow.run(async () => {
       // The conditional statement of DOC-16 §5.5: of two presses of "Save" one claims the job, the other finds it committed.
@@ -125,8 +138,9 @@ export class CommitUnitOwnerImport {
       if (!claimed) return this.replay(staff, job.id, now)
       const plan = await this.planner.plan(staff.scope, read)
       if (!sameCounts(plan.preview.counts, claimed.result.counts))
-        throw new ImportStaleError(plan.preview.counts.rows)
+        throw this.refused('stale', new ImportStaleError(plan.preview.counts.rows))
       const { importId: _importId, ...committed } = await this.auditedWrite(staff, claimed, plan)
+      this.metrics.inc('import_commits_total', { outcome: 'committed' })
       return { job: claimed, committed }
     })
   }
@@ -135,8 +149,8 @@ export class CommitUnitOwnerImport {
   private answerFor(job: ImportJobRecord, now: Date): CommitResult | null {
     const status = statusAt(job, now)
     if (status === 'committed') return { job, committed: committedOf(job.result.counts) }
-    if (status === 'expired') throw new ImportExpiredError()
-    if (status !== 'validated') throw new ImportNotReadyError(status)
+    if (status === 'expired') throw this.refused('expired', new ImportExpiredError())
+    if (status !== 'validated') throw this.refused('not_ready', new ImportNotReadyError(status))
     return null
   }
 
@@ -146,7 +160,7 @@ export class CommitUnitOwnerImport {
     if (!current) throw new NotFoundError()
     const answer = this.answerFor(current, now)
     // `validated` and not expired yet no claim: the job moved between the two statements; ask the caller to retry.
-    if (!answer) throw new ImportNotReadyError(current.status)
+    if (!answer) throw this.refused('not_ready', new ImportNotReadyError(current.status))
     return answer
   }
 

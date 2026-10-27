@@ -19,7 +19,7 @@ import {
 } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { BuildingId, Guards, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
-import { cloneTemplate, type TestDb } from '@rms/test-support'
+import { cloneTemplate, recordingMetrics, type TestDb } from '@rms/test-support'
 import { sql } from 'drizzle-orm'
 import ExcelJS from 'exceljs'
 import { installResidency, type ResidencyModule, residencyManifest } from '../src'
@@ -262,6 +262,8 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     purgeGraceMinutes: 0,
   })
   const files = new MemoryFiles()
+  /** What the module reported (DOC-40 §4.3). */
+  const metrics = recordingMetrics()
   const identity = identityOn(database, ids, () => clock.now())
   const residency: ResidencyModule = installResidency({
     logger: silent,
@@ -276,6 +278,7 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     guards: { staff: () => ({}), resident: () => ({}), unit: () => ({}) } as unknown as Guards,
     pii: () => pii,
     audited: options.audited ?? audit.audited,
+    metrics,
     outboxMaxPayloadBytes: 65536,
   })
   const admin = db.admin()
@@ -367,6 +370,7 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     ids,
     pii,
     files,
+    metrics,
     identity,
     residency,
     seedUnit,

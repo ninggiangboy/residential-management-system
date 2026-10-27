@@ -8,7 +8,13 @@ import {
 import type { OutboxWriter } from '@core/messaging'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
-import type { MemberType, StaffContext, StaffRole } from '@rms/shared-types'
+import {
+  type MemberType,
+  type MetricsPort,
+  NO_METRICS,
+  type StaffContext,
+  type StaffRole,
+} from '@rms/shared-types'
 import {
   type MembershipChangedPayload,
   type OwnerChangedPayload,
@@ -65,6 +71,7 @@ export class CreateResident {
     audited: Audited,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {
     this.auditedAdd = this.buildAuditedAdd(audited)
     this.auditedProfile = this.buildAuditedProfile(audited)
@@ -227,6 +234,7 @@ export class CreateResident {
           }
         : addedEvent(staff.buildingId, membership, now),
     ])
+    this.metrics.inc('membership_changes_total', { change: 'added', actor: 'staff' })
   }
 }
 

@@ -6,7 +6,8 @@ import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
-import type { Guards } from '@rms/shared-types'
+import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { sql } from 'drizzle-orm'
 import { ResidencyApiImpl } from './application/api/residency-api-impl'
 import { ClearProfileOnAccountDeletionHandler } from './application/handlers/clear-profile-on-account-deletion'
 import { ImportPlanner } from './application/import-planner'
@@ -69,6 +70,8 @@ export interface ResidencyDeps {
     | 'approveResidentDeletion'
   >
   guards: Guards
+  /** `MetricsPort` of the host (DOC-40 §4.3). */
+  metrics?: MetricsPort
   /** E-72 takes an `Idempotency-Key` (DOC-50 §8.1). */
   idempotent: Idempotent
   /**
@@ -131,6 +134,7 @@ export type ResidencyRoutes = ReturnType<typeof residencyRoutes>
 /** Builds the module from what it needs; `install.ts` narrows the host to this (DOC-12 §4.2, §4.3). */
 export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModule {
   const { database, clock, ids, logger } = deps
+  const metrics = deps.metrics ?? NO_METRICS
 
   const memberships = new DrizzleMembershipRepository(database)
   const profiles = new DrizzleResidentProfileRepository(database)
@@ -172,6 +176,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     database,
     clock,
     ids,
+    metrics,
   )
   const commitUnitOwnerImport = new CommitUnitOwnerImport(
     deps.files,
@@ -188,6 +193,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     database,
     clock,
     ids,
+    metrics,
   )
   const expireImports = new ExpireImports(deps.files, importJobs, database, clock)
   const purgeImports = new PurgeImports(deps.files, importJobs, database, clock)
@@ -206,6 +212,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     deps.audited,
     clock,
     ids,
+    metrics,
   )
   const updateProfile = new UpdateProfile(
     database,
@@ -228,6 +235,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     deps.audited,
     clock,
     ids,
+    metrics,
   )
   const transferOwnership = new TransferOwnership(
     database,
@@ -240,6 +248,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     deps.audited,
     clock,
     ids,
+    metrics,
   )
   const changeLoginPhone = new ChangeLoginPhone(
     database,
@@ -311,5 +320,20 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     ],
     outbox: { name: 'residency', table: residencyOutbox, inboxTable: residencyInbox },
     jobs: [importExpireJob(expireImports), importPurgeJob(purgeImports)],
+    gauges: [
+      {
+        name: 'units_without_owner',
+        help: 'Units that are not vacant and have no owner (informational, DOC-27 §15).',
+        read: async () => {
+          // scope-ok: system-wide by design, like the other business gauges of DOC-40 §4 (one deployment, one building)
+          const [row] = await database.db.execute<{ n: number }>(sql`
+            SELECT count(*)::int AS n FROM residency.unit u
+             WHERE u.occupancy <> 'vacant'
+               AND NOT EXISTS (SELECT 1 FROM residency.membership m
+                                WHERE m.unit_id = u.id AND m.member_type = 'owner' AND m.status <> 'removed')`)
+          return [{ value: row?.n ?? 0 }]
+        },
+      },
+    ],
   }
 }

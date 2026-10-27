@@ -6,7 +6,13 @@ import {
   ValidationError,
 } from '@core/kernel'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
-import { buildingToday, type StaffContext, type StaffRole } from '@rms/shared-types'
+import {
+  buildingToday,
+  type MetricsPort,
+  NO_METRICS,
+  type StaffContext,
+  type StaffRole,
+} from '@rms/shared-types'
 import { IMPORT_TTL_MS, type ImportJobRecord } from '../../domain/import-job'
 import type { ImportJobRepository } from '../../domain/import-job-repository'
 import { fileActorOf } from '../file-actor'
@@ -41,6 +47,7 @@ export class ValidateUnitOwnerImport {
     private readonly uow: UnitOfWork,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(
@@ -48,6 +55,7 @@ export class ValidateUnitOwnerImport {
     input: { fileId: string; fileName?: string },
   ): Promise<ImportJobRecord> {
     requireRole(staff, VALIDATE_UNIT_OWNER_IMPORT_ROLES)
+    const began = performance.now()
     const actor = fileActorOf(staff)
     const bytes = await this.files.read(actor, input.fileId, {
       module: 'residency',
@@ -79,6 +87,8 @@ export class ValidateUnitOwnerImport {
       await this.jobs.insert(staff.scope, job)
       await this.files.attach(actor, input.fileId, `import:${job.id}`)
     })
+    // NFR-12: 2,000 rows in 10 s; the figure is the whole of the call, the file read included.
+    this.metrics.observe('import_validate_duration_seconds', (performance.now() - began) / 1000)
     return { ...job, buildingId: staff.buildingId, committedAt: null }
   }
 
