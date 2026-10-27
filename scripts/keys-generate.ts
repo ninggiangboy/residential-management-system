@@ -3,9 +3,10 @@
  * changed; a missing key is appended. A port set in the environment (`RMS_PG_PORT=5433 bun run keys:generate`) is written
  * the first time. The variables are written in the order the dotenv expansion needs: ports and passwords first, URLs after.
  */
-import { generateKeyPairSync } from 'node:crypto'
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { envFile, readEnvFile } from './lib/env'
+import { base64Key, es256, ringJson, secret, secretFiles } from './lib/keys'
 
 /** A dotenv reference, expanded by Bun and by docker compose when the file is read. */
 const ref = (name: string) => `\${${name}}`
@@ -13,19 +14,8 @@ const ref = (name: string) => `\${${name}}`
 const url = (role: string, password: string) =>
   `postgres://${role}:${ref(password)}@localhost:${ref('RMS_PG_PORT')}/rms`
 
-const secret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('hex')
-
-const base64Key = (bytes: number) =>
-  Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString('base64')
-
-/** A key ring with one key (DOC-41 §6), on one line and single-quoted so dotenv leaves the JSON alone. */
-const ring = (kid: string, key: string) => `'${JSON.stringify({ [kid]: key })}'`
-
-/** An ES256 (P-256) private key in PEM; the `\n` escapes of JSON keep the ring on one line. */
-const es256 = () =>
-  generateKeyPairSync('ec', { namedCurve: 'P-256' })
-    .privateKey.export({ type: 'pkcs8', format: 'pem' })
-    .toString()
+/** A key ring with one key (DOC-41 §6), single-quoted so dotenv leaves the JSON alone. */
+const ring = (kid: string, key: string) => `'${ringJson(kid, key)}'`
 
 const generated: [key: string, value: () => string][] = [
   ['APP_ENV', () => 'local'],
@@ -58,22 +48,80 @@ const generated: [key: string, value: () => string][] = [
   ['PII_ENCRYPTION_KEYS', () => ring('k1', base64Key(32))],
 ]
 
-const existed = existsSync(envFile)
-const have = readEnvFile(envFile)
-const missing = generated.filter(([key]) => !have.has(key))
+function generateLocal() {
+  const existed = existsSync(envFile)
+  const have = readEnvFile(envFile)
+  const missing = generated.filter(([key]) => !have.has(key))
 
-if (!existed)
-  writeFileSync(
-    envFile,
-    '# Local secrets and ports. Made by `bun run keys:generate`; never committed.\n',
-  )
-if (missing.length === 0) {
-  console.log('kept .env.local')
-} else {
-  appendFileSync(envFile, `${missing.map(([key, value]) => `${key}=${value()}`).join('\n')}\n`)
-  console.log(
-    existed
-      ? `updated .env.local (${missing.length} keys added)`
-      : `created .env.local (${missing.length} keys)`,
-  )
+  if (!existed)
+    writeFileSync(
+      envFile,
+      '# Local secrets and ports. Made by `bun run keys:generate`; never committed.\n',
+    )
+  if (missing.length === 0) {
+    console.log('kept .env.local')
+  } else {
+    appendFileSync(envFile, `${missing.map(([key, value]) => `${key}=${value()}`).join('\n')}\n`)
+    console.log(
+      existed
+        ? `updated .env.local (${missing.length} keys added)`
+        : `created .env.local (${missing.length} keys)`,
+    )
+  }
 }
+
+/**
+ * `--out <dir> --env staging|production --db-host <host>`: one file per secret for a host (DOC-70 §9.1, DOC-41 §2 rule 4),
+ * run on the host from the `rms-api` image so no key is made on a laptop or in CI. A file that exists is kept, so a second
+ * run changes nothing (CF-16); a URL is built from the password file next to it.
+ */
+function generateOut(args: string[]) {
+  const option = (name: string) => {
+    const at = args.indexOf(name)
+    return at === -1 ? undefined : args[at + 1]
+  }
+  const out = option('--out')
+  const env = option('--env')
+  const dbHost = option('--db-host')
+  if (!out || (env !== 'staging' && env !== 'production') || !dbHost) {
+    console.error(
+      'usage: keys-generate.ts --out <dir> --env staging|production --db-host <host> [--db-port 5432] [--db-name rms]',
+    )
+    process.exit(2)
+  }
+  const dbPort = Number(option('--db-port') ?? 5432)
+  if (!Number.isInteger(dbPort) || dbPort < 1 || dbPort > 65535) {
+    console.error(`--db-port ${option('--db-port')} is not a port`)
+    process.exit(2)
+  }
+  mkdirSync(out, { recursive: true })
+
+  const values = new Map<string, string>()
+  const known = (name: string) => {
+    const value = values.get(name)
+    if (value === undefined) throw new Error(`${name} is used before it is made`)
+    return value
+  }
+  let created = 0
+  const files = secretFiles({ dbHost, dbPort, dbName: option('--db-name') ?? 'rms', env })
+  for (const file of files) {
+    const path = join(out, file.name)
+    if (existsSync(path)) {
+      values.set(file.name, readFileSync(path, 'utf8').replace(/\n$/, ''))
+      continue
+    }
+    const value = file.make(known)
+    values.set(file.name, value)
+    // `wx` never overwrites; the mode is the one of DOC-70 §9.1 (group `rms` reads an application file).
+    writeFileSync(path, value, { mode: file.mode === 'app' ? 0o440 : 0o400, flag: 'wx' })
+    created++
+  }
+  console.log(created === 0 ? `kept ${files.length} files` : `created ${created} files`)
+}
+
+const args = process.argv.slice(2)
+if (args.includes('--out')) generateOut(args)
+else if (args.some((arg) => arg.startsWith('--'))) {
+  console.error('unknown option; the local form takes none (see --out for a host)')
+  process.exit(2)
+} else generateLocal()

@@ -18,9 +18,10 @@ COPY package.json bunfig.toml ./
 COPY apps/api ./apps/api
 COPY modules ./modules
 COPY packages ./packages
-# `scripts/keys-generate.ts --out` joins this line with P1-20. `migrate.ts` reads the bootstrap and grants SQL (DOC-19 §3.1).
-COPY scripts/healthcheck.ts scripts/migrate.ts ./scripts/
-COPY ops/postgres ./ops/postgres
+# `keys-generate.ts --out` makes the secret files on the staging host (DOC-70 §9.1). `migrate.ts` reads the bootstrap and grants SQL (DOC-19 §3.1); `maintenance.ts` sets the maintenance flag (DOC-70 §6.4).
+COPY scripts/healthcheck.ts scripts/migrate.ts scripts/maintenance.ts scripts/keys-generate.ts ./scripts/
+COPY scripts/lib/env.ts scripts/lib/keys.ts ./scripts/lib/
+COPY ops/postgres/0000-bootstrap.sql ops/postgres/0900-grants.sql ./ops/postgres/
 ARG GIT_SHA=unknown
 # The repository URL comes from CI (`github.server_url`/`github.repository`): no Owner value in the repository (DR-228).
 ARG SOURCE_URL=unknown
