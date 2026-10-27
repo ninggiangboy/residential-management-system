@@ -1,6 +1,6 @@
 import { generateKeyPairSync } from 'node:crypto'
 import { Database } from '@core/db'
-import { createSecretBox, UuidV7Generator } from '@core/kernel'
+import { createSecretBox, NotFoundError, UuidV7Generator } from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { FakeClock } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
@@ -124,6 +124,8 @@ export async function createHarness(options: HarnessOptions = {}) {
   }
   const jwtKeys = options.jwtKeys ?? { k1: es256Pem() }
   const lockout = options.lockout ?? DEFAULT_SETTINGS.lockout
+  /** The buildings that `assertDemo` accepts: none unless a test of the demo reset adds one. */
+  const demoBuildings = new Set<string>()
 
   const config: IdentityConfig = {
     accessTtlSeconds: 900,
@@ -186,7 +188,13 @@ export async function createHarness(options: HarnessOptions = {}) {
       },
     },
     memberships: { listActive: async (accountId) => memberships.get(accountId) ?? [] },
-    building: { getSettings: async () => ({ ...DEFAULT_SETTINGS, lockout }) },
+    building: {
+      getSettings: async () => ({ ...DEFAULT_SETTINGS, lockout }),
+      async assertDemo(buildingId) {
+        if (!demoBuildings.has(buildingId)) throw new NotFoundError()
+      },
+      isDemo: async (buildingId) => demoBuildings.has(buildingId),
+    },
     // The avatar is checked by the HTTP tests of `apps/api`, which run the real `FilesApi`.
     files: {
       async verify() {
@@ -366,6 +374,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     provider,
     memberships,
     openTickets,
+    demoBuildings,
     row,
     signIn,
     sidOf,
