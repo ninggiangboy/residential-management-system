@@ -1,24 +1,28 @@
-# UIRA-33, UIRA-34: two homes go to Unit-Pick in unit-code order; the tenant card says whether paying is allowed.
-# Account +84901234567: owner of A-1508 and tenant (cannot pay) of A-0703.
+# UIRA-33: two homes go to Unit-Pick, one card each, and a tap on a card opens that home. The seed has no account that is a tenant
+# who cannot pay in two homes, so the "not allowed to pay" card of UIRA-34 is not covered here.
+# Account +12025550107 (Demo Owner 3): owner of A-0505 and A-0506.
 appId: vn.rms.resident.dev
 ---
 - runFlow: helpers/launch.yaml
 - tapOn:
     id: phone-input
-- inputText: "0901 234 567"
+- inputText: "+12025550107"
 # Enter on the keyboard sends the number like the button; `hideKeyboard` finds nothing to press on iOS.
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Enter the OTP"
     timeout: 30000
 - inputText: "123456"
+- runFlow: helpers/accept-terms.yaml
 - assertVisible: "Choose a home"
-# A card is one element for the accessibility tree: "A-0703, Tenant, Not allowed to pay fees".
-- assertVisible: ".*Not allowed to pay fees.*"
+- assertVisible:
+    id: unit-A-0505
+- assertVisible:
+    id: unit-A-0506
 - tapOn:
-    id: unit-A-1508
+    id: unit-A-0505
 - runFlow: helpers/dismiss-push-prompt.yaml
 - assertVisible:
     id: home-screen
-# The unit switcher of Home is one element: "A-1508. You are the owner".
-- assertVisible: ".*A-1508.*"
+# The unit switcher of Home is one element: "A-0505. You are the owner".
+- assertVisible: ".*A-0505.*"
