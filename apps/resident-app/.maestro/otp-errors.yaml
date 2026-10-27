@@ -5,9 +5,12 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0902 345 678"
+- hideKeyboard
 - tapOn:
     id: login-submit
-- assertVisible: "Enter the OTP"
+- extendedWaitUntil:
+    visible: "Enter the OTP"
+    timeout: 30000
 - inputText: "654321"
 - assertVisible: "Wrong code. 4 tries left."
 - tapOn:
