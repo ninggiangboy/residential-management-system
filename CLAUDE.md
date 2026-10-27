@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-A residential (apartment building) management system: an Elysia API, a web CMS for staff, and two Expo apps (resident and staff). It is a Bun monorepo written docs-first. The code is still mostly scaffolding (Phase 1, "Foundation"). The design lives in `docs/`, and the work is planned task by task.
+A residential (apartment building) management system: an Elysia API, a web CMS for staff, and two Expo apps (resident and staff). It is a Bun monorepo written docs-first. The work is in Phase 1, "Foundation": the runtime, four modules, the web CMS shell and the two app shells run; fees, payments, tickets, notices, vehicles and the library (Phases 2 to 5) are not written yet. The design lives in `docs/`, and the work is planned task by task.
 
 - `residential-management-sdd.md` is the **original SDD**. `docs/00-master-plan.md` lists every document, phase and task (`Pn-xx`) with its acceptance criteria. `docs/00-decision-register.md` holds the decisions (`DR-xx`). `docs/README.md` is the index of documents with their status.
 - Code comments, scripts and CI cite these IDs (`DOC-12 §6.2`, `DR-233`, `P1-04`). Keep doing that: when you add behavior, cite the document or decision behind it, and look up an ID in its document before you rely on it.
@@ -23,7 +23,7 @@ bun run infra:up           # docker compose: postgres 18.6 :5432, SeaweedFS S3 :
 bun run infra:down | infra:reset   # reset DELETES the local database and object store
 bun run monitor:up | monitor:down  # Prometheus :9090, Alertmanager :9093, Loki, Alloy, the two exporters and Grafana :3030 beside infra:up; scrapes the API on the host (:3001), alerts mail to Mailpit
 
-bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, i18n, dependabot, ops (promtool/amtool/Loki/Alloy via Docker), deploy, test-ids)
+bun run check              # every `verify` check in one go (lint, typecheck, check:arch, fixtures, knip, jscpd, scope, audit, layout, i18n, authz-metadata, dependabot, ops (promtool/amtool/Loki/Alloy via Docker), deploy, test-ids)
 bun run lint               # Biome; `bun run format` applies the fixes
 bun run typecheck          # tsc in every workspace + scripts/
 bun run check:arch         # dependency-cruiser, three configs (apps, modules, packages)
@@ -34,9 +34,10 @@ bun run check:deploy       # the files of a host (DOC-70): compose, Caddy, shell
 bun run test:backup-repo   # SeaweedFS over TLS + pgBackRest end to end, a point-in-time restore (needs Docker and the network, ~70 s; not in `check`)
 bun run test               # unit tests of every workspace (bun test, no database)
 bun run test:coverage      # the same with lcov (CI `unit` job)
+bun run dev [api web rapp sapp]   # restarts the named dev servers (all when none is named): API :3000, Vite :5173, Metro :8081/:8082; `bun run stop` stops them
 bun run dev:web            # Vite for apps/cms-web on :5173
 bun run test:e2e            # Playwright flows of the web CMS: a cloned seeded database, the API on :3100 and Vite on :5173 (stop dev:web first); needs infra:up
-bun run --filter @app/api dev      # API on :3000 (skeleton until P1-04)
+bun run --filter @app/api dev      # API on :3000, ops port :3001 (/health/ready, /metrics); --watch, reads .env.local
 bun run tokens:build       # regenerate packages/design-tokens/generated/ from tokens.json
 bun run ops:dashboards     # regenerate ops/grafana/dashboards/*.json from scripts/build-dashboards.ts (check:ops fails on a stale file)
 ```
@@ -50,7 +51,7 @@ Running tests:
 - Integration tests (`bun run test:integration`, `bun run test:grants`) need the stack and `.env.local`; each file clones a migrated template database. The files tests of `@mod/building` use SeaweedFS when `S3_ENDPOINT` answers and an in-memory store otherwise; `bun --env-file=.env.local test tools/compat/uploads.test.ts` runs the upload checks (U1…U11) against the store that `S3_*` names.
 - `bun run check:arch:fixtures` tests the cruiser rules against the deliberately broken trees in `tools/arch-fixtures/cases/`.
 
-Several targets named in the docs (`dev`, `check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
+Several targets named in the docs (`check:openapi`…) do not exist yet. DOC-69 §5 lists each one with the task that creates it. `scripts/check.ts`, `scripts/setup.ts` and `scripts/run-if-defined.ts` report a missing target as skipped and name that task. To add a target, define it in the root `package.json` and leave those scripts alone; they pick it up without an edit (DR-233).
 
 ## Architecture
 
@@ -66,7 +67,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
   - `presentation` holds Elysia routes. A route handler is about three lines and receives use cases, never repositories.
   - The layout to follow is the module template in DOC-12 §4 and its rules in §4.5 (DR-254): `application/use-cases/<verb>-<noun>.ts` for commands only, with one class and one `execute`; reads are methods of a few query services in `queries/<name>-queries.ts` (no `get-`/`list-`/`view-` use case files); one handler per file in `handlers/`; `api/<name>-api-impl.ts` for the contract; repository interfaces and aggregates in `domain/`, `<name>.module.ts` apart from `install.ts`. No `*Service` class. A staff operation exports its `<OPERATION>_ROLES` and calls `requireRole(staff, <OPERATION>_ROLES)` (`@core/kernel`); the route reads the same constant for its guard and `audience`. `bun run check:layout` enforces it.
 - `@core/*` (`packages/core-*`) is infrastructure vendored from an upstream reference repository (`packages/CORE_VERSION`). It is this project's code now: fix bugs here, in a normal PR. Any change that is not a rename gets a line under `local-changes` in `CORE_VERSION`. A package may import only the other packages listed for it in the `ALLOWED` map of `.dependency-cruiser.packages.cjs`.
-- `@rms/*` holds project packages shared with the clients. `@rms/shared-types` is a leaf with no dependencies (ids, statuses, error codes, `Money`, time helpers). `@rms/client-core` is the pure-TypeScript fetcher of the clients (single-flight refresh, retries, error classes, intent keys, query keys, the throttle and cleaning of error reports). The other packages are `@rms/i18n-catalog` and `@rms/design-tokens`. `mobile-core`, `ui-native` and `pdf-assets` are planned and not created yet.
+- `@rms/*` holds project packages shared with the clients. `@rms/shared-types` is a leaf with no dependencies (ids, statuses, error codes, `Money`, time helpers). `@rms/client-core` is the pure-TypeScript fetcher of the clients (single-flight refresh, retries, error classes, intent keys, query keys, the throttle and cleaning of error reports). `@rms/mobile-core` is the shared logic of the two Expo apps (session and token store, refresh, push, gates, device storage), and `@rms/ui-native` their shared components. The other packages are `@rms/i18n-catalog`, `@rms/design-tokens` and `@rms/test-support` (test helpers). `pdf-assets` is planned and not created yet.
 
 **Backend rules that reviewers enforce** (DOC-12 §14 and master plan §7.2):
 
