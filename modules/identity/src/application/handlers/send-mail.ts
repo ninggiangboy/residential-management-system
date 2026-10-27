@@ -1,5 +1,6 @@
 import type { Clock, Log, SecretBox } from '@core/kernel'
 import type { Envelope, InboxGuard, IntegrationEventHandler } from '@core/messaging'
+import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { IDENTITY_EVENTS, type MailRequestedPayload } from '../../contracts'
 import type { StaffAccountRepository } from '../../domain/staff-account-repository'
 import { mailAad } from '../mail-commands'
@@ -8,6 +9,8 @@ import type { Mailer } from '../ports'
 
 const HOUR_MS = 3_600_000
 const MINUTE_MS = 60_000
+
+type SentOutcome = Exclude<CounterLabels['mail_sent_total']['outcome'], 'failed'>
 
 /**
  * `identity.send_mail` (DOC-26 §5.4): turns `identity.mail_requested.v1` into a mail. A command past its `expiresAt` returns
@@ -27,6 +30,7 @@ export class SendMailHandler implements IntegrationEventHandler {
     private readonly logger: Log,
     /** `ADMIN_BASE_URL`: the invite and reset links open there (DOC-26 §4.3). */
     private readonly adminBaseUrl: string,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async handle(message: Envelope): Promise<void> {
@@ -35,12 +39,14 @@ export class SendMailHandler implements IntegrationEventHandler {
   }
 
   private async send(message: Envelope, command: MailRequestedPayload): Promise<void> {
-    const { staffAccounts, secretBox, mailer, clock, logger, adminBaseUrl } = this
-    const log = (outcome: string) =>
+    const { staffAccounts, secretBox, mailer, clock, logger, adminBaseUrl, metrics } = this
+    const log = (outcome: SentOutcome) => {
+      metrics.inc('mail_sent_total', { outcome })
       logger.info(
         { event: 'auth.mail', kind: command.kind, outcome, staffId: command.staffId },
         'auth.mail',
       )
+    }
     const expiresAt = command.expiresAt ? new Date(command.expiresAt) : null
     if (expiresAt && expiresAt <= clock.now()) return log('expired')
 
@@ -65,7 +71,12 @@ export class SendMailHandler implements IntegrationEventHandler {
           : `${base}/reset?token=${secret}`,
       code: secret ?? '',
     })
-    await mailer.send({ to: staff.email, ...mail })
+    try {
+      await mailer.send({ to: staff.email, ...mail })
+    } catch (error) {
+      metrics.inc('mail_sent_total', { outcome: 'failed' })
+      throw error
+    }
     log('sent')
   }
 }

@@ -1,6 +1,6 @@
 import type { Clock, IdGenerator, UnitOfWork } from '@core/kernel'
 import { NotFoundError, requireRole } from '@core/kernel'
-import type { StaffContext, StaffRole } from '@rms/shared-types'
+import { type MetricsPort, NO_METRICS, type StaffContext, type StaffRole } from '@rms/shared-types'
 import type { StepUpAction } from '../../contracts'
 import type { PasswordTokenRepository } from '../../domain/password-token-repository'
 import type { StaffAccountRepository } from '../../domain/staff-account-repository'
@@ -32,16 +32,22 @@ export class RequestStepUp {
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(staff: StaffContext, action: StepUpAction): Promise<void> {
     requireRole(staff, REQUEST_STEP_UP_ROLES)
     const { staffAccounts, passwordTokens, limiter, factory, mail, uow, clock, ids, config } = this
-    await limiter.take({
-      key: `stepup:staff:${staff.staffId}`,
-      capacity: config.stepUpRequestsPerHour,
-      perSeconds: HOUR_SECONDS,
-    })
+    await limiter
+      .take({
+        key: `stepup:staff:${staff.staffId}`,
+        capacity: config.stepUpRequestsPerHour,
+        perSeconds: HOUR_SECONDS,
+      })
+      .catch((error: unknown) => {
+        this.metrics.inc('auth_step_up_total', { action, outcome: 'rate_limited' })
+        throw error
+      })
     await uow.run(async () => {
       const record = await staffAccounts.findById(staff.staffId)
       if (!record) throw new NotFoundError()
@@ -61,5 +67,6 @@ export class RequestStepUp {
       )
       await mail.request(record, 'step_up_code', { secret: code, params: { action }, expiresAt })
     })
+    this.metrics.inc('auth_step_up_total', { action, outcome: 'requested' })
   }
 }

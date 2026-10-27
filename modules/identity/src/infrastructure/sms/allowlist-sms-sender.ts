@@ -17,14 +17,18 @@ export class AllowlistSmsSender implements SmsSender {
     this.allowed = new Set(allowed)
   }
 
-  async send(message: { to: string; text: string; requestId: string }): Promise<void> {
+  async send(message: {
+    to: string
+    text: string
+    requestId: string
+  }): Promise<void | 'not_allowlisted'> {
     if (!this.allowed.has(message.to)) {
       this.log.warn(
         { event: 'auth.sms', outcome: 'not_allowlisted', requestId: message.requestId },
         'sms not sent (not on SMS_ALLOWLIST)',
       )
-      return
+      return 'not_allowlisted'
     }
-    await this.inner.send(message)
+    return this.inner.send(message)
   }
 }

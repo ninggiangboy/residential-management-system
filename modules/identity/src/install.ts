@@ -23,6 +23,7 @@ export function installIdentity(host: IdentityHost): IdentityModule {
     audited: host.audited,
     guards: host.guards,
     idempotent: host.idempotent,
+    metrics: host.metrics,
     tickets: host.tickets,
     outboxMaxPayloadBytes: host.outboxMaxPayloadBytes,
     hasher: host.hasher,

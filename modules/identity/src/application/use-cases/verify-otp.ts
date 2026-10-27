@@ -1,5 +1,6 @@
 import type { Clock, Log, UnitOfWork } from '@core/kernel'
 import { decide } from '@core/kernel'
+import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { OtpInvalidError } from '../../domain/errors'
 import { DEMO_FIXED_OTP, OtpChallenge } from '../../domain/otp-challenge'
 import type { OtpChallengeRepository } from '../../domain/otp-challenge-repository'
@@ -40,7 +41,11 @@ export const toResidentProfile = (account: ResidentAccountRecord): ResidentProfi
   pushEnabled: account.pushEnabled,
 })
 
-type Outcome = { signedIn: true; value: ResidentSignIn } | { signedIn: false; attemptsLeft: number }
+/** `expired`: the challenge is unknown, spent or past its time; the answer is the same as for a wrong code (FR-15.3), the metric is not. */
+type Outcome =
+  | { signedIn: true; value: ResidentSignIn }
+  | { signedIn: false; attemptsLeft: number; expired?: true }
+const EXPIRED = { signedIn: false, attemptsLeft: 0, expired: true } as const
 
 /**
  * `POST /auth/otp/verify` (DOC-26 §5.2). One transaction: the right code is spent by one guarded statement and the session is
@@ -60,20 +65,23 @@ export class VerifyOtp {
     private readonly clock: Clock,
     private readonly logger: Log,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<ResidentSignIn> {
     const outcome = await this.uow.run(() => this.verify(input))
-    const log = (result: string) =>
+    const log = (result: 'ok' | 'invalid' | 'expired' | 'exhausted') => {
+      this.metrics.inc('auth_otp_verify_total', { outcome: result })
       this.logger.info(
         { event: 'auth.otp_verified', outcome: result, ip: input.ip },
         'auth.otp_verified',
       )
+    }
     if (outcome.signedIn) {
       log('ok')
       return outcome.value
     }
-    log(outcome.attemptsLeft === 0 ? 'exhausted' : 'invalid')
+    log(outcome.expired ? 'expired' : outcome.attemptsLeft === 0 ? 'exhausted' : 'invalid')
     throw new OtpInvalidError(outcome.attemptsLeft)
   }
 
@@ -83,12 +91,12 @@ export class VerifyOtp {
       const now = clock.now()
       const record = await challenges.findById(input.challengeId)
       // Unknown, expired and used challenges answer alike, with no tries left (FR-15.3).
-      if (!record) return { done: true, value: { signedIn: false, attemptsLeft: 0 } }
+      if (!record) return { done: true, value: EXPIRED }
       const challenge = new OtpChallenge(record)
-      if (!challenge.isLive(now)) return { done: true, value: { signedIn: false, attemptsLeft: 0 } }
+      if (!challenge.isLive(now)) return { done: true, value: EXPIRED }
 
       const account = await residents.findSignInByPhone(record.phone)
-      if (!account) return { done: true, value: { signedIn: false, attemptsLeft: 0 } }
+      if (!account) return { done: true, value: EXPIRED }
 
       // The fixed code goes through its own statement, which checks the flag again; every other code, and every account that is
       // not flagged, goes through the ordinary one (DOC-26 §5.3).

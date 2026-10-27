@@ -1,5 +1,6 @@
 import type { Clock, IdGenerator, Log, UnitOfWork } from '@core/kernel'
 import { decide } from '@core/kernel'
+import { type CounterLabels, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { UnauthenticatedError } from '../../domain/errors'
 import { type Client, RefreshFamily } from '../../domain/refresh-family'
 import type { SessionRepository } from '../../domain/session-repository'
@@ -43,6 +44,7 @@ export class RefreshSession {
     private readonly ids: IdGenerator,
     private readonly logger: Log,
     private readonly config: IdentityConfig,
+    private readonly metrics: MetricsPort = NO_METRICS,
   ) {}
 
   async execute(input: { refreshToken: string }): Promise<RefreshResult> {
@@ -56,8 +58,10 @@ export class RefreshSession {
     const now = clock.now()
     const hash = tokens.hashOpaque(presented)
     const nextId = ids.next()
-    const log = (result: string, extra: object = {}) =>
+    const log = (result: CounterLabels['auth_refresh_total']['outcome'], extra: object = {}) => {
+      this.metrics.inc('auth_refresh_total', { outcome: result })
       logger.info({ event: 'auth.refresh', outcome: result, ...extra }, 'auth.refresh')
+    }
 
     // 2 to 4. What the presented token is is the family's rule. Spending it is one guarded statement; the loser of two parallel
     // refreshes finds the token spent when it decides again, and takes the grace path.
@@ -76,6 +80,7 @@ export class RefreshSession {
       if (presentation.kind === 'reuse') {
         if (!(await sessions.revokeFamily(presentation.revocation, now))) return { done: false }
         await events.revoked([family.summary], 'token_reuse', now)
+        this.metrics.inc('auth_refresh_total', { outcome: 'reuse' })
         logger.warn(
           { event: 'auth.refresh', outcome: 'reuse', sessionId: family.id },
           'auth.refresh',

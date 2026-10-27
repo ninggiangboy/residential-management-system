@@ -31,10 +31,11 @@ export interface TokenFactory {
 
 /**
  * The SMS driver: `console`, `allowlist` or the provider adapter by `SMS_DRIVER` (DOC-26 §5.5, DR-68). It needs only `send`, and
- * reports a provider failure as an exception, so the outbox retries.
+ * reports a provider failure as an exception, so the outbox retries. The `allowlist` driver answers `not_allowlisted` for a number
+ * it did not text, so the counter `sms_sent_total` does not call it `sent`.
  */
 export interface SmsSender {
-  send(message: { to: string; text: string; requestId: string }): Promise<void>
+  send(message: { to: string; text: string; requestId: string }): Promise<void | 'not_allowlisted'>
 }
 
 /** A phone as the product stores it. The parser is `libphonenumber-js`, which the application layer may not import. */
