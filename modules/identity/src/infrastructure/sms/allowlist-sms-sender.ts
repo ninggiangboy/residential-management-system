@@ -1,5 +1,5 @@
 import type { Log } from '@core/kernel'
-import type { SmsSender } from '../../application/ports'
+import type { SmsSender, SmsSendResult } from '../../application/ports'
 
 /**
  * Sends only to the numbers of `SMS_ALLOWLIST` and logs `not_allowlisted` for any other, returning normally (DOC-26 §5.5): the
@@ -17,11 +17,7 @@ export class AllowlistSmsSender implements SmsSender {
     this.allowed = new Set(allowed)
   }
 
-  async send(message: {
-    to: string
-    text: string
-    requestId: string
-  }): Promise<void | 'not_allowlisted'> {
+  async send(message: { to: string; text: string; requestId: string }): Promise<SmsSendResult> {
     if (!this.allowed.has(message.to)) {
       this.log.warn(
         { event: 'auth.sms', outcome: 'not_allowlisted', requestId: message.requestId },
