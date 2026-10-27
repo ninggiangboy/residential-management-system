@@ -9,9 +9,10 @@ import {
 import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { BuildingApi, FilesApi } from '@mod/building/contracts'
-import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { type DemoResettable, type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { IdentityApiImpl } from './application/api/identity-api-impl'
 import type { IdentityConfig } from './application/config'
+import { IdentityDemo } from './application/demo-identity'
 import { FailureCounter } from './application/failure-counter'
 import { SendMailHandler } from './application/handlers/send-mail'
 import { SendSmsHandler } from './application/handlers/send-sms'
@@ -60,6 +61,7 @@ import { VerifyOtp } from './application/use-cases/verify-otp'
 import { VerifyStepUp } from './application/use-cases/verify-step-up'
 import type { AccessTokenVerifier, IdentityApi, OpenTicketsProbe } from './contracts'
 import { DatabaseAutonomous } from './infrastructure/persistence/database-autonomous'
+import { DrizzleDemoRepository } from './infrastructure/persistence/drizzle-demo-repository'
 import { DrizzleOtpChallengeRepository } from './infrastructure/persistence/drizzle-otp-challenge-repository'
 import { DrizzlePasswordTokenRepository } from './infrastructure/persistence/drizzle-password-token-repository'
 import { DrizzleResidentAccountRepository } from './infrastructure/persistence/drizzle-resident-account-repository'
@@ -95,8 +97,8 @@ export interface IdentityDeps {
   sms: SmsSender
   /** `ResidencyApi.listActiveMemberships`, bound by the container; a stand-in until P1-12 (DOC-26 §3.4). */
   memberships: ActiveMemberships
-  /** Only the lockout settings of the staff member's building are read (DOC-26 §4.1). */
-  building: Pick<BuildingApi, 'getSettings'>
+  /** The lockout settings of the staff member's building are read (DOC-26 §4.1); `assertDemo` guards the demo reset (DOC-36 §10.2). */
+  building: Pick<BuildingApi, 'getSettings' | 'assertDemo' | 'isDemo'>
   /** The avatar of E-30 and E-31: verified, attached and removed with the member's update, and presigned for the answer. */
   files: Pick<FilesApi, 'verify' | 'attach' | 'remove' | 'signedUrl'>
   audited: Audited
@@ -190,6 +192,8 @@ export interface IdentityModule extends AppModule<'identity'> {
   /** The reads behind `GET /staff/me`, `GET /staff/sessions` and `GET /me`. */
   readonly queries: { staff: StaffQueries; sessions: SessionQueries; residents: ResidentQueries }
   readonly verifier: AccessTokenVerifier & { ready(): Promise<void> }
+  /** `identity`'s part of the demo reset, which the host hands to `building` (DOC-36 §10.2). */
+  readonly demo: DemoResettable
   /** Issues an invite for a staff account created by P1-14; here for the resend. */
   readonly inviteIssuer: InviteIssuer
 }
@@ -397,6 +401,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       clock,
       logger,
       config.adminBaseUrl,
+      deps.building,
       metrics,
     ),
     new SendSmsHandler(
@@ -474,6 +479,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
     queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },
     verifier: tokens,
     inviteIssuer,
+    demo: new IdentityDemo(deps.building, new DrizzleDemoRepository(database), hasher),
     routes: createRoutes({
       ...useCases,
       staffQueries,

@@ -17,3 +17,12 @@ describe('LibphonenumberPhones (DR-36, DR-114)', () => {
     expect(phones.toE164(input)).toBeNull()
   })
 })
+
+describe('the demo phones (DOC-36 §9.1)', () => {
+  test.each(Array.from({ length: 8 }, (_, at) => `+1202555010${at + 1}`))(
+    'BD-48 %s is valid and stays as it is',
+    (phone) => {
+      expect(phones.toE164(phone)).toBe(phone)
+    },
+  )
+})
