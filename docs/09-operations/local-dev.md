@@ -377,7 +377,7 @@ These are the checks a reviewer runs after P1-03. Checks 1 and 2 were run on 202
 | 2 | `bun run setup` a second time | No file changes (`git status` clean); `.env.local` kept; the seed does not duplicate |
 | 3 | The curl commands of §4 | `ready` on both ports (run in P1-04: `{"status":"ok","maintenance":false}` and the same with `checks.database`); `/metrics` text (P1-18) |
 | 4 | Sign in as `admin@demo.rms.invalid`, then as `+12025550101` with `123456` in the resident app | Both succeed; the resident sees unit `A-1508` (run in P1-21 with the API on the host and `curl`: the staff sign-in answers a token, the resident's answer holds `A-1508`; the apps were not opened) |
-| 5 | `bun run db:reset` | The schemas are dropped and migrated again (run in P1-06: `dropped 14 schemas`, then the output of step 5); the seed is back (run in P1-21: `dropped 14 schemas`, the migrations, then `demo seeded (building created): 240 units, 8 residents, 4 staff`); the sessions of check 4 no longer work (BD-38, over HTTP: the refresh tokens of a reset answer 401) |
+| 5 | `bun run db:reset` | The schemas are dropped and migrated again (run in P1-06: `dropped 14 schemas`, then the output of step 5; since the modules have migrations each has a `drizzle_<module>` history as well, so the line reads `dropped 18 schemas` with the four modules of 2026-10-27, §14.1); the seed is back (run in P1-21: `dropped 14 schemas`, the migrations, then `demo seeded (building created): 240 units, 8 residents, 4 staff`); the sessions of check 4 no longer work (BD-38, over HTTP: the refresh tokens of a reset answer 401) |
 | 6 | Every command in §5 marked P1-xx exists once that task is done | `bun run <target>` exits 0 or prints its usage |
 | 7 | Every port of §7 | Is the one in use; no other port appears in the repository's documents (`grep`) |
 
@@ -420,6 +420,18 @@ Differences between the first draft of this document and what the dry run showed
 7. The machine's Node (24.21.0 in the clone, 26.10.0 in the working copy) differs from the pin 24.22.0 in `.tool-versions`: Node only warns when Expo SDK 58 accepts it (§3).
 8. Docker 29.8.2 and Compose 5.5.0 are older than the pins and work (§2).
 9. Ports are bound to `127.0.0.1` (§6).
+
+**The second run, 2026-10-27 (Claude Code for the Owner).** The first run covered steps 1 to 4 only. This one ran steps 1 to 6 on commit `3a5849d`, in a new clone with no `.env.local` and no `node_modules`, on the same machine (macOS, OrbStack, Docker 29.8.2, Compose 5.5.0, Bun 1.4.3, Node 24.21.0 against the pin 24.22.0; the images were cached). The clone had its own Compose project and volumes (`rmsdry`, `rmsdry-pg`, `rmsdry-s3`) and its own ports (`RMS_PG_PORT=5543`, 9100, 9101, 1125, 8125), because `compose.local.yml` names the volumes `rms-pg` and `rms-s3`: a clone that shares them with a working copy's stack shares its data too (an earlier attempt that did so was followed by a working copy whose PostgreSQL volume would not start, `could not locate a valid checkpoint record`; the cause was not established).
+
+| Step | Command | Result |
+| --- | --- | --- |
+| First run | `RMS_PG_PORT=5543 RMS_S3_PORT=9100 RMS_S3_CONSOLE_PORT=9101 RMS_MAIL_PORT=1125 RMS_MAIL_UI_PORT=8125 bun run setup` | `created .env.local (26 keys)`; the three services `healthy`, `infra up in 6 s`; `migrated: 10 pending applied, 14 schemas`, `grants applied`; `demo seeded (building created): 240 units, 8 residents, 4 staff in 55 ms (local)`; 9.8 s in all |
+| Second run | `bun run setup` | `kept .env.local`, `infra up in 1 s`, `migrated: 0 pending applied, 14 schemas`, `demo seeded: 240 units, 8 residents, 4 staff` (no `(building created)`); `git status` shows no file but the edit of the volume names in `compose.local.yml` |
+| Reset | `bun run db:reset` | `dropped 18 schemas`, the four modules migrated again (10 applied), `demo seeded (building created)` |
+| Ready | The commands of §4 with the API of that clone | `{"status":"ok","maintenance":false}` on 3000, the same with `checks.database` and `checks.relay` on 3001, `/metrics` in the Prometheus text format |
+| Sign-in | `POST /auth/staff/login` as `admin@demo.rms.invalid`; `POST /auth/otp` then `/auth/otp/verify` with `123456` as `+12025550101` | A token for the Admin (`client: "app"`); the resident's answer holds the membership of `A-1508`. A second `POST /auth/otp` for the same phone within 45 s answers 429 `rate_limited` (`otp:resend`), and 20 requests an hour from one address answer 429 as well (`otp:ip`): a script or a test suite that signs in many times must stay below it |
+
+One difference corrected above: the `db:reset` line reads `dropped 18 schemas` (§13 check 5). **A second clone beside a working copy needs the volume names changed in its `compose.local.yml`** (and `name:` at the top); the file does not take them from `.env.local`, and that is left as it is because a developer has one stack. It was not a clean user account either (same caveats as the first run), and checks 6 and 7 were not run.
 
 **Not covered, so check 1 is open in its strict form:** installing the tools from §3 on a machine that has none (`mise install` or `asdf install`), a Linux or WSL host, and a cold download of the PostgreSQL image. The Owner can close it by running §4 on a new user account and adding a line here.
 
