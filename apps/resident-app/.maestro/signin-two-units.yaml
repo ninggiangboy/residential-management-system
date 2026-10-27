@@ -6,18 +6,19 @@ appId: vn.rms.resident.dev
 - tapOn:
     id: phone-input
 - inputText: "0901 234 567"
-- hideKeyboard
-- tapOn:
-    id: login-submit
+# Enter on the keyboard sends the number like the button; `hideKeyboard` finds nothing to press on iOS.
+- pressKey: Enter
 - extendedWaitUntil:
     visible: "Enter the OTP"
     timeout: 30000
 - inputText: "123456"
 - assertVisible: "Choose a home"
-- assertVisible: "Not allowed to pay fees"
+# A card is one element for the accessibility tree: "A-0703, Tenant, Not allowed to pay fees".
+- assertVisible: ".*Not allowed to pay fees.*"
 - tapOn:
     id: unit-A-1508
 - runFlow: helpers/dismiss-push-prompt.yaml
 - assertVisible:
     id: home-screen
-- assertVisible: "A-1508"
+# The unit switcher of Home is one element: "A-1508. You are the owner".
+- assertVisible: ".*A-1508.*"
