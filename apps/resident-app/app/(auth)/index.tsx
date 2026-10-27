@@ -131,6 +131,11 @@ export default function Login() {
         keyboardType="phone-pad"
         textContentType="telephoneNumber"
         autoComplete="tel"
+        returnKeyType="go"
+        // Enter on the keyboard sends the code like the button does, which the keyboard may cover.
+        onSubmitEditing={() => {
+          if (online && !waiting && !request.isPending) submit()
+        }}
         value={phone}
         onChangeText={(value) => {
           setPhone(value)
