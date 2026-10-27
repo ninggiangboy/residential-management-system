@@ -34,7 +34,9 @@ appId: vn.rms.staff.dev
       - tapOn:
           text: "Continue"
           optional: true
-      # Then the tools menu opens over the app; Back closes it (only when it is open, or Back would leave the app).
+      # Then the tools menu opens over the app. Its floating tools button sits on the top-right corner and takes the taps meant for a
+      # button there (the language switch, the account button), so the menu turns the button off before Back closes it (only when the
+      # menu is open, or Back would leave the app). The setting is kept in the app's data, which `clearState` wipes, so it is set on every launch.
       - extendedWaitUntil:
           visible: "Toggle performance monitor"
           timeout: 8000
@@ -43,6 +45,9 @@ appId: vn.rms.staff.dev
           when:
             visible: "Toggle performance monitor"
           commands:
+            - scrollUntilVisible:
+                element: "Tools button"
+            - tapOn: "Tools button"
             - pressKey: back
 - extendedWaitUntil:
     visible:
