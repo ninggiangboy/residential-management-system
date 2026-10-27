@@ -1,5 +1,5 @@
 # The pull-request and trunk pipeline (DOC-71 §2, §4). `gate` is the one required check (DR-163). The trunk is `dev`
-# (DR-239). `deploy-staging` is P1-20; `deploy-web-staging` and `mobile-staging` are added by P6-10.
+# (DR-239). `deploy-staging` is P1-20 and prepares the host itself (DR-273); `deploy-web-staging` and `mobile-staging` are added by P6-10.
 # Actions are pinned by commit SHA with the tag in a comment (DR-95); the scanner images are pinned in `env` below and
 # refreshed by hand with DOC-11 §9 (Dependabot does not read `docker run` lines).
 name: ci
@@ -29,6 +29,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: filter
@@ -36,7 +37,32 @@ jobs:
         with:
           filters: .github/paths-filter.yml
 
+  # A push to `dev` whose tree already passed `gate` on its pull request skips the checks that would repeat (DOC-71 §4.3, DR-274).
+  # `ops/deploy/trusted-tree.sh` decides and never fails: anything it cannot establish is `tested=false`, and then every check runs.
+  # On a pull request the job is skipped and its outputs are empty, which every `if` below reads as "not tested".
+  trusted:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      tested: ${{ steps.tree.outputs.tested }}
+      e2e: ${{ steps.tree.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          ops/deploy/trusted-tree.sh 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
   verify:
+    needs: trusted
+    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -67,6 +93,8 @@ jobs:
         run: bun scripts/run-if-defined.ts check:openapi P1-04
 
   unit:
+    needs: trusted
+    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -96,6 +124,8 @@ jobs:
           if-no-files-found: ignore
 
   integration:
+    needs: trusted
+    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
@@ -141,6 +171,8 @@ jobs:
           if-no-files-found: ignore
 
   security:
+    needs: trusted
+    if: ${{ !cancelled() && needs.trusted.outputs.tested != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -281,8 +313,8 @@ jobs:
           compression-level: 0
 
   e2e-web:
-    needs: changes
-    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.api == 'true'
+    needs: [changes, trusted]
+    if: ${{ !cancelled() && needs.changes.outputs.e2e == 'true' && needs.trusted.outputs.e2e != 'passed' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -334,10 +366,35 @@ jobs:
         run: |
           echo "gate is green; merge with \`bun run pr:merge $PR_NUMBER\` (DR-241)" >> "$GITHUB_STEP_SUMMARY"
 
-  # `sha-<7>` reaches GHCR only for a commit of `dev` whose `gate` is green (DOC-71 §7.5).
-  publish:
+  # Is there a staging host? The variable `HOST_IP` of the environment `staging` is its address (DOC-70 §11), so a non-empty value is
+  # the answer (DR-275). A job's `if` cannot read an environment's variables, hence this job: it runs in the environment with
+  # `deployment: false`, which gives it the variables and writes no deployment record. Until the host exists `publish` and
+  # `deploy-staging` do not start, and no `failure` record is left on every push.
+  staging-host:
     if: github.event_name == 'push'
-    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    environment:
+      name: staging
+      deployment: false
+    outputs:
+      ready: ${{ steps.host.outputs.ready }}
+    steps:
+      - id: host
+        env:
+          HOST_IP: ${{ vars.HOST_IP }}
+        run: |
+          if [ -n "$HOST_IP" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No staging host yet (the variable HOST_IP of the environment staging is empty): nothing is published or deployed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # `sha-<7>` reaches GHCR only for a commit of `dev` whose `gate` is green (DOC-71 §7.5) and only when there is a staging host (DR-275).
+  publish:
+    if: ${{ github.event_name == 'push' && needs.staging-host.outputs.ready == 'true' }}
+    needs: [gate, staging-host]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -364,8 +421,8 @@ jobs:
   # here against the public hosts. A deploy gate, not a merge gate (DR-163). The job's own deployment record is what `promote`
   # reads on a release tag (DOC-71 §7.4). Two deploys never overlap: the second waits for the first.
   deploy-staging:
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.publish.result == 'success' && needs.e2e-web.result != 'failure' }}
-    needs: [publish, e2e-web]
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.staging-host.outputs.ready == 'true' && needs.publish.result == 'success' && needs.e2e-web.result != 'failure' }}
+    needs: [publish, e2e-web, staging-host]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: staging
@@ -386,16 +443,43 @@ jobs:
           echo "${CLOUDFLARED_SHA256}  cloudflared.deb" | sha256sum -c -
           sudo dpkg -i cloudflared.deb
           cloudflared --version
+      # DR-273: nothing is prepared on the VPS by hand. `--prepare` builds the host from the inputs in GitHub (a no-op when its stamp
+      # matches), the first run reaching it through HOST_IP; `--finish` does what needs the running stack, and closes the firewall.
+      - name: Prepare the host (ops/host/bootstrap.sh)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          RMS_SECRETS_PACK: ${{ secrets.RMS_SECRETS_PACK }}
+          HOST_IP: ${{ vars.HOST_IP }}
+          HOST_INITIAL_USER: ${{ vars.HOST_INITIAL_USER }}
+          RMS_DATA_DEVICE: ${{ vars.RMS_DATA_DEVICE }}
+          OPERATOR_SSH_KEYS: ${{ vars.OPERATOR_SSH_KEYS }}
+          RMS_APP_ENV_EXTRA: ${{ vars.RMS_APP_ENV_EXTRA }}
+        run: ops/deploy/ci-deploy.sh staging --prepare
       - name: Deploy sha-<7> over the Tunnel
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          HOST_IP: ${{ vars.HOST_IP }}
         run: |
+          # `run` is `bash -e` without pipefail: the exit code of `tee` would hide a failed deploy, and the record would say success.
+          set -o pipefail
           tag="sha-${GITHUB_SHA::7}"
           ops/deploy/ci-deploy.sh staging "$tag" | tee deploy.log
           tail -n 1 deploy.log | sed 's/^/### /' >> "$GITHUB_STEP_SUMMARY"
+      - name: Finish the host (buckets, pgBackRest, firewall)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          HOST_IP: ${{ vars.HOST_IP }}
+          HOST_INITIAL_USER: ${{ vars.HOST_INITIAL_USER }}
+        run: ops/deploy/ci-deploy.sh staging --finish
       - name: Smoke test (DOC-71 §7.3)
         env:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}

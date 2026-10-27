@@ -133,6 +133,105 @@ describe('ci-deploy.sh', () => {
   })
 })
 
+describe('ci-deploy.sh --prepare and --finish (DR-273)', () => {
+  /** `ssh` logs its command line and stdin size; `ssh-keygen -y` prints a public key; `$SSH_FAIL_TUNNEL` makes the Tunnel refuse. */
+  const fake = (extra: Record<string, string> = {}) => {
+    const s = stubs({
+      ssh: [
+        'echo "ssh $*" >> "$STUB_LOG"',
+        'if [ -t 0 ]; then :; else n=$(wc -c | tr -d " "); echo "stdin $n" >> "$STUB_LOG"; fi',
+        // the Tunnel answers with the stamp of the host only when STUB_STAMP says so; the public address always answers
+        'case "$*" in *ProxyCommand=none*) exit 0 ;; esac',
+        '[ -z "$SSH_FAIL_TUNNEL" ] || exit 255',
+        'case "$*" in *prepared*) echo "$STUB_STAMP" ;; esac',
+      ].join('\n'),
+      'ssh-keygen': 'case "$*" in *-lf*) exit 0 ;; esac; echo "ssh-ed25519 AAAACI"',
+    })
+    const home = join(s.dir, 'home')
+    mkdirSync(home)
+    return {
+      ...s,
+      env: {
+        PATH: `${s.bin}:${process.env.PATH}`,
+        HOME: home,
+        STUB_LOG: s.log,
+        DOMAIN: 'example.invalid',
+        GITHUB_REPOSITORY_OWNER: 'Some-Owner',
+        DEPLOY_SSH_KEY: 'key',
+        DEPLOY_KNOWN_HOSTS: 'ssh-staging.example.invalid ssh-ed25519 AAAA',
+        CF_ACCESS_CLIENT_ID: 'id',
+        CF_ACCESS_CLIENT_SECRET: 'secret',
+        RMS_SECRETS_PACK: Buffer.from('not really a tarball').toString('base64'),
+        ...extra,
+      },
+    }
+  }
+
+  test('through the Tunnel it logs in as ops, uploads the payload and runs the script from a file with sudo', () => {
+    const f = fake()
+    const result = run('ci-deploy.sh', ['staging', '--prepare'], f.env)
+    expect(result.code).toBe(0)
+    const log = readFileSync(f.log, 'utf8')
+    expect(log).toContain('-l ops ssh-staging.example.invalid cat > .rms-bootstrap.tgz')
+    expect(log).toContain('sudo -n bash')
+    expect(log).toContain('prepare staging')
+    expect(log).not.toContain('bash -s') // a streamed script would be read by apt and docker
+    expect(log).not.toContain('ProxyCommand=none') // the public address is not used while the Tunnel answers
+  })
+
+  test('skips the whole phase when the host holds the stamp of these inputs', () => {
+    // an `ssh` that answers every `cat /var/lib/rms/prepared` with the stamp it was given
+    const f = fake()
+    writeFileSync(
+      join(f.bin, 'ssh'),
+      '#!/usr/bin/env bash\necho "ssh $*" >> "$STUB_LOG"\ncase "$*" in *prepared*) cat "$STUB_STAMP_FILE" ;; esac\n',
+    )
+    const probe = stubs({ sha256sum: 'cat > /dev/null; echo fixedstamp -' })
+    writeFileSync(join(f.dir, 'stamp'), 'fixedstamp\n')
+    const result = run('ci-deploy.sh', ['staging', '--prepare'], {
+      ...f.env,
+      PATH: `${probe.bin}:${f.env.PATH}`,
+      STUB_STAMP_FILE: join(f.dir, 'stamp'),
+    })
+    expect(result.out).toContain('host prepared: the stamp matches')
+    expect(readFileSync(f.log, 'utf8')).not.toContain('.rms-bootstrap.tgz')
+  })
+
+  test('a host that is not behind the Tunnel yet is reached at HOST_IP, ops first and then the provider user', () => {
+    const f = fake({ SSH_FAIL_TUNNEL: '1', HOST_IP: '203.0.113.7' })
+    const result = run('ci-deploy.sh', ['staging', '--prepare'], f.env)
+    expect(result.code).toBe(0)
+    const log = readFileSync(f.log, 'utf8')
+    expect(log).toContain('-l ops 203.0.113.7 true')
+    expect(log).toContain('StrictHostKeyChecking=accept-new')
+    expect(log).toContain('203.0.113.7 cat > .rms-bootstrap.tgz')
+  })
+
+  test('without the Tunnel and without HOST_IP it stops with a message', () => {
+    const f = fake({ SSH_FAIL_TUNNEL: '1' })
+    const result = run('ci-deploy.sh', ['staging', '--prepare'], f.env)
+    expect(result.code).not.toBe(0)
+    expect(result.out).toContain('HOST_IP is not set')
+  })
+
+  test('--finish sends the script and says which door it came through, so the firewall closes only behind the Tunnel', () => {
+    const tunnel = fake()
+    run('ci-deploy.sh', ['staging', '--finish'], tunnel.env)
+    expect(readFileSync(tunnel.log, 'utf8')).toContain('finish staging tunnel')
+    const direct = fake({ SSH_FAIL_TUNNEL: '1', HOST_IP: '203.0.113.7' })
+    run('ci-deploy.sh', ['staging', '--finish'], direct.env)
+    expect(readFileSync(direct.log, 'utf8')).toContain('finish staging direct')
+  })
+
+  test('the first deploy goes to HOST_IP as deploy when the Tunnel is not up', () => {
+    const f = fake({ SSH_FAIL_TUNNEL: '1', HOST_IP: '203.0.113.7' })
+    expect(run('ci-deploy.sh', ['staging', 'sha-abcdef0'], f.env).code).toBe(0)
+    const log = readFileSync(f.log, 'utf8')
+    expect(log).toContain('-l deploy 203.0.113.7 cat > /opt/rms/incoming/sha-abcdef0.tgz')
+    expect(log).toContain('-l deploy 203.0.113.7 bash -s -- sha-abcdef0')
+  })
+})
+
 describe('ghcr-cleanup.sh', () => {
   // 34 versions with a `sha-` tag, one per hour; `sha-0000000` is the newest. Plus the exceptions.
   const hex = (n: number) => n.toString(16).padStart(7, '0')
@@ -212,5 +311,106 @@ esac`,
     const t = setup([versions.slice(0, 10)])
     expect(run('ghcr-cleanup.sh', ['acme'], t.env).out).toBe('nothing to delete')
     expect(deleted(t.log)).toEqual([])
+  })
+})
+
+describe('trusted-tree.sh (DR-274)', () => {
+  const SHA = 'a'.repeat(40)
+  const HEAD = 'b'.repeat(40)
+  type Case = {
+    tree?: string
+    headTree?: string
+    prs?: string
+    gate?: string
+    e2e?: string
+    broken?: boolean
+  }
+
+  // The `gh` the script calls, answering as the real one does after `--jq`: the tree of a commit, the numbers of the merged
+  // pull requests of the commit, the head of a pull request, and the latest conclusion of a check on the head.
+  function trusted(c: Case) {
+    const s = stubs({
+      gh: `
+if [ -n "$BROKEN" ]; then echo "gh: HTTP 500" >&2; exit 1; fi
+case "$*" in
+  *"/git/commits/${SHA}"*) echo "$TREE" ;;
+  *"/git/commits/${HEAD}"*) echo "$HEAD_TREE" ;;
+  *"/commits/${SHA}/pulls"*) printf '%s' "$PRS" ;;
+  *"/pulls/"*) echo "${HEAD}" ;;
+  *"check_name=gate"*) echo "$GATE" ;;
+  *"check_name=e2e-web"*) echo "$E2E" ;;
+  *) exit 1 ;;
+esac`,
+    })
+    const output = join(s.dir, 'output')
+    writeFileSync(output, '')
+    const proc = Bun.spawnSync(['bash', join(repo, 'ops/deploy/trusted-tree.sh')], {
+      env: {
+        ...process.env,
+        PATH: `${s.bin}:${process.env.PATH}`,
+        GITHUB_REPOSITORY: 'acme/rms',
+        GITHUB_SHA: SHA,
+        GITHUB_OUTPUT: output,
+        TREE: c.tree ?? 't1',
+        HEAD_TREE: c.headTree ?? 't1',
+        PRS: c.prs ?? '28\n',
+        GATE: c.gate ?? 'success',
+        E2E: c.e2e ?? 'success',
+        BROKEN: c.broken ? '1' : '',
+      },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+    return {
+      code: proc.exitCode ?? -1,
+      out: readFileSync(output, 'utf8').trim().split('\n'),
+      said: `${proc.stderr}`.trim(),
+    }
+  }
+
+  test('the tree of a merged pull request whose gate passed is tested, and e2e-web too when it ran', () => {
+    expect(trusted({})).toMatchObject({ code: 0, out: ['tested=true', 'e2e=passed'] })
+    expect(trusted({ e2e: 'skipped' }).out).toEqual(['tested=true', 'e2e=none'])
+    expect(trusted({ e2e: 'failure' }).out).toEqual(['tested=true', 'e2e=none'])
+    expect(trusted({}).said).toContain('#28')
+  })
+
+  test('a direct push (no pull request), or a pull request that is not merged into dev, is not tested', () => {
+    expect(trusted({ prs: '' }).out).toEqual(['tested=false', 'e2e=none'])
+  })
+
+  test('a different tree is not tested', () => {
+    const result = trusted({ headTree: 't2' })
+    expect(result.out).toEqual(['tested=false', 'e2e=none'])
+    expect(result.said).toContain('differs')
+  })
+
+  test('a head whose gate is not green, or has no gate, is not tested', () => {
+    expect(trusted({ gate: 'failure' }).out).toEqual(['tested=false', 'e2e=none'])
+    expect(trusted({ gate: 'none' }).out).toEqual(['tested=false', 'e2e=none'])
+    expect(trusted({ gate: 'cancelled' }).out).toEqual(['tested=false', 'e2e=none'])
+  })
+
+  test('an API failure is not tested, exits 0 and leaves the workflow to run every check', () => {
+    const result = trusted({ broken: true })
+    expect(result.code).toBe(0)
+    expect(result.out).toEqual(['tested=false', 'e2e=none'])
+  })
+})
+
+describe('the workflows', () => {
+  // GitHub runs a `run` step with `bash -e {0}`: no pipefail, so `command | tee file` exits 0 when `command` fails. A deploy that
+  // failed would then end the step green and the job could record a successful deployment, which `promote` reads (DOC-71 §7.4).
+  test('every run step that pipes into tee sets pipefail first', () => {
+    const files = ['ci.yml', 'rollback.yml', 'weekly.yml']
+    for (const file of files) {
+      const text = readFileSync(join(repo, '.github/workflows', file), 'utf8')
+      const blocks = text.split(/\n(?=\s+- (?:name|id|uses|run|if|env):|\s+run:)/)
+      for (const block of blocks) {
+        if (!/\|\s*tee\b/.test(block)) continue
+        expect(`${file}: ${block.slice(0, 80)}`).toBeDefined()
+        expect(/set -o pipefail|shell: bash\b/.test(block)).toBe(true)
+      }
+    }
   })
 })
