@@ -11,6 +11,7 @@ api:
   - packages/i18n-catalog/**
   - docker/**
   - ops/**
+  - patches/**
   - bun.lock
 web:
   - apps/cms-web/**
@@ -67,5 +68,6 @@ e2e:
   - bunfig.toml
   - .tool-versions
   - bun.lock
+  - patches/**
   - .github/workflows/ci.yml
   - .github/paths-filter.yml

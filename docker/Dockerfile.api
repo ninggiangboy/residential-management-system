@@ -3,6 +3,8 @@
 FROM oven/bun:1.4.3 AS deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
+# The patches of `patchedDependencies`, which `bun install` applies (DR-278).
+COPY patches ./patches
 # Every workspace manifest, so `--frozen-lockfile` sees the workspaces of `bun.lock`; `--parents` keeps the paths and
 # needs no line per module (Dockerfile 1.20+).
 COPY --parents apps/*/package.json modules/*/package.json packages/*/package.json ./

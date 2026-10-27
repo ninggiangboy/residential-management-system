@@ -87,6 +87,21 @@ describe('reading the first sheet', () => {
     expect(await reader.read(await make(5001))).toMatchObject({ ok: true, tooMany: true })
   })
 
+  // `exceljs` writes `sheet1.xml` before `sharedStrings.xml` and `workbook.xml`, so the reader parks the sheet in a temporary file.
+  // Unpatched, its stream helper then lost the entries after it in about a third of the reads, and a good file was DQ-01.
+  test('IM-44 every workbook that exceljs writes is read, read after read (DR-278)', async () => {
+    for (let i = 0; i < 40; i++) {
+      const read = await reader.read(
+        await bytesOf((sheet) => {
+          sheet.addRow(['Mã căn hộ'])
+          sheet.addRow([`A-${i}`])
+        }),
+      )
+      expect(read).toMatchObject({ ok: true, sheet: { rows: [{ cells: [`A-${i}`] }] } })
+      await Bun.sleep(10)
+    }
+  })
+
   test('a workbook with only a header has no rows', async () => {
     const read = await reader.read(await bytesOf((sheet) => sheet.addRow(['Mã căn hộ'])))
     expect(read).toMatchObject({ ok: true, sheet: { rows: [] } })
