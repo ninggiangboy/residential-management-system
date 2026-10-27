@@ -63,6 +63,12 @@ export function publicRoutes(d: PublicRouteDeps) {
   return routePlugin({ prefix: '/public' }).get(
     '/config',
     config,
-    publicRoute('public', { endpoint: 'E-03', operationId: 'getPublicConfig' }),
+    publicRoute('public', {
+      endpoint: 'E-03',
+      operationId: 'getPublicConfig',
+      summary: 'Get the public app configuration',
+      description:
+        'What an app needs before anyone signs in: the minimum supported app version, the available languages and the manager contact shown to a person who cannot sign in. Also read at app start to show "Update the app" without a first failing call. Subject to the maintenance gate, not to the app-version gate.',
+    }),
   )
 }

@@ -1,5 +1,6 @@
 import {
   API_PREFIX,
+  describedEnum,
   type RouteInfo,
   type RouteSet,
   routePlugin,
@@ -54,38 +55,84 @@ function versionOf(header: string | null): number | undefined {
   return Number(match[1])
 }
 
-const ReceivingAccountBody = strictObject({
-  bankBin: Type.String(),
-  accountNumber: Type.String(),
-  accountName: Type.String(),
-})
+const ReceivingAccountBody = strictObject(
+  {
+    bankBin: Type.String({ description: 'The bank identification number, six digits' }),
+    accountNumber: Type.String({ description: 'The account number, 6…20 digits' }),
+    accountName: Type.String({
+      description: 'The account holder, 1…50 upper-case ASCII letters, digits and spaces',
+    }),
+  },
+  { description: 'The bank account that receives the payments. Required on create' },
+)
 
 const GatewayBody = strictObject({
-  provider: Type.Union([Type.Literal('payos'), Type.Literal('vietqr')]),
-  driver: Type.Optional(
-    Type.Union([Type.Literal('payos'), Type.Literal('vietqr'), Type.Literal('fake')]),
+  provider: describedEnum(
+    { payos: 'payOS', vietqr: 'VietQR' },
+    'The payment provider this configuration is for. One active configuration exists per provider.',
   ),
-  status: Type.Optional(Type.Union([Type.Literal('active'), Type.Literal('disabled')])),
+  driver: Type.Optional(
+    describedEnum(
+      {
+        payos: 'Calls the payOS API',
+        vietqr: 'Builds VietQR transfer codes',
+        fake: 'A test driver that always answers ok; only for a demo building',
+      },
+      'The code that talks to the provider. Required on create and when the driver changes.',
+    ),
+  ),
+  status: Type.Optional(
+    describedEnum(
+      { active: 'The configuration is used', disabled: 'The configuration is kept but not used' },
+      'Defaults to `active` on create and to the stored value afterwards.',
+    ),
+  ),
   receivingAccount: Type.Optional(ReceivingAccountBody),
-  secrets: Type.Optional(Type.Record(Type.String(), Type.String({ minLength: 1, maxLength: 512 }))),
-  stepUp: Type.Optional(
-    strictObject({
-      password: Type.String({ minLength: 1, maxLength: 128 }),
-      code: Type.String({ pattern: '^[0-9]{6}$' }),
+  secrets: Type.Optional(
+    Type.Record(Type.String(), Type.String({ minLength: 1, maxLength: 512 }), {
+      description:
+        'The fields the driver needs (`clientId`, `apiKey`, `checksumKey` for `payos`). A field present replaces the stored one; a field absent keeps it. Required on create and with a new driver',
     }),
+  ),
+  stepUp: Type.Optional(
+    strictObject(
+      {
+        password: Type.String({
+          minLength: 1,
+          maxLength: 128,
+          description: 'The password of the signed-in admin',
+        }),
+        code: Type.String({
+          pattern: '^[0-9]{6}$',
+          description: 'The six-digit code mailed by `requestStepUp` for `gateway_config`',
+        }),
+      },
+      {
+        description:
+          'The proof of a sensitive action. Required, even to re-save an unchanged configuration',
+      },
+    ),
   ),
 })
 
-const TermsKindSchema = Type.Union([Type.Literal('terms'), Type.Literal('privacy')])
+const TermsKindSchema = describedEnum(
+  { terms: 'The terms of use', privacy: 'The privacy notice' },
+  'Which document.',
+)
 
 const TermsQuery = strictObject({ kind: Type.Optional(TermsKindSchema) })
 
 const TermsBody = strictObject({
   kind: TermsKindSchema,
-  text: strictObject({
-    vi: Type.String({ minLength: 1, maxLength: 100_000 }),
-    en: Type.Optional(Type.String({ minLength: 1, maxLength: 100_000 })),
-  }),
+  text: strictObject(
+    {
+      vi: Type.String({ minLength: 1, maxLength: 100_000, description: 'The Vietnamese text' }),
+      en: Type.Optional(
+        Type.String({ minLength: 1, maxLength: 100_000, description: 'The English text' }),
+      ),
+    },
+    { description: 'The text of the new version' },
+  ),
 })
 
 /**
@@ -184,31 +231,63 @@ export function buildingRoutes(d: BuildingRouteDeps) {
     .get(
       '/settings',
       getSettings,
-      route(GET_SETTINGS_ROLES, { endpoint: 'E-47', operationId: 'getSettings' }),
+      route(GET_SETTINGS_ROLES, {
+        endpoint: 'E-47',
+        operationId: 'getSettings',
+        summary: 'Get the building settings',
+        description:
+          'The building row (name, company block, contact, logo) and the settings in one document.',
+      }),
     )
     .patch('/settings', updateSettings, {
-      ...route(UPDATE_BUILDING_SETTINGS_ROLES, { endpoint: 'E-48', operationId: 'updateSettings' }),
+      ...route(UPDATE_BUILDING_SETTINGS_ROLES, {
+        endpoint: 'E-48',
+        operationId: 'updateSettings',
+        summary: 'Update the building settings',
+        description: 'Edits the building row, the settings or both in one transaction.',
+      }),
       body: SettingsUpdateSchema,
     })
     .get(
       '/gateway',
       getGateway,
-      route(GET_GATEWAY_ROLES, { endpoint: 'E-49', operationId: 'getGateway' }),
+      route(GET_GATEWAY_ROLES, {
+        endpoint: 'E-49',
+        operationId: 'getGateway',
+        summary: 'Get the payment gateway configuration',
+        description:
+          'The gateway configurations with masked secrets, the drivers allowed for this building and the last connection check.',
+      }),
     )
     .put('/gateway', saveGateway, {
       ...route(SAVE_GATEWAY_CONFIG_ROLES, {
         endpoint: 'E-50',
         operationId: 'putGateway',
+        summary: 'Save a payment gateway configuration',
+        description:
+          'Creates or changes the configuration of one payment provider: secrets, receiving account, driver and status. Needs a step-up code for `gateway_config`.',
         stepUp: 'gateway_config',
       }),
       body: GatewayBody,
     })
     .get('/terms', listTerms, {
-      ...route(LIST_TERMS_ROLES, { endpoint: 'E-52', operationId: 'listTermsVersions' }),
+      ...route(LIST_TERMS_ROLES, {
+        endpoint: 'E-52',
+        operationId: 'listTermsVersions',
+        summary: 'List terms versions',
+        description:
+          'Every published version of the terms of use and the privacy notice, newest first, with the text and the number of residents who accepted it.',
+      }),
       query: TermsQuery,
     })
     .post('/terms', publishTerms, {
-      ...route(PUBLISH_TERMS_ROLES, { endpoint: 'E-53', operationId: 'publishTermsVersion' }),
+      ...route(PUBLISH_TERMS_ROLES, {
+        endpoint: 'E-53',
+        operationId: 'publishTermsVersion',
+        summary: 'Publish a terms version',
+        description:
+          'Publishes the next version of the terms of use or the privacy notice. Every resident is refused with 403 `terms_required` at their next request until they accept it.',
+      }),
       body: TermsBody,
     })
 }

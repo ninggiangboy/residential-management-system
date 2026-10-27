@@ -66,9 +66,12 @@ A resident token never passes a staff guard and the reverse, whatever the role (
 | Enum values | lower snake_case | `memberType: "family"`, `status: "deletion_requested"` |
 | Query parameters | camelCase; `q` for a search text; `cursor`, `limit`, `page`, `pageSize` for paging | `?q=nguyen&limit=20` |
 | `operationId` | lowerCamel verb and noun, unique, the one DOC-51 §2 lists | `createPaymentIntent` |
+| `summary` | The name of the endpoint in the docs: one line, imperative, in English | `Create a payment intent` |
+| `description` | What the endpoint does beyond its name: who calls it, what it changes, what it refuses (Markdown); written from the Purpose line of the endpoint in DOC-51 | |
+| Enum in a schema | `describedEnum({ value: 'meaning' }, 'what the field is')` of `@core/http`, never a union of literals: the API reference lists the values to choose from with their meaning; a value outside it is 400 `validation_failed` rule `enum` | `describedEnum({ vi: 'Vietnamese', en: 'English' })` |
 | Endpoint id | `E-xx`, the number in DOC-51 §2 | `E-85` |
 
-The OpenAPI document carries `operationId`, and the vendor extensions `x-endpoint-id: "E-85"` and `x-audience` (the metadata above) on every operation, so EXP-10 and the clients can join them. OpenAPI and the Scalar page are served only in `local` and `staging` at `/api/v1/openapi.json` and `/api/v1/docs` (DR-64); in `production` they answer 404.
+The OpenAPI document carries `operationId`, `summary`, `description`, and the vendor extensions `x-endpoint-id: "E-85"` and `x-audience` (the metadata above) on every operation, so EXP-10 and the clients can join them. OpenAPI and the Scalar page are served only in `local` and `staging` at `/api/v1/openapi.json` and `/api/v1/docs` (DR-64); in `production` they answer 404.
 
 ## 4. Methods and status codes
 
@@ -326,6 +329,9 @@ Prefix `AG-` (master plan §0.2, DR-142; DOC-88 indexes it). They run against th
 | --- | --- | --- |
 | AG-01 | Every route of the mounted `App` | Has `audience` metadata and an `operationId` listed in DOC-51 §2; a route without either fails the build (DR-77) |
 | AG-02 | The set of `x-endpoint-id` values of the OpenAPI document | Equals the E-xx set of DOC-51 §2 for the implemented groups: no extra, no duplicate |
+| AG-02a | Every operation with an `x-endpoint-id` of the OpenAPI document | Has a non-empty `summary` and `description`, and every tag it uses is described by the `docs` of its module (`AppModule.docs`) |
+| AG-02b | Every `enum` in the paths of the OpenAPI document | Has an `x-enumDescriptions` entry for each of its values (declared with `describedEnum`, `@core/http`), so the API reference says what each value means |
+| AG-02c | Every parameter and every field of a request body in the OpenAPI document | Has a `description`: what it is, its unit or range where it has one, and what `null` does where it is allowed |
 | AG-03 | `GET /api/v1/openapi.json` in `production` configuration | 404; the boot guard refuses `OPENAPI_ENABLED=true` |
 | AG-04 | For every route of `/me/*` and `/staff/*`: a request with no token and an invalid body | 401 `unauthenticated`, never 400 |
 | AG-05 | A `unit: <capability>` route with no `X-Unit-Id`; with a malformed one; with a unit of another account | 400 `validation_failed` (`header.X-Unit-Id`); 400; 403 `membership_inactive` |

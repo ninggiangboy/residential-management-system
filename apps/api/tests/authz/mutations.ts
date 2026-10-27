@@ -93,7 +93,11 @@ const PROBES = {
   }),
 }
 
-const info = (r: RouteRecord) => ({ endpoint: r.endpointId, operationId: r.operationId })
+const info = (r: RouteRecord) => ({
+  endpoint: r.endpointId,
+  operationId: r.operationId,
+  summary: r.operationId,
+})
 
 /** The app of a mutant run: the real routes and the probe routes, built on the guards of the (possibly defective) container. */
 function mountProbes(guards: Guards) {

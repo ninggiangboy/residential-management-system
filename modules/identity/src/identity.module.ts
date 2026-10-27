@@ -420,6 +420,27 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
 
   return {
     name: 'identity',
+    docs: [
+      {
+        name: 'auth',
+        description:
+          'Sign-in, token refresh and sign-out for staff (email and password) and residents (SMS code), and the staff invite and password-reset links.',
+      },
+      {
+        name: 'resident',
+        description:
+          'The signed-in resident: their account, language and push settings, and their sessions.',
+      },
+      {
+        name: 'staff',
+        description:
+          'The signed-in staff member (own account, sessions, step-up codes) and, for admins, the management of staff accounts.',
+      },
+      {
+        name: 'client-errors',
+        description: 'Crash and error reports sent by the apps and the web CMS.',
+      },
+    ],
     api: new IdentityApiImpl(
       staffQueries,
       residentQueries,

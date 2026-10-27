@@ -78,23 +78,57 @@ export const SettingsShapeSchema = Type.Object(
 export const SettingsPatchSchema = Type.Partial(
   Type.Object(
     {
-      defaultLanguage: Type.Union([Type.String(), Type.Null()]),
-      defaultDueDays: Type.Union([Type.Integer(), Type.Null()]),
-      accountDeletionDays: Type.Union([Type.Integer(), Type.Null()]),
-      lockout: Type.Union([
-        Type.Object(
-          { maxAttempts: Type.Integer(), minutes: Type.Integer() },
-          { additionalProperties: false },
-        ),
-        Type.Null(),
-      ]),
-      maxCarsPerUnit: Type.Union([Type.Integer(), Type.Null()]),
-      storageQuotaBytes: Type.Union([Type.Integer(), Type.Null()]),
-      feeNoticeLanguage: Type.Union([Type.String(), Type.Null()]),
-      reportColumns: Type.Union([ReportColumns, Type.Null()]),
+      defaultLanguage: Type.Union([Type.String(), Type.Null()], {
+        description:
+          'The language new accounts start with: `vi` or `en`. `null` restores the default',
+      }),
+      defaultDueDays: Type.Union([Type.Integer(), Type.Null()], {
+        description:
+          'Days from the issue of a fee to its due date, 1…60. `null` restores the default',
+      }),
+      accountDeletionDays: Type.Union([Type.Integer(), Type.Null()], {
+        description:
+          'Days between the approval of an account deletion and its execution, 1…365. `null` restores the default',
+      }),
+      lockout: Type.Union(
+        [
+          Type.Object(
+            {
+              maxAttempts: Type.Integer({
+                description: 'Failed sign-ins before the account is locked for a while, 3…10',
+              }),
+              minutes: Type.Integer({ description: 'Minutes the account stays locked, 5…120' }),
+            },
+            { additionalProperties: false },
+          ),
+          Type.Null(),
+        ],
+        {
+          description:
+            'The temporary lock after failed sign-ins. Always sent whole. `null` restores the default',
+        },
+      ),
+      maxCarsPerUnit: Type.Union([Type.Integer(), Type.Null()], {
+        description: 'How many cars one unit may register, 1…20. `null` restores the default',
+      }),
+      storageQuotaBytes: Type.Union([Type.Integer(), Type.Null()], {
+        description:
+          'The file storage of the building in bytes, 1 GiB…1 TiB. `null` restores the default',
+      }),
+      feeNoticeLanguage: Type.Union([Type.String(), Type.Null()], {
+        description:
+          'The language of fee notices: `vi`, `en` or `both`. `null` restores the default',
+      }),
+      reportColumns: Type.Union([ReportColumns, Type.Null()], {
+        description: 'The columns of each report, by report name. `null` restores the default',
+      }),
     },
     { additionalProperties: false },
   ),
+  {
+    description:
+      'A shallow merge: a key present is set, a key `null` is removed (back to its default), a key absent is untouched.',
+  },
 )
 
 export type SettingsShape = Static<typeof SettingsShapeSchema>
@@ -103,10 +137,14 @@ export type SettingsPatch = Static<typeof SettingsPatchSchema>
 const Nullable = <T extends ReturnType<typeof Type.String>>(schema: T) =>
   Type.Union([schema, Type.Null()])
 
-const BilingualText = Type.Object(
-  { vi: Type.String(), en: Type.Optional(Type.String()) },
-  { additionalProperties: false },
-)
+const BilingualText = (description: string) =>
+  Type.Object(
+    {
+      vi: Type.String({ description: 'The Vietnamese text' }),
+      en: Type.Optional(Type.String({ description: 'The English text' })),
+    },
+    { additionalProperties: false, description },
+  )
 
 /**
  * The `building` part of `PATCH /staff/settings` (DOC-36 §4.1): only the fields to change. `code`, `timeZone` and `isDemo` are
@@ -117,31 +155,54 @@ const BilingualText = Type.Object(
 export const BuildingPatchSchema = Type.Partial(
   Type.Object(
     {
-      name: BilingualText,
+      name: BilingualText('The name of the building'),
       company: Type.Object(
         {
-          name: BilingualText,
-          taxCode: Type.Optional(Type.String()),
-          address: Type.Optional(Type.String()),
-          phone: Type.Optional(Type.String()),
-          email: Type.Optional(Type.String()),
-          representative: Type.Optional(Type.String()),
+          name: BilingualText('The name of the management company'),
+          taxCode: Type.Optional(Type.String({ description: 'The tax code of the company' })),
+          address: Type.Optional(Type.String({ description: 'The address of the company' })),
+          phone: Type.Optional(Type.String({ description: 'The phone of the company' })),
+          email: Type.Optional(Type.String({ description: 'The email of the company' })),
+          representative: Type.Optional(
+            Type.String({ description: 'The legal representative of the company' }),
+          ),
         },
-        { additionalProperties: false },
+        {
+          additionalProperties: false,
+          description: 'The management company, printed on fee notices and receipts',
+        },
       ),
-      address: Type.String(),
-      hotline: Nullable(Type.String()),
-      workingHours: Type.Union([BilingualText, Type.Null()]),
-      email: Nullable(Type.String()),
-      logoFileId: Nullable(Type.String({ pattern: '^[0-9a-fA-F-]{36}$' })),
+      address: Type.String({ description: 'The address of the building' }),
+      hotline: Nullable(
+        Type.String({ description: 'The hotline shown to residents; `null` removes it' }),
+      ),
+      workingHours: Type.Union([BilingualText('The office hours'), Type.Null()], {
+        description: 'The office hours shown to residents; `null` removes them',
+      }),
+      email: Nullable(
+        Type.String({ description: 'The contact email shown to residents; `null` removes it' }),
+      ),
+      logoFileId: Nullable(
+        Type.String({
+          pattern: '^[0-9a-fA-F-]{36}$',
+          description: 'The id of a verified `logo` upload; `null` removes the logo',
+        }),
+      ),
     },
     { additionalProperties: false },
   ),
+  {
+    description:
+      'Only the fields to change. `code`, `timeZone` and `isDemo` cannot be edited and are refused as `unknown_key`.',
+  },
 )
 
 /** The body of `PATCH /staff/settings`: either part, or both, in one transaction. */
 export const SettingsUpdateSchema = Type.Object(
-  { building: Type.Optional(BuildingPatchSchema), settings: Type.Optional(SettingsPatchSchema) },
+  {
+    building: Type.Optional(BuildingPatchSchema),
+    settings: Type.Optional(SettingsPatchSchema),
+  },
   { additionalProperties: false },
 )
 

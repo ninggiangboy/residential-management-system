@@ -1,4 +1,5 @@
 import {
+  describedEnum,
   type Idempotent,
   IdParams,
   type RouteInfo,
@@ -34,22 +35,61 @@ export interface ImportRouteDeps {
 }
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-const KINDS = ['unit_owner', 'fee_batch'] as const
-const STATUSES = ['validated', 'failed', 'committed', 'expired'] as const
+const IMPORT_KIND = describedEnum(
+  {
+    unit_owner: 'Units and their owners',
+    fee_batch: 'A batch of fees',
+  },
+  'What the file holds.',
+)
+const IMPORT_STATUS = describedEnum(
+  {
+    validated: 'The file was checked and the preview can still be committed',
+    failed: 'The file could not be read',
+    committed: 'The valid rows were saved',
+    expired: 'The preview was not committed in time; upload the file again',
+  },
+  'The state of the import job.',
+)
 
-const KindParams = strictObject({ kind: Type.String() })
+const KindParams = strictObject({
+  kind: Type.String({
+    description:
+      'The kind of import: `unit_owner` or `fee_batch`. Any other value is 404 `not_found`',
+  }),
+})
 const CreateBody = strictObject({
-  kind: Type.Union(KINDS.map((kind) => Type.Literal(kind))),
-  fileId: Type.String({ format: 'uuid' }),
+  kind: IMPORT_KIND,
+  fileId: Type.String({
+    format: 'uuid',
+    description:
+      'A verified upload of the purpose `import`, registered by the caller for the module of the kind. Otherwise 422 `file_not_verified`',
+  }),
   /** The name of the file as the browser knows it: the upload flow keeps none (DR-258). */
-  fileName: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
-  params: Type.Optional(strictObject({})),
+  fileName: Type.Optional(
+    Type.String({
+      minLength: 1,
+      maxLength: 255,
+      description: 'The name of the file as the browser knows it, shown in the import history',
+    }),
+  ),
+  params: Type.Optional(
+    strictObject({}, { description: 'Extra parameters of the kind. `unit_owner` takes none' }),
+  ),
 })
 const ListQuery = strictObject({
-  kind: Type.Optional(Type.Union(KINDS.map((kind) => Type.Literal(kind)))),
-  status: Type.Optional(Type.Union(STATUSES.map((status) => Type.Literal(status)))),
-  cursor: Type.Optional(Type.String({ maxLength: 200 })),
-  limit: Type.Optional(Type.String({ pattern: '^[0-9]{1,3}$' })),
+  kind: Type.Optional(IMPORT_KIND),
+  status: Type.Optional(IMPORT_STATUS),
+  cursor: Type.Optional(
+    Type.String({
+      maxLength: 200,
+      description:
+        'The `next` cursor of the previous page. Opaque; one that does not decode is 400 `invalid_cursor`',
+    }),
+  ),
+  limit: Type.Optional(
+    Type.String({ pattern: '^[0-9]{1,3}$', description: 'Rows per page, 1…100 (default 20)' }),
+  ),
 })
 
 /** The key belongs to the staff account (DOC-50 §8.3). */
@@ -217,29 +257,51 @@ export function importRoutes(d: ImportRouteDeps) {
 
   return routePlugin({ prefix: '/staff/imports' })
     .get('/templates/:kind', template, {
-      ...read({ endpoint: 'E-71', operationId: 'downloadImportTemplate' }),
+      ...read({
+        endpoint: 'E-71',
+        operationId: 'downloadImportTemplate',
+        summary: 'Download an import template',
+        description: 'Downloads the Excel template for an import of the given kind.',
+      }),
       params: KindParams,
     })
     .post('/', d.idempotent({ account: staffAccount, mode: 'external' }, create), {
       ...staffRoute(d.guards, 'residency', VALIDATE_UNIT_OWNER_IMPORT_ROLES, {
         endpoint: 'E-72',
         operationId: 'createImport',
+        summary: 'Validate an import file',
+        description:
+          'Validates an uploaded Excel file synchronously and stores the preview for the commit. Nothing is written to the unit tables here. Needs an `Idempotency-Key`.',
         idempotent: true,
       }),
       body: CreateBody,
     })
     .get('/', list, {
-      ...read({ endpoint: 'E-169', operationId: 'listImports' }),
+      ...read({
+        endpoint: 'E-169',
+        operationId: 'listImports',
+        summary: 'List imports',
+        description:
+          'The earlier import jobs of the building, newest first, so the manager can reopen a preview that is still valid and see who imported what and when.',
+      }),
       query: ListQuery,
     })
     .get('/:id', get, {
-      ...read({ endpoint: 'E-73', operationId: 'getImport' }),
+      ...read({
+        endpoint: 'E-73',
+        operationId: 'getImport',
+        summary: 'Get an import',
+        description: 'Reopens a preview or reads the result of a commit.',
+      }),
       params: IdParams,
     })
     .post('/:id/commit', commit, {
       ...staffRoute(d.guards, 'residency', COMMIT_UNIT_OWNER_IMPORT_ROLES, {
         endpoint: 'E-74',
         operationId: 'commitImport',
+        summary: 'Commit an import',
+        description:
+          'Saves the valid rows in one transaction: creates or updates the units, the resident profiles and the owner memberships. Rows with an error are skipped. No invitation SMS is sent.',
       }),
       params: IdParams,
     })

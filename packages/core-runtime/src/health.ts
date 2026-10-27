@@ -1,4 +1,4 @@
-import type { TSchema } from '@sinclair/typebox'
+import { Kind, type TSchema, Type } from '@sinclair/typebox'
 import { Elysia, t } from 'elysia'
 
 export interface HealthCheck {
@@ -21,6 +21,23 @@ export interface HealthOptions {
   /** The public path names no dependency (DR-145); the ops port lists every check. */
   exposeChecks: boolean
 }
+
+/**
+ * The two unhealthy answers, as an enum with the meaning of each value. Elysia's `UnionEnum` kind and not a union of literals,
+ * because the OpenAPI plugin drops the description of a union of literals (the same as `describedEnum` of `@core/http`, which this
+ * package does not depend on).
+ */
+const unhealthy = Type.Unsafe<'degraded' | 'stopping'>({
+  [Kind]: 'UnionEnum',
+  type: 'string',
+  enum: ['degraded', 'stopping'],
+  description:
+    'Why the process is not ready.\n\n- `degraded`: a dependency does not answer in time\n- `stopping`: the process is shutting down and the proxy should drain it',
+  'x-enumDescriptions': {
+    degraded: 'A dependency does not answer in time',
+    stopping: 'The process is shutting down and the proxy should drain it',
+  },
+})
 
 const checkSchema = t.Object({ ok: t.Boolean(), latencyMs: t.Number() })
 
@@ -88,7 +105,7 @@ export function readyRoute(options: HealthOptions) {
       },
       response: {
         200: readiness(t.Literal('ok')),
-        503: readiness(t.Union([t.Literal('degraded'), t.Literal('stopping')])),
+        503: readiness(unhealthy),
       },
     },
   )

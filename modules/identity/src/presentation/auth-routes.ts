@@ -1,6 +1,7 @@
 import { requestContext } from '@core/context'
 import {
   bucketIp,
+  describedEnum,
   publicRoute,
   type RouteInfo,
   type RouteSet,
@@ -38,28 +39,70 @@ export interface AuthRouteDeps {
   clock: Clock
 }
 
-const Email = Type.String({ format: 'email', maxLength: 254 })
-const Client = Type.Union([Type.Literal('web'), Type.Literal('app')])
+const Email = Type.String({
+  format: 'email',
+  maxLength: 254,
+  description: 'The email of the staff account',
+})
+const Client = describedEnum(
+  {
+    web: 'The web CMS: the refresh token is kept in an HttpOnly cookie',
+    app: 'A mobile app: the refresh token is returned in the body',
+  },
+  'The kind of client, which decides where the refresh token goes.',
+)
 type Client = Static<typeof Client>
 
 const LoginBody = strictObject({
   email: Email,
-  password: Type.String({ minLength: 1, maxLength: 128 }),
+  password: Type.String({ minLength: 1, maxLength: 128, description: 'The password' }),
   client: Client,
 })
 const PasswordResetBody = strictObject({ email: Email })
 const SetPasswordBody = strictObject({
-  token: Type.String({ minLength: 1, maxLength: 200 }),
-  password: Type.String({ minLength: 1, maxLength: 1024 }),
+  token: Type.String({
+    minLength: 1,
+    maxLength: 200,
+    description: 'The single-use token of the invite or reset link',
+  }),
+  password: Type.String({
+    minLength: 1,
+    maxLength: 1024,
+    description: 'The new password; a weak one is 400 `validation_failed` rule `password_weak`',
+  }),
 })
-const ResendInviteBody = strictObject({ staffId: Type.String({ format: 'uuid' }) })
-const OtpBody = strictObject({ phone: Type.String({ minLength: 3, maxLength: 32 }) })
+const ResendInviteBody = strictObject({
+  staffId: Type.String({
+    format: 'uuid',
+    description: 'The id of the staff account that is still `invited`',
+  }),
+})
+const OtpBody = strictObject({
+  phone: Type.String({
+    minLength: 3,
+    maxLength: 32,
+    description:
+      'The phone number of the resident, with or without the country code (Vietnam by default)',
+  }),
+})
 const VerifyOtpBody = strictObject({
-  challengeId: Type.String({ format: 'uuid' }),
-  code: Type.String({ pattern: '^[0-9]{6}$' }),
+  challengeId: Type.String({
+    format: 'uuid',
+    description: 'The `challengeId` returned by `requestOtp`',
+  }),
+  code: Type.String({ pattern: '^[0-9]{6}$', description: 'The six-digit code sent by SMS' }),
 })
 const RefreshBody = Type.Optional(
-  strictObject({ refreshToken: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })) }),
+  strictObject({
+    refreshToken: Type.Optional(
+      Type.String({
+        minLength: 1,
+        maxLength: 200,
+        description:
+          'The refresh token of an app. The web CMS sends no body: its token is in the HttpOnly cookie (with the header `X-Requested-With: rms`)',
+      }),
+    ),
+  }),
 )
 
 /** The ip the buckets key on: an IPv6 address is reduced to its /64 (DOC-39 §5.3). */
@@ -192,37 +235,82 @@ export function authRoutes(d: AuthRouteDeps) {
   return routePlugin({ prefix: '/auth' })
     .post('/staff/login', staffLogin, {
       body: LoginBody,
-      ...open({ endpoint: 'E-05', operationId: 'loginStaff' }),
+      ...open({
+        endpoint: 'E-05',
+        operationId: 'loginStaff',
+        summary: 'Sign in as staff',
+        description:
+          'A staff member signs in with email and password. With `client: "web"` the refresh token is set in an HttpOnly cookie; with `client: "app"` it is returned in the body. A wrong password, an unknown email and an account that is invited, locked or disabled all answer the same 401 `invalid_credentials`.',
+      }),
     })
     .post('/staff/password-reset', requestPasswordReset, {
       body: PasswordResetBody,
-      ...open({ endpoint: 'E-06', operationId: 'requestStaffPasswordReset' }),
+      ...open({
+        endpoint: 'E-06',
+        operationId: 'requestStaffPasswordReset',
+        summary: 'Request a staff password reset',
+        description:
+          'A staff member asks for a reset link by email. The answer is the same whether or not the email belongs to an account, so it cannot be used to find out which emails exist.',
+      }),
     })
     .post('/staff/password', setPassword, {
       body: SetPasswordBody,
-      ...open({ endpoint: 'E-07', operationId: 'setStaffPassword' }),
+      ...open({
+        endpoint: 'E-07',
+        operationId: 'setStaffPassword',
+        summary: 'Set a staff password',
+        description:
+          'Sets the password from an invite link or a reset link. The token is single use; an unknown, expired or used token all answer 400 `token_invalid`. A reset revokes every session of the account.',
+      }),
     })
     .post('/staff/invite/resend', resendStaffInvite, {
       ...staffRoute(d.guards, 'auth', RESEND_STAFF_INVITE_ROLES, {
         endpoint: 'E-08',
         operationId: 'resendStaffInvite',
+        summary: 'Resend a staff invite',
+        description:
+          'Sends a new invite link to a staff member who is still `invited`, typically after the 24-hour link expired.',
       }),
       body: ResendInviteBody,
     })
     .post('/otp', requestOtp, {
       body: OtpBody,
-      ...open({ endpoint: 'E-09', operationId: 'requestOtp' }),
+      ...open({
+        endpoint: 'E-09',
+        operationId: 'requestOtp',
+        summary: 'Request a resident sign-in code',
+        description:
+          'A resident asks for a one-time code sent by SMS to their phone. An unregistered phone answers 404 `phone_not_registered` and no SMS is sent. Rate limited per IP and per phone; a resend before `resendAfter` answers 429.',
+      }),
     })
     .post('/otp/verify', verifyOtp, {
       body: VerifyOtpBody,
-      ...open({ endpoint: 'E-10', operationId: 'verifyOtp' }),
+      ...open({
+        endpoint: 'E-10',
+        operationId: 'verifyOtp',
+        summary: 'Verify a resident sign-in code',
+        description:
+          'The resident enters the code and signs in. The answer carries the tokens and the active memberships, so the app can go to the home screen or the unit picker without another call. An empty membership list means no unit is linked yet.',
+      }),
     })
     .post('/refresh', refresh, {
       body: RefreshBody,
-      ...withRefreshToken({ endpoint: 'E-11', operationId: 'refreshSession' }),
+      ...withRefreshToken({
+        endpoint: 'E-11',
+        operationId: 'refreshSession',
+        summary: 'Refresh the session tokens',
+        description:
+          'Rotates the access token and the refresh token. The client calls it once on a 401 and replays the request. Presenting a refresh token that was already rotated revokes the whole session family.',
+      }),
     })
     .post('/logout', logout, {
       body: RefreshBody,
-      ...withRefreshToken({ endpoint: 'E-12', operationId: 'logout' }),
+      ...withRefreshToken({
+        endpoint: 'E-12',
+        operationId: 'logout',
+        summary: 'Sign out',
+        description:
+          'Ends the session of the given refresh token. Safe to repeat: an unknown or already ended session answers the same.',
+      }),
     })
 }

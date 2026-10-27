@@ -28,10 +28,26 @@ const STAFF_UPLOAD_ROLES = [
 ] as const satisfies readonly StaffRole[]
 
 const RegisterBody = strictObject({
-  purpose: Type.String({ maxLength: 40 }),
-  module: Type.Optional(Type.String({ maxLength: 20 })),
-  mime: Type.String({ maxLength: 120 }),
-  size: Type.Integer({ minimum: 1 }),
+  purpose: Type.String({
+    maxLength: 40,
+    description:
+      'What the file is for, for example `avatar`, `logo`, `import`, `statement`, `ticket_media`, `notice_attachment`. The purposes a role may register are listed in DOC-37 §4; any other is 403 `forbidden`',
+  }),
+  module: Type.Optional(
+    Type.String({
+      maxLength: 20,
+      description:
+        'The module that owns the file: `residency` or `finance`. Required for the purpose `import`; for any other purpose it must equal the module of the purpose',
+    }),
+  ),
+  mime: Type.String({
+    maxLength: 120,
+    description: 'The media type of the file, one the purpose allows (a CSV is `text/csv`)',
+  }),
+  size: Type.Integer({
+    minimum: 1,
+    description: 'The size of the file in bytes, at most the maximum of the purpose',
+  }),
 })
 
 /** The key belongs to the staff account (DOC-50 §8.3). */
@@ -90,6 +106,9 @@ export function uploadRoutes(d: UploadRouteDeps) {
       ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, {
         endpoint: 'E-36',
         operationId: 'registerStaffUpload',
+        summary: 'Register a staff upload',
+        description:
+          'Registers a file and returns a presigned `PUT` URL. Step 1 of the upload flow; the client then uploads the bytes and calls the verify route. The allowed purposes depend on the role.',
         byPurpose: true,
         idempotent: true,
       }),
@@ -99,6 +118,9 @@ export function uploadRoutes(d: UploadRouteDeps) {
       ...staffRoute(d.guards, 'files', STAFF_UPLOAD_ROLES, {
         endpoint: 'E-37',
         operationId: 'verifyStaffUpload',
+        summary: 'Verify a staff upload',
+        description:
+          'Step 2 of the upload flow: after the client has put the bytes, the server checks the object (size, type, magic bytes) and marks the file `verified`.',
         byPurpose: true,
       }),
       params: IdParams,

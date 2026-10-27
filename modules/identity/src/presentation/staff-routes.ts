@@ -1,5 +1,6 @@
 import {
   API_PREFIX,
+  describedEnum,
   type Idempotent,
   IdParams,
   type RouteInfo,
@@ -71,46 +72,80 @@ export interface StaffRouteDeps {
 }
 
 const StepUpBody = strictObject({
-  action: Type.Union([
-    Type.Literal('gateway_config'),
-    Type.Literal('admin_change'),
-    Type.Literal('staff_email'),
-  ]),
+  action: describedEnum(
+    {
+      gateway_config: 'Change the payment gateway configuration',
+      admin_change: 'Create an admin account or promote someone to admin',
+      staff_email: 'Change the email of a staff account',
+    },
+    'The sensitive action the code is for. The code works for this action only.',
+  ),
 })
 
-const Role = Type.Union([
-  Type.Literal('admin'),
-  Type.Literal('manager'),
-  Type.Literal('technician'),
-  Type.Literal('guard'),
-])
-const Status = Type.Union([
-  Type.Literal('invited'),
-  Type.Literal('active'),
-  Type.Literal('locked'),
-  Type.Literal('disabled'),
-])
-const Language = Type.Union([Type.Literal('vi'), Type.Literal('en')])
-const ProofBody = strictObject({
-  password: Type.String({ minLength: 1, maxLength: 128 }),
-  code: Type.String({ pattern: '^[0-9]{6}$' }),
-})
-const FullName = Type.String({ minLength: 1, maxLength: 120 })
-const Email = Type.String({ format: 'email', maxLength: 254 })
+const Role = describedEnum(
+  {
+    admin: 'Full access, including staff accounts and the payment gateway',
+    manager: 'Runs the building day to day',
+    technician: 'Works on the tickets assigned to them',
+    guard: 'Front-gate security',
+  },
+  'The role of the staff member.',
+)
+const Status = describedEnum(
+  {
+    invited: 'Created and mailed a link; has not set a password yet',
+    active: 'Can sign in',
+    locked: 'Locked by an admin or manager; cannot sign in',
+    disabled: 'A former staff member; the email stays reserved',
+  },
+  'The status of the staff account.',
+)
+const Language = describedEnum({ vi: 'Vietnamese', en: 'English' }, 'The interface language.')
+const ProofBody = strictObject(
+  {
+    password: Type.String({
+      minLength: 1,
+      maxLength: 128,
+      description: 'The password of the signed-in admin',
+    }),
+    code: Type.String({
+      pattern: '^[0-9]{6}$',
+      description: 'The six-digit code mailed by `requestStepUp` for the action',
+    }),
+  },
+  { description: 'The proof of a sensitive action (a password and a step-up code)' },
+)
+const FullName = Type.String({ minLength: 1, maxLength: 120, description: 'The full name' })
+const Email = Type.String({ format: 'email', maxLength: 254, description: 'The email address' })
 
 const UpdateMeBody = strictObject({
-  fullName: Type.Optional(Type.String({ minLength: 1 })),
+  fullName: Type.Optional(Type.String({ minLength: 1, description: 'The own full name' })),
   language: Type.Optional(Language),
-  pushEnabled: Type.Optional(Type.Boolean()),
-  avatarFileId: Type.Optional(Type.Union([Type.String({ format: 'uuid' }), Type.Null()])),
+  pushEnabled: Type.Optional(
+    Type.Boolean({ description: 'Whether push notifications are on for this account' }),
+  ),
+  avatarFileId: Type.Optional(
+    Type.Union([Type.String({ format: 'uuid' }), Type.Null()], {
+      description: 'The id of a verified `avatar` upload; `null` removes the avatar',
+    }),
+  ),
 })
 
 const ListQuery = strictObject({
-  page: Type.Optional(Type.String({ pattern: '^[0-9]{1,5}$' })),
-  pageSize: Type.Optional(Type.String({ pattern: '^[0-9]{1,3}$' })),
+  page: Type.Optional(
+    Type.String({ pattern: '^[0-9]{1,5}$', description: 'The page number, from 1 (default 1)' }),
+  ),
+  pageSize: Type.Optional(
+    Type.String({ pattern: '^[0-9]{1,3}$', description: 'Rows per page, 1…50 (default 10)' }),
+  ),
   role: Type.Optional(Role),
   status: Type.Optional(Status),
-  q: Type.Optional(Type.String({ maxLength: 100 })),
+  q: Type.Optional(
+    Type.String({
+      maxLength: 100,
+      description: 'Matches the name (case and diacritics ignored) or the start of the email',
+    }),
+  ),
 })
 const CreateBody = strictObject({
   fullName: FullName,
@@ -124,14 +159,38 @@ const UpdateBody = strictObject({
   language: Type.Optional(Language),
   role: Type.Optional(Role),
   email: Type.Optional(Email),
-  reassignTo: Type.Optional(Type.String({ format: 'uuid' })),
-  reason: Type.Optional(Type.String({ maxLength: 1000 })),
+  reassignTo: Type.Optional(
+    Type.String({
+      format: 'uuid',
+      description:
+        'With `role`: an active technician or guard who takes over the open tickets of the account (admin only)',
+    }),
+  ),
+  reason: Type.Optional(
+    Type.String({
+      maxLength: 1000,
+      description:
+        'Why the open tickets are reassigned, 5…500 characters. Required with `reassignTo`',
+    }),
+  ),
   stepUp: Type.Optional(ProofBody),
 })
 const ReassignBody = Type.Optional(
   strictObject({
-    reassignTo: Type.Optional(Type.String({ format: 'uuid' })),
-    reason: Type.Optional(Type.String({ maxLength: 1000 })),
+    reassignTo: Type.Optional(
+      Type.String({
+        format: 'uuid',
+        description:
+          'Admin only: an active technician or guard who takes over every open ticket of the account in the same transaction',
+      }),
+    ),
+    reason: Type.Optional(
+      Type.String({
+        maxLength: 1000,
+        description:
+          'Why the open tickets are reassigned, 5…500 characters. Required with `reassignTo`',
+      }),
+    ),
   }),
 )
 
@@ -298,31 +357,63 @@ export function staffRoutes(d: StaffRouteDeps) {
     staffRoute(d.guards, 'staff', roles, info)
 
   return routePlugin({ prefix: '/staff' })
-    .get('/me', me, route(GET_STAFF_ME_ROLES, { endpoint: 'E-30', operationId: 'getStaffMe' }))
+    .get(
+      '/me',
+      me,
+      route(GET_STAFF_ME_ROLES, {
+        endpoint: 'E-30',
+        operationId: 'getStaffMe',
+        summary: 'Get the signed-in staff member',
+        description:
+          'The account of the signed-in staff member, used by the shell of the web CMS and the staff app.',
+      }),
+    )
     .patch('/me', updateMe, {
-      ...route(UPDATE_STAFF_ME_ROLES, { endpoint: 'E-31', operationId: 'updateStaffMe' }),
+      ...route(UPDATE_STAFF_ME_ROLES, {
+        endpoint: 'E-31',
+        operationId: 'updateStaffMe',
+        summary: 'Update the signed-in staff member',
+        description:
+          'Edits the own name, language, push setting and avatar. The email and the role are never changed here: the email only through the staff account update with step-up, the role only by an admin.',
+      }),
       body: UpdateMeBody,
     })
     .get(
       '/sessions',
       listSessions,
-      route(LIST_STAFF_SESSIONS_ROLES, { endpoint: 'E-32', operationId: 'listStaffSessions' }),
+      route(LIST_STAFF_SESSIONS_ROLES, {
+        endpoint: 'E-32',
+        operationId: 'listStaffSessions',
+        summary: 'List my staff sessions',
+        description:
+          'The live sessions of the signed-in staff member, with the current one marked.',
+      }),
     )
     .delete('/sessions/:id', revokeSession, {
       ...route(REVOKE_STAFF_SESSION_ROLES, {
         endpoint: 'E-33',
         operationId: 'revokeStaffSession',
+        summary: 'Revoke one of my staff sessions',
+        description: 'Ends one of the own sessions, or the current one, which equals a sign-out.',
       }),
       params: IdParams,
     })
     .post('/step-up', requestStepUp, {
-      ...route(REQUEST_STEP_UP_ROLES, { endpoint: 'E-38', operationId: 'requestStepUp' }),
+      ...route(REQUEST_STEP_UP_ROLES, {
+        endpoint: 'E-38',
+        operationId: 'requestStepUp',
+        summary: 'Request a step-up code',
+        description:
+          'The admin asks for the one-time code that proves a sensitive action. The code is mailed to the admin own address, is valid for 10 minutes, can be used once and is bound to the admin and to the action.',
+      }),
       body: StepUpBody,
     })
     .get('/accounts', listAccounts, {
       ...route(LIST_STAFF_ACCOUNTS_ROLES, {
         endpoint: 'E-39',
         operationId: 'listStaffAccounts',
+        summary: 'List staff accounts',
+        description: 'The staff accounts of the building, with filters and cursor pagination.',
       }),
       query: ListQuery,
     })
@@ -330,26 +421,44 @@ export function staffRoutes(d: StaffRouteDeps) {
       ...route(CREATE_STAFF_ACCOUNT_ROLES, {
         endpoint: 'E-40',
         operationId: 'createStaffAccount',
+        summary: 'Create a staff account',
+        description:
+          'Creates a staff account in the status `invited` and mails the set-password link. Needs an `Idempotency-Key`, and a step-up code for `admin_change` when the role is `admin`.',
         idempotent: true,
         stepUp: 'admin_change',
       }),
       body: CreateBody,
     })
     .get('/accounts/:id', getAccount, {
-      ...route(GET_STAFF_ACCOUNT_ROLES, { endpoint: 'E-41', operationId: 'getStaffAccount' }),
+      ...route(GET_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-41',
+        operationId: 'getStaffAccount',
+        summary: 'Get a staff account',
+        description:
+          'One staff account. The `ETag` of the answer is the value to send in `If-Match` when updating it.',
+      }),
       params: IdParams,
     })
     .patch('/accounts/:id', updateAccount, {
       ...route(UPDATE_STAFF_ACCOUNT_ROLES, {
         endpoint: 'E-42',
         operationId: 'updateStaffAccount',
+        summary: 'Update a staff account',
+        description:
+          'Edits the name, language, role or email of a staff account. Needs `If-Match`; a promotion to `admin` needs a step-up code for `admin_change`, an email change one for `staff_email`.',
         stepUp: ['admin_change', 'staff_email'],
       }),
       params: IdParams,
       body: UpdateBody,
     })
     .post('/accounts/:id/lock', lockAccount, {
-      ...route(LOCK_STAFF_ACCOUNT_ROLES, { endpoint: 'E-43', operationId: 'lockStaffAccount' }),
+      ...route(LOCK_STAFF_ACCOUNT_ROLES, {
+        endpoint: 'E-43',
+        operationId: 'lockStaffAccount',
+        summary: 'Lock a staff account',
+        description:
+          'Locks a staff account so it cannot sign in and every session ends. A manager can lock only technician and guard accounts; an admin any account except their own. Open tickets are handed to `reassignTo`.',
+      }),
       params: IdParams,
       body: ReassignBody,
     })
@@ -357,6 +466,9 @@ export function staffRoutes(d: StaffRouteDeps) {
       ...route(UNLOCK_STAFF_ACCOUNT_ROLES, {
         endpoint: 'E-44',
         operationId: 'unlockStaffAccount',
+        summary: 'Unlock a staff account',
+        description:
+          'Lifts either kind of lock at once: the manual `locked` status and the temporary lock after failed sign-ins.',
       }),
       params: IdParams,
     })
@@ -364,6 +476,8 @@ export function staffRoutes(d: StaffRouteDeps) {
       ...route(DISABLE_STAFF_ACCOUNT_ROLES, {
         endpoint: 'E-45',
         operationId: 'disableStaffAccount',
+        summary: 'Disable a staff account',
+        description: 'Deactivates a former staff member. The email stays reserved.',
       }),
       params: IdParams,
       body: ReassignBody,
@@ -372,6 +486,8 @@ export function staffRoutes(d: StaffRouteDeps) {
       ...route(ENABLE_STAFF_ACCOUNT_ROLES, {
         endpoint: 'E-46',
         operationId: 'enableStaffAccount',
+        summary: 'Enable a staff account',
+        description: 'Re-activates a disabled staff account.',
       }),
       params: IdParams,
     })

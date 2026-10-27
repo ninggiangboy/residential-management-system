@@ -76,7 +76,9 @@ export function buildApp(container: Container) {
           enabled: config.http.OPENAPI_ENABLED,
           path: '/docs',
           specPath: '/openapi.json',
-          documentation: openapiDocumentation([]),
+          documentation: openapiDocumentation(
+            container.modules.flatMap((module) => module.docs ?? []),
+          ),
         }),
       )
       // The public readiness route names no dependency (DR-145); the ops port lists every check (ops.ts).
