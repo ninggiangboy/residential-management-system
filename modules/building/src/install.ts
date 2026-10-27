@@ -27,5 +27,7 @@ export function installBuilding(host: BuildingHost): BuildingModule {
     features: host.features,
     thumbnailer: host.thumbnailer,
     usage: host.usage,
+    demo: host.demo,
+    metrics: host.metrics,
   })
 }

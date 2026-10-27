@@ -36,3 +36,18 @@ export interface TransactionProbe {
 export interface UsageReporter {
   report(buildingId: string, ratio: number, isDemo: boolean): void
 }
+
+/**
+ * The lock of a demo reset (DOC-36 §10.2): `pg_try_advisory_xact_lock(hashtext('job:demo_reset'))`, the same lock as the nightly job,
+ * held to the end of the caller's transaction. Taking it also sets the transaction-local `rms.demo_reset` to the building's id,
+ * which the delete guards of the ledger honor for that building only (DR-243).
+ */
+export interface DemoResetLock {
+  /** `false` when another reset holds it. */
+  acquire(buildingId: string): Promise<boolean>
+}
+
+/** `demo-reset:building:<id>`, one per minute (E-56); throws `RateLimitedError` with `Retry-After` when the bucket is empty. */
+export interface DemoResetLimiter {
+  take(buildingId: string): Promise<void>
+}

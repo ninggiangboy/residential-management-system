@@ -2,6 +2,7 @@ import {
   ConflictError,
   ForbiddenError,
   InvariantError,
+  NotFoundError,
   PayloadTooLargeError,
   RuleViolationError,
   ValidationError,
@@ -58,5 +59,22 @@ export class GatewayInUseError extends ConflictError {
 export class TermsVersionSupersededError extends ConflictError {
   constructor(current: ReadonlyArray<{ kind: string; version: number; versionId: string }>) {
     super('terms_version_superseded', 'The terms were updated', { details: { current } })
+  }
+}
+
+/**
+ * 404 `not_found`: a demo operation aimed at a building that is not a demo building, or at an id that does not exist. The answer
+ * does not tell the two apart and does not reveal that the endpoint exists for another building (DOC-36 §10.2, §10.4; BD-37, BD-42).
+ */
+export class DemoResetRefusedError extends NotFoundError {
+  constructor() {
+    super('not_found', 'Resource not found')
+  }
+}
+
+/** 409 `demo_reset_running`: the advisory lock `job:demo_reset` is held by another reset (DOC-36 §10.4; BD-41). */
+export class DemoResetRunningError extends ConflictError {
+  constructor() {
+    super('demo_reset_running', 'The demo is being reset')
   }
 }

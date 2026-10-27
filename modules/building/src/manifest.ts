@@ -7,8 +7,7 @@ const dir = fileURLToPath(new URL('..', import.meta.url))
 
 /**
  * Static data, importable without building the container (DOC-12 §4.2). `building` writes two commands to its own outbox
- * (DR-122), both of the `default` retry class, and declares the audit actions of DOC-35 §4.2. `building.demo.reset` joins the
- * list with the demo reset (P1-21).
+ * (DR-122), both of the `default` retry class, and declares the audit actions of DOC-35 §4.2, `building.demo.reset` (P1-21) included.
  */
 export const buildingManifest = {
   name: 'building',
@@ -26,5 +25,6 @@ export const buildingManifest = {
     'building.settings.update',
     'building.gateway.update',
     'building.terms.publish',
+    'building.demo.reset',
   ],
 } as const satisfies ModuleManifest

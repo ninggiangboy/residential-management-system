@@ -5,7 +5,14 @@ import type { Envelope } from '@core/messaging'
 import { type ObjectStorage, S3ObjectStorage } from '@core/storage'
 import { FakeClock, FakeStorage } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
-import type { BuildingId, StaffContext, StaffId, StaffRole } from '@rms/shared-types'
+import type {
+  BuildingId,
+  DemoPlan,
+  DemoResettable,
+  StaffContext,
+  StaffId,
+  StaffRole,
+} from '@rms/shared-types'
 import { cloneTemplate, type TestDb } from '@rms/test-support'
 import type { sql } from 'drizzle-orm'
 import sharp from 'sharp'
@@ -58,6 +65,39 @@ interface StepUpCalls {
 export interface HarnessOptions {
   settingsCacheSeconds?: number
   uploadRatePerHour?: number
+  /** `DEMO_STAFF_PASSWORD`; none by default in a test that checks the refusal. */
+  demoPassword?: string
+}
+
+/** The seed of the demo building of these tests: the building, its gateway and one version of each terms; no unit, no account. */
+export function demoPlanOf(buildingId: string): DemoPlan {
+  return {
+    building: {
+      id: buildingId,
+      code: 'DEMO-A',
+      name: { vi: 'Chung cư Demo A', en: 'Demo A Apartments' },
+      company: { name: { vi: 'Công ty Demo' } },
+      address: '1 Demo',
+      hotline: '1900 0000',
+      email: 'demo@demo.rms.invalid',
+      workingHours: { vi: 'Thứ 2 – Thứ 6', en: 'Mon – Fri' },
+      timeZone: 'Asia/Ho_Chi_Minh',
+    },
+    gateway: {
+      id: '018f0000-0000-7000-8000-0000000000a1',
+      provider: 'payos',
+      driver: 'fake',
+      receivingAccount: { bankBin: '970436', accountNumber: '0000000000', accountName: 'DEMO' },
+    },
+    terms: [
+      { id: '018f0000-0000-7000-8000-0000000000b1', kind: 'terms', text: { vi: 'DEMO' } },
+      { id: '018f0000-0000-7000-8000-0000000000b2', kind: 'privacy', text: { vi: 'DEMO' } },
+    ],
+    termsPublisherId: '018f0000-0000-7000-8000-0000000000c1',
+    units: [],
+    staff: [],
+    residents: [],
+  }
 }
 
 export async function createHarness(options: HarnessOptions = {}) {
@@ -90,6 +130,9 @@ export async function createHarness(options: HarnessOptions = {}) {
     purgeGraceMinutes: 0,
   })
   const usage: Array<{ buildingId: string; ratio: number; isDemo: boolean }> = []
+  /** The modules of the host that `building` resets besides itself; a test pushes its own. */
+  const demoModules: DemoResettable[] = []
+  const observed: Array<{ name: string; seconds: number }> = []
   const building: BuildingModule = installBuilding({
     idempotent: noIdempotency,
     logger: silent,
@@ -135,6 +178,16 @@ export async function createHarness(options: HarnessOptions = {}) {
     outboxMaxPayloadBytes: 65536,
     features: { ticketDeadlines: false },
     usage: { report: (buildingId, ratio, isDemo) => usage.push({ buildingId, ratio, isDemo }) },
+    demo: {
+      source: { plan: demoPlanOf(DEMO_BUILDING), password: options.demoPassword },
+      modules: () => demoModules,
+      graceMinutes: 120,
+    },
+    metrics: {
+      inc() {},
+      add() {},
+      observe: (name, seconds) => observed.push({ name, seconds }),
+    },
   })
 
   const admin = db.admin()
@@ -254,6 +307,8 @@ export async function createHarness(options: HarnessOptions = {}) {
     stepUpState,
     probeState,
     usage,
+    demoModules,
+    observed,
     staff,
     actorOf,
     resident,

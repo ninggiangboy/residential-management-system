@@ -18,6 +18,7 @@ import {
   LIST_TERMS_ROLES,
 } from '../application/queries/building-queries'
 import { PUBLISH_TERMS_ROLES, type PublishTerms } from '../application/use-cases/publish-terms'
+import { RESET_DEMO_ROLES, type ResetDemo } from '../application/use-cases/reset-demo'
 import {
   SAVE_GATEWAY_CONFIG_ROLES,
   type SaveGatewayConfig,
@@ -38,6 +39,7 @@ export interface BuildingRouteDeps {
   updateBuildingSettings: UpdateBuildingSettings
   saveGatewayConfig: SaveGatewayConfig
   publishTerms: PublishTerms
+  resetDemo: ResetDemo
   staffNames: StaffNames
   guards: Guards
 }
@@ -136,7 +138,8 @@ const TermsBody = strictObject({
 })
 
 /**
- * `/staff/settings`, `/staff/gateway` and `/staff/terms` of `building` (DOC-36 §4, §7, §8; E-47…E-50, E-52, E-53). Every route
+ * `/staff/settings`, `/staff/gateway`, `/staff/terms` and `/staff/demo/reset` of `building` (DOC-36 §4, §7, §8, §10.4; E-47…E-50,
+ * E-52, E-53, E-56). Every route
  * is the Admin's, reads its roles from the use case or query it calls, and holds no rule. `POST /staff/gateway/check` (E-51)
  * comes with the drivers of DOC-24; the resident terms routes (E-16, E-17) with P1-11.
  */
@@ -224,6 +227,11 @@ export function buildingRoutes(d: BuildingRouteDeps) {
     return created
   }
 
+  const resetDemo = async (context: { set: RouteSet }) => {
+    context.set.headers['cache-control'] = 'no-store'
+    return d.resetDemo.execute(staffOf(context))
+  }
+
   const route = (roles: Parameters<Guards['staff']>[0], info: RouteInfo) =>
     staffRoute(d.guards, 'building', roles, info)
 
@@ -290,4 +298,15 @@ export function buildingRoutes(d: BuildingRouteDeps) {
       }),
       body: TermsBody,
     })
+    .post(
+      '/demo/reset',
+      resetDemo,
+      route(RESET_DEMO_ROLES, {
+        endpoint: 'E-56',
+        operationId: 'resetDemo',
+        summary: 'Reset the demo building',
+        description:
+          'Puts the demo building back to its seed: every module deletes its rows and seeds them again in one transaction. Every demo session ends. The answer is 404 for a building that is not a demo building.',
+      }),
+    )
 }
