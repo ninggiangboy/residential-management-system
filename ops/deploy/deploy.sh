@@ -75,7 +75,8 @@ step 4 infrastructure
 dc up -d --no-deps caddy seaweedfs cloudflared postgres-exporter node-exporter prometheus alertmanager grafana || fail 4
 if [[ ",$COMPOSE_PROFILES," == *",logs,"* ]]; then dc up -d --no-deps loki alloy || fail 4; fi
 
-# 5. rolling restart: api-1 -> ready -> api-2 -> ready -> worker
+# 5. rolling restart: worker -> ready -> api-1 -> ready -> api-2. The consumer goes first: an event of a new type that the new `api`
+#    writes must find its handler, and a worker that has no handler for a type marks the message as done (DR-272).
 step 5 rolling
 wait_healthy() { # name, timeout seconds
   local t=$(($(date +%s) + ${2:-90}))
@@ -84,7 +85,7 @@ wait_healthy() { # name, timeout seconds
     sleep "${RMS_POLL_SECONDS:-3}"
   done
 }
-for svc in api-1 api-2 worker; do
+for svc in worker api-1 api-2; do
   if [ "$svc" = api-2 ] && [[ ",$COMPOSE_PROFILES," != *",api2,"* ]]; then continue; fi
   dc up -d --no-deps --force-recreate "$svc" || fail 5
   wait_healthy "$svc" "${RMS_HEALTH_SECONDS:-90}" || { echo "$svc not healthy"; fail 5; }
