@@ -8,6 +8,7 @@ appId: vn.rms.staff.dev
 - tapOn:
     id: password-input
 - inputText: "Sunrise2026!"
+- hideKeyboard
 - tapOn:
     id: login-submit
 - assertVisible:
