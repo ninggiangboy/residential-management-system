@@ -266,6 +266,15 @@ describe('the boot rules of DOC-41 §17', () => {
     ).toEqual([])
   })
 
+  test('CF-19 a simulated latency is refused on a host and accepted in local (DR-305)', () => {
+    for (const profile of ['staging', 'production'] as const) {
+      const { env, io } = hostEnv(profile, { DEV_LATENCY_MS: '400' })
+      expect(ruleOf(problemsOf(env, io), 'DEV_LATENCY_MS')).toBe(15)
+    }
+    expect(problemsOf(localEnv({ DEV_LATENCY_MS: '400' }))).toEqual([])
+    expect(ruleOf(problemsOf(localEnv({ DEV_LATENCY_MS: '9000' })), 'DEV_LATENCY_MS')).toBe(2)
+  })
+
   test('a role that does not run the API does not need its keys', () => {
     const worker = localEnv({
       APP_ROLES: 'worker',

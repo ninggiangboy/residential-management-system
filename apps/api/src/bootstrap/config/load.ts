@@ -206,6 +206,11 @@ const isOrigin = (origin: string) => {
   }
 }
 
+/** Rule 15: the simulated latency of DR-305 is a laptop tool; a host never waits on purpose. */
+function hostRules(config: Parsed, fail: Fail) {
+  if (config.http.DEV_LATENCY_MS > 0) fail('DEV_LATENCY_MS', 15, 'must be 0 outside local and test')
+}
+
 function networkRules(config: Parsed, fail: Fail) {
   if (!config.http.CORS_ORIGINS.every(isOrigin))
     fail('CORS_ORIGINS', 11, 'must hold origins without a path and no wildcard')
@@ -213,12 +218,13 @@ function networkRules(config: Parsed, fail: Fail) {
     fail('TRUSTED_PROXY_HOPS', 12, 'must be 0 when TRUSTED_PROXY_CIDRS is empty')
 }
 
-/** Rules 6 to 12 on the parsed values (DOC-41 §17). */
+/** Rules 6 to 12 and 15 on the parsed values (DOC-41 §17). */
 function crossRules(config: Parsed, profile: AppEnv): ConfigProblem[] {
   const problems: ConfigProblem[] = []
   const fail: Fail = (key, rule, message) => problems.push({ key, rule, message })
   limitRules(config, fail)
   if (profile === 'production') productionRules(config, fail)
+  if (isHostProfile(profile)) hostRules(config, fail)
   networkRules(config, fail)
   return problems
 }

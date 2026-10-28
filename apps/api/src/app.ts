@@ -50,6 +50,17 @@ export const clientIpOf = ({ config, logger }: Pick<Container, 'config' | 'logge
   })
 
 /**
+ * DR-305: with `APP_ENV=local` every answer waits `DEV_LATENCY_MS`, ±50%, so the clients are built against the delay of a real
+ * network (loading states, double clicks, races). Health routes answer at once. Any other profile never waits: the boot rule 15
+ * refuses the key on a host, and the code checks the profile as well.
+ */
+export const latencyPlugin = (appEnv: string, ms: number) =>
+  new Elysia({ name: 'dev-latency' }).onRequest(({ request }) => {
+    if (appEnv !== 'local' || ms === 0 || new URL(request.url).pathname.includes('/health')) return
+    return Bun.sleep(Math.round(ms * (0.5 + Math.random())))
+  })
+
+/**
  * Shared by `main.ts` and the tests. `App` is the type the clients infer their Eden Treaty client from, and the only thing
  * they may import from this package (`import type`, DOC-12 §5.4). The plugins are mounted in the order of the gates of
  * DOC-50 §7: request context → error handler → CORS → maintenance → OpenAPI → health → one `.use()` per module.
@@ -68,6 +79,7 @@ export function buildApp(container: Container) {
         }),
       )
       .use(errorHandlerPlugin({ logger }))
+      .use(latencyPlugin(config.core.APP_ENV, config.http.DEV_LATENCY_MS))
       .use(
         corsPlugin({
           origins: config.http.CORS_ORIGINS,
