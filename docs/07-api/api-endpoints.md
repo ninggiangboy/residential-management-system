@@ -2724,14 +2724,14 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
     ] }
   ```
 
-- **Response 204:** no body, also when every event was dropped, when `USAGE_ENABLED` is false and when the building is a demo building.
+- **Response 204:** no body, also when every event was dropped and when the building is a demo building. When `USAGE_ENABLED` is false the answer is the same 204 plus the header `X-Usage-Enabled: false`, which tells the client to stop sending until its next launch (DOC-104 §5.4); the header is in the exposed list of DOC-50 §5.3.
 - **Errors:** 400 `validation_failed` (an unknown key, a count or a value out of range, `sessionId` not a UUID v4; for E-173 also a missing or malformed `X-Unit-Id`, `header.X-Unit-Id`), 401, 403 `membership_inactive` and 403 `terms_required` (E-173), (E-174 takes every role, so it has no 403 `forbidden`), 413 `payload_too_large` (the body limit, before validation), 426 `upgrade_required` (the version gate), 429 `rate_limited` with `Retry-After` (`scope: "usage_events"`; the app drops the batch silently), 503 `maintenance`. No new error code (DOC-42 §10).
 - **Data source:** one `INSERT … SELECT FROM unnest(…)` into `analytics.usage_event` (DOC-104 §6.3); `audience` is `resident` for E-173 and `staff` for E-174. Two PostgreSQL buckets in `platform.rate_bucket` (DR-64), shared by both routes: `usage-events:ip:<ip>` 30 a minute (`USAGE_EVENTS_PER_MINUTE_PER_IP`) and `usage-events:session:<sessionId>` 120 an hour (`USAGE_EVENTS_PER_HOUR_PER_SESSION`). The counters `usage_events_total` and `usage_events_dropped_total` (DOC-40 §4.7). Nothing identifies the account in a row, a bucket or a metric label; the request line carries the account id like any request line, and never the body (DOC-42 §8.4).
 - **Cache:** `no-store`.
 - **Idempotency:** none (not `R`): a repeated batch is counted twice, which DR-279 (9) accepts.
 - **Performance:** p95 under 50 ms (two bucket statements and one insert of at most 50 rows).
 - **Events:** none (no outbox row, no audit row; DOC-104 §6.3).
-- **Tests:** UA-01…14, UA-28 (DOC-104 §13).
+- **Tests:** UA-01…14, UA-28, UA-30 (DOC-104 §13).
 
 ## 11. Later groups
 

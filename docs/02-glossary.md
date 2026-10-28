@@ -347,7 +347,7 @@ This document defines the words of the project, as the project uses them. Every 
 | audit log | — | `audit.audit_log`: an append-only row per staff mutation, written in the mutation's transaction. | FR-37, DR-57 |
 | usage event | — | One `screen_view` or one `tap` that a signed-in client reports, named from a closed list, with no account, device, IP address or user agent: `analytics.usage_event`. Not an outbox event and not an audit row. | DR-279, DOC-104 |
 | usage session | — | A random UUID that a client makes in memory at launch and renews after 30 minutes in the background; it groups the usage events of one use of the app and joins nothing else. Not a login session (`refresh_family`). | DR-279, DOC-104 §5.2 |
-| usage switch | Chia sẻ dữ liệu sử dụng ẩn danh | The setting, on the device and on by default, that stops a client from recording usage events. | DR-279, DOC-104 §5.4 |
+| usage switch | Chia sẻ dữ liệu sử dụng ẩn danh | The setting, on the device and on by default, that stops a client from recording usage events. The server can also stop every client with `USAGE_ENABLED` (`X-Usage-Enabled: false`). | DR-279, DOC-104 §5.4 |
 | usage rollup | — | `analytics.usage_daily`: the events and the distinct sessions of a day per app, platform, audience, event and name, made by the job `usage_rollup` and kept 730 days; the raw events are purged after 90. | DR-279, DOC-104 §7 |
 | `actor_kind = 'system'` | — | The audit actor of a settlement posted by the webhook, the re-query or the statement path. | DR-57 |
 | `pii.read` | — | The audit action for reading CCCD or date of birth: one row per detail view and one per export (with the record count). | DR-57, DR-58 |

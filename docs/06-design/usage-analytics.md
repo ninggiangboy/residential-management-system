@@ -66,21 +66,72 @@ A `screen_view` name is the **section id of a screen in DOC-56** (`Main`, `Fees`
 
 ### 4.2 Controls
 
-A `tap` name is `<Screen>.<control>`, where `<Screen>` is a section id of §4.1 and `<control>` is a lower-case word with underscores.
+A `tap` name is `<Screen>.<control>`, where `<Screen>` is a section id of §4.1 and `<control>` is a lower-case word with underscores. The three clients are measured: the resident app, the staff app and the web CMS.
 
-| Target | Screen | Control | Added in |
+**What is measured.** The controls that start an action that matters to the building: paying, reading a notice, sending a request, and the decisions of staff on the web and in the app (publishing a fee batch, recording a payment, assigning a ticket, sending a notice, reviewing a vehicle). A tap records **the press that starts the action**, not its outcome: whether the payment settled or the ticket was created is already in the business tables (`finance`, `tickets`, `notices`), and the gap between the press and the outcome is the drop-off that this record exists to show (§8.2). Reading a notice needs no tap: it is the `screen_view` of `Notice-Detail`.
+
+**What is not measured.** The usage switch (§2.1); a field the person types in; a row that stands for a person or a unit (so no `B-Units.open_unit`); anything that would put an id, an amount or a name in the target. A control name is a word of the interface, never data.
+
+#### 4.2.1 Listed now (P1-29)
+
+The controls of screens that phase 1 builds. P1-29 confirms each name against the built screen.
+
+| Target | Screen | Control | Why |
 | --- | --- | --- | --- |
-| `Account.language` | `Account` | The language row | P1-29 |
-| `Account.push` | `Account` | The push row | P1-29 |
-| `W-Profile.language` | `W-Profile` | The language field | P1-29 |
-| `W-Profile.reset_link` | `W-Profile` | The "send me a reset link" button | P1-29 |
+| `Account.language` | `Account` | The language row | Do residents switch language |
+| `Account.push` | `Account` | The push row | How many turn push off |
+| `S-Account.language` | `S-Account` | The language row | The same, staff app |
+| `S-Account.push` | `S-Account` | The push row | The same, staff app |
+| `W-Profile.language` | `W-Profile` | The language field | The same, web CMS |
+| `W-Profile.reset_link` | `W-Profile` | The "send me a reset link" button | Password resets from the profile |
+| `W-Import.save` | `W-Import` | The button that saves a validated import | The main web action of phase 1 |
+| `W-Resident-Add.submit` | `W-Resident-Add` | The create button | Residents added by hand against by import |
+| `W-Staff-New.submit` | `W-Staff-New` | The create button | Staff accounts created |
+| `W-Building.save` | `W-Building` | The save button | Building settings changed |
 
-There is no target for the usage switch (§2.1). The controls that later phases will add are named with their screens, in the same change, one row each. Examples, not yet added: `Fees.open_batch` (P2), `Pay-Select.confirm` (P3), `Request-New.submit` (P4).
+#### 4.2.2 Owed with their screens
+
+Each row is added to §4.2.1 and to `USAGE_TARGETS` by the task that builds its screen (§4.3). The control names are indicative: the screen task fixes the name and keeps the rest of the row.
+
+| Target | Control | Phase | Why |
+| --- | --- | --- | --- |
+| `Fees.pay` | The pay button of the fee list | P3 | Start of payment |
+| `Pay-Select.confirm` | Confirm the batches and the method | P3 | A payment intent is asked for |
+| `Pay-VietQR.copy_content` | Copy the transfer text | P3 | Do residents pay by the code or by hand |
+| `Fee-History.open_receipt` | Open a receipt | P2 | Receipts read |
+| `Notice-Detail.open_attachment` | Open an attachment | P4 | Notices read to the end |
+| `Notices.filter` | Apply a filter | P4 | Is the list found useful |
+| `Inbox.open_item` | Open an inbox entry | P4 | Push to action |
+| `Requests.new` | The button that opens the form | P4 | Intent to send a request |
+| `Request-New.submit` | Send the request | P4 | Requests sent |
+| `Request-Detail.comment` | Send a comment | P4 | Follow-up on a request |
+| `Request-Cancel.confirm` | Cancel before acceptance | P4 | Requests withdrawn |
+| `Request-Done.rate` | Send the rating | P4 | Ratings given |
+| `Member-Add.submit` | Add a household member | P4 | Household set-up |
+| `Vehicle-Add.submit` | Register a vehicle | P5 | Vehicles registered |
+| `QR-Expired.regenerate` | Make a new QR code | P5 | Codes that expire unused |
+| `B-Assign.confirm` | Assign a ticket (staff app) | P4 | Ticket handling by the Manager |
+| `B-Ticket-Close.confirm` | Close or reopen (staff app) | P4 | The same |
+| `B-Notice-New.send` | Send a quick notice (staff app) | P4 | Notices sent from the phone |
+| `B-Vehicle-Review.approve` | Approve a vehicle (staff app) | P5 | Review work |
+| `K-Job-New.accept` | Accept a job | P4 | Technician response |
+| `K-Job-Done.submit` | Report a job done | P4 | Jobs closed by the Technician |
+| `G-Plate.search` | Search a plate | P5 | Guard lookups by plate |
+| `W-Fee-Import.save` | Save an imported batch | P2 | Batches by import |
+| `W-Fee-Batch.publish` | Publish a draft batch | P2 | Batches published |
+| `W-Fee-Record.record_payment` | Record a manual payment | P2 | Cash and transfer entered by hand |
+| `W-Debts.send_reminders` | Send debt reminders | P2 | Reminders sent |
+| `W-Statement.upload` | Upload a bank statement | P3 | Reconciliation work |
+| `W-Ticket-Assign.confirm` | Assign a ticket (web) | P4 | Ticket handling on the web |
+| `W-Notice-Edit.send` | Send or schedule a notice | P4 | Notices sent from the web |
+| `W-Docs.save_page` | Save a library page | P5 | Library edited |
+| `W-Vehicles.approve` | Approve a vehicle (web) | P5 | Review work on the web |
+| `W-Export-Center.download` | Download an export | P6 | Exports used |
 
 ### 4.3 Adding a control
 
-1. Add a row to §4.2 in the change that adds the control. A control with no row is not tracked.
-2. Add the id to `USAGE_TARGETS` in `@rms/shared-types`; the test UA-15 fails when the constant and §4.2 differ.
+1. Add a row to §4.2.1 (moving it from §4.2.2 if it is there) in the change that adds the control. A control with no row is not tracked.
+2. Add the id to `USAGE_TARGETS` in `@rms/shared-types`; the test UA-15 fails when the constant and §4.2.1 differ.
 3. Call `trackTap('<Screen>.<control>')` from the handler. The argument is typed (`UsageTarget`), so a misspelled id does not compile.
 4. A name must satisfy the grammar `^[A-Z][A-Za-z0-9-]*(\.[a-z][a-z0-9_]*)?$` and be at most 60 characters. The same rule is the check `ck_usage_event_name` (DOC-17 §9A.1).
 
@@ -112,6 +163,7 @@ All three return at once, never throw and never await the network.
 | A batch is sent when | 20 events are queued, or 30 seconds have passed since the first queued event, or the app goes to the background |
 | Size | At most 50 events and 16 KB per request (the server's limit, §6.2) |
 | In flight | One request at a time |
+| On `X-Usage-Enabled: false` | The queue is cleared and nothing is queued or sent until the next launch (§5.4) |
 | On any failure | The batch is **dropped**: a network error, 401, 413, 429, 503, anything else. No retry, no log to the person |
 | Sent with | The token of the signed-in account (DOC-55 §5) and, in the resident app, the `X-Unit-Id` of the active unit, like any unit call; through the fetcher without the idempotency header and without the retry of reads. Nothing is sent while no unit is chosen |
 | On sign-out | The queue is cleared before the token is dropped, so events of one account are never sent with the token of the next |
@@ -124,7 +176,7 @@ All three return at once, never throw and never await the network.
 - **Default.** On (DR-279 (5)). The default is the constant `USAGE_DEFAULT_ENABLED` in `@rms/client-core`; counsel's answer (DR-279 (11)) may turn it off.
 - **Stored** on the device (mobile: the device storage of `@rms/mobile-core`, key `usage.enabled`; web: `localStorage`, key `rms.usage.enabled`, read in a `try/catch`), not on the server and not per account. Another account that signs in on the same device inherits the choice.
 - **Off** means: nothing is queued, the queue is cleared at once, no request is made. Turning it on again starts a new session.
-- The server has a kill switch of its own, `USAGE_ENABLED` (§12).
+- **The server can tell the apps to stop.** When `USAGE_ENABLED` is false (§12) the batch is answered 204 with the header `X-Usage-Enabled: false`. The client then clears its queue and queues and sends nothing for the rest of that launch (a flag in memory); the first batch of the next launch learns it again. Setting the key back to `true` resumes it with no release. The web CMS can read the header because it is in the exposed list of DOC-50 §5.3.
 
 ### 5.5 Noise
 
@@ -144,7 +196,7 @@ Two routes share one use case (DOC-51): **E-173 `POST /api/v1/me/usage-events`**
 4. The IP bucket `usage-events:ip:<ip>`: `USAGE_EVENTS_PER_MINUTE_PER_IP` (30) requests a minute, else 429 `rate_limited`, `scope: "usage_events"` (DOC-39 §6).
 5. Validation of the body (§6.2), else 400 `validation_failed`.
 6. The session bucket `usage-events:session:<sessionId>`: `USAGE_EVENTS_PER_HOUR_PER_SESSION` (120) requests an hour, else 429. Both buckets are in `platform.rate_bucket`; neither key holds an account.
-7. If the building of the token is a demo building (`isDemo`), or `USAGE_ENABLED` is false: the events are counted as dropped (`demo`, `disabled`) and discarded, answer 204.
+7. If the building of the token is a demo building (`isDemo`): the events are counted as dropped (`demo`) and discarded, answer 204. If `USAGE_ENABLED` is false: the same with `disabled`, and the answer carries `X-Usage-Enabled: false`, which tells the client to stop sending (§5.4).
 8. Each event whose name is not in the lists is dropped and counted (`unknown_name`); the rest are written.
 9. One statement writes the batch; the counter `usage_events_total` rises by the written events; answer 204.
 
@@ -231,7 +283,7 @@ About 650 accounts at about 30 events a day is 20,000 rows a day, 1.8 million ro
 | --- | --- |
 | "What is used most this week?" | The Grafana dashboard **Usage** (§8.1), at `monitor.<domain>` behind Cloudflare Access (DOC-40 §7) |
 | "What was used most last quarter?" | SQL on `analytics.usage_daily` with `rms_readonly` (§8.2); Prometheus keeps 15 days (DOC-40 §2), the table keeps 730 |
-| A screen of the web CMS | **Not built.** A new requirement and a new DR (DR-279 (7)) |
+| A screen in the web CMS or the apps | **None, by decision.** The record is for analysis outside the product: Grafana and SQL (DR-279 (7)); a screen would be a new requirement and a new DR |
 | Who did it | Cannot be answered, by design |
 
 ### 8.1 The dashboard `Usage`
@@ -248,15 +300,43 @@ Provisioned from `ops/grafana/dashboards/` like the others (generated by `script
 
 `increase` survives a restart of the API (the counter resets and Prometheus corrects for it). A screen no one opened has no series; the panel shows what exists.
 
-### 8.2 SQL for longer periods
+### 8.2 SQL for analysis
+
+Run as `rms_readonly`. The first two read the rollup (730 days), the third reads the raw rows (90 days) because it needs the order of events inside a session.
 
 ```sql
 -- the 20 most opened screens of the last 30 days
-SELECT name, sum(events) AS events, sum(sessions) AS sessions   -- sessions: an upper bound (§9A.2 of DOC-17)
+SELECT name, sum(events) AS events, sum(sessions) AS sessions   -- sessions: an upper bound (DOC-17 §9A.2)
 FROM analytics.usage_daily
 WHERE building_id = $1 AND event = 'screen_view' AND day >= current_date - 30
 GROUP BY name ORDER BY events DESC LIMIT 20;
+
+-- how often a decision control was pressed, by week and app
+SELECT date_trunc('week', day) AS week, app, name, sum(events) AS presses
+FROM analytics.usage_daily
+WHERE building_id = $1 AND event = 'tap' AND name IN ('W-Fee-Batch.publish', 'W-Notice-Edit.send')
+GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
+
+-- the payment funnel: sessions that went on to each step, in order (raw rows, last 30 days)
+WITH first_at AS (
+  SELECT session_id,
+         min(occurred_at) FILTER (WHERE event = 'screen_view' AND name = 'Fees')               AS s1,
+         min(occurred_at) FILTER (WHERE event = 'tap'         AND name = 'Fees.pay')           AS s2,
+         min(occurred_at) FILTER (WHERE event = 'screen_view' AND name = 'Pay-Select')         AS s3,
+         min(occurred_at) FILTER (WHERE event = 'tap'         AND name = 'Pay-Select.confirm') AS s4,
+         min(occurred_at) FILTER (WHERE event = 'screen_view' AND name = 'Pay-Done')           AS s5
+  FROM analytics.usage_event
+  WHERE building_id = $1 AND occurred_at >= now() - interval '30 days'
+  GROUP BY session_id)
+SELECT count(*) FILTER (WHERE s1 IS NOT NULL)                                  AS fees_viewed,
+       count(*) FILTER (WHERE s2 >= s1)                                        AS pay_pressed,
+       count(*) FILTER (WHERE s3 >= s2 AND s2 >= s1)                           AS pay_select_viewed,
+       count(*) FILTER (WHERE s4 >= s3 AND s3 >= s2 AND s2 >= s1)              AS confirm_pressed,
+       count(*) FILTER (WHERE s5 >= s4 AND s4 >= s3 AND s3 >= s2 AND s2 >= s1) AS done_viewed
+FROM first_at;
 ```
+
+A funnel counts **sessions**, not people: a resident who pays in two launches is two sessions, and the session ends at the launch or after 30 minutes in the background (§5.2). Read it as the shape of the drop-off, not as a headcount. The steps are the `Fees`, `Pay-Select` and `Pay-Done` screens and the two taps of §4.2.2, so the funnel exists once P3 has built them. The outcome (the payment settled) is in `finance`, not here.
 
 ## 9. Privacy, the notice and the stores
 
@@ -321,7 +401,7 @@ Defined in DOC-41 §13A.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `USAGE_ENABLED` | `true` | `false` makes E-173 and E-174 discard every event (204) and count it as `disabled`; the clients keep sending and nothing is stored |
+| `USAGE_ENABLED` | `true` | `false` makes E-173 and E-174 discard every event (204, counted as `disabled`) and answer with `X-Usage-Enabled: false`, so the clients stop sending until their next launch (§5.4) |
 | `USAGE_RAW_RETENTION_DAYS` | `90` | Age at which raw events are purged; 7 to 365 |
 | `USAGE_DAILY_RETENTION_DAYS` | `730` | Age at which the rollup is purged; 90 to 3650 |
 
@@ -342,12 +422,12 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-07 | `ageMs` 3,600,001; `ageMs` 4,000 with the clock fixed | 400; `occurred_at` is 4 s before the receive time |
 | UA-08 | No token on either route; a staff token on E-174; a resident token with a unit on E-173; a resident token on E-174; a staff token on E-173; a resident token with no `X-Unit-Id`; with the unit of another account | 401; 204 with `audience` `staff`; 204 with `audience` `resident`; 401 (a resident token does not pass the staff guard); 401 (the reverse); 400 `validation_failed`; 403 `membership_inactive` |
 | UA-09 | A token of a demo building | 204; no row; `reason="demo"` |
-| UA-10 | `USAGE_ENABLED=false` | 204; no row; `reason="disabled"` |
+| UA-10 | `USAGE_ENABLED=false` | 204 with `X-Usage-Enabled: false`; no row; `reason="disabled"`; with the key `true` the header is absent |
 | UA-11 | The 31st request in a minute from one IP; the 121st in an hour for one `sessionId` | 429 `rate_limited`, `scope` `usage_events`, `Retry-After`; no bucket key holds an account id |
 | UA-12 | Maintenance mode | 503 `maintenance` |
 | UA-13 | A tap whose screen is unknown; a known screen with an unlisted control | Both dropped, `unknown_name` |
 | UA-14 | A `screen_view` named `Login`, `OTP`, `Terms`, `Unit-Pick` | Dropped, `unknown_name` |
-| UA-15 | The lists against the documents | `USAGE_SCREENS` ⊆ section ids of DOC-56; `USAGE_EXCLUDED_SCREENS` = the signed-out sections and `Terms*`; `USAGE_TARGETS` = the rows of §4.2 |
+| UA-15 | The lists against the documents | `USAGE_SCREENS` ⊆ section ids of DOC-56; `USAGE_EXCLUDED_SCREENS` = the signed-out sections, `Terms*` and `Unit-Pick`; `USAGE_TARGETS` = the rows of §4.2.1 (those of §4.2.2 are not in it yet); every target's screen is in `USAGE_SCREENS` |
 | UA-16 | The rollup of §7.1 on the fixture of §13.1 | Five rows; 7 events; the event at 23:30 local is in the earlier day |
 | UA-17 | The rollup twice (run-twice) | The rows are identical |
 | UA-18 | The purge of raw rows with an empty `usage_daily`; with a rolled day | Nothing is deleted; only rows before the end of the newest rolled day |
@@ -362,6 +442,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) | The registry equals the rows of DOC-40 §4 with the two metrics of §11 |
 | UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to a member of the unit named in the header, whatever the member type (Helper included), and refused to a staff token; E-174 is allowed to every staff role and refused to a resident token; both refuse a request with no token |
 | UA-29 | The app configs | `PrivacyInfo.xcprivacy` of each app has the entry of §9.2; no `NSUserTrackingUsageDescription` in `Info.plist` |
+| UA-30 | Client: the answer carries `X-Usage-Enabled: false` | The queue is cleared; no event is queued or sent until a new launch; the first batch of the new launch is sent |
 
 ### 13.1 Statements run
 
@@ -371,6 +452,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | --- | --- |
 | The DDL of DOC-17 §9A | Applies; five bad rows (a tap with no control, a screen with a control, `Fees?unit=1`, version `1.0`, app `tv`) are each refused by their check; two good rows are accepted |
 | The batch statement of §6.3, prepared | `INSERT 0 2`: `ageMs` 4,200 and 900 give `09:12:26` and `09:12:30` for a receive time of `09:12:30.987`; a batch with one bad name fails whole and leaves the table as it was (the application filters names before it writes, so it does not meet this) |
+| The payment funnel of §8.2 on 4 sessions (3 viewed `Fees`, 2 pressed pay, 2 viewed `Pay-Select`, 1 pressed confirm, 1 viewed `Pay-Done`; a 4th session that only viewed `Pay-Done`) | `3, 2, 2, 1, 1`: the 4th session is not counted at the last step because the earlier steps are missing |
 | The rollup statement of §7.1 | `INSERT 0 5`: 10-26 `Fees` 1 event; 10-27 `Fees` 3 events and 3 sessions (iOS), 1 (Android), 1 (staff); `Account.language` 1 |
 | The same statement again | `INSERT 0 5`; five rows, 7 events, unchanged |
 | The raw purge with a cut-off in 2027 | `DELETE 7`: the seven rolled events go; the event of the unrolled day 10-28 stays |
@@ -391,6 +473,8 @@ All inside DR-279; the points that the DR leaves to this document:
 5. The batch write is not a `UnitOfWork` command with an outbox row (§6.3), with the reason.
 6. The usage switch has no tap id (§2.1).
 7. The job runs at 02:30 and recomputes three days (§7.1).
+8. The server stops the apps by a response header, not by a field of `GET /public/config`: it needs no change of E-03 and takes effect at the next batch (§5.4).
+9. A tap is the press that starts an action, never its outcome, and the web CMS is measured like the apps (§4.2).
 
 ## 15. Not in this document
 
