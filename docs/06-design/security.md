@@ -1,6 +1,6 @@
 # Security
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-26 (DR-268: no R2 in `vn`; the files host fronts SeaweedFS) · 2026-10-22 (DR-238, DR-239: Semgrep CE replaces CodeQL in §12, the trunk is `dev`; earlier: DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-28 (DR-279: the buckets `usage_events`) · 2026-10-26 (DR-268: no R2 in `vn`; the files host fronts SeaweedFS) · 2026-10-22 (DR-238, DR-239: Semgrep CE replaces CodeQL in §12, the trunk is `dev`; earlier: DR-226: 169 routes, 2,704 cells; earlier: DR-189: app token storage sentence in §5.3; DR-159, DR-160 decided: §5.4; skeleton, P0-30; DR-151, DR-152, DR-153) · DOC-39
 > Depends on: original SDD §7, §19.1, §19.4, §19.5, [DR](../00-decision-register.md) (DR-07, 12, 32, 33, 37, 38, 39, 48, 58, 61, 64, 65, 83, 113, 268, 147, 151, 152, 153, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §11, [DOC-26](identity-and-sessions.md), [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-41](configuration-reference.md), [DOC-50](../07-api/api-guidelines.md) §2, §7, §13, [DOC-51](../07-api/api-endpoints.md) §2, §12
 > Main readers: P1-04, P1-10, P1-14, P1-15 (route metadata and the matrix), P1-16 (the web CMS headers), P1-20 (Caddy), P3-03, P5-09, P6-08 (the review), DOC-70, DOC-71, DOC-99 (EXP-10), DOC-98 (EXP-09)
 
@@ -284,6 +284,7 @@ One table for all buckets. A bucket is a token bucket in PostgreSQL, one atomic 
 | `reminder` | `reminder:account:<id>` | 10 per hour | `platform.rate_bucket` | `DEBT_REMINDER_PER_HOUR` | DR-64 |
 | `upload` | `upload:account:<id>` | 60 per hour | `platform.rate_bucket` | `UPLOAD_RATE_PER_HOUR` | DOC-37 §6.1 |
 | `client_errors` | `client-error:ip:<ip>`, `client-error:account:<id>` | 10 per minute; 30 per hour | `platform.rate_bucket` | `CLIENT_ERRORS_PER_MINUTE_PER_IP`, `CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT` | DOC-42 §10 |
+| `usage_events` | `usage-events:ip:<ip>`, `usage-events:session:<uuid>` (a random session id of the client, never an account, DR-279) | 30 per minute; 120 per hour | `platform.rate_bucket` | `USAGE_EVENTS_PER_MINUTE_PER_IP`, `USAGE_EVENTS_PER_HOUR_PER_SESSION` | DOC-104 §6.1 |
 | (invitations) | counted under an advisory lock | 10 per owner per building day | `residency.membership` | `MEMBER_INVITES_PER_DAY` | DOC-27 §14 |
 | (streams) | counted in memory per account | 3 concurrent `GET /staff/events` | none | `SSE_MAX_STREAMS_PER_ACCOUNT` | DR-75 |
 | (exports) | worker concurrency | 2 at once | none | `EXPORT_CONCURRENCY` | DR-64 |
