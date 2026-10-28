@@ -1,6 +1,6 @@
 # Flows index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the object store is `s3`, not `r2`) · 2026-10-20 · DOC-43
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-25: DOC-44 written, its `FF-` blocks) · 2026-10-26 (DR-268: the object store is `s3`, not `r2`) · 2026-10-20 · DOC-43
 > Depends on: [DOC-04](../../01-product/use-cases.md), [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-50](../../07-api/api-guidelines.md), [DOC-12](../../03-architecture/code-architecture.md) §4, §5, §8, [DOC-09](../../03-architecture/messaging-contracts.md), [DR](../../00-decision-register.md) (DR-142…), master plan §3.2 (flows), Appendix A.8, [DOC-06](../../02-glossary.md)
 > Main readers: the authors of DOC-44…49, P1-25, every task that implements a flow, DOC-56…67 (screens name the `FL-xx` they start), DOC-88
 
@@ -26,7 +26,7 @@ Every flow-document test prefix is unique to its document (master plan §0.2, DR
 
 | Document | Flows | Test prefix | Test ID blocks |
 | --- | --- | --- | --- |
-| DOC-44 Fees and payments | FL-01…09, FL-44 | `FF-` | assigned by the author, by flow |
+| DOC-44 Fees and payments | FL-01…09, FL-44 | `FF-` | FL-01 `FF-01…12`, FL-02 `FF-13…20`, FL-03 `FF-21…30`, FL-04 `FF-31…40`, FL-05 `FF-41…58`, FL-06 `FF-59…66`, FL-07 `FF-67…74`, FL-08 `FF-75…82`, FL-09 `FF-83…94`, FL-44 `FF-95…102` |
 | DOC-45 Online payment | FL-10…16 | `FO-` | |
 | DOC-46 Identity and household | FL-17…24, FL-45 | `FI-` | FL-17 `FI-01…10`, FL-18 `FI-11…20`, FL-19 `FI-21…30` (numbers 31 and 32 of the block unused), FL-20 `FI-33…40`, FL-45 `FI-41…50`, FL-21 `FI-51…62`, FL-22 `FI-63…74`, FL-23 `FI-75…86`, FL-24 `FI-87…96` |
 | DOC-47 Tickets | FL-25…30 | `FT-` | |
@@ -155,7 +155,7 @@ UC-29 (restore) and UC-30 (rotate secrets) have no flow: they are runbooks (RB-1
 
 | DOC | File | Flows | Status |
 | --- | --- | --- | --- |
-| DOC-44 | `fees-and-payments.md` | FL-01…09, FL-44 | Not written (P1-25) |
+| DOC-44 | [fees-and-payments.md](fees-and-payments.md) | FL-01…09, FL-44 | Draft (P1-25) |
 | DOC-45 | `online-payment.md` | FL-10…16 | Not written (P3) |
 | DOC-46 | [identity-and-household.md](identity-and-household.md) | FL-17…24, FL-45 | Review |
 | DOC-47 | `tickets.md` | FL-25…30 | Not written (P4) |

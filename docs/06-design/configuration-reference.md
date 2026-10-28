@@ -1,6 +1,6 @@
 # Configuration reference
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (DOC-23: the minimum of `INTENT_TTL_MINUTES`; DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
 > Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
@@ -232,7 +232,7 @@ These rows are final names and defaults taken from the decisions; the document i
 | `WEBHOOK_PER_MINUTE_PER_IP` | int | 60 | P3 · DR-32 | Rate of inserts into `finance.webhook_rejection` per IP |
 | `WEBHOOK_MAX_BODY_BYTES` | int | 16384 | P3 · DR-32 | Body limit of the webhook route |
 | `WEBHOOK_REJECTION_EXCERPT_BYTES` | int | 2048 | P3 · DR-32 | Excerpt stored with a rejection |
-| `INTENT_TTL_MINUTES` | int | 60 | P3 · DR-28, DOC-23 | Life of a payment intent |
+| `INTENT_TTL_MINUTES` | int | 60 | P3 · DR-28, DOC-23 | Life of a payment intent; at least 30, the QR's display validity (`ck_payment_intent_window`, DOC-23 §10.1) |
 | `INTENT_REQUERY_BATCH` | int | 20 | P3 · DR-30, DOC-23 | Intents claimed per tick of `intent_requery` |
 | `INTENT_CREATING_STALE_SECONDS` | int | 120 | P3 · DR-30, DOC-23 | A `creating` intent older than this is cleaned |
 | `GATEWAY_CALLS_IN_FLIGHT` | int | 5 | P3 · DR-30, DOC-24 | Concurrent gateway calls of the re-query job |

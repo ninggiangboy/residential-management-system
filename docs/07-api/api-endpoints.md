@@ -1,6 +1,6 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-28 (DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-28 (DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
@@ -147,6 +147,7 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-172 | `DELETE /staff/fee-batches/{id}` | `discardFeeBatch` | staff: admin, manager | | UC-01 | DOC-21 §3.8 (DR-265, P2) |
 | E-173 | `POST /me/usage-events` | `recordMyUsageEvents` | unit: broadcast_notices | | | | §10A |
 | E-174 | `POST /staff/usage-events` | `recordStaffUsageEvents` | staff: any | | | | §10A |
+| E-175 | `POST /staff/payments/intents/{id}/cancel` | `cancelPaymentIntentByStaff` | staff: admin, manager | | | UC-03 | DOC-23 §5.3 (DR-282, P3) |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -162,10 +163,10 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-82 | `GET /me/fees/history` | `listMyFeeHistory` | unit: view_fees | | UC-03 | P2 |
 | E-83 | `GET /me/receipts` | `listMyReceipts` | unit: view_fees | | UC-03 | P2 |
 | E-84 | `GET /me/receipts/{id}/pdf` | `downloadMyReceipt` | unit: view_fees | | UC-03 | P2 |
-| E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 (P3); **sample owed** |
+| E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 §4 (P3); the sample is DOC-23 §4.6, copied here when the P3 group is specified |
 | E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P3 (the response carries `unmatchedTransfer {amount, receivedAt}` for the outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, DR-96) |
 | E-87 | `POST /me/payments/intents/{id}/cancel` | `cancelPaymentIntent` | unit: pay | | UC-03 | P3 |
-| E-88 | `POST /me/payments/intents/{id}/check` | `checkPaymentIntent` | unit: pay | | UC-18 | P3 |
+| E-88 | `POST /me/payments/intents/{id}/check` | `checkPaymentIntent` | unit: pay | | UC-18 | P3 (answers `{status, checkScheduled}`, DOC-23 §5.2) |
 | E-89 | `GET /staff/fee-batches` | `listFeeBatches` | staff: admin, manager | | UC-01 | DOC-21 (P2) |
 | E-90 | `POST /staff/fee-batches` | `createFeeBatch` | staff: admin, manager | R | UC-01 | P2 |
 | E-91 | `GET /staff/fee-batches/{id}` | `getFeeBatch` | staff: admin, manager | | UC-01 | P2 |
@@ -2779,6 +2780,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-171 | `DELETE /staff/charges/{id}` | Remove a draft charge (DR-265) |
 | E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
 | E-173, E-174 | `POST /me/usage-events`, `POST /staff/usage-events` | The apps' record of screen views, taps, opening, closing and the time of use, from closed lists and with no account stored (DR-279); two routes because a resident token never passes a staff guard |
+| E-175 | `POST /staff/payments/intents/{id}/cancel` | A Manager or Admin cancels a resident's open payment (DR-28 rule 4, DR-282) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |

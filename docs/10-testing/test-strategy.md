@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-25: `IN-` written in DOC-23, `FF-` in DOC-44; DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -512,7 +512,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | Prefix | Meaning | Document | Written today | Status | Task |
 | --- | --- | --- | --- | --- | --- |
 | `LG-` | Ledger, allocation, money log, batch lifecycle | [DOC-22](../06-design/ledger-and-allocation.md) owns `LG-01…60`; [DOC-21](../06-design/fee-batches-and-import.md) takes `LG-61…81` | `LG-01…81` | Draft (DOC-21, DOC-22) | P2-02, P2-03, P2-05, P2-07…P2-11 |
-| `IN-` | Payment intents and settlement | DOC-23 | not written | planned (P2, P3) | P2-06, P3-02, P3-04 |
+| `IN-` | Payment intents and settlement | [DOC-23](../06-design/payment-intents-and-settlement.md) §16 | `IN-01…52` | Draft | P2-06, P3-02, P3-04 |
 | `PX-` | payOS gateway adapter | DOC-24 | not written | planned (P3) | P3 |
 | `ST-` | Bank-statement reconciliation | DOC-25 | not written | planned (P3) | P3-07 |
 | `AU-` | Identity and sessions | [DOC-26](../06-design/identity-and-sessions.md) §12 | `AU-01…55`; statement tests `AU-S01…S12` | Review | P1-10, P1-11 |
@@ -538,7 +538,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `GRT-` | Roles and grants | [DOC-19](../05-data/db-roles-and-grants.md) §9 | `GRT-01…97` | Review | P1-06 |
 | `DLC-` | Purge statements of the data lifecycle | [DOC-20](../05-data/data-lifecycle.md) §10 | `DLC-01…15` | Draft | P1-05 |
 | `AG-` | API guidelines | [DOC-50](../07-api/api-guidelines.md) §17 | `AG-01…26` | Review | P1-04 |
-| `FF-` | Flows: fees and payments | DOC-44 | not written | planned (P2) | P2 |
+| `FF-` | Flows: fees and payments | [DOC-44](../06-design/flows/fees-and-payments.md) | `FF-01…102` (FL-01 `01…12`, FL-02 `13…20`, FL-03 `21…30`, FL-04 `31…40`, FL-05 `41…58`, FL-06 `59…66`, FL-07 `67…74`, FL-08 `75…82`, FL-09 `83…94`, FL-44 `95…102`) | Draft | P2 |
 | `FO-` | Flows: online payment | DOC-45 | not written | planned (P3) | P3 |
 | `FI-` | Flows: identity and household | [DOC-46](../06-design/flows/identity-and-household.md) | `FI-01…96` except numbers 31 and 32, which stay unused (struck 2026-10-21) | Review | P1-10…P1-12 |
 | `FT-` | Flows: tickets | DOC-47 | not written | planned (P4) | P4 |

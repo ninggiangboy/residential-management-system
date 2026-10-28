@@ -1,6 +1,6 @@
 # Observability
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (DR-282: two settlement metrics in §4.5, the alert `GatewayErrors` in §5.3; DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
@@ -199,6 +199,8 @@ The names come from DR-63; the owning document confirms the labels.
 | `webhook_rejections_total` | counter | `reason` (the five of DR-32) | DOC-24 | P3 |
 | `webhook_unknown_ip_total` | counter | none | DOC-39 §5.4 | P3 |
 | `payos_requests_total` | counter | `outcome` (`ok`, `timeout`, `http_error`, `rejected`) | DOC-24 | P3 |
+| `payment_settlements_total` | counter | `source` (`webhook`, `requery`, `statement`), `outcome` (the nine of `SettleOutcome`: the seven `gateway_event` outcomes, `already_processed`, `foreign_building`) | DOC-23 §14 (DR-282) | P2 (`settle()`), P3 |
+| `payment_settle_duration_seconds` | histogram | `source`; buckets 0.05, 0.1, 0.25, 0.5, 1, 2.5 (the server part of NFR-02, DR-80: p95 ≤ 1 s) | DOC-23 §14 (DR-282) | P2, P3 |
 
 `push_failures_total` and `sms_failures_ratio` of DR-63 are not built: `delivery_failed_total{channel}` and `sms_sent_total{outcome}` carry the same information (DR-154).
 
@@ -343,6 +345,7 @@ groups:
 | `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
 | `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P3-09 |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |
+| `GatewayErrors` | Warning | `sum(increase(payos_requests_total{outcome=~"timeout\|http_error"}[10m])) > 0.5 * sum(increase(payos_requests_total[10m])) and sum(increase(payos_requests_total[10m])) >= 10` (DR-30's "more than half of the calls in 10 minutes failed") | 5m | RB-02 | DOC-23 §14, DR-282 · P3-09 |
 | `ProviderAuthFailed` | Warning | `sum by (provider) (increase(provider_auth_failed_total[10m])) > 0` | none | RB-12 | DOC-42 §8.5 · P1-22 |
 | `OtpDailyCapReached` | Warning | `sum(increase(otp_daily_cap_reached_total[5m])) > 0` | none | RB-06 | DOC-26 §10 · live (P1-18) |
 | `SmsProviderDown` | Warning | `max(sms_provider_down) == 1` | 5m | RB-06 | DOC-26 §10 · live (P1-18) |
@@ -446,7 +449,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Overview** | Request rate by route group; p50, p95, p99 of `http_request_duration_seconds` (lines at 0.3 and 0.8 s); 5xx ratio; `rate_limited_total` by scope; open alerts | `ApiErrors`, NFR-03 |
 | **Worker and jobs** | Outbox oldest age by schema; dead letters; table of `time() - job_last_success_timestamp` per job beside `job_stale_after_seconds`; `job_runs_total{status="failed"}`; `job_duration_seconds` p95; `handler_outcomes_total` by outcome | `OutboxLag`, `DeadLetters`, `JobStale`, RB-04, RB-05 |
 | **Identity** | Staff sign-in outcomes; OTP requested and verified by outcome; refresh by outcome (reuse line); lockouts; step-up outcomes; SMS and mail sent by outcome; `sms_provider_down`; `otp_challenges_24h` against 3000 | `OtpDailyCapReached`, `SmsProviderDown`, `RefreshTokenReuse`, `LockoutSpike`, EXP-09 |
-| **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payos_requests_total` by outcome; payment confirmation latency (from DOC-23) | `LedgerInvariantViolation`, `PaymentsStuck`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
+| **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payos_requests_total` by outcome; `payment_settle_duration_seconds` p95 and `payment_settlements_total` by outcome (DOC-23 §14) | `LedgerInvariantViolation`, `PaymentsStuck`, `GatewayErrors`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
 | **Storage and database** | `storage_usage_ratio`; disk used; `pg_stat_activity_count` against `max_connections`; `db_pool_waiting`; archive failures and age; WAL size | `StorageQuota`, `DiskUsage`, `DbPoolWaiting`, `PostgresArchiveFailing` |
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
 | **Usage** (DR-279, built in P1-29: `ops/grafana/dashboards/usage.json`) | Top 10 screens and top 10 controls over 7 days; opens per day and the average and median time of a stretch; events per hour by app; residents against staff; dropped events by reason (the queries are DOC-104 §8.1). It supports no alert; Prometheus keeps 15 days, longer periods are SQL on `usage_daily` | DR-279 |
