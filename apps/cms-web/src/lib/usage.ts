@@ -3,6 +3,7 @@ import type { UsageScreen, UsageTarget } from '@rms/shared-types'
 import { useEffect, useSyncExternalStore } from 'react'
 import { authenticatedFetch } from '../api/client'
 import { env } from '../env'
+import { onUsageEnd } from './usage-end'
 
 /**
  * The usage tracker of the web CMS (DOC-104 §5): `@rms/client-core`'s tracker bound to `localStorage` for the switch (key
@@ -67,6 +68,8 @@ if (typeof document !== 'undefined') {
     if (document.visibilityState === 'visible') usage.foreground(true)
   })
 }
+
+onUsageEnd(() => usage.setSignedIn(false))
 
 /** The press that starts the action of a listed control. The argument is typed, so a misspelled id does not compile. */
 export const trackTap = (target: UsageTarget): void => usage.tap(target)
