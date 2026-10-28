@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createLogger } from '@core/telemetry'
 import { Elysia, t } from 'elysia'
-import { buildApp, buildOpsApp } from './app'
+import { buildApp, buildOpsApp, latencyPlugin } from './app'
 import { loadAppConfig } from './bootstrap/config'
 import { hostEnv, localEnv } from './bootstrap/config/support'
 import { type ContainerOverrides, createContainer } from './bootstrap/container'
@@ -234,5 +234,20 @@ describe('the order of the gates (DOC-50 §7, AG-04)', () => {
     await probe.handle(new Request('http://localhost/transform', invalid()))
     // beforeHandle never ran for the invalid body; transform did, and ran before the validation error.
     expect(order).toEqual(['error:VALIDATION', 'transform', 'error:VALIDATION'])
+  })
+})
+
+describe('latencyPlugin', () => {
+  const timed = async (appEnv: string, path: string) => {
+    const app = new Elysia().use(latencyPlugin(appEnv, 200)).get('/*', () => 'ok')
+    const started = performance.now()
+    await app.handle(new Request(`http://localhost${path}`))
+    return performance.now() - started
+  }
+
+  test('CF-20 only local waits, at least half the configured delay, and never on a health route (DR-305)', async () => {
+    expect(await timed('local', '/api/v1/staff/me')).toBeGreaterThanOrEqual(95)
+    expect(await timed('test', '/api/v1/staff/me')).toBeLessThan(50)
+    expect(await timed('local', '/api/v1/health/ready')).toBeLessThan(50)
   })
 })

@@ -1,6 +1,6 @@
 # Configuration reference
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (P1-26: `PUSH_DRIVER`, `EXPO_PUSH_BASE_URL`, `PUSH_REQUEST_TIMEOUT_MS`, `PUSH_MAX_AGE_MINUTES`, `INBOX_RETENTION_DAYS` (DR-301), the `PUSH_*` rows move to P2 (DR-76), `PDF_INLINE_CONCURRENCY`, `PDF_RENDERER_MAX_DOCUMENTS`, `PDF_RENDERER_MAX_RSS_MB` and the meaning of `PDF_CONCURRENCY` (DR-291), streams per `api` process (DR-288); the schema gains the keys) · 2026-10-28 (DOC-23: the minimum of `INTENT_TTL_MINUTES`; DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (DR-305: `DEV_LATENCY_MS`, rule 15, CF-19, CF-20) · 2026-10-28 (P1-26: `PUSH_DRIVER`, `EXPO_PUSH_BASE_URL`, `PUSH_REQUEST_TIMEOUT_MS`, `PUSH_MAX_AGE_MINUTES`, `INBOX_RETENTION_DAYS` (DR-301), the `PUSH_*` rows move to P2 (DR-76), `PDF_INLINE_CONCURRENCY`, `PDF_RENDERER_MAX_DOCUMENTS`, `PDF_RENDERER_MAX_RSS_MB` and the meaning of `PDF_CONCURRENCY` (DR-291), streams per `api` process (DR-288); the schema gains the keys) · 2026-10-28 (DOC-23: the minimum of `INTENT_TTL_MINUTES`; DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
 > Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
@@ -111,6 +111,7 @@ A ring is refused when it is empty, when a value has the wrong length or encodin
 | `CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT` | int | 30 | | The same, per account |
 | `USAGE_EVENTS_PER_MINUTE_PER_IP` | int | 30 | | `POST /me/usage-events` and `POST /staff/usage-events` (E-173, E-174, DOC-104 §6.1); 1 to 600 |
 | `USAGE_EVENTS_PER_HOUR_PER_SESSION` | int | 120 | | The same, per random session id of the client; 1 to 3600 |
+| `DEV_LATENCY_MS` | int | 0 | `local` only (`keys:generate` writes 400); `staging`, `production` refuse a value above 0 (rule 15); the code waits only when `APP_ENV=local`; 0 to 5000 | Every API answer except `/health` waits this long, ±50%, so the clients are built against a real network's delay (DR-305); `e2e/run.ts` sets 0 |
 
 ## 8. Identity and sessions
 
@@ -280,6 +281,7 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | `MAIL_DRIVER` | `console` | `console` | `allowlist` | `smtp` |
 | `PUSH_DRIVER` (from P2-12) | `console` | `console` | `expo` | `expo` |
 | `OPENAPI_ENABLED` | `true` | `false` | `true` | `false` |
+| `DEV_LATENCY_MS` | 400 | 0 | 0 | 0 |
 | `TRUSTED_PROXY_HOPS` | 0 | 0 | 1 | 1 |
 | `DB_POOL_MAX` (`api` / `worker`) | 10 / 10 | 5 / 5 | 15 / 10 | 20 / 15 |
 | `PDF_CONCURRENCY` | 1 | 1 | 1 | 2 |
@@ -309,6 +311,7 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | 12 | `TRUSTED_PROXY_HOPS` is 0 when `TRUSTED_PROXY_CIDRS` is empty | all |
 | 13 | A key that is not in this document is refused when its name starts with a prefix this document owns (`OUTBOX_`, `JOB_`, `FILES_`, `OTP_`, …): a typo must not silently fall back to a default | all |
 | 14 | `PUSH_DRIVER` is `expo` (added by P2-12 with the sender, DR-301) | `production` |
+| 15 | `DEV_LATENCY_MS` is 0 (DR-305) | `staging`, `production` |
 
 ## 18. Not configuration
 
@@ -353,6 +356,8 @@ Prefix `CF-` (configuration; unused before this document; master plan §0.2, DR-
 | CF-16 | `bun run keys:generate` in an empty directory | Every `secret` of §6 that `local` needs exists with the stated format; running it again changes nothing. *Run by hand in P1-04 on the existing `.env.local`: the five application keys were appended, the second run printed `kept .env.local`. The empty-directory form is `--out`, run in P1-20 (above)* |
 | CF-17 | The generated `.env.example` | Holds every key of §4 to §13 with its default and no `secret` value |
 | CF-18 | A job grace key for each of the 12 clock jobs of §11 | The schema has it; an hourly job has none; `JOB_INVARIANT_CHECK_GRACE_MINUTES=0` turns the catch-up off |
+| CF-19 | `DEV_LATENCY_MS=400` in `staging`, in `production`, in `local`; 9000 in `local` | Rule 15 in both hosts; accepted in `local`; rule 2 above 5000 |
+| CF-20 | The latency plugin at 200 ms with `APP_ENV` `local` and `test`, and on a health route | `local` waits at least 100 ms; `test` and `/health` answer at once |
 
 ## 20. Decisions made while writing
 

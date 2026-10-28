@@ -40,6 +40,8 @@ const generated: [key: string, value: () => string][] = [
   ['S3_ACCESS_KEY_ID', () => `rms${secret().slice(0, 16)}`],
   ['S3_SECRET_ACCESS_KEY', secret],
   ['DEMO_STAFF_PASSWORD', () => 'demo-password-1'],
+  // DR-305: every API answer waits about this long on a laptop, as on a real network; 0 turns it off.
+  ['DEV_LATENCY_MS', () => '400'],
   // The application keys (P1-04, DOC-41 §6): a ring is `{"<kid>": "<key>"}`, the newest kid signs and all verify.
   ['JWT_KEYS', () => ring('k1', es256())],
   ['QR_KEYS', () => ring('v1', base64Key(32))],

@@ -155,6 +155,9 @@ const httpConfig = defineSlice({
     USAGE_EVENTS_PER_HOUR_PER_SESSION: int(120, { min: 1, max: 3600 }).describe(
       'The same routes, per random session id of the client (DR-279).',
     ),
+    DEV_LATENCY_MS: int(0, { min: 0, max: 5000 }).describe(
+      'Local only: every API answer waits this long, ±50%, as on a real network (DR-305).',
+    ),
   }),
 })
 
