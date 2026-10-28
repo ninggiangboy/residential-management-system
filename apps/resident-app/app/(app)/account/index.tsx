@@ -2,10 +2,12 @@ import { apiErrorOf } from '@rms/client-core'
 import {
   pushPermission,
   requestPushToken,
+  trackTap,
   useI18n,
   useOnline,
   useRuntime,
   useSelectedUnitId,
+  useUsageEnabled,
 } from '@rms/mobile-core'
 import {
   Avatar,
@@ -36,6 +38,7 @@ export default function Account() {
   const unitId = useSelectedUnitId()
   const me = useMe()
   const update = useUpdateMe()
+  const [usageEnabled, setUsageEnabled] = useUsageEnabled()
   const [languageOpen, setLanguageOpen] = useState(false)
   const [signOutOpen, setSignOutOpen] = useState(false)
   const [deniedOpen, setDeniedOpen] = useState(false)
@@ -61,6 +64,7 @@ export default function Account() {
   }
 
   const togglePush = async (next: boolean) => {
+    trackTap('Account.push')
     setError(null)
     if (!next) return save({ pushEnabled: false })
     if ((await pushPermission()) === 'denied') return setDeniedOpen(true)
@@ -124,7 +128,10 @@ export default function Account() {
           title={t('res.account.language.label')}
           value={t(lang === 'vi' ? 'common.language.switch-to-vi' : 'common.language.switch-to-en')}
           disabled={!online}
-          onPress={() => setLanguageOpen(true)}
+          onPress={() => {
+            trackTap('Account.language')
+            setLanguageOpen(true)
+          }}
         />
         <ListItem
           icon="bell"
@@ -137,6 +144,19 @@ export default function Account() {
               value={account?.pushEnabled ?? false}
               disabled={!online || !account}
               onValueChange={(next) => void togglePush(next)}
+            />
+          }
+        />
+        <ListItem
+          icon="info"
+          title={t('common.usage.title')}
+          subtitle={t('common.usage.hint')}
+          trailing={
+            <Switch
+              testID="account-usage"
+              label={t('common.usage.title')}
+              value={usageEnabled}
+              onValueChange={setUsageEnabled}
             />
           }
         />

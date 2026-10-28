@@ -166,6 +166,9 @@ export const vi: Record<keyof typeof en, string> = {
   'common.app.name': 'Hiên',
   'common.language.switch-to-en': 'English',
   'common.language.switch-to-vi': 'Tiếng Việt',
+  'common.usage.title': 'Chia sẻ dữ liệu sử dụng ẩn danh',
+  'common.usage.hint':
+    'Giúp ban quản lý biết màn hình nào được dùng nhiều và ứng dụng được mở bao lâu để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn.',
   'common.unit.label': 'Căn hộ',
   'common.unit.role-line':
     '{memberType, select, owner {Bạn là chủ hộ} family {Bạn là thành viên gia đình} tenant {Bạn là người thuê} helper {Bạn là giúp việc} other {}}',

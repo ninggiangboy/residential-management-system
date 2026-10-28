@@ -15,6 +15,7 @@ import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { uploadFile } from '../../lib/uploads'
+import { trackTap } from '../../lib/usage'
 import { errorsCsv } from './csv'
 import {
   downloadTemplate,
@@ -159,7 +160,8 @@ export function ImportPage({ importId }: { importId?: string }) {
           committing={commit.isPending}
           canWrite={canWrite}
           onOther={() => setImportId(undefined)}
-          onCommit={() =>
+          onCommit={() => {
+            trackTap('W-Import.save')
             commit.mutate(job.data.importId, {
               onError: (thrown) => {
                 const failure = apiErrorOf(thrown)
@@ -167,7 +169,7 @@ export function ImportPage({ importId }: { importId?: string }) {
                 else toast.error(errorText(t, failure))
               },
             })
-          }
+          }}
           commitError={commit.error ? apiErrorOf(commit.error).code : null}
         />
       )}

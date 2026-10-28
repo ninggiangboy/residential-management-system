@@ -18,6 +18,7 @@ import { toast } from '../../components/ui/toaster'
 import { applyServerErrors, formResolver } from '../../lib/forms'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
+import { trackTap } from '../../lib/usage'
 import { useIntent } from '../../lib/use-intent'
 import { type StaffAccount, staffAccountQuery, useStaffMutations } from './hooks'
 import { type OpenTicket, OpenTicketsDialog } from './open-tickets-dialog'
@@ -123,6 +124,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
     if (readOnly || !canWrite) return
     try {
       if (!edit) {
+        trackTap('W-Staff-New.submit')
         const body = {
           fullName: values.fullName.trim(),
           email: values.email.trim(),
