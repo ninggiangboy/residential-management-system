@@ -1,6 +1,6 @@
 # Configuration reference
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
 > Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
@@ -109,6 +109,8 @@ A ring is refused when it is empty, when a value has the wrong length or encodin
 | `FEATURE_TICKET_DEADLINES` | bool | `false` | | Ticket deadlines (DOC-36 §3.3, DR-47) |
 | `CLIENT_ERRORS_PER_MINUTE_PER_IP` | int | 10 | | `POST /client-errors` (DOC-42 §10) |
 | `CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT` | int | 30 | | The same, per account |
+| `USAGE_EVENTS_PER_MINUTE_PER_IP` | int | 30 | | `POST /usage-events` (E-173, DOC-104 §6.1); 1 to 600 |
+| `USAGE_EVENTS_PER_HOUR_PER_SESSION` | int | 120 | | The same, per random session id of the client; 1 to 3600 |
 
 ## 8. Identity and sessions
 
@@ -206,6 +208,18 @@ Grace defaults (DOC-38 §4.1). The hourly jobs (`storage_quota`, `orphan_uploads
 | `METRICS_CACHE_SECONDS` | int | 10 | A gauge computed less than this long ago is reused, so two scrapers or a manual `curl` do not multiply the queries (DOC-40 §4.1) |
 
 `LOG_LEVEL` and `OPS_PORT` are in §4. Prometheus, Alertmanager, Loki and Alloy are configured in DOC-40 and DOC-70, not here.
+
+## 13A. Usage analytics
+
+DR-279, DOC-104 §12. Read by `api` (the first) and `worker` (the other two). The rate limits of E-173 are in §7.
+
+| Key | Type | Default | Description (source) |
+| --- | --- | --- | --- |
+| `USAGE_ENABLED` | bool | `true` | `false` makes `POST /usage-events` discard every event (204, counted as dropped `disabled`); the clients keep sending and nothing is stored (DOC-104 §5.4, §6.1) |
+| `USAGE_RAW_RETENTION_DAYS` | int | 90 | Age at which `analytics.usage_event` rows are deleted by `usage_rollup`, only up to the newest rolled-up day; 7 to 365 (DOC-20 §2.5) |
+| `USAGE_DAILY_RETENTION_DAYS` | int | 730 | Age at which `analytics.usage_daily` rows are deleted; 90 to 3650 (DOC-20 §2.5) |
+
+The default of the switch in the clients (`USAGE_DEFAULT_ENABLED`) is a constant of `@rms/client-core`, not a key: it is baked into the app and changing it is a release (DOC-104 §5.4, §9.4).
 
 ## 14. Keys of later phases
 

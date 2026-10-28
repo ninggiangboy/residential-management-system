@@ -1,7 +1,7 @@
 # Usage analytics
 
 > Status: **Review** · Updated: 2026-10-28 (DR-279) · DOC-104
-> Depends on: [DR](../00-decision-register.md) (DR-279, DR-103, DR-58, DR-64, DR-264, DR-265), [ADR-0028](../04-adr/0028-self-hosted-usage-analytics-without-an-identifier.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-06](../02-glossary.md), [DOC-17](../05-data/operations-model.md) §9A, [DOC-20](../05-data/data-lifecycle.md) §2.5 and §5, [DOC-35](audit-privacy-and-terms.md) §7 to §9, [DOC-38](jobs-and-outbox-runtime.md) §4, [DOC-40](observability.md) §4.7, [DOC-41](configuration-reference.md) §13A, [DOC-42](error-handling.md) §10, [DOC-51](../07-api/api-endpoints.md) E-173, [DOC-55](../08-ux-ui/client-architecture.md) §15A, [DOC-56](../08-ux-ui/screens/README.md), [DOC-73](../09-operations/mobile-release.md) §9
+> Depends on: [DR](../00-decision-register.md) (DR-279, DR-103, DR-58, DR-64, DR-264, DR-265), [ADR-0028](../04-adr/0028-self-hosted-usage-analytics-without-an-identifier.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-06](../02-glossary.md), [DOC-17](../05-data/operations-model.md) §9A, [DOC-20](../05-data/data-lifecycle.md) §2.5 and §5, [DOC-35](audit-privacy-and-terms.md) §7 to §9, [DOC-38](jobs-and-outbox-runtime.md) §4, [DOC-39](security.md) §6, [DOC-40](observability.md) §4.7, [DOC-41](configuration-reference.md) §13A, [DOC-42](error-handling.md) §10, [DOC-51](../07-api/api-endpoints.md) E-173, [DOC-55](../08-ux-ui/client-architecture.md) §15A, [DOC-56](../08-ux-ui/screens/README.md), [DOC-73](../09-operations/mobile-release.md) §10.2, §10.3
 > Main readers: P1-29 (the build), P6-10 (the store declarations), DOC-103 (go-live), every task that adds a screen or a control
 
 This document says what the system records about how the apps are used, what it never records, how a client sends it, how it is stored, rolled up and read, and what the stores and the privacy notice must say about it. The tables are in DOC-17 §9A, the endpoint contract is E-173 in DOC-51, the keys are in DOC-41 §13A, the metrics in DOC-40. It does not cover errors and crashes (DOC-42 §10, DOC-55 §15) or the counters of business operations (DOC-40).
@@ -35,7 +35,7 @@ This document says what the system records about how the apps are used, what it 
 | --- | --- | --- |
 | Account id, membership, unit, role | It would be a record of one named resident's habits (ADR-0028 option 2) | No column (DOC-17 §9A.1); UA-02 |
 | Device id (IDFV, Android ID, advertising id), push token | A stable identifier joins launches and apps; Apple names session and fingerprint ids as tracking when joined with other companies' data | The client never reads them (UA-25) |
-| IP address, user agent | Personal data (DOC-35 §7.1) | The batch handler does not read them; the rate bucket uses the IP and keeps no row for it after the idle purge |
+| IP address, user agent | Personal data (DOC-35 §7.1) | The batch handler does not store them; the IP bucket key holds the IP, as every IP bucket does, and `token_purge` deletes the idle bucket (DOC-20 §2.2) |
 | Text typed, form values, search terms, amounts, names | They are personal or financial | No field for them in the body (§6.2) |
 | A URL, a path, a route parameter, a query string | A path carries ids (`/fees/<batch>`) | The grammar of a name (§4.3); the check `ck_usage_event_name` |
 | A screenshot, a screen recording, a tap position | Session replay shows names and amounts; Apple wants disclosure and consent for it | Not in the event schema |
@@ -141,9 +141,9 @@ The module is `analytics` (`modules/analytics`, ADR-0028), a leaf: no module cal
 1. Body at most 16 KB, else 413 `payload_too_large`.
 2. Maintenance mode, else 503 `maintenance`.
 3. The token and the app-version gate (DOC-50 §7), as for any route; no token is 401.
-4. The IP bucket `usage_events:ip:<ip>`: 30 requests a minute, else 429 `rate_limited`, `scope: "usage_events"` (DOC-42 §10).
+4. The IP bucket `usage-events:ip:<ip>`: `USAGE_EVENTS_PER_MINUTE_PER_IP` (30) requests a minute, else 429 `rate_limited`, `scope: "usage_events"` (DOC-39 §6).
 5. Validation of the body (§6.2), else 400 `validation_failed`.
-6. The session bucket `usage_events:session:<sessionId>`: 120 requests an hour, else 429.
+6. The session bucket `usage-events:session:<sessionId>`: `USAGE_EVENTS_PER_HOUR_PER_SESSION` (120) requests an hour, else 429. Both buckets are in `platform.rate_bucket`; neither key holds an account.
 7. If the building of the token is a demo building (`isDemo`), or `USAGE_ENABLED` is false: the events are counted as dropped (`demo`, `disabled`) and discarded, answer 204.
 8. Each event whose name is not in the lists is dropped and counted (`unknown_name`); the rest are written.
 9. One statement writes the batch; the counter `usage_events_total` rises by the written events; answer 204.
@@ -197,7 +197,7 @@ Tables: DOC-17 §9A. Periods: `USAGE_RAW_RETENTION_DAYS` = 90, `USAGE_DAILY_RETE
 
 ### 7.1 The job `usage_rollup`
 
-Daily at 02:30 in `JOBS_TIME_ZONE`, mode `lock`, grace 12 hours, a row every run (DOC-38 §3.3, §4.1). It works for the building of the deployment (one deployment is one building, DR-12; the demo building writes no rows, §6.1 step 7):
+Daily at 02:30 in `JOBS_TIME_ZONE`, mode `lock`, grace 12 hours, a row every run (DOC-38 §3.3, §4.1). It works one building at a time, like `orphan_uploads` (DOC-20 §5); the demo building writes no rows (§6.1 step 7):
 
 1. **Roll up** the last 3 complete local days, `[today - 3, today)`, with the statement below. It recomputes each day from the raw rows, so it is idempotent and a day missed by a failed run is made up by the next one.
 2. **Purge raw rows** older than `USAGE_RAW_RETENTION_DAYS`, but only before the end of the newest rolled-up day (DOC-20 §5).
@@ -270,7 +270,7 @@ Checked 2026-10-28.
 - **App Privacy ("nutrition label"):** *Usage Data → Product Interaction*; purpose *Analytics*; **not linked to the user**; **not used for tracking**.
 - **Tracking.** Apple defines tracking as linking data from the app with data from other companies' apps, websites or offline properties for targeted advertising or advertising measurement, or sharing it with data brokers (<https://developer.apple.com/app-store/user-privacy-and-data-use/>). Nothing here does either, so there is **no App Tracking Transparency prompt** and no `NSUserTrackingUsageDescription`. Apple also bars fingerprinting: the client derives nothing from the device to identify it (§2.1).
 - **Privacy manifest.** Each app's `ios.privacyManifests` (the app config) gets `NSPrivacyCollectedDataTypes` with one entry: `NSPrivacyCollectedDataTypeProductInteraction`, `NSPrivacyCollectedDataTypeLinked` false, `NSPrivacyCollectedDataTypeTracking` false, `NSPrivacyCollectedDataTypePurposes` `[NSPrivacyCollectedDataTypePurposeAnalytics]`; `NSPrivacyTracking` false. Expo's guide documents `ios.privacyManifests` with the key `NSPrivacyAccessedAPITypes` (<https://docs.expo.dev/guides/apple-privacy/>) and does not show `NSPrivacyCollectedDataTypes`; **P1-29 checks that key against Apple's privacy manifest documentation and a generated `PrivacyInfo.xcprivacy`** (UA-29).
-- The label must match the manifest and the privacy notice. EAS Observe's own collection (errors, performance) is declared in the same places (DOC-73 §9).
+- The label must match the manifest and the privacy notice. EAS Observe's own collection (errors, performance) is declared in the same places (DOC-73 §10.2, §10.3).
 
 ### 9.3 Google Play
 
@@ -324,7 +324,7 @@ Defined in DOC-41 §13A.
 | `USAGE_RAW_RETENTION_DAYS` | `90` | Age at which raw events are purged; 7 to 365 |
 | `USAGE_DAILY_RETENTION_DAYS` | `730` | Age at which the rollup is purged; 90 to 3650 |
 
-The limits of §6.1 (50 events, 16 KB, 30 a minute, 120 an hour, 3 days of rollup, 30 minutes of session, 20 events or 30 seconds per batch) are constants of the code, not keys.
+The two rate limits of §6.1 are keys too (DOC-41 §7, DOC-39 §6): `USAGE_EVENTS_PER_MINUTE_PER_IP` (30) and `USAGE_EVENTS_PER_HOUR_PER_SESSION` (120). The other limits (50 events and 16 KB per batch, 3 days of rollup, 30 minutes of session, 20 events or 30 seconds per batch, 100 queued events) are constants of the code, not keys.
 
 ## 13. Required tests
 

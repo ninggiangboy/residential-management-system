@@ -1,6 +1,6 @@
 # Observability
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
@@ -210,6 +210,15 @@ The names come from DR-63; the owning document confirms the labels.
 | `node_filesystem_avail_bytes`, `node_filesystem_size_bytes`, `node_memory_*`, `node_cpu_seconds_total` | `node_exporter` | Disk at 80% (DOC-10 §6.4), memory and CPU for EXP-07 |
 | `backup_last_success_timestamp` | A file `backup.prom` in the textfile directory, written by the backup script **after** a successful `pgbackrest backup` (DR-154): `backup_last_success_timestamp 1.7917e+09` | The backup alert; `backup_last_success_age_seconds` of DR-63 is not used |
 
+### 4.7 Usage
+
+Added by DR-279 (DOC-104 §11). The labels hold no person: `name` is a screen id or a control id from the closed lists of DOC-104 §4, which are types in `@rms/shared-types`, so the set of values is closed (about 100 at the end of phase 6).
+
+| Metric | Type | Labels | Defined in | Phase |
+| --- | --- | --- | --- | --- |
+| `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`), `name` | DOC-104 §11 | P1-29 (the `analytics` module; the phase becomes `P1` when it is built) |
+| `usage_events_dropped_total` | counter | `reason` (`unknown_name`, `disabled`, `demo`) | DOC-104 §11 | P1-29 (as above) |
+
 ## 5. Alert rules
 
 ### 5.1 Rules for the rules
@@ -346,7 +355,7 @@ groups:
 
 ### 5.4 A job that stopped
 
-A job's gauge is a timestamp. The expected silence of each job is a recorded constant, one rule per job generated from the table below (a rule file with 23 `record` lines):
+A job's gauge is a timestamp. The expected silence of each job is a recorded constant, one rule per job generated from the table below (a rule file with 24 `record` lines):
 
 ```yaml
   - name: rms-job-thresholds
@@ -377,7 +386,7 @@ A job's gauge is a timestamp. The expected silence of each job is a recorded con
 | `push_receipts` | 5 min | 600 |
 | `storage_quota`, `orphan_uploads`, `import_expire`, `export_purge`, `realtime_purge` | 1 h | 7200 |
 | `invariant_check` | daily 03:00 | 129600 (36 h), its own Critical rule |
-| `qr_scan_purge`, `otp_purge`, `token_purge`, `account_deletion`, `demo_reset` | daily | 172800 |
+| `usage_rollup`, `qr_scan_purge`, `otp_purge`, `token_purge`, `account_deletion`, `demo_reset` | daily | 172800 |
 | `integrity_weekly`, `integrity_notices`, `inbox_purge`, `import_purge`, `finance_purge` | weekly | 1209600 |
 | `audit_purge` | monthly | 5356800 (62 d) |
 
@@ -437,6 +446,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payos_requests_total` by outcome; payment confirmation latency (from DOC-23) | `LedgerInvariantViolation`, `PaymentsStuck`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
 | **Storage and database** | `storage_usage_ratio`; disk used; `pg_stat_activity_count` against `max_connections`; `db_pool_waiting`; archive failures and age; WAL size | `StorageQuota`, `DiskUsage`, `DbPoolWaiting`, `PostgresArchiveFailing` |
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
+| **Usage** (DR-279, P1-29) | Top 10 screens and top 10 controls over 7 days; events per hour by app; residents against staff; dropped events by reason (the queries are DOC-104 §8.1). It supports no alert; Prometheus keeps 15 days, longer periods are SQL on `usage_daily` | DR-279 |
 | **Logs** | The saved queries of §3.4 as panels with a `requestId` variable | RB-09 |
 
 **As built (P1-18).** Five dashboards exist: Overview, Worker and jobs, Identity, Storage and database (with, since P1-20, PostgreSQL up, the time since the last backup, WAL archive failures, connections by state, disk used and host memory) and Logs. They are generated from `scripts/build-dashboards.ts` (`bun run ops:dashboards`; `check:ops` fails when a JSON file is stale), every panel names what it supports, and all 42 queries of the Prometheus panels and the four of Logs were run against the local stack without an error. Money (P2, P3) joins with its metrics. The new host panels were run against the local stack (both exporters up; their queries answer; the disk query is empty there because the Linux VM of Docker has no `/` file system under `--path.rootfs`, so its labels are checked on the host). Locally Grafana is at `localhost:3030` with no sign-in.

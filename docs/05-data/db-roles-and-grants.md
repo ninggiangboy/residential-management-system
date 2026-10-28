@@ -1,6 +1,6 @@
 # Database roles and grants
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the pgBackRest repository is SeaweedFS in `vn`) · 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: `analytics` is the fifteenth schema) · 2026-10-26 (DR-268: the pgBackRest repository is SeaweedFS in `vn`) · 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
 > Depends on: original SDD §19.1, [DR](../00-decision-register.md) (DR-12, 57, 65, 66, 67, 83, 85, 105, 110, 112, 113, 268), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2, §5, §12, [DOC-16](identity-and-residency-model.md), [DOC-17](operations-model.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.1, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles and migrations), P1-08 (append-only audit), P1-20 (the VPS), CI (the permission tests), DOC-41, DOC-70, DOC-72, RB-12
 
@@ -177,6 +177,8 @@ $grants$;
 COMMIT;
 ```
 
+*DR-279 (2026-10-28):* P1-29 adds the schema `analytics` as the **fifteenth**: its name joins the `schemas` array above, it gets no exception (`rms_app` has SIUD on `usage_event` and `usage_daily`; `rms_readonly` has `SELECT` on both, they hold no personal data, DOC-17 §9A), and the counts "fourteen" in §4.1, §4.2 and GRT-89, GRT-94 and GRT-95 read fifteen when it is built. Everything below was run with fourteen.
+
 ### 4.1 What `rms_app` gets
 
 - `USAGE` on the fourteen schemas; `SELECT`, `INSERT`, `UPDATE`, `DELETE` on every table; `USAGE` and `SELECT` on every sequence (`finance.order_code_seq`, DR-27).
@@ -215,7 +217,7 @@ A table with a secret that the rules above miss is added to `denied_tables` (or 
 | `building` | owner | USAGE; SIUD all tables | USAGE; S all except `gateway_config.secrets_enc` | S all |
 | `residency` | owner | USAGE; SIUD all tables | USAGE; S all except `resident_profile.cccd_enc` and `date_of_birth` | S all |
 | `finance` | owner | USAGE; SIUD all tables; USAGE on `order_code_seq` | USAGE; S all except `outbox_messages` | S all |
-| `tickets`, `access`, `vehicles`, `notices`, `wiki`, `reporting`, `realtime` | owner | USAGE; SIUD all tables | USAGE; S all except `outbox_messages` | S all |
+| `tickets`, `access`, `vehicles`, `notices`, `wiki`, `reporting`, `realtime`, `analytics` | owner | USAGE; SIUD all tables | USAGE; S all except `outbox_messages` | S all |
 | `notification` | owner | USAGE; SIUD all tables | USAGE; S all except `device_token` and `outbox_messages` | S all |
 | `audit` | owner; `UPDATE` and `DELETE` are refused by the trigger even for the owner | USAGE; **S, I only** on `audit_log`; X `audit.purge` | USAGE; S `audit_log` | S |
 | `platform` | owner; writes `maintenance` | USAGE; SIUD `idempotency_key`, `rate_bucket`; **S only** on `maintenance`; the helper functions | USAGE; S `maintenance`; nothing on `idempotency_key`, `rate_bucket` | S all |

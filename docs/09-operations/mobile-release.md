@@ -1,6 +1,6 @@
 # Mobile release
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: Owner inputs are placeholders until the task that needs them; earlier: skeleton, P0-31) · DOC-73
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final in P6) · Updated: 2026-10-28 (DR-279: the usage record in the privacy manifest, App Privacy and Data safety, §3, §10.2, §10.3) · 2026-10-22 (DR-239: the trunk is `dev`; earlier 2026-10-21: DR-228: Owner inputs are placeholders until the task that needs them; earlier: skeleton, P0-31) · DOC-73
 > Depends on: original SDD §4.3, §21, [DR](../00-decision-register.md) (DR-37, 52, 60, 69, 70, 82, 94, 95, DR-167, 168, DR-228), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §6, [DOC-36](../06-design/building-configuration-and-demo.md) §9, [DOC-41](../06-design/configuration-reference.md) §7, §15, [DOC-50](../07-api/api-guidelines.md) §7, §16, [DOC-69](local-dev.md) §10, [DOC-71](ci-cd.md) §9
 > Main readers: P1-17 (the first development builds), P6-10 (store builds and submission); the Owner (store accounts, review notes)
 
@@ -73,6 +73,14 @@ const config: ExpoConfig = {
     bundleIdentifier: ID,
     supportsTablet: false,                           // no iPad screenshots or layouts (§12)
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    privacyManifests: {                              // DR-279, DOC-104 §9.2: one collected type, never linked, never tracking
+      NSPrivacyCollectedDataTypes: [{
+        NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeProductInteraction',
+        NSPrivacyCollectedDataTypeLinked: false,
+        NSPrivacyCollectedDataTypeTracking: false,
+        NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAnalytics'],
+      }],
+    },
   },
   android: {
     package: ID,
@@ -295,7 +303,7 @@ The list a person ticks for each app and each store. A release record (a GitHub 
 | # | Item |
 | --- | --- |
 | 1 | App Store Connect record: name, subtitle, primary language `vi`, category (Lifestyle for the resident app, Business for the staff app; the Owner decides), pricing Free |
-| 2 | **App Privacy** details: contact info (name, phone number, email for staff), user content (photos in tickets), identifiers (device push token), diagnostics (client error reports); **not used for tracking**; linked to the user's identity |
+| 2 | **App Privacy** details: contact info (name, phone number, email for staff), user content (photos in tickets), identifiers (device push token), diagnostics (client error reports); **not used for tracking**; linked to the user's identity. **Plus, as its own line: Usage Data → Product Interaction, purpose Analytics, not linked to the user, not used for tracking** (the usage record, DR-279, DOC-104 §9.2); it matches `privacyManifests` of §3 and the privacy notice (DOC-35 §9.4). No App Tracking Transparency prompt and no `NSUserTrackingUsageDescription` |
 | 3 | Screenshots: §12 |
 | 4 | Review notes with the demo credentials (§11) and a sentence that the app needs the production demo building |
 | 5 | TestFlight external testing is not required for a staging build; internal testers only (DR-69) |
@@ -307,7 +315,7 @@ The list a person ticks for each app and each store. A release record (a GitHub 
 | # | Item |
 | --- | --- |
 | 1 | Play Console app record, default language `vi`, free app |
-| 2 | **Data safety** form: same data types as 10.2 |
+| 2 | **Data safety** form: same data types as 10.2, and **App activity → App interactions**: collected, not shared, purpose Analytics, *users can choose whether this data is collected* (the usage switch in both apps, DOC-104 §5.4, §9.3). Data collection by the app's own publisher is not "sharing" in the form |
 | 3 | App access: login required; the reviewer's credentials are given (§11) |
 | 4 | Content rating questionnaire; target audience adults; ads: none |
 | 5 | Screenshots, feature graphic and icon: §12 |

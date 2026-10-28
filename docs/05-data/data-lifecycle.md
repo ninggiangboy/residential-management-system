@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-28 (DR-279: `analytics` rows in §2.5, the job `usage_rollup` in §5, DLC-16…18) · 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -78,7 +78,7 @@ Rules that hold everywhere:
 | `fee_notice_job` | One bulk fee-notice request per row (*added 2026-10-22, DR-245*) | Rows kept (about 15 a year); the ZIP file is deleted by age | ZIP 7 days | `finance_purge` | DR-56, DR-123, DR-245 |
 | `fake_gateway_link` | Links of the `fake` driver | Reset with the demo building; on `local` and `staging` kept until the database is rebuilt | — | `demo_reset` | DR-26, DR-60 |
 
-### 2.5 Other schemas (DDL pending in DOC-17 §4–§9)
+### 2.5 Other schemas (DDL pending in DOC-17 §4–§9; §9A is written)
 
 | Table | What is kept | Removal | Period | Job | Source |
 | --- | --- | --- | --- | --- | --- |
@@ -94,6 +94,8 @@ Rules that hold everywhere:
 | `wiki.*`, other | Folders, pages, attachments | Follows the page or folder | Kept | — | DR-54 |
 | `reporting.export_job` and the export file | The request and the file | Row and file deleted by age | 7 days after the request finished (default for the row) | `export_purge`, hourly | DR-55, DR-115 |
 | `realtime.events` | The replay buffer for `Last-Event-ID` | Deleted by age | 24 hours (default) | the realtime module, hourly (DOC-17 §9 confirms) | DR-75, DR-115 |
+| `analytics.usage_event` | Screen views and taps without an account or device id (DOC-17 §9A.1) | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup`, daily 02:30 | DR-279 |
+| `analytics.usage_daily` | The daily rollup: events and sessions per app, platform, audience, event and name (DOC-17 §9A.2) | Deleted by age | 730 days (`USAGE_DAILY_RETENTION_DAYS`) | `usage_rollup`, daily 02:30 | DR-279 |
 
 ## 3. Object storage
 
@@ -133,6 +135,7 @@ The job names, schedules and owners are those of DR-62 (and DR-101), with the tw
 | `push_receipts` | every 5 minutes | notification | Fetches Expo receipts and also deletes push tickets older than 3 days (DR-52) |
 | `import_purge` | weekly Sunday 04:00 | residency | Deletes `residency.import_job` rows after 30 days (DR-120: DR-62 named `building`; each module owns its `import_job`, DR-21) |
 | `finance_purge` | weekly Sunday 04:00 | finance | Deletes fee-batch `import_job` rows, `webhook_rejection` and `debt_reminder` rows after 30 days, statement files after 1 year and `bulk_zip` files after 7 days (DR-120, DR-123) |
+| `usage_rollup` | daily 02:30 | analytics | Folds the last 3 complete local days into `usage_daily`, then deletes raw events past the retention (only up to the newest rolled-up day) and rollup rows past theirs; new, DR-279 (the rollup statement is DOC-104 §7.1) |
 | `realtime_purge` | hourly at :45 | realtime | Deletes `realtime.events` older than 24 hours (DR-115, DR-120) |
 | `audit_purge` | monthly day 1, 04:30 | audit | `audit.purge` for each class |
 | relay cleanup | every 10 minutes | every module's outbox | Deletes published outbox rows and delivered inbox rows after 7 days |
@@ -166,12 +169,18 @@ DELETE FROM building.file_object WHERE building_id = :building_id AND status = '
 DELETE FROM finance.outbox_messages WHERE published_at < now() - interval '7 days';
 DELETE FROM finance.inbox WHERE processed_at < now() - interval '7 days';
 
+-- usage_rollup (analytics), per building: the rollup statement is DOC-104 §7.1; then the two purges
+DELETE FROM analytics.usage_event e
+ WHERE e.building_id = :building_id AND e.occurred_at < :raw_cutoff            -- now() minus USAGE_RAW_RETENTION_DAYS
+   AND e.occurred_at < ((SELECT max(d.day) FROM analytics.usage_daily d WHERE d.building_id = :building_id) + 1)::timestamp AT TIME ZONE :tz;
+DELETE FROM analytics.usage_daily WHERE building_id = :building_id AND day < :daily_cutoff;   -- today minus USAGE_DAILY_RETENTION_DAYS
+
 -- audit_purge (audit): the function raises the cut-off to the retention floor itself (DOC-17 §2)
 SELECT audit.purge(now(), 'finance');
 SELECT audit.purge(now(), 'standard');
 ```
 
-The scope lint (DOC-14 §5.2) applies to the statements on scoped tables (`file_object`, `import_job`): the job loops over the buildings, as the `:building_id` shows. `refresh_family` is read with a sequential scan: its predicate is an `OR` over two columns, and at 30,000 live sessions (design scale) the daily scan is a few milliseconds, so no index on `revoked_at` is added.
+The scope lint (DOC-14 §5.2) applies to the statements on scoped tables (`file_object`, `import_job`, `usage_event`, `usage_daily`): the job loops over the buildings, as the `:building_id` shows. `refresh_family` is read with a sequential scan: its predicate is an `OR` over two columns, and at 30,000 live sessions (design scale) the daily scan is a few milliseconds, so no index on `revoked_at` is added.
 
 ## 6. Backups
 
@@ -236,6 +245,7 @@ DOC-10 §5 holds the estimate (computed by `docs/03-architecture/capacity/capaci
 | Files (SeaweedFS volume in `vn`) | About 4.6 GB per building per year; the 50 GiB quota is reached after about 10.8 years and the 80% alert after about 8.7 years | DOC-10 §5.3 |
 | WAL | Up to 1,440 objects per day of 16 MB before compression; measured in P1-20 | DOC-10 §5.5 |
 | Logs and metrics | About 42 MB per day of raw logs for the sample building (8 MB in Loki, 14 days); Prometheus about 25 MB per day | DOC-10 §5.4 |
+| `analytics.usage_event` | About 20,000 rows a day for the sample building, 1.8 million at 90 days, about 400 MB with its index (planned, not measured: 650 accounts at 30 events a day, 100 bytes a row; DOC-104 §7.2); bounded by the 90 days, so it does not grow with the years. `usage_daily` is a few hundred rows a day | DR-279 |
 
 What the retention rules of §2 change in that estimate: the outbox, inbox, `job_run`, idempotency keys, OTP and token rows are bounded by days, so none grows with the years; `audit_log` is bounded by 5 years (the upper bound DOC-10 uses); the ledger, tickets, notices and the library grow without a purge. They stay unbounded by decision (DR-115); the quota (50 GiB per building) is the limit, and the Admin sees the alert at 80%.
 
@@ -260,11 +270,15 @@ Tested on PostgreSQL 18.6 on 2026-10-19 on a database built from the DDL of DOC-
 | DLC-13 | Inbox cleanup | processed 8 days ago, 1 day ago | 1 deleted |
 | DLC-14 | `audit.purge(now(), …)` | a `finance` row 5 years and 1 day old, a `standard` row 2 years and 1 day old | 1 deleted in each class |
 | DLC-15 | Plans with sequential scans disabled | — | `otp_challenge_created_idx`, `ix_job_run_started`, `ix_idempotency_key_created`, `import_job_building_idx`; `ix_file_object_building_deleted` on a table of 20,200 rows; `refresh_family` by sequential scan (§5) |
+| DLC-16 | `usage_rollup`, raw purge (2026-10-28, as `postgres` in a scratch database, without the grants) | 7 events of the days 10-26 and 10-27 rolled up, 1 event of 10-28 not rolled up | cut-off in 2027: 7 deleted, the unrolled one stays; with `usage_daily` empty: 0 deleted |
+| DLC-17 | `usage_rollup`, rollup purge (same run) | rows of 2024-10-01 and 2024-10-29, daily cut-off 2024-10-29 | 1 deleted |
+| DLC-18 | The rollup statement twice (same run) | the 7 events above, zone `Asia/Ho_Chi_Minh` | 5 rows both times, 7 events; the event at 23:30 local is in the earlier day |
 
 ### 10.1 Not run
 
 | Item | Why | Done in |
 | --- | --- | --- |
+| DLC-16…18 as `rms_app` (the grants of `analytics`), and the job itself | The scratch database had no roles; the job needs the worker | P1-29 (`UA-`, `GRT-`) |
 | The statements of the tables not yet written (`qr_scan`, `lookup_log`, `inbox_entry`, `push_ticket`, `export_job`, `events`, `webhook_rejection`, `debt_reminder`) | No DDL yet | When DOC-15 and DOC-17 §5, §6, §9 are written |
 | `account_deletion` end to end (events, handlers, idempotency) | Needs the modules | P1-14 (`AD-`, `RM-` tests) |
 | The job runtime: locks, `job_run` rows, missed-run policy | Needs the worker | P1-05 (`JB-`) |

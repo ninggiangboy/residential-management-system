@@ -247,6 +247,7 @@ The code is one modular monolith: `apps/api` is the composition root that instal
 | `wiki` | `wiki` | Document library: folders, pages, versions, search | New | `api` |
 | `audit` | `audit` | Audit log writer and reader, purge function | New | `api`, `worker` |
 | `reporting` | `reporting` | Dashboard composition through read contracts, export jobs | New (DR-55) | `api`, `worker` |
+| `analytics` | `analytics` | Usage events (`screen_view`, `tap`) from closed lists with no account or device id, their daily rollup and its purge; a leaf that no module calls (DR-279, ADR-0028, DOC-104) | New | `api`, `worker` |
 | `realtime` | `realtime` | SSE over `LISTEN/NOTIFY` for the web CMS, replay buffer | Reused as is (DR-03) | `api` |
 
 `notification` and `realtime` are generic leaf modules: they never import a producer. What they know about a producer lives in the producer's `integrations/<consumer>` entry point (reference `generic-modules-are-leaves`, DR-04). The reference modules `privacy`, `profile` and `billing` are not used (DR-03).

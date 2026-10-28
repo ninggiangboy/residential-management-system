@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: the upload target is the S3 store, not R2; DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: §10 points to the usage endpoint) · 2026-10-26 (DR-268: the upload target is the S3 store, not R2; DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -393,6 +393,8 @@ The apps log through one public endpoint, `POST /client-errors` (DR-63, DR-127; 
 | Handling | Answers 204. Writes one `warn` line `client_error` with the fields above, the account id when known, and the route-free `screen`; increments `client_errors_total{app,kind}`. The `message` and `stack` pass through `maskPhone` and the redact list of §8.3. Nothing is stored in the database |
 | As built (P1-16, DR-264) | The web CMS reports (`packages/client-core/src/reporter.ts`, `apps/cms-web/src/lib/report-error.ts`); the apps report through EAS Observe (DOC-55 §15). The tests ER-43 and ER-44 run in `apps/api/tests/integration/client-errors.integration.test.ts` |
 | The app's duty | Never send user input, form values, tokens, URLs with a query string or a response body; send the error class, the message of the error and the stack |
+
+**Usage events are not errors.** `POST /usage-events` (E-173, DR-279, DOC-104) is the other endpoint that the clients call for themselves. It adds no error code: a bad body is `validation_failed` 400, a body over 16 KB is `payload_too_large` 413, a limit is `rate_limited` 429 with `scope: "usage_events"` (the buckets and keys are DOC-39 §6, DOC-41 §7), maintenance is 503, a missing token is 401. The apps drop the batch on every one of them and never show it (DOC-104 §5.3).
 
 ## 11. Decisions made while writing
 
