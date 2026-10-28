@@ -554,6 +554,7 @@ All inside DR-279; the points that the DR leaves to this document:
 8. The server stops the apps by a response header, not by a field of `GET /public/config`: it needs no change of E-03 and takes effect at the next batch (§5.4).
 9. A tap is the press that starts an action, never its outcome, and the web CMS is measured like the apps (§4.2).
 10. Opening, closing and the time of use are two more events, `app_open` and `app_close` (Owner, 2026-10-28), with one new nullable column `duration_s` and one new column `seconds` in the rollup, not a new table (§3, §5.6). The time of use is a number the client measures on its monotonic clock, never a difference of two phone clocks. "Close" means "left the foreground", because the app is not told when the person swipes it away. The time on a screen is not stored; it is read from the gaps between events (§8.2).
+11. The Owner confirmed on 2026-10-28 four points that P1-29 would otherwise check: (a) E-173 uses `unit: broadcast_notices` and is open to every member type; (b) the planned size of about 450 MB is accepted without a measurement first; (c) any grant the job or the route lacks is added to `0900-grants.sql` (DOC-19) and the statements of DOC-20 §5 are re-run as `rms_app`; (d) the rollup follows `JOBS_TIME_ZONE`, one building at a time.
 
 ## 15. Not in this document
 
