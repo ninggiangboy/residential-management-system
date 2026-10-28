@@ -29,6 +29,11 @@ export interface SessionStoreOptions {
   logout: (refreshToken: string) => Promise<void>
   /** Best-effort removal of this device's push token before the logout (E-23, E-35). */
   removeDevice?: () => Promise<void>
+  /**
+   * Called first when the session is about to end, before any call that uses the token and before the tokens go: the usage queue is
+   * cleared here, so events of one account never leave with the token of the next (DOC-104 §5.3).
+   */
+  onEnding?: () => void
   /** The local steps that are not the tokens: `queryClient.clear()`, the persisted cache, the unit (DOC-55 §5.4). */
   onEnded: (reason: SignOutReason) => void | Promise<void>
   now?: () => number
@@ -55,6 +60,7 @@ export function createSessionStore(options: SessionStoreOptions) {
   }
 
   async function ended(reason: SignOutReason) {
+    options.onEnding?.()
     await tokens.clear()
     set({ status: 'signedOut', reason })
     await options.onEnded(reason)
@@ -105,6 +111,7 @@ export function createSessionStore(options: SessionStoreOptions) {
 
     /** The user signs out: the device and the session are ended best effort, then the local steps run even if both fail. */
     async signOut(): Promise<void> {
+      options.onEnding?.()
       const refreshToken = await tokens.refreshCredential()
       try {
         await options.removeDevice?.()

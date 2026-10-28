@@ -8,9 +8,12 @@ import { createSessionStore } from './session'
 import type { SecureStorage } from './storage'
 import { createTokenStore } from './token-store'
 import { createUnitStore } from './unit'
+import { createMobileUsage, registerUsage } from './usage'
 
 export interface MobileRuntimeOptions {
   app: 'resident' | 'staff'
+  /** For the usage record (DOC-104 §6.2). */
+  platform: 'ios' | 'android'
   /** `x.y.z` of `app.config.ts`; sent as `X-App-Version` (DOC-55 §4.2). */
   appVersion: string
   /** Ends in `/api/v1` (DOC-41 §15). */
@@ -44,8 +47,13 @@ export function createMobileRuntime(options: MobileRuntimeOptions) {
   const upgradeGate = createUpgradeGate()
   const refresh = createRefreshTransport({ baseUrl: apiBaseUrl, tokens, app, appVersion })
 
+  // Cleared before the token goes, so events of one account never leave with the token of the next (DOC-104 §5.3). The tracker
+  // is created below, once the fetcher exists; the session store only calls this when a session ends.
+  const endingUsage = () => usage.setSignedIn(false)
+
   const session = createSessionStore({
     tokens,
+    onEnding: endingUsage,
     refresh,
     logout: async (refreshToken) => {
       await fetch(`${apiBaseUrl}/auth/logout`, {
@@ -85,6 +93,21 @@ export function createMobileRuntime(options: MobileRuntimeOptions) {
     randomId,
   })
 
+  // The usage record (DOC-104): the tracker follows the session and the app state; a press handler reaches it through `trackTap`.
+  const usage = createMobileUsage({
+    app,
+    platform: options.platform,
+    appVersion,
+    apiBaseUrl,
+    storage,
+    authenticatedFetch,
+    unitId: () => unit.get(),
+    randomId,
+  })
+  // Who may be recorded is decided by the root layout, from the flow (`useUsageGate`): a session is not enough, the terms of the
+  // record must be accepted and a unit chosen (DOC-104 §4.1). Here the tracker only follows the session out (`onEnding`).
+  registerUsage(usage)
+
   return {
     app,
     appVersion,
@@ -98,6 +121,7 @@ export function createMobileRuntime(options: MobileRuntimeOptions) {
     termsGate,
     upgradeGate,
     authenticatedFetch,
+    usage,
   }
 }
 

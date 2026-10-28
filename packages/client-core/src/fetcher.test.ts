@@ -85,6 +85,60 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
 const unauthenticated = () => json(401, { error: { code: 'unauthenticated', message: 'x' } })
 const ok = () => json(200, { ok: true })
 
+describe('UA-23 the usage batch is a quiet call (DOC-104 §5.3)', () => {
+  const rateLimited = () =>
+    json(429, { error: { code: 'rate_limited', message: 'x' } }, { 'retry-after': '1' })
+
+  test('a 429 or a 503 is returned at once: no retry, no sleep', async () => {
+    for (const answer of [
+      rateLimited,
+      () => json(503, { error: { code: 'maintenance', message: 'x' } }),
+    ]) {
+      const h = harness()
+      h.queue.push(answer)
+      const res = await h.fetcher(`${BASE}/staff/usage-events`, { method: 'POST', body: '{}' })
+      expect(res.status).toBe(answer === rateLimited ? 429 : 503)
+      expect(h.seen).toHaveLength(1)
+      expect(h.calls.sleeps).toEqual([])
+    }
+  })
+
+  test('a network error is thrown at once, so the tracker keeps its events', async () => {
+    const h = harness()
+    h.queue.push(() => {
+      throw new TypeError('Network request failed')
+    })
+    await expect(
+      h.fetcher(`${BASE}/me/usage-events`, { method: 'POST', body: '{}' }),
+    ).rejects.toBeInstanceOf(ApiException)
+    expect(h.seen).toHaveLength(1)
+  })
+
+  test('terms_required and upgrade_required open no screen', async () => {
+    const h = harness()
+    h.queue.push(() => json(403, { error: { code: 'terms_required', message: 'x' } }))
+    h.queue.push(() => json(426, { error: { code: 'upgrade_required', message: 'x' } }))
+    expect(
+      (await h.fetcher(`${BASE}/me/usage-events`, { method: 'POST', body: '{}' })).status,
+    ).toBe(403)
+    expect(
+      (await h.fetcher(`${BASE}/me/usage-events`, { method: 'POST', body: '{}' })).status,
+    ).toBe(426)
+    expect(h.calls.terms).toBe(0)
+    expect(h.calls.upgrade).toBe(0)
+  })
+
+  test('a 401 still refreshes the token and replays the batch once', async () => {
+    const h = harness()
+    h.queue.push(unauthenticated)
+    h.queue.push(() => new Response(null, { status: 204 }))
+    const res = await h.fetcher(`${BASE}/staff/usage-events`, { method: 'POST', body: '{}' })
+    expect(res.status).toBe(204)
+    expect(h.calls.refresh).toBe(1)
+    expect(h.seen).toHaveLength(2)
+  })
+})
+
 describe('headers', () => {
   test('a call carries the bearer, the language, the app id and a request id', async () => {
     const h = harness()

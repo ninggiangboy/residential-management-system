@@ -145,3 +145,42 @@ describe('sign-in and sign-out', () => {
     expect(heard).toBeGreaterThanOrEqual(2)
   })
 })
+
+describe('UA-24 the usage queue goes before the token does (DOC-104 §5.3)', () => {
+  function orderedHarness() {
+    const steps: string[] = []
+    const tokens = fakeTokens('ref-1')
+    const clear = tokens.clear
+    tokens.clear = async () => {
+      steps.push('tokens.clear')
+      await clear()
+    }
+    const session = createSessionStore({
+      tokens,
+      refresh: async () => ({ status: 'denied' }),
+      logout: async () => {
+        steps.push('logout')
+      },
+      onEnding: () => {
+        steps.push('onEnding')
+      },
+      onEnded: () => {
+        steps.push('onEnded')
+      },
+    })
+    return { session, steps }
+  }
+
+  test('a sign-out clears the queue before the logout call and before the tokens', async () => {
+    const { session, steps } = orderedHarness()
+    await session.signOut()
+    expect(steps.slice(0, 3)).toEqual(['onEnding', 'logout', 'onEnding'])
+    expect(steps.indexOf('tokens.clear')).toBeGreaterThan(steps.indexOf('logout'))
+  })
+
+  test('a forced end clears the queue before the tokens', async () => {
+    const { session, steps } = orderedHarness()
+    await session.endLocally('revoked')
+    expect(steps).toEqual(['onEnding', 'tokens.clear', 'onEnded'])
+  })
+})
