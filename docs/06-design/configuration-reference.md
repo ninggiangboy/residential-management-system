@@ -192,6 +192,7 @@ Grace defaults (DOC-38 §4.1). The hourly jobs (`storage_quota`, `orphan_uploads
 | `JOB_TOKEN_PURGE_GRACE_MINUTES` | 720 | | `JOB_IMPORT_PURGE_GRACE_MINUTES` | 1440 |
 | `JOB_ACCOUNT_DELETION_GRACE_MINUTES` | 720 | | `JOB_FINANCE_PURGE_GRACE_MINUTES` | 1440 |
 | `JOB_DEMO_RESET_GRACE_MINUTES` | 120 | | `JOB_AUDIT_PURGE_GRACE_MINUTES` | 10080 |
+| `JOB_USAGE_ROLLUP_GRACE_MINUTES` | 720 | | | |
 
 ## 12. Concurrency of the worker's own work
 

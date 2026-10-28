@@ -1,6 +1,6 @@
 # Database roles and grants
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: `analytics` is the fifteenth schema) · 2026-10-26 (DR-268: the pgBackRest repository is SeaweedFS in `vn`) · 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-29: `analytics` is the fifteenth schema, built; GRT-98…100; DR-279) · 2026-10-26 (DR-268: the pgBackRest repository is SeaweedFS in `vn`) · 2026-10-21 (P1-06: the scripts exist, the grants exceptions are guarded, §9 ran in the repository, DR-250) · 2026-10-19 · DOC-19
 > Depends on: original SDD §19.1, [DR](../00-decision-register.md) (DR-12, 57, 65, 66, 67, 83, 85, 105, 110, 112, 113, 268), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2, §5, §12, [DOC-16](identity-and-residency-model.md), [DOC-17](operations-model.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.1, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles and migrations), P1-08 (append-only audit), P1-20 (the VPS), CI (the permission tests), DOC-41, DOC-70, DOC-72, RB-12
 
@@ -118,7 +118,7 @@ During a deploy the maintenance flag is on from before step 2 until the new vers
 
 ## 4. The grants step (`0900-grants.sql`)
 
-Run by `rms_migrator` after the last module migration of every release. It is **idempotent** and **atomic**: it revokes what `rms_app` and `rms_readonly` hold on the tables and sequences of the fourteen schemas and grants the final state again, in one transaction, so the result does not depend on what was granted before and no request sees the half-way state. Nobody grants by hand; the script is edited instead. *As built in P1-06 (DR-250):* the three exceptions that name an object of a module (`audit.audit_log`, `audit.purge`) are applied only when that object exists, and a table whose every column is excluded stays closed, so the script also runs on a database that holds the platform only; `platform.maintenance` exists from the bootstrap.
+Run by `rms_migrator` after the last module migration of every release. It is **idempotent** and **atomic**: it revokes what `rms_app` and `rms_readonly` hold on the tables and sequences of the fifteen schemas and grants the final state again, in one transaction, so the result does not depend on what was granted before and no request sees the half-way state. Nobody grants by hand; the script is edited instead. *As built in P1-06 (DR-250):* the three exceptions that name an object of a module (`audit.audit_log`, `audit.purge`) are applied only when that object exists, and a table whose every column is excluded stays closed, so the script also runs on a database that holds the platform only; `platform.maintenance` exists from the bootstrap.
 
 ```sql
 -- 0900-grants.sql: run by rms_migrator after the last module migration of every release (db:migrate does it).
@@ -177,11 +177,11 @@ $grants$;
 COMMIT;
 ```
 
-*DR-279 (2026-10-28):* P1-29 adds the schema `analytics` as the **fifteenth**: its name joins the `schemas` array above, it gets no exception (`rms_app` has SIUD on `usage_event` and `usage_daily`; `rms_readonly` has `SELECT` on both, they hold no personal data, DOC-17 §9A), and the counts "fourteen" in §4.1, §4.2 and GRT-89, GRT-94 and GRT-95 read fifteen when it is built. Everything below was run with fourteen.
+*DR-279 (2026-10-28):* P1-29 adds the schema `analytics` as the **fifteenth**: its name joins the `schemas` array above, it gets no exception (`rms_app` has SIUD on `usage_event` and `usage_daily`; `rms_readonly` has `SELECT` on both, they hold no personal data, DOC-17 §9A), and the counts in §4.1, §4.2 and GRT-89, GRT-94 and GRT-95 read fifteen. *Built in P1-29:* `0000-bootstrap.sql` creates the schema, `0900-grants.sql` lists it, and GRT-98…100 were run as `rms_app` and `rms_readonly` against the migrated template. The earlier runs below were made with fourteen.
 
 ### 4.1 What `rms_app` gets
 
-- `USAGE` on the fourteen schemas; `SELECT`, `INSERT`, `UPDATE`, `DELETE` on every table; `USAGE` and `SELECT` on every sequence (`finance.order_code_seq`, DR-27).
+- `USAGE` on the fifteen schemas; `SELECT`, `INSERT`, `UPDATE`, `DELETE` on every table; `USAGE` and `SELECT` on every sequence (`finance.order_code_seq`, DR-27).
 - Never `TRUNCATE`, `REFERENCES`, `TRIGGER` or `CREATE` (GRT-89, GRT-96). Disabling or dropping a trigger needs ownership (GRT-08, GRT-09).
 - Two exceptions: `audit.audit_log` is `SELECT` and `INSERT` only; `platform.maintenance` is `SELECT` only.
 - `EXECUTE` on `audit.purge`, the only `SECURITY DEFINER` function (GRT-97). The helper functions of `platform` (`is_bilingual`, `immutable_unaccent`) are executable by `PUBLIC` by default, and `USAGE` on schema `platform` is what lets a role reach them: the `CHECK` constraints and the trigram index of `resident_profile` call them as the inserting role (GRT-11, GRT-24).
@@ -189,7 +189,7 @@ COMMIT;
 
 ### 4.2 What `rms_readonly` gets
 
-`SELECT` on every table of the fourteen schemas, **except**:
+`SELECT` on every table of the fifteen schemas, **except**:
 
 | Rule | Reason |
 | --- | --- |
@@ -344,6 +344,9 @@ The seed rows the tests touch are inserted by the superuser first (a building, a
 | GRT-41 | `rms_readonly` | `SELECT full_name, cccd_last4` from `resident_profile` | ok |
 | GRT-42 | `rms_readonly` | `SELECT` from `platform.idempotency_key` | 42501 |
 | GRT-43 | `rms_readonly` | `SELECT *` from `audit.audit_log` | ok |
+| GRT-98 | `rms_app` | `DELETE` from `analytics.usage_event` (P1-29) | ok |
+| GRT-99 | `rms_readonly` | `SELECT *` from `analytics.usage_daily` (P1-29) | ok |
+| GRT-100 | `rms_readonly` | `DELETE` from `analytics.usage_event` (P1-29) | 42501 |
 | GRT-44 | `rms_readonly` | `INSERT` into `building_setting` | 42501 |
 | GRT-45 | `rms_readonly` | `UPDATE building.building` | 42501 |
 | GRT-46 | `rms_readonly` | `DELETE FROM finance.inbox` | 42501 |
@@ -403,13 +406,13 @@ GRT-68 to GRT-76 create the probe table, the sequence and the history schema as 
 
 | ID | Question | Result |
 | --- | --- | --- |
-| GRT-89 | Does `rms_app` hold `TRUNCATE`, `REFERENCES` or `TRIGGER` on any table of the fourteen schemas? | none |
+| GRT-89 | Does `rms_app` hold `TRUNCATE`, `REFERENCES` or `TRIGGER` on any table of the fifteen schemas? | none |
 | GRT-90 | Does a table lack `SELECT`, `INSERT`, `UPDATE` or `DELETE` for `rms_app`, apart from `audit.audit_log` (U, D) and `platform.maintenance` (I, U, D)? | none |
 | GRT-91 | Does `rms_readonly` hold a write privilege, `REFERENCES` or `TRIGGER` on any table? | none |
 | GRT-92 | Can `rms_readonly` read any denied table or any `outbox_messages`, even one column? | none |
 | GRT-93 | Can `rms_readonly` read a column named `*_hash`, `*_enc` or `date_of_birth`? | none |
-| GRT-94 | Is a table or schema of the fourteen not owned by `rms_migrator`? | none |
-| GRT-95 | Does `PUBLIC` hold a privilege on one of the fourteen schemas? | none |
+| GRT-94 | Is a table or schema of the fifteen not owned by `rms_migrator`? | none |
+| GRT-95 | Does `PUBLIC` hold a privilege on one of the fifteen schemas? | none |
 | GRT-96 | Can `rms_app`, `rms_readonly`, `rms_backup` or a stranger `CREATE` in any schema or in the database? | none |
 | GRT-97 | Which `SECURITY DEFINER` functions exist outside `pg_catalog`, and who can execute them? | one: `audit.purge(timestamptz, text)`, executable by `rms_app` and `rms_migrator` only |
 

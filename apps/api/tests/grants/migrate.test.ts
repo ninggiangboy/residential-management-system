@@ -116,12 +116,12 @@ describe('the db:migrate command on a database that holds nothing', () => {
     return rows[0]?.h
   }
 
-  test('it creates the fourteen schemas and the platform tables, grants the roles, and a second run changes nothing', async () => {
+  test('it creates the fifteen schemas and the platform tables, grants the roles, and a second run changes nothing', async () => {
     const first = await migrate()
     expect(first.code).toBe(0)
     expect(first.out).toContain('bootstrap applied')
     // every migration of every module of the catalog is pending on a database that holds nothing
-    expect(first.out).toContain(`migrated: ${migrationsInCatalog()} pending applied, 14 schemas`)
+    expect(first.out).toContain(`migrated: ${migrationsInCatalog()} pending applied, 15 schemas`)
     expect(first.out).toContain('grants applied')
     const hash = await aclHash()
     expect(hash).toBeTruthy()

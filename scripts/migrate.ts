@@ -1,7 +1,7 @@
 /**
  * `bun run db:migrate` (and `bun scripts/migrate.ts` in the image, DOC-70 §6.3): as `rms_migrator`, on one connection with
  * `prepare: false` (PgBouncer-compatible, DR-67):
- *   1. `0000-bootstrap.sql`: extensions, the fourteen schemas, the helpers and tables of `platform` (idempotent)
+ *   1. `0000-bootstrap.sql`: extensions, the fifteen schemas, the helpers and tables of `platform` (idempotent)
  *   2. the pending migrations of every module in catalog order, each with its history in `drizzle_<module>.__migrations`
  *   3. `0900-grants.sql`: the privileges of `rms_app` and `rms_readonly`, computed from nothing (idempotent, one transaction)
  * Never run by the application at boot (DR-08). Exit 0, or non-zero on the first failure.
@@ -15,7 +15,7 @@ const root = resolve(import.meta.dir, '..')
 const say = (line: string) => process.stdout.write(`${line}\n`)
 const warn = (line: string) => process.stderr.write(`${line}\n`)
 
-/** The fourteen schemas of DOC-14 §2: thirteen modules and `platform`. */
+/** The fifteen schemas of DOC-14 §2: fourteen modules and `platform` (`analytics` joined with DR-279). */
 const SCHEMAS = [
   'platform',
   'identity',
@@ -31,6 +31,7 @@ const SCHEMAS = [
   'audit',
   'reporting',
   'realtime',
+  'analytics',
 ]
 
 function migrationUrl(): string {

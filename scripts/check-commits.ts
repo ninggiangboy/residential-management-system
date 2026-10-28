@@ -25,6 +25,7 @@ const scopes = [
   'audit',
   'reporting',
   'realtime',
+  'analytics',
   'api',
   'web',
   'resident-app',

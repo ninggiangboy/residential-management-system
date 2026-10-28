@@ -119,8 +119,8 @@ describe('the schema against DOC-41', () => {
     for (const key of schemaKeys()) expect(written).toContain(`${key}=`)
   })
 
-  test('CF-18 the twelve clock jobs have a grace key and an hourly job has none', () => {
-    expect(Object.keys(CLOCK_JOB_GRACE_MINUTES)).toHaveLength(12)
+  test('CF-18 the thirteen clock jobs have a grace key and an hourly job has none', () => {
+    expect(Object.keys(CLOCK_JOB_GRACE_MINUTES)).toHaveLength(13)
     const config = loadAppConfig(localEnv({ JOB_INVARIANT_CHECK_GRACE_MINUTES: '0' }))
     expect(config.jobs.JOB_INVARIANT_CHECK_GRACE_MINUTES).toBe(0)
     expect(config.jobs.JOB_DEMO_RESET_GRACE_MINUTES).toBe(120)

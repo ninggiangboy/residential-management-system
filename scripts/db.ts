@@ -1,7 +1,7 @@
 /**
  * Database commands that are not the migration itself:
  *   bun run db:generate   drizzle-kit generates the next migration of every module of the catalog (DOC-14 §14.1)
- *   bun run db:reset      empties the application database and migrates it again: every object of the fourteen schemas and
+ *   bun run db:reset      empties the application database and migrates it again: every object of the fifteen schemas and
  *                         every `drizzle_<module>` history goes, the roles and the database stay, then `seed:demo` (DOC-69 §11)
  * `reset` runs as `rms_migrator`, which owns everything; it refuses any profile but `local` and `test`.
  */
@@ -37,7 +37,7 @@ async function reset() {
     const schemas = await database.client.unsafe(`
       select schema_name from information_schema.schemata
        where schema_name in ('platform','identity','building','residency','finance','tickets','access','vehicles',
-                             'notices','notification','wiki','audit','reporting','realtime')
+                             'notices','notification','wiki','audit','reporting','realtime','analytics')
           or schema_name like 'drizzle\\_%'`)
     for (const { schema_name } of schemas)
       await database.client.unsafe(`drop schema if exists "${schema_name}" cascade`)

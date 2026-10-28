@@ -1,6 +1,6 @@
 # Usage analytics
 
-> Status: **Review** · Updated: 2026-10-28 (DR-279) · DOC-104
+> Status: **Review** · Updated: 2026-10-28 (P1-29 built, §13.2; DR-279) · DOC-104
 > Depends on: [DR](../00-decision-register.md) (DR-279, DR-103, DR-58, DR-64, DR-264, DR-265), [ADR-0028](../04-adr/0028-self-hosted-usage-analytics-without-an-identifier.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-06](../02-glossary.md), [DOC-17](../05-data/operations-model.md) §9A, [DOC-20](../05-data/data-lifecycle.md) §2.5 and §5, [DOC-35](audit-privacy-and-terms.md) §7 to §9, [DOC-38](jobs-and-outbox-runtime.md) §4, [DOC-39](security.md) §6, [DOC-40](observability.md) §4.7, [DOC-41](configuration-reference.md) §13A, [DOC-42](error-handling.md) §10, [DOC-51](../07-api/api-endpoints.md) E-173, [DOC-55](../08-ux-ui/client-architecture.md) §15A, [DOC-56](../08-ux-ui/screens/README.md), [DOC-73](../09-operations/mobile-release.md) §10.2, §10.3
 > Main readers: P1-29 (the build), P6-10 (the store declarations), DOC-103 (go-live), every task that adds a screen or a control
 
@@ -472,7 +472,7 @@ The two rate limits of §6.1 are keys too (DOC-41 §7, DOC-39 §6): `USAGE_EVENT
 
 ## 13. Required tests
 
-Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes it). Written in P1-29; **none is run yet**, except the statements of §13.1.
+Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes it). Written and run in P1-29; where each lives is in §13.2. The statements of §13.1 were run before the build.
 
 | ID | Case | Expected |
 | --- | --- | --- |
@@ -539,6 +539,32 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | The three readings of §8.2 (stretches by app, time per session, time on a screen) | Resident: 3 opens, 3 stretches, 72 s on average; web: 1 and 600 s. Sessions: 170 s in 2 opens, 45 s, 600 s. Screens: `Main` 24 s, `Fees` 29 s, `Notices` 29 s (checked by hand against the fixture: `Main` 19 s and 28 s, `Fees` 50 s and 8 s) |
 
 **Not run:** the endpoint, the job, the tracker, the metrics and the dashboard (they are built in P1-29); the store declarations (they need the accounts, P6-10); counsel's reading (P0-06).
+
+### 13.2 As built (P1-29, 2026-10-28)
+
+All 36 are written and green on PostgreSQL 18.6. The test counts below are from the run of 2026-10-28.
+
+| Tests | Where |
+| --- | --- |
+| UA-01…14, UA-28 (E-173/E-174 side), UA-32, UA-33 | `apps/api/tests/integration/usage-events.integration.test.ts` (26 tests, over HTTP, as `rms_app`); the logic of the use case also in `modules/analytics/src/application/use-cases/record-usage-events.test.ts` and `domain/usage-batch.test.ts` |
+| UA-15 | `packages/shared-types/src/usage.test.ts` (parses DOC-56 §3 and §4.2.1 of this document) |
+| UA-16…20, UA-34 | the same integration file, block "the rollup" (UA-20 holds the advisory lock `job:usage_rollup` from a second session, then runs the job through the runtime) |
+| UA-21…26, UA-30, UA-31, UA-35 | `packages/client-core/src/usage.test.ts` (27 tests on a fake monotonic clock, a fake network and a fake timer), `packages/mobile-core/src/usage.test.ts` and `session.test.ts` (the device storage key, the routes, the queue cleared before the token), `fetcher.test.ts` (the batch is a quiet call) |
+| UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) now reads the three rows of DOC-40 §4.7 as phase `P1` |
+| UA-28 (matrix) | EXP-10 (`exp:10`) and `test:authz` pass with E-173 and E-174 mounted |
+| UA-29 | `apps/resident-app/app.config.test.ts`, `apps/staff-app/app.config.test.ts` (the manifest as the build merges it with `IOSConfig.PrivacyInfo.mergePrivacyInfo`; no `NSUserTrackingUsageDescription`) |
+| UA-36 | `record-usage-events.test.ts` (count 2, sum 66 for the labels of the batch; a dropped close adds nothing) |
+
+Where the build differs from the text above, or leaves something open:
+
+1. **The version gate (426) is not applied.** §6.1 step 3 and DOC-51 say the routes are subject to it, but the API has no server-side gate yet (`MIN_APP_VERSION_*` is only published by E-03). The routes take it with the gate when it exists; nothing here needs a change.
+2. **Who is recorded is decided by the flow, not by the session** (§5.6). The root layout calls `useUsageGate(phase === 'ready' && no open terms gate)`, so a person who has not accepted the terms, or has not chosen a unit, is recorded nowhere, not even as an `app_open`. The web CMS records while the `_app` layout is mounted.
+3. **The batch is a "quiet call" of the fetcher** (`QUIET` in `fetcher.ts`): no retry (a 429 or 503 is returned at once), no terms or upgrade screen. A 401 still refreshes the token and replays the batch once.
+4. **Not tracked:** the staff app's `account/sessions` screen (it is part of `S-Account`, DOC-61), and `Account-Helper` (the build has one `Account` for every member type). `USAGE_SCREENS` lists what the apps have.
+5. **`NSPrivacyCollectedDataTypes` (§9.2):** the key and the values are in Expo's own types (`@expo/config-types`, `ios.privacyManifests`) and in the config plugin that writes `PrivacyInfo.xcprivacy`, which UA-29 runs. `expo prebuild --platform ios` of the resident app then generated the file (2026-10-28) with the one entry (`NSPrivacyCollectedDataTypeProductInteraction`, linked false, tracking false, purpose analytics), `NSPrivacyTracking` false, and `Info.plist` has no `NSUserTrackingUsageDescription`. Apple's documentation page could not be read in full from the build host (the fetch returned its title only), so the check against Apple's own text is **still owed** to P6-10, with the store declarations.
+6. **Run on a device (2026-10-28):** on the Android emulator, against a scratch database with a building that is not the demo one, the resident app signed in by OTP and a session of 28 s (the Main home, `Contact`, back, `Account`, the language row, then the app sent to the background) made one request. It wrote 7 rows (`app_open` Launch, `screen_view` Main, Contact, Main, Account, `tap` `Account.language`, `app_close` 28 s), none for `Login` or `OTP`, with no account, unit or device in them; `usage_events_total` and `usage_foreground_seconds` showed the same events. The staff app and the web CMS were not run on a device or in a browser; their bindings are covered by the tests of §13.2 only.
+7. **No automated test** covers the web bindings of `visibilitychange` and `pagehide` with `keepalive` (`apps/cms-web/src/lib/usage.ts`); the tracker they call is covered by UA-31 and UA-35.
+8. **Size (§7.2)** was not measured, as the Owner accepted (§14 item 11).
 
 ## 14. Decisions made while writing
 

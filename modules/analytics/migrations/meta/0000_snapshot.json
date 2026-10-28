@@ -1,0 +1,278 @@
+{
+  "id": "84d7f056-730b-4c10-83c3-ab3739f96fd1",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "analytics.usage_daily": {
+      "name": "usage_daily",
+      "schema": "analytics",
+      "columns": {
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "day": {
+          "name": "day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "app": {
+          "name": "app",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "audience": {
+          "name": "audience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event": {
+          "name": "event",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "events": {
+          "name": "events",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sessions": {
+          "name": "sessions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seconds": {
+          "name": "seconds",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_usage_daily": {
+          "name": "pk_usage_daily",
+          "columns": [
+            "building_id",
+            "day",
+            "app",
+            "platform",
+            "audience",
+            "event",
+            "name"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_usage_daily_app": {
+          "name": "ck_usage_daily_app",
+          "value": "\"analytics\".\"usage_daily\".\"app\" IN ('resident', 'staff', 'web')"
+        },
+        "ck_usage_daily_platform": {
+          "name": "ck_usage_daily_platform",
+          "value": "\"analytics\".\"usage_daily\".\"platform\" IN ('ios', 'android', 'web')"
+        },
+        "ck_usage_daily_audience": {
+          "name": "ck_usage_daily_audience",
+          "value": "\"analytics\".\"usage_daily\".\"audience\" IN ('resident', 'staff')"
+        },
+        "ck_usage_daily_event": {
+          "name": "ck_usage_daily_event",
+          "value": "\"analytics\".\"usage_daily\".\"event\" IN ('screen_view', 'tap', 'app_open', 'app_close')"
+        },
+        "ck_usage_daily_counts": {
+          "name": "ck_usage_daily_counts",
+          "value": "\"analytics\".\"usage_daily\".\"events\" >= 1 AND \"analytics\".\"usage_daily\".\"sessions\" BETWEEN 1 AND \"analytics\".\"usage_daily\".\"events\""
+        },
+        "ck_usage_daily_seconds": {
+          "name": "ck_usage_daily_seconds",
+          "value": "\"analytics\".\"usage_daily\".\"event\" = 'app_close' OR \"analytics\".\"usage_daily\".\"seconds\" = 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "analytics.usage_event": {
+      "name": "usage_event",
+      "schema": "analytics",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "app": {
+          "name": "app",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "app_version": {
+          "name": "app_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "audience": {
+          "name": "audience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event": {
+          "name": "event",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration_s": {
+          "name": "duration_s",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ix_usage_event_building_at": {
+          "name": "ix_usage_event_building_at",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_usage_event": {
+          "name": "pk_usage_event",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_usage_event_app": {
+          "name": "ck_usage_event_app",
+          "value": "\"analytics\".\"usage_event\".\"app\" IN ('resident', 'staff', 'web')"
+        },
+        "ck_usage_event_platform": {
+          "name": "ck_usage_event_platform",
+          "value": "\"analytics\".\"usage_event\".\"platform\" IN ('ios', 'android', 'web')"
+        },
+        "ck_usage_event_version": {
+          "name": "ck_usage_event_version",
+          "value": "\"analytics\".\"usage_event\".\"app_version\" ~ '^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$'"
+        },
+        "ck_usage_event_audience": {
+          "name": "ck_usage_event_audience",
+          "value": "\"analytics\".\"usage_event\".\"audience\" IN ('resident', 'staff')"
+        },
+        "ck_usage_event_event": {
+          "name": "ck_usage_event_event",
+          "value": "\"analytics\".\"usage_event\".\"event\" IN ('screen_view', 'tap', 'app_open', 'app_close')"
+        },
+        "ck_usage_event_name": {
+          "name": "ck_usage_event_name",
+          "value": "char_length(\"analytics\".\"usage_event\".\"name\") <= 60 AND \"analytics\".\"usage_event\".\"name\" ~ '^[A-Z][A-Za-z0-9-]*(\\.[a-z][a-z0-9_]*)?$'"
+        },
+        "ck_usage_event_name_form": {
+          "name": "ck_usage_event_name_form",
+          "value": "(\"analytics\".\"usage_event\".\"event\" = 'tap') = (position('.' IN \"analytics\".\"usage_event\".\"name\") > 0)"
+        },
+        "ck_usage_event_lifecycle": {
+          "name": "ck_usage_event_lifecycle",
+          "value": "(\"analytics\".\"usage_event\".\"event\" = 'app_open' AND \"analytics\".\"usage_event\".\"name\" IN ('Launch', 'Resume')) OR (\"analytics\".\"usage_event\".\"event\" = 'app_close' AND \"analytics\".\"usage_event\".\"name\" = 'Background') OR \"analytics\".\"usage_event\".\"event\" IN ('screen_view', 'tap')"
+        },
+        "ck_usage_event_duration": {
+          "name": "ck_usage_event_duration",
+          "value": "(\"analytics\".\"usage_event\".\"event\" = 'app_close') = (\"analytics\".\"usage_event\".\"duration_s\" IS NOT NULL) AND (\"analytics\".\"usage_event\".\"duration_s\" IS NULL OR \"analytics\".\"usage_event\".\"duration_s\" BETWEEN 0 AND 86400)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "analytics": "analytics"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

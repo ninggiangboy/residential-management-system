@@ -35,6 +35,7 @@
     "@core/runtime": "workspace:*",
     "@core/telemetry": "workspace:*",
     "@core/storage": "workspace:*",
+    "@mod/analytics": "workspace:*",
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
     "@mod/identity": "workspace:*",

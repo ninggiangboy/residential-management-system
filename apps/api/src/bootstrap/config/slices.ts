@@ -293,6 +293,7 @@ const filesConfig = defineSlice({
 /** The clock jobs that have a catch-up window (DOC-38 §4.1); the hourly jobs have none. */
 export const CLOCK_JOB_GRACE_MINUTES = {
   INVARIANT_CHECK: 720,
+  USAGE_ROLLUP: 720,
   QR_SCAN_PURGE: 720,
   OTP_PURGE: 720,
   TOKEN_PURGE: 720,
@@ -371,7 +372,7 @@ const observabilityConfig = defineSlice({
   }),
 })
 
-/** Usage analytics (DR-279, DOC-104): the module `analytics` reads these when P1-29 builds it. */
+/** Usage analytics (DR-279, DOC-104): the module `analytics` reads these. */
 const usageConfig = defineSlice({
   title: 'Usage analytics (DOC-41 §13A)',
   schema: z.object({

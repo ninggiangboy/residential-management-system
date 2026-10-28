@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-28 (DR-279: §9A, the `analytics` tables) · 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
+> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-28 (P1-29: §9A built as `modules/analytics/migrations/0000_init.sql`; DR-279) · 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -36,7 +36,7 @@ This document holds the tables of the schemas that run the system rather than th
 | 6 | `notices`, `notification` | `notice`, `notice_attachment`, `notice_recipient`, `inbox_entry`, `device_token`, `push_ticket` (DR-50…53). The notification tables are needed in P2 and are written in P1-26 | P1-26, P3-12 | Not written |
 | 7 | `vehicles` | `vehicle`, `vehicle_revision` (DR-49) | P4-11 | Not written |
 | 8 | `wiki` | `folder`, `page`, `page_version`, `page_attachment` (DR-54) | P4-13 | Not written |
-| 9A | `analytics` | `usage_event`, `usage_daily` (DR-279, ADR-0028) | 2026-10-28 (DOC-104) | Written, DDL run on PostgreSQL 18.6 |
+| 9A | `analytics` | `usage_event`, `usage_daily` (DR-279, ADR-0028) | 2026-10-28 (DOC-104) | Written, DDL run on PostgreSQL 18.6; migrated in P1-29 |
 | 9 | `reporting`, `realtime` | `export_job` (DR-55; plus the requester's role, IP, user agent and request id, which the worker needs to write the `pii.read` row of an export, DOC-35 §6, DR-124), `events` (DR-87) | P5-09 | Not written |
 
 The rules of DOC-14 §5.3 apply to every new table: a table with no `building_id` joins the allow-list in the same change as its DDL. This document adds `building.job_run` (§3.2) to it.
