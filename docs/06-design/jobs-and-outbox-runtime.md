@@ -1,6 +1,6 @@
 # Jobs and outbox runtime
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: the job `usage_rollup`, 24 jobs) · 2026-10-27 (DR-272: an unknown type is deferred, the worker restarts first, the drain of the api) · 2026-10-26 (DR-268: the store is SeaweedFS in `vn`; DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: §4.3, the job `usage_rollup` owed to P1-29) · 2026-10-27 (DR-272: an unknown type is deferred, the worker restarts first, the drain of the api) · 2026-10-26 (DR-268: the store is SeaweedFS in `vn`; DR-266: `invariant_check` runs 19 queries; earlier: P1-05: the runtime exists, §9 statuses, DR-249; P1-04: the boot order of §5.1, DR-248; DR-245: `fee_notice_run` claims `finance.fee_notice_job`; DR-244: cross-building jobs claim per building; earlier DR-161: database absent at start; DR-154: label `job_name`) · DOC-38
 > Depends on: original SDD §4.1, §4.2, §5.10, §10.2, §15, §19.4, [DR](../00-decision-register.md) (DR-05, 06, 30, 31, 51, 52, 55, 56, 60, 61, 62, 63, 67, 98, 101, 112, 114, 115, 118, 120, 121), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4.3, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-12](../03-architecture/code-architecture.md) §4.2, §8, [DOC-17](../05-data/operations-model.md) §3, [DOC-20](../05-data/data-lifecycle.md) §5
 > Main readers: P1-05 (messaging and job runtime), P1-07, P1-20 (the VPS), every task that adds a job or an event handler, DOC-40, DOC-41, DOC-70, RB-04, RB-05
 
@@ -302,7 +302,7 @@ The keys of a job's own work (`PDF_CONCURRENCY`, `EXPORT_CONCURRENCY`, the re-qu
 
 ## 4. The catalog
 
-24 jobs. Schedules are in building time (`JOBS_TIME_ZONE`). The hourly jobs are staggered by the minute so that they do not start together. **Mode** is §3.2; **Row** is §3.5 ("always" or "on work").
+23 jobs, and `usage_rollup` owed to P1-29 (§4.3). Schedules are in building time (`JOBS_TIME_ZONE`). The hourly jobs are staggered by the minute so that they do not start together. **Mode** is §3.2; **Row** is §3.5 ("always" or "on work").
 
 ### 4.1 Schedules
 
@@ -319,7 +319,6 @@ The keys of a job's own work (`PDF_CONCURRENCY`, `EXPORT_CONCURRENCY`, the re-qu
 | `import_expire` | residency | hourly at :25 | lock | none | always | DR-114 |
 | `export_purge` | reporting | hourly at :35 | lock | none | always | DR-55, DR-62 |
 | `realtime_purge` | realtime | hourly at :45 | lock | none | always | DR-75, DR-115, DR-120 |
-| `usage_rollup` | analytics | daily 02:30 | lock | 12 h | always | DR-279 |
 | `invariant_check` | finance | daily 03:00 | snapshot | 12 h | always | DR-62, DR-78, NFR-09 |
 | `qr_scan_purge` | access | daily 03:45 | lock | 12 h | always | DR-48, DR-62 |
 | `otp_purge` | identity | daily 03:45 | lock | 12 h | always | DR-62 |
@@ -351,7 +350,6 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `export_purge` | Deletes export rows and files older than 7 days | `{"deleted": n}` | DOC-33, DOC-20 §2.5 |
 | `realtime_purge` | Deletes `realtime.events` older than 24 hours | `{"deleted": n}` | DOC-17 §9, DOC-20 |
 | `invariant_check` | The 19 queries of DOC-22 §12 (the 17 ledger corruptions of DR-78 and two table checks, DR-266) in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 19, "violations": n}` | DOC-22 (EXP-11) |
-| `usage_rollup` | Rolls the last 3 complete local days of `usage_event` into `usage_daily`, deletes raw events older than `USAGE_RAW_RETENTION_DAYS` up to the newest rolled-up day and rollup rows older than `USAGE_DAILY_RETENTION_DAYS`; idempotent | `{"rolled": n, "purgedRaw": n, "purgedDaily": n}` | DOC-104 §7.1, DOC-20 §5 |
 | `qr_scan_purge` | Deletes `qr_scan` and `lookup_log` rows older than 90 days | `{"deleted": n}` | DOC-20 §5 |
 | `otp_purge` | Deletes OTP challenges older than 24 hours | `{"deleted": n}` | DOC-20 §5 |
 | `token_purge` | Deletes consumed or expired tokens, expired or revoked families, idle buckets (identity and platform), expired idempotency keys, `job_run` rows older than 30 days | `{"deleted": {"password_token": n, …}}` | DOC-20 §5 |
@@ -365,6 +363,16 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `audit_purge` | `audit.purge(now(), 'finance')` and `(now(), 'standard')`; the function raises the cut-off to the floor itself | `{"deleted": {"finance": n, "standard": n}}` | DOC-17 §2, DOC-35 |
 
 `integrity_weekly` and `integrity_notices` report findings by a Warning alert and never repair.
+
+### 4.3 Jobs owed
+
+A job whose module does not exist yet is not in §4.1: the catalog test (`jobs.integration.test.ts`, JB-10) compares that table with `apps/api/src/bootstrap/job-catalog.ts` row for row, and `ops-rules.test.ts` compares the stale-after rules with it. The job is added to §4.1, to the catalog, to `ops/prometheus/rules/rms-jobs.yml` and to the grace keys in the change that builds it.
+
+| Job | Module | Schedule | Mode | Grace | Row | Source | Work | Result | Owed to |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `usage_rollup` | analytics | daily 02:30 | lock | 12 h (`JOB_USAGE_ROLLUP_GRACE_MINUTES`, 720) | always | DR-279 | Rolls the last 3 complete local days of `analytics.usage_event` into `usage_daily`, deletes raw events older than `USAGE_RAW_RETENTION_DAYS` up to the newest rolled-up day and rollup rows older than `USAGE_DAILY_RETENTION_DAYS`; idempotent (DOC-104 §7.1, DOC-20 §5) | `{"rolled": n, "purgedRaw": n, "purgedDaily": n}` | P1-29 |
+
+When it is built, the catalog has 24 jobs, JB-10 reads 24 job names and 33 distinct hashes, and its stale-after value is 172800 s, the value of the other daily jobs (DOC-40 §5.4).
 
 ## 5. The process
 
@@ -453,7 +461,7 @@ Prefix `JB-` (jobs and outbox runtime). Tests marked **run** were executed on 20
 | JB-07 | 100 pending rows, two sessions claim 50 each at once | Both run | 50 and 50 rows, no overlap | run |
 | JB-08 | Session A holds `job:invariant_check` | Session B tries it, then another job name, then after A commits | `false`, `true`, `true` | run |
 | JB-09 | A session holds `job:orphan_uploads` and is killed | Another session tries | `true` after the kill | run |
-| JB-10 | The 24 job names and the 9 cleanup-lock names | `hashtext` is computed | 33 distinct values (a catalog test repeats it) | run |
+| JB-10 | The 23 job names and the 9 cleanup-lock names | `hashtext` is computed | 32 distinct values (a catalog test repeats it) | run |
 | JB-11 | `job_run` rows: three for `invariant_check` (two succeeded, one failed), one for `audit_purge` | The restart query runs | The latest `succeeded` time of each job; plan: bitmap scan of `ix_job_run_name_success` | run |
 | JB-12 | Two pending rows (3 min, 20 s), one dead, one published | The gauge queries run | Oldest unpublished 180 s; dead letters 1 | run |
 | JB-13 | A role without superuser | A `snapshot` transaction runs | `repeatable read`, read-only, `statement_timeout` 5 min, lock taken | run |

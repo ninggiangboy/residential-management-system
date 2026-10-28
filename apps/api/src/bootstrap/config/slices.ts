@@ -149,6 +149,12 @@ const httpConfig = defineSlice({
     CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT: int(30, { min: 1 }).describe(
       '`POST /client-errors` per account.',
     ),
+    USAGE_EVENTS_PER_MINUTE_PER_IP: int(30, { min: 1, max: 600 }).describe(
+      '`POST /me/usage-events` and `POST /staff/usage-events` per IP (DR-279).',
+    ),
+    USAGE_EVENTS_PER_HOUR_PER_SESSION: int(120, { min: 1, max: 3600 }).describe(
+      'The same routes, per random session id of the client (DR-279).',
+    ),
   }),
 })
 
@@ -365,6 +371,22 @@ const observabilityConfig = defineSlice({
   }),
 })
 
+/** Usage analytics (DR-279, DOC-104): the module `analytics` reads these when P1-29 builds it. */
+const usageConfig = defineSlice({
+  title: 'Usage analytics (DOC-41 §13A)',
+  schema: z.object({
+    USAGE_ENABLED: bool('true').describe(
+      'false discards every usage event (204) and counts it as dropped `disabled`.',
+    ),
+    USAGE_RAW_RETENTION_DAYS: int(90, { min: 7, max: 365 }).describe(
+      'Age at which `analytics.usage_event` rows are deleted by `usage_rollup`.',
+    ),
+    USAGE_DAILY_RETENTION_DAYS: int(730, { min: 90, max: 3650 }).describe(
+      'Age at which `analytics.usage_daily` rows are deleted by `usage_rollup`.',
+    ),
+  }),
+})
+
 /** Rows of DOC-41 §14: final names and defaults, read by a later phase. Listed so that a typo of one is refused too. */
 const laterConfig = defineSlice({
   title: 'Keys of later phases (DOC-41 §14)',
@@ -426,5 +448,6 @@ export const CONFIG_SLICES = {
   jobs: jobsConfig,
   concurrency: concurrencyConfig,
   observability: observabilityConfig,
+  usage: usageConfig,
   later: laterConfig,
 } as const
