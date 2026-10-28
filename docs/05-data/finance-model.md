@@ -1,6 +1,6 @@
 # Finance model
 
-> Status: **Draft** · Updated: 2026-10-22 · DOC-15
+> Status: **Draft** · Updated: 2026-10-28 (DR-243…245 confirmed by the Owner) · 2026-10-22 · DOC-15
 > Depends on: original SDD §5, §6, §16, [DR](../00-decision-register.md) (DR-09…14, 16…21, 23…35, 56, 60, 84, 86, 87, 96, 97, 105, 109, 115, 119, 120, 126, DR-243…245), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-14](data-conventions.md), [DOC-16](identity-and-residency-model.md) §5.5, [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-20](data-lifecycle.md) §2.4, [DOC-36](../06-design/building-configuration-and-demo.md) §10, [DOC-03](../01-product/requirements.md) (FR-01…12, 44, 46, 47, 49), [DOC-06](../02-glossary.md)
 > Main readers: P2-01 (finance schema), P2-02 (counters), P2-03, P2-06…P2-11, P2-13, P3-02…P3-07, DOC-21, DOC-22, DOC-23, DOC-24, DOC-25, DOC-34, DOC-19 (grants), DOC-100 (EXP-11), DOC-75 (RB-01)
 
@@ -1868,7 +1868,7 @@ Every "never deleted" row of a demo building is deleted by the demo reset under 
 
 ## 16. Decisions made while writing
 
-Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-10-22, to be confirmed by the Owner because the tables hold money.
+Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-10-22 and confirmed by the Owner on 2026-10-28. Items 4 and 8 of DR-244 (`cancel_reason`, the sequence ceiling) follow DR-28 and DR-27, which are still proposed.
 
 | ID | Decision | Where used |
 | --- | --- | --- |
@@ -1909,7 +1909,7 @@ Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-1
 
 ## Open questions
 
-Decisions made while writing are DR-243…245 (§16), decided under delegation and listed for the Owner to confirm. The document stays **Draft** because five tables follow DRs that are still proposed; each line says what the decision can still change.
+Decisions made while writing are DR-243…245 (§16), confirmed by the Owner on 2026-10-28. The document stays **Draft** because five tables follow DRs that are still proposed; each line says what the decision can still change.
 
 - **DR-27 (order code and transfer content).** The sequence start, the ceiling and `uq_payment_intent_order_code` follow it. A gateway sandbox that allows a longer description or a different code range changes the ceiling only (a migration of the sequence and of `ck_payment_intent_order_code`).
 - **DR-28 (intent lifecycle).** `cancel_reason`, the supersede rule and the active states follow it. P2-06 builds `settle()` on these columns.
