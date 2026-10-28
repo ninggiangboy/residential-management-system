@@ -142,10 +142,11 @@ export function reportBootGuard(
       policy === 'always' ||
       (policy === 'strict' && (appEnv === 'production' || appEnv === 'staging'))
     refuses ||= stops
-    ;(stops ? log.error : log.warn)(
-      { event: 'boot_guard_failed', check: failure.check, ids: failure.ids },
-      `boot_guard_failed: ${failure.message}`,
-    )
+    // Called as a method: a pino logger reads `this`, so `(stops ? log.error : log.warn)(…)` would call it unbound and throw.
+    const fields = { event: 'boot_guard_failed', check: failure.check, ids: failure.ids }
+    const message = `boot_guard_failed: ${failure.message}`
+    if (stops) log.error(fields, message)
+    else log.warn(fields, message)
   }
   return refuses
 }
