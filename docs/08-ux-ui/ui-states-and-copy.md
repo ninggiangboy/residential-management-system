@@ -321,7 +321,7 @@ The switch of DR-279 (DOC-104 §5.4) is on three screens (`Account`, `S-Account`
 | Key | `vi` | `en` | Note |
 | --- | --- | --- | --- |
 | `common.usage.title` | Chia sẻ dữ liệu sử dụng ẩn danh | Share anonymous usage data | The label of the switch |
-| `common.usage.hint` | Giúp ban quản lý biết màn hình nào được dùng nhiều để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn. | Helps the management see which screens are used so it can improve the app. It is not tied to your account or phone number. | Helper text under the label; no toast on change |
+| `common.usage.hint` | Giúp ban quản lý biết màn hình nào được dùng nhiều và ứng dụng được mở bao lâu để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn. | Helps the management see which screens are used, and how often and how long the app is open, so it can improve the app. It is not tied to your account or phone number. | Helper text under the label; no toast on change |
 
 ## 5. `status.*` labels
 

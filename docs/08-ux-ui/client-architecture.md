@@ -591,14 +591,14 @@ Rules (DR-192):
 
 ## 15A. Usage record
 
-DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of listed controls, with no account or device id, and send them in batches: the resident app to `POST /me/usage-events` (E-173), the staff app and the web CMS to `POST /staff/usage-events` (E-174). This section says only where the code sits; the rules (session, queue, switch, drops) are DOC-104 §5.
+DR-279, DOC-104 §5. The apps and the web CMS record screen views, taps of listed controls, and when the app is opened and left (with the seconds of each stretch), with no account or device id, and send them in batches: the resident app to `POST /me/usage-events` (E-173), the staff app and the web CMS to `POST /staff/usage-events` (E-174). This section says only where the code sits; the rules (session, queue, switch, drops) are DOC-104 §5.
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| `createUsageTracker` | `@rms/client-core` | Pure TypeScript: the queue (100), the session, the batching (one request when the app goes to the background, at 50 events or after 5 minutes), the merge of a repeated `screen_view`, the sender port; the clock, the id maker and the sender are injected, so the tests (UA-21…26, UA-31) need no timers or network |
-| Device binding | `@rms/mobile-core` | The switch in the device storage (`usage.enabled`); `AppState` for the flush on background and the 30-minute session renewal; the sender is the authenticated fetcher with `X-Unit-Id`, no `Idempotency-Key`, no retry |
+| `createUsageTracker` | `@rms/client-core` | Pure TypeScript: the queue (100), the session, the batching (one request when the app goes to the background, at 50 events or after 5 minutes), the merge of a repeated `screen_view`, the foreground timer (`app_open`, `app_close`, `durationSec`), the sender port; the clock, the id maker and the sender are injected, so the tests (UA-21…26, UA-31, UA-35) need no timers or network |
+| Device binding | `@rms/mobile-core` | The switch in the device storage (`usage.enabled`); `AppState` for the flush on background, the 30-minute session renewal and the open and close of a stretch (`active`, `background`; `inactive` is ignored); the sender is the authenticated fetcher with `X-Unit-Id`, no `Idempotency-Key`, no retry |
 | Screen hook | each app's route layout | `routeToScreen` maps an Expo Router route name to a DOC-56 section id; a route not in it is not tracked; parameters never reach the id |
-| Web binding | `apps/cms-web` | TanStack Router `onResolved` calls `usage.screen`; the switch in `localStorage` (`rms.usage.enabled`) in a `try/catch` |
+| Web binding | `apps/cms-web` | TanStack Router `onResolved` calls `usage.screen`; `visibilitychange` and `pagehide` call `usage.foreground`; the switch in `localStorage` (`rms.usage.enabled`) in a `try/catch` |
 | `trackTap(target)` | `@rms/client-core` | `target` is the type `UsageTarget` of `@rms/shared-types`; a handler calls it after it has started its action; it never throws and never awaits |
 | Lists | `@rms/shared-types` | `USAGE_SCREENS`, `USAGE_EXCLUDED_SCREENS`, `USAGE_TARGETS`; the test UA-15 compares them with DOC-56 and DOC-104 §4.2 |
 

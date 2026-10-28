@@ -44,12 +44,16 @@ This document says what the system records about how the apps are used, what it 
 
 ## 3. Events
 
-Two events exist (DR-279 (1)). Another needs a new DR.
+Four events exist (DR-279 (1)). Another needs a new DR.
 
 | Event | Means | `name` | Sent when |
 | --- | --- | --- | --- |
 | `screen_view` | A screen was shown to a signed-in user | A screen id of §4.1 | The screen gains focus; once per focus (§5.5) |
 | `tap` | A control of §4.2 was pressed | A target id `<Screen>.<control>` | The press handler of the control runs, after the action has been started (the tap never delays it) |
+| `app_open` | The app came to the foreground with a signed-in user | `Launch` (the app or the page started) or `Resume` (it came back from the background or a hidden tab) | At the start of a foreground stretch (§5.6) |
+| `app_close` | The app left the foreground | `Background` (mobile: the app went to the background; web: the tab was hidden or closed) | At the end of a foreground stretch; it carries `durationSec`, the seconds of that stretch (§5.6) |
+
+"Close" is not "quit": a phone does not tell the app that the person swiped it away, so the end of use is the moment the app leaves the foreground. A stretch whose end the client never saw (the app was killed, the battery died) has an `app_open` and no `app_close`; its time is not counted (§10).
 
 Every event also carries `ageMs`: the milliseconds between the event and the moment the batch is sent, 0 to 3,600,000. The server stores `occurred_at = received_at - ageMs`, cut to the second. The client's own clock is never used, so a phone with a wrong time cannot put events in the wrong day.
 
@@ -146,18 +150,19 @@ The tracker is shared code. `@rms/client-core` holds the pure part (queue, sessi
 | `usage.screen(id)` | The route layout of each app, on focus | Queues a `screen_view` for the id that the route name maps to (a table `routeToScreen` per app; a route that is not in it is not tracked; parameters never reach the id) |
 | `trackTap(target)` | A press handler | Queues a `tap` |
 | `usage.setEnabled(boolean)` | The switch | Stores the choice, clears the queue when it is off |
+| `usage.foreground(true \| false)` | The binding of each platform to its app state (mobile: `AppState`; web: `visibilitychange`, `pagehide`), never a screen | Queues an `app_open` or an `app_close` and measures the stretch (§5.6) |
 
-All three return at once, never throw and never await the network.
+All of them return at once, never throw and never await the network.
 
 ### 5.2 The session
 
 - `sessionId` is a UUID v4 made at launch (the web: at page load) with the platform's secure random source.
-- It is renewed when the app comes back from the background after **more than 30 minutes**, and when the person signs out and another signs in.
+- It is renewed when the app comes back from the background after **more than 30 minutes** (the `Resume` of that return is the first event of the new session), and when the person signs out and another signs in.
 - It is kept **in memory only**: not in the device storage, not in a cookie, not in a log line. Two launches of one phone cannot be joined (UA-22).
 
 ### 5.3 The queue and the batch
 
-**No request per action.** A press or a screen change only appends to the queue in memory. The queue goes to the server in one request when the person leaves the app, so a normal use of the app costs one request, not one per action.
+**No request per action.** A press, a screen change, an open or a close only appends to the queue in memory. The queue goes to the server in one request when the person leaves the app, so a normal use of the app costs one request, not one per action. The `app_close` is queued first, so it travels in the batch that its own going-to-the-background sends.
 
 | Rule | Value |
 | --- | --- |
@@ -173,7 +178,7 @@ All three return at once, never throw and never await the network.
 
 ### 5.4 The switch
 
-- **Copy.** Title `common.usage.title`: vi "Chia sẻ dữ liệu sử dụng ẩn danh", en "Share anonymous usage data". Hint `common.usage.hint`: vi "Giúp ban quản lý biết màn hình nào được dùng nhiều để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn.", en "Helps the management see which screens are used so it can improve the app. It is not tied to your account or phone number." (DOC-68 §4.6; shared keys because three screens use them.)
+- **Copy.** Title `common.usage.title`: vi "Chia sẻ dữ liệu sử dụng ẩn danh", en "Share anonymous usage data". Hint `common.usage.hint`: vi "Giúp ban quản lý biết màn hình nào được dùng nhiều và ứng dụng được mở bao lâu để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn.", en "Helps the management see which screens are used, and how often and how long the app is open, so it can improve the app. It is not tied to your account or phone number." (DOC-68 §4.6; shared keys because three screens use them.)
 - **Where.** `Account` (resident app, DOC-60), `S-Account` (staff app, DOC-61), `W-Profile` (web CMS, DOC-64).
 - **Default.** On (DR-279 (5)). The default is the constant `USAGE_DEFAULT_ENABLED` in `@rms/client-core`; counsel's answer (DR-279 (11)) may turn it off.
 - **Stored** on the device (mobile: the device storage of `@rms/mobile-core`, key `usage.enabled`; web: `localStorage`, key `rms.usage.enabled`, read in a `try/catch`), not on the server and not per account. Another account that signs in on the same device inherits the choice.
@@ -183,6 +188,18 @@ All three return at once, never throw and never await the network.
 ### 5.5 Noise
 
 A `screen_view` for the same id within one second of the previous one is merged (a re-render must not count twice). A `tap` is never merged: ten presses are ten events.
+
+### 5.6 Opening, closing and the time of use
+
+A **foreground stretch** is the time from the app coming to the foreground to it leaving. The client records it as a pair:
+
+1. When a signed-in user is in the foreground (the app starts with a stored session, a sign-in completes, or the app returns), the tracker queues `app_open` with `Launch` for the first stretch of the process and `Resume` for every later one, and starts a timer on the **monotonic clock** of the platform (`performance.now()`, which the web and React Native both have), never on the wall clock.
+2. When the app leaves the foreground, the tracker queues `app_close` `Background` with `durationSec`, the whole seconds of the timer, from 0 to 86,400 (a longer stretch is cut to the cap), and the batch is sent (§5.3).
+3. **Mobile:** `AppState` `active` opens a stretch and `background` closes it. `inactive` (a call, the control center, a permission dialog) closes nothing. **Web:** `visibilityState` `visible` opens and `hidden` closes; `pagehide` closes a stretch that `hidden` has not already closed, once.
+4. Signing out clears the queue (§5.3), so the stretch in progress is not recorded and no `app_close` is queued for it. The next sign-in opens a new stretch.
+5. Nothing is recorded for a stretch while the switch is off (§5.4) or while no session exists.
+
+What this gives, with no identifier: how often the app is opened (`app_open`), how long a stretch lasts (`durationSec`), how long a session lasts (the sum of `durationSec` of one `session_id`), and how long a screen is kept open (the time to the next event of the session, §8.2). It does **not** give the time of one person across days: the session is renewed and joined to nothing (§2).
 
 ## 6. The server
 
@@ -215,8 +232,10 @@ Content-Type: application/json
 { "app": "resident", "appVersion": "1.0.3", "platform": "ios",
   "sessionId": "0192f3c4-9d02-4000-8000-00000000a001",
   "events": [
+    { "event": "app_open", "name": "Launch", "ageMs": 61200 },
     { "event": "screen_view", "name": "Fees", "ageMs": 4200 },
-    { "event": "tap", "name": "Account.language", "ageMs": 900 }
+    { "event": "tap", "name": "Account.language", "ageMs": 900 },
+    { "event": "app_close", "name": "Background", "ageMs": 0, "durationSec": 61 }
   ] }
 ```
 
@@ -227,9 +246,10 @@ Content-Type: application/json
 | `platform` | `ios`, `android`, `web` |
 | `sessionId` | A UUID, version 4 |
 | `events` | 1 to 50 items; an unknown key anywhere is 400 |
-| `events[].event` | `screen_view`, `tap` |
-| `events[].name` | A string of at most 60 characters; checked against the lists after validation |
+| `events[].event` | `screen_view`, `tap`, `app_open`, `app_close` |
+| `events[].name` | A string of at most 60 characters; checked against the lists after validation (`Launch` or `Resume` for `app_open`, `Background` for `app_close`) |
 | `events[].ageMs` | An integer from 0 to 3,600,000 |
+| `events[].durationSec` | An integer from 0 to 86,400; **required** on `app_close` and **refused** (400) on any other event |
 
 `audience` is not in the body: it is `resident` for a resident token and `staff` for a staff token. `app` is a label the client states; it is not checked against the token (a wrong label spoils a count, not a decision).
 
@@ -238,13 +258,13 @@ Content-Type: application/json
 One statement, no transaction around it, no outbox event, no audit row: the batch changes no business state, it is not an act of a person (DOC-35 §3.3 audits actions), and a lost batch costs one count. This is the one write path of the system that is not a `UnitOfWork` command with an outbox row, on purpose (DOC-12 §8.3).
 
 ```sql
-INSERT INTO analytics.usage_event (id, building_id, occurred_at, app, platform, app_version, audience, session_id, event, name)
+INSERT INTO analytics.usage_event (id, building_id, occurred_at, app, platform, app_version, audience, session_id, event, name, duration_s)
 SELECT e.id, $1, date_trunc('second', $2::timestamptz - e.age_ms * interval '1 millisecond'),
-       $3, $4, $5, $6, $7, e.event, e.name
-FROM unnest($8::uuid[], $9::text[], $10::text[], $11::int[]) AS e(id, event, name, age_ms);
+       $3, $4, $5, $6, $7, e.event, e.name, e.duration_s
+FROM unnest($8::uuid[], $9::text[], $10::text[], $11::int[], $12::int[]) AS e(id, event, name, age_ms, duration_s);
 ```
 
-Parameters: `$1` the building of the token; `$2` the receive time from the `Clock` port; `$3…$7` app, platform, version, audience and session; `$8…$11` the arrays of the events that passed the lists (ids are UUIDv7 made by the application, DOC-14 §3). The statement was run in §13.1 with a prepared form of it.
+Parameters: `$1` the building of the token; `$2` the receive time from the `Clock` port; `$3…$7` app, platform, version, audience and session; `$8…$12` the arrays of the events that passed the lists (`$12` holds `NULL` for every event but `app_close`) (ids are UUIDv7 made by the application, DOC-14 §3). The statement was run in §13.1 with a prepared form of it.
 
 ## 7. Storage, rollup and retention
 
@@ -258,26 +278,28 @@ Daily at 02:30 in `JOBS_TIME_ZONE`, mode `lock`, grace 12 hours, a row every run
 2. **Purge raw rows** older than `USAGE_RAW_RETENTION_DAYS`, but only before the end of the newest rolled-up day (DOC-20 §5).
 3. **Purge the rollup** older than `USAGE_DAILY_RETENTION_DAYS` (DOC-20 §5).
 
+`seconds` is the sum of `durationSec` of the `app_close` rows of the group and is 0 for every other event.
+
 The result in `job_run.details` is `{"rolled": n, "purgedRaw": n, "purgedDaily": n}`.
 
 ```sql
-INSERT INTO analytics.usage_daily (building_id, day, app, platform, audience, event, name, events, sessions)
+INSERT INTO analytics.usage_daily (building_id, day, app, platform, audience, event, name, events, sessions, seconds)
 SELECT e.building_id, (e.occurred_at AT TIME ZONE $2)::date, e.app, e.platform, e.audience, e.event, e.name,
-       count(*), count(DISTINCT e.session_id)
+       count(*), count(DISTINCT e.session_id), coalesce(sum(e.duration_s), 0)
 FROM analytics.usage_event e
 WHERE e.building_id = $1
   AND e.occurred_at >= ($3::timestamp AT TIME ZONE $2)      -- $3, $4: local dates [today - 3, today)
   AND e.occurred_at <  ($4::timestamp AT TIME ZONE $2)
 GROUP BY 1, 2, 3, 4, 5, 6, 7
 ON CONFLICT (building_id, day, app, platform, audience, event, name)
-DO UPDATE SET events = EXCLUDED.events, sessions = EXCLUDED.sessions;
+DO UPDATE SET events = EXCLUDED.events, sessions = EXCLUDED.sessions, seconds = EXCLUDED.seconds;
 ```
 
 Example (§13.1, run): building zone `Asia/Ho_Chi_Minh`, seven events of five sessions between 2026-10-26 23:30 and 2026-10-27 12:10 local. The day of an event is its **local** day: the event at 16:30 UTC on 10-26 (23:30 local) is in 10-26, the one at 17:30 UTC (00:30 local) is in 10-27. The result is five rows for the groups of the example; the sums are 7 events; running the statement again leaves the same five rows.
 
 ### 7.2 Size (planned)
 
-About 650 accounts at about 30 events a day is 20,000 rows a day, 1.8 million rows at 90 days, about 100 bytes a row and as much again in the index: **about 400 MB planned**, not measured. The rollup is at most a few hundred rows a day. Both are inside the nightly backup and restore with the rest of the database; the restore brings the rows back (DOC-20 §4).
+About 650 accounts at about 36 events a day (30 screens and taps and about 3 open and close pairs) is 23,000 rows a day, 2.1 million rows at 90 days, about 100 bytes a row and as much again in the index: **about 450 MB planned**, not measured. The rollup is at most a few hundred rows a day. Both are inside the nightly backup and restore with the rest of the database; the restore brings the rows back (DOC-20 §4).
 
 ## 8. Reading it
 
@@ -296,11 +318,14 @@ Provisioned from `ops/grafana/dashboards/` like the others (generated by `script
 | --- | --- |
 | Top 10 screens, 7 days | `topk(10, sum by (name) (increase(usage_events_total{event="screen_view"}[7d])))` |
 | Top 10 controls, 7 days | `topk(10, sum by (name) (increase(usage_events_total{event="tap"}[7d])))` |
-| Events per hour by app | `sum by (app) (increase(usage_events_total[1h]))` |
+| Opens per day by app | `sum by (app) (increase(usage_events_total{event="app_open"}[1d]))` |
+| Average time of a stretch, 7 days | `sum(increase(usage_foreground_seconds_sum[7d])) / sum(increase(usage_foreground_seconds_count[7d]))` |
+| Median time of a stretch, 7 days | `histogram_quantile(0.5, sum by (le) (increase(usage_foreground_seconds_bucket[7d])))` |
+| Events per hour by app | `sum by (app) (increase(usage_events_total{event=~"screen_view|tap"}[1h]))` |
 | Residents against staff | `sum by (audience) (increase(usage_events_total[7d]))` |
 | Dropped events by reason | `sum by (reason) (increase(usage_events_dropped_total[1d]))` |
 
-`increase` survives a restart of the API (the counter resets and Prometheus corrects for it). A screen no one opened has no series; the panel shows what exists.
+The two time panels read the histogram `usage_foreground_seconds` (§11); the median is only as fine as its buckets (10 s, 30 s, 1, 3, 10, 30 and 60 minutes). `increase` survives a restart of the API (the counter resets and Prometheus corrects for it). A screen no one opened has no series; the panel shows what exists.
 
 ### 8.2 SQL for analysis
 
@@ -312,6 +337,16 @@ SELECT name, sum(events) AS events, sum(sessions) AS sessions   -- sessions: an 
 FROM analytics.usage_daily
 WHERE building_id = $1 AND event = 'screen_view' AND day >= current_date - 30
 GROUP BY name ORDER BY events DESC LIMIT 20;
+
+-- opens and the time of a stretch, by app (the rollup)
+SELECT app,
+       sum(events) FILTER (WHERE event = 'app_open')                      AS opens,
+       sum(events) FILTER (WHERE event = 'app_close')                     AS stretches,
+       round(sum(seconds) FILTER (WHERE event = 'app_close')::numeric
+             / nullif(sum(events) FILTER (WHERE event = 'app_close'), 0)) AS avg_seconds_per_stretch
+FROM analytics.usage_daily
+WHERE building_id = $1 AND day >= current_date - 30
+GROUP BY app ORDER BY app;
 
 -- how often a decision control was pressed, by week and app
 SELECT date_trunc('week', day) AS week, app, name, sum(events) AS presses
@@ -338,6 +373,28 @@ SELECT count(*) FILTER (WHERE s1 IS NOT NULL)                                  A
 FROM first_at;
 ```
 
+```sql
+-- the time of use per session: opens and total foreground seconds (raw rows)
+SELECT session_id, count(*) FILTER (WHERE event = 'app_open') AS opens, sum(duration_s) AS seconds
+FROM analytics.usage_event
+WHERE building_id = $1 AND occurred_at >= now() - interval '30 days'
+GROUP BY session_id;
+
+-- the time a screen is kept open: until the next event of the session, at most 10 minutes (raw rows)
+WITH ordered AS (
+  SELECT name, event, occurred_at,
+         lead(occurred_at) OVER (PARTITION BY session_id ORDER BY occurred_at, id) AS next_at
+  FROM analytics.usage_event
+  WHERE building_id = $1 AND occurred_at >= now() - interval '30 days')
+SELECT name, count(*) AS views,
+       round(avg(least(extract(epoch FROM next_at - occurred_at), 600))) AS avg_seconds
+FROM ordered
+WHERE event = 'screen_view' AND next_at IS NOT NULL
+GROUP BY name ORDER BY avg_seconds DESC;
+```
+
+The time of a screen is a **reading of the gaps**, not a measurement: the last screen before the app leaves ends at the `app_close`, a screen that is followed by nothing (the app was killed) is left out, and a long pause on one screen is cut to 10 minutes. The figures are good for comparing screens with each other. The time of use is the sum of `durationSec`, which the client measures itself.
+
 A funnel counts **sessions**, not people: a resident who pays in two launches is two sessions, and the session ends at the launch or after 30 minutes in the background (§5.2). Read it as the shape of the drop-off, not as a headcount. The steps are the `Fees`, `Pay-Select` and `Pay-Done` screens and the two taps of §4.2.2, so the funnel exists once P3 has built them. The outcome (the payment settled) is in `finance`, not here.
 
 ## 9. Privacy, the notice and the stores
@@ -353,13 +410,14 @@ Checked 2026-10-28.
 - **App Privacy ("nutrition label"):** *Usage Data → Product Interaction*; purpose *Analytics*; **not linked to the user**; **not used for tracking**.
 - **Tracking.** Apple defines tracking as linking data from the app with data from other companies' apps, websites or offline properties for targeted advertising or advertising measurement, or sharing it with data brokers (<https://developer.apple.com/app-store/user-privacy-and-data-use/>). Nothing here does either, so there is **no App Tracking Transparency prompt** and no `NSUserTrackingUsageDescription`. Apple also bars fingerprinting: the client derives nothing from the device to identify it (§2.1).
 - **Privacy manifest.** Each app's `ios.privacyManifests` (the app config) gets `NSPrivacyCollectedDataTypes` with one entry: `NSPrivacyCollectedDataTypeProductInteraction`, `NSPrivacyCollectedDataTypeLinked` false, `NSPrivacyCollectedDataTypeTracking` false, `NSPrivacyCollectedDataTypePurposes` `[NSPrivacyCollectedDataTypePurposeAnalytics]`; `NSPrivacyTracking` false. Expo's guide documents `ios.privacyManifests` with the key `NSPrivacyAccessedAPITypes` (<https://docs.expo.dev/guides/apple-privacy/>) and does not show `NSPrivacyCollectedDataTypes`; **P1-29 checks that key against Apple's privacy manifest documentation and a generated `PrivacyInfo.xcprivacy`** (UA-29).
-- The label must match the manifest and the privacy notice. EAS Observe's own collection (errors, performance) is declared in the same places (DOC-73 §10.2, §10.3).
+- Opens, closes and the time of use are the same data type: Apple's examples of *Product Interaction* include app launches and taps, and nothing is added to the label. The label must match the manifest and the privacy notice. EAS Observe's own collection (errors, performance) is declared in the same places (DOC-73 §10.2, §10.3).
 
 ### 9.3 Google Play
 
 Checked 2026-10-28 (<https://support.google.com/googleplay/android-developer/answer/10787469>).
 
 - **Data safety form:** *App activity → App interactions* ("information about how a user interacts with the app", for example sections tapped); **collected**; **not shared** (the form defines sharing as going to a third party; collection by the app's own publisher is not sharing); purpose *Analytics*; **users can choose whether this data is collected**. The last answer is allowed only if every user, in every region, can opt out: the switch exists in both apps for that reason.
+- App opens, closes and the time of use are *App interactions* too; the form has no separate line for them.
 - Not encrypted in transit is not an option: all calls are HTTPS.
 - Data deletion: the form asks whether users can ask for deletion. The record holds nothing that belongs to a person, so there is nothing to delete by request; the answer follows DOC-35 §10 for the data that is personal.
 
@@ -375,6 +433,8 @@ Adding an account id or a device id to a row, sending a row to a third party, re
 
 | Case | What happens |
 | --- | --- |
+| A client never sends `app_close` (killed, crashed, battery) | That stretch has an `app_open` and no time; the sum of `durationSec` undercounts the time of use a little. Nothing corrects it: the figure is approximate on purpose (principle 5) |
+| A modified client sends `durationSec` of 86,400 again and again | It raises the total time; the cap keeps one event to a day, and the rate buckets keep the count of events low. Nothing business reads it |
 | One client floods | The IP bucket (30 a minute) and the session bucket (120 an hour) answer 429; the client drops and goes on |
 | A modified client sends forged events | It can only name listed screens and controls and it counts as one session id per batch it makes up; it can raise a count. Nothing business reads the counts (principle 4) |
 | A modified client sends a name outside the lists | Dropped and counted (`unknown_name`); a path or a query string is also refused by the check of the table |
@@ -392,10 +452,11 @@ Defined in DOC-40 §4.7; this table is the reading copy.
 
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
-| `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`), `name` (a screen or target id of §4; the lists are types, so the set is closed) | Events written |
+| `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`, `app_open`, `app_close`), `name` (a screen or target id of §4, or `Launch`, `Resume`, `Background`; the lists are types, so the set is closed) | Events written |
+| `usage_foreground_seconds` | histogram, buckets 10, 30, 60, 180, 600, 1800, 3600 | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`) | One observation of `durationSec` per `app_close` written: the time of one foreground stretch |
 | `usage_events_dropped_total` | counter | `reason` (`unknown_name`, `disabled`, `demo`) | Events discarded after validation |
 
-The labels hold no person (a name is a screen or a control). The module reports through `MetricsPort`; the names and label values are types in `@rms/shared-types` (DOC-12 §14). `usage_rollup` is a job, so `job_last_success_timestamp`, `job_runs_total` and `job_duration_seconds` cover it. There is no log line per batch.
+The labels hold no person (a name is a screen, a control or one of three lifecycle words). The module reports through `MetricsPort`; the names and label values are types in `@rms/shared-types` (DOC-12 §14). `usage_rollup` is a job, so `job_last_success_timestamp`, `job_runs_total` and `job_duration_seconds` cover it. There is no log line per batch.
 
 ## 12. Configuration
 
@@ -441,11 +502,16 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-24 | Client: sign-out with 5 queued events, then another account signs in | The queue is empty; no event of the first account is sent with the second token |
 | UA-25 | Client: the same screen twice in 1 s; a route with a parameter; a tap | One `screen_view`; the id has no parameter; the tap is not merged; no device id is read |
 | UA-26 | Client: the switch after a restart | The stored choice; the default is on (`USAGE_DEFAULT_ENABLED`) |
-| UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) | The registry equals the rows of DOC-40 §4 with the two metrics of §11 |
+| UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) | The registry equals the rows of DOC-40 §4 with the three metrics of §11 |
 | UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to a member of the unit named in the header, whatever the member type (Helper included), and refused to a staff token; E-174 is allowed to every staff role and refused to a resident token; both refuse a request with no token |
 | UA-29 | The app configs | `PrivacyInfo.xcprivacy` of each app has the entry of §9.2; no `NSUserTrackingUsageDescription` in `Info.plist` |
 | UA-30 | Client: the answer carries `X-Usage-Enabled: false` | The queue is cleared; no event is queued or sent until a new launch; the first batch of the new launch is sent |
 | UA-31 | Client: batching | 30 events in 4 minutes make no request; the app going to the background makes one request holding all 30; the 50th queued event sends at once; 5 minutes after the first queued event sends; the web sends on `visibilitychange` to `hidden` with `keepalive` |
+| UA-32 | A batch with `app_open` `Launch`, `app_close` `Background` with `durationSec` 61; then `app_close` with no `durationSec`; `durationSec` on a `tap`; `durationSec` 86,401; `app_open` named `Background`; `app_close` named `Launch` | The first is written, `duration_s` 61; the next three are 400 `validation_failed`; the last two are dropped, `unknown_name` |
+| UA-33 | Rows inserted directly: `app_close` with no duration, `tap` with a duration, `app_close` with 86,401, `app_open` named `Background` or `Fees` | Each is refused by `ck_usage_event_duration` or `ck_usage_event_lifecycle` |
+| UA-34 | The rollup of §7.1 over `app_close` rows of 120 s and 50 s, and over other events | `seconds` is 170 for the `app_close` group and 0 for every other; the same after a second run |
+| UA-35 | Client: the lifecycle on a fake monotonic clock | `active` then `background` 61 s later queues `app_open` `Launch` and `app_close` 61; `inactive` queues nothing; a return after 31 minutes is `Resume` of a new session; the web `hidden` then `pagehide` queues one close; a stretch of 30 hours is 86,400; sign-out in a stretch queues no close; the switch off queues none; the wall clock is never read |
+| UA-36 | Two `app_close` of 61 s and 5 s written | `usage_foreground_seconds` has count 2 and sum 66 for the labels of the batch; a dropped close adds nothing |
 
 ### 13.1 Statements run
 
@@ -453,7 +519,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 
 | Run | Result |
 | --- | --- |
-| The DDL of DOC-17 §9A | Applies; five bad rows (a tap with no control, a screen with a control, `Fees?unit=1`, version `1.0`, app `tv`) are each refused by their check; two good rows are accepted |
+| The DDL of DOC-17 §9A (first version, without the lifecycle) | Applies; five bad rows (a tap with no control, a screen with a control, `Fees?unit=1`, version `1.0`, app `tv`) are each refused by their check; two good rows are accepted |
 | The batch statement of §6.3, prepared | `INSERT 0 2`: `ageMs` 4,200 and 900 give `09:12:26` and `09:12:30` for a receive time of `09:12:30.987`; a batch with one bad name fails whole and leaves the table as it was (the application filters names before it writes, so it does not meet this) |
 | The payment funnel of §8.2 on 4 sessions (3 viewed `Fees`, 2 pressed pay, 2 viewed `Pay-Select`, 1 pressed confirm, 1 viewed `Pay-Done`; a 4th session that only viewed `Pay-Done`) | `3, 2, 2, 1, 1`: the 4th session is not counted at the last step because the earlier steps are missing |
 | The rollup statement of §7.1 | `INSERT 0 5`: 10-26 `Fees` 1 event; 10-27 `Fees` 3 events and 3 sessions (iOS), 1 (Android), 1 (staff); `Account.language` 1 |
@@ -462,6 +528,15 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | The raw purge with `usage_daily` empty | `DELETE 0` |
 | The rollup purge at 730 days | `DELETE 1`: the 2024-10-01 row goes, 2024-10-29 stays |
 | Plans (`enable_seqscan = off`, the tables are tiny) | The window count is an index-only scan of `ix_usage_event_building_at`; the top-names query is a scan of `pk_usage_daily` |
+
+**Run again on 2026-10-28** after the opening, closing and time of use were added (§3, §5.6), on a second scratch database, dropped afterwards. Fixture: three sessions, 16 events (an iOS resident with two stretches of 120 s and 50 s, an Android resident of 45 s, a staff user on the web of 600 s).
+
+| Run | Result |
+| --- | --- |
+| The DDL with `duration_s`, `ck_usage_event_duration`, `ck_usage_event_lifecycle`, `usage_daily.seconds` and `ck_usage_daily_seconds` | Applies; five bad rows (`app_close` with no duration, a `tap` with a duration, a duration of 86,401, `app_open` named `Background`, `app_open` named `Fees`) are each refused |
+| The batch statement of §6.3 with the array of durations, prepared | `INSERT 0 8`, `INSERT 0 4`, `INSERT 0 3`: `app_close` rows keep their seconds, every other row has `duration_s` null |
+| The rollup statement of §7.1 with `seconds` | `INSERT 0 13`; `seconds` is 170 (iOS), 45 (Android) and 600 (web) on the `app_close` groups and 0 on the others; again: `INSERT 0 13`, 13 rows, 815 seconds, unchanged |
+| The three readings of §8.2 (stretches by app, time per session, time on a screen) | Resident: 3 opens, 3 stretches, 72 s on average; web: 1 and 600 s. Sessions: 170 s in 2 opens, 45 s, 600 s. Screens: `Main` 24 s, `Fees` 29 s, `Notices` 29 s (checked by hand against the fixture: `Main` 19 s and 28 s, `Fees` 50 s and 8 s) |
 
 **Not run:** the endpoint, the job, the tracker, the metrics and the dashboard (they are built in P1-29); the store declarations (they need the accounts, P6-10); counsel's reading (P0-06).
 
@@ -478,6 +553,7 @@ All inside DR-279; the points that the DR leaves to this document:
 7. The job runs at 02:30 and recomputes three days (§7.1).
 8. The server stops the apps by a response header, not by a field of `GET /public/config`: it needs no change of E-03 and takes effect at the next batch (§5.4).
 9. A tap is the press that starts an action, never its outcome, and the web CMS is measured like the apps (§4.2).
+10. Opening, closing and the time of use are two more events, `app_open` and `app_close` (Owner, 2026-10-28), with one new nullable column `duration_s` and one new column `seconds` in the rollup, not a new table (§3, §5.6). The time of use is a number the client measures on its monotonic clock, never a difference of two phone clocks. "Close" means "left the foreground", because the app is not told when the person swipes it away. The time on a screen is not stored; it is read from the gaps between events (§8.2).
 
 ## 15. Not in this document
 

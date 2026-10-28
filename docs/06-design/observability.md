@@ -212,11 +212,12 @@ The names come from DR-63; the owning document confirms the labels.
 
 ### 4.7 Usage
 
-Added by DR-279 (DOC-104 §11). The labels hold no person: `name` is a screen id or a control id from the closed lists of DOC-104 §4, which are types in `@rms/shared-types`, so the set of values is closed (about 100 at the end of phase 6).
+Added by DR-279 (DOC-104 §11). The labels hold no person: `name` is a screen id or a control id from the closed lists of DOC-104 §4, which are types in `@rms/shared-types`, so the set of values is closed (about 100 at the end of phase 6, plus `Launch`, `Resume` and `Background`).
 
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
-| `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`), `name` | DOC-104 §11 | P1-29 (the `analytics` module; the phase becomes `P1` when it is built) |
+| `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`, `app_open`, `app_close`), `name` | DOC-104 §11 | P1-29 (the `analytics` module; the phase becomes `P1` when it is built) |
+| `usage_foreground_seconds` | histogram, buckets 10, 30, 60, 180, 600, 1800, 3600 | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`) | DOC-104 §11 | P1-29 (as above) |
 | `usage_events_dropped_total` | counter | `reason` (`unknown_name`, `disabled`, `demo`) | DOC-104 §11 | P1-29 (as above) |
 
 ## 5. Alert rules
@@ -448,7 +449,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payos_requests_total` by outcome; payment confirmation latency (from DOC-23) | `LedgerInvariantViolation`, `PaymentsStuck`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
 | **Storage and database** | `storage_usage_ratio`; disk used; `pg_stat_activity_count` against `max_connections`; `db_pool_waiting`; archive failures and age; WAL size | `StorageQuota`, `DiskUsage`, `DbPoolWaiting`, `PostgresArchiveFailing` |
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
-| **Usage** (DR-279, P1-29) | Top 10 screens and top 10 controls over 7 days; events per hour by app; residents against staff; dropped events by reason (the queries are DOC-104 §8.1). It supports no alert; Prometheus keeps 15 days, longer periods are SQL on `usage_daily` | DR-279 |
+| **Usage** (DR-279, P1-29) | Top 10 screens and top 10 controls over 7 days; opens per day and the average and median time of a stretch; events per hour by app; residents against staff; dropped events by reason (the queries are DOC-104 §8.1). It supports no alert; Prometheus keeps 15 days, longer periods are SQL on `usage_daily` | DR-279 |
 | **Logs** | The saved queries of §3.4 as panels with a `requestId` variable | RB-09 |
 
 **As built (P1-18).** Five dashboards exist: Overview, Worker and jobs, Identity, Storage and database (with, since P1-20, PostgreSQL up, the time since the last backup, WAL archive failures, connections by state, disk used and host memory) and Logs. They are generated from `scripts/build-dashboards.ts` (`bun run ops:dashboards`; `check:ops` fails when a JSON file is stale), every panel names what it supports, and all 42 queries of the Prometheus panels and the four of Logs were run against the local stack without an error. Money (P2, P3) joins with its metrics. The new host panels were run against the local stack (both exporters up; their queries answer; the disk query is empty there because the Linux VM of Docker has no `/` file system under `--path.rootfs`, so its labels are checked on the host). Locally Grafana is at `localhost:3030` with no sign-in.

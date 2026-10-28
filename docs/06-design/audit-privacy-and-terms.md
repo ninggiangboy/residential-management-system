@@ -308,7 +308,7 @@ DOC-20 §2 is the table of every table and file; §5 holds the purge statements 
 | Resident personal fields | Cleared at account deletion | `accountDeletionDays` after approval (30) | §10 |
 | OTP challenges; reset, invite and step-up tokens; sessions | Deleted by age | 24 h; 7 days; 30 days after revocation | `otp_purge`, `token_purge` daily 03:45 |
 | Scans and Guard lookups | Deleted by age | 90 days | `qr_scan_purge` |
-| Usage events (`analytics.usage_event`): screen views and taps, no person | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup` (DR-279) |
+| Usage events (`analytics.usage_event`): screen views, taps, opening and closing of the app, no person | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup` (DR-279) |
 | Usage rollup (`analytics.usage_daily`): daily counts | Deleted by age | 730 days (`USAGE_DAILY_RETENTION_DAYS`) | `usage_rollup` (DR-279) |
 | Logs | Deleted by age | 14 days in Loki | Alloy and Loki (DR-63) |
 | Backups | Deleted by age | About 5 weeks tail (DOC-20 §6) | pgBackRest retention; the notice says so |
@@ -383,7 +383,7 @@ The texts are the client's legal deliverable (P0-06, `vi` and `en`). The system 
 | --- | --- |
 | Terms of use (all members) | Who the management company is (`building.company`); that fees are paid in full per charge, with no partial payment or credit; that the receipt is a "Biên lai thu tiền" and not a tax invoice, and that an e-invoice is issued on request outside the system (DR-17) |
 | Terms of use, owner section | That **debt follows the unit but history does not**: a member sees the open charges of the unit at any time, and paid history, receipts and payer names only from the start of their own membership (DR-40, DR-59) |
-| Privacy notice (usage) | That the apps record which screens are opened and which listed controls are pressed, without the account, phone, device or location; that the record is kept 90 days and then only as daily counts for 730 days; that it stays on the building's server; that the person can turn it off in `Account`, `S-Account` or `W-Profile`; the Manager's contact (DR-279, DOC-104 §9.1). A new `privacy` version carries it before the first build that sends events reaches a resident |
+| Privacy notice (usage) | That the apps record which screens are opened, which listed controls are pressed, and when the app is opened and left and for how long, without the account, phone, device or location; that the record is kept 90 days and then only as daily counts for 730 days; that it stays on the building's server; that the person can turn it off in `Account`, `S-Account` or `W-Profile`; the Manager's contact (DR-279, DOC-104 §9.1). A new `privacy` version carries it before the first build that sends events reaches a resident |
 | Privacy notice | The data kept (§7.1), why, and who sees it; the processors outside Vietnam (§7.2); the retention periods (§8); that payer names stay on receipts after deletion; the backup tail of about 5 weeks; the deletion procedure and its cooling-off (`accountDeletionDays`); the Manager's contact for questions |
 
 ### 9.5 Not built
