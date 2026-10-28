@@ -1,0 +1,90 @@
+{
+  "experiment": "EXP-10",
+  "run": 4,
+  "of": 5,
+  "commit": "e2beb14",
+  "dirty": true,
+  "startedAt": "2026-10-28T08:33:56.978Z",
+  "finishedAt": "2026-10-28T08:34:12.638Z",
+  "machine": {
+    "host": "developer machine",
+    "cpu": "8 × Apple M2",
+    "ramGb": 16,
+    "os": "darwin 27.0.0"
+  },
+  "runtime": {
+    "bun": "1.4.3",
+    "postgres": "18.6",
+    "api": "e2beb14"
+  },
+  "metrics": {
+    "routes": 60,
+    "routesWithMetadata": 60,
+    "catalogParity": {
+      "missing": 114,
+      "extra": []
+    },
+    "cellsOwn": 960,
+    "cellsForeign": 98,
+    "unexpected2xx": 0,
+    "unexpectedRefusals": 0,
+    "serverErrors": 0,
+    "leaks": 0,
+    "missingFixtures": 0,
+    "mutants": {
+      "run": 11,
+      "caught": 11,
+      "survivors": []
+    },
+    "stepUp": {
+      "cases": 54,
+      "failures": 0
+    },
+    "matrixSha256": "4a9a88ee8ee98446624fc245d82d199f0c27e69179cfa0fec8df63ea69b9e56c"
+  },
+  "criteria": [
+    {
+      "id": "C1",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C2",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C3",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C4",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    },
+    {
+      "id": "C5",
+      "expected": "100%, 0, 0",
+      "observed": "0 problems, 0 extra, 0 missing fixtures",
+      "pass": true
+    },
+    {
+      "id": "C7",
+      "expected": "11",
+      "observed": 11,
+      "pass": true
+    },
+    {
+      "id": "C8",
+      "expected": "0",
+      "observed": 0,
+      "pass": true
+    }
+  ],
+  "pass": true
+}
