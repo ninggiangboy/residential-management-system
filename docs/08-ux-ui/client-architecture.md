@@ -595,7 +595,7 @@ DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of li
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| `createUsageTracker` | `@rms/client-core` | Pure TypeScript: the queue (100), the session, the batching (20 events or 30 s), the merge of a repeated `screen_view`, the sender port; the clock, the id maker and the sender are injected, so the tests (UA-21…26) need no timers or network |
+| `createUsageTracker` | `@rms/client-core` | Pure TypeScript: the queue (100), the session, the batching (one request when the app goes to the background, at 50 events or after 5 minutes), the merge of a repeated `screen_view`, the sender port; the clock, the id maker and the sender are injected, so the tests (UA-21…26, UA-31) need no timers or network |
 | Device binding | `@rms/mobile-core` | The switch in the device storage (`usage.enabled`); `AppState` for the flush on background and the 30-minute session renewal; the sender is the authenticated fetcher with `X-Unit-Id`, no `Idempotency-Key`, no retry |
 | Screen hook | each app's route layout | `routeToScreen` maps an Expo Router route name to a DOC-56 section id; a route not in it is not tracked; parameters never reach the id |
 | Web binding | `apps/cms-web` | TanStack Router `onResolved` calls `usage.screen`; the switch in `localStorage` (`rms.usage.enabled`) in a `try/catch` |
