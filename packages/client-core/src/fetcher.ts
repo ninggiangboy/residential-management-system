@@ -53,6 +53,11 @@ export interface AuthenticatedFetchOptions {
 const REFRESH_RETRY_DELAYS_MS = [1000, 3000] as const
 const NO_BEARER = /\/(public\/|auth\/|client-errors)/
 const COOKIE_AUTH = /\/auth\/(refresh|logout)$/
+/**
+ * The usage batch (E-173, E-174) is a call nobody asked for (DOC-104 §5.3): no retry, so a 429 or a 503 drops it, and no gate, so it
+ * never opens the terms or the upgrade screen. An answer is an answer; only a network error is told apart.
+ */
+const QUIET = /\/usage-events$/
 
 const defaultSleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
@@ -115,6 +120,7 @@ export function createAuthenticatedFetch(options: AuthenticatedFetchOptions): ty
     const url = urlOf(input)
     const method = (init.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
     const needsBearer = !NO_BEARER.test(url)
+    const quiet = QUIET.test(url)
     const cookieAuth = env.app === 'web' && COOKIE_AUTH.test(url)
     const inherited = input instanceof Request ? input.headers : undefined
     const base = new Headers(inherited)
@@ -160,7 +166,7 @@ export function createAuthenticatedFetch(options: AuthenticatedFetchOptions): ty
         if (thrown instanceof ApiException) throw thrown
         const error = networkError(requestId, thrown instanceof Error ? thrown.message : undefined)
         const plan = retryPlan({ method, hasKey }, error, retries)
-        if (!plan.retry) throw new ApiException(error)
+        if (quiet || !plan.retry) throw new ApiException(error)
         retries++
         await sleep(plan.afterMs)
         continue
@@ -185,17 +191,17 @@ export function createAuthenticatedFetch(options: AuthenticatedFetchOptions): ty
           throw new ApiException(networkError(requestId, 'The session could not be refreshed'))
         return withRequestId(response)
       }
-      if (error.code === 'terms_required' && !termsHandled) {
+      if (error.code === 'terms_required' && !termsHandled && !quiet) {
         termsHandled = true
         await gates.termsRequired(error.details)
         continue
       }
-      if (error.code === 'upgrade_required') {
+      if (error.code === 'upgrade_required' && !quiet) {
         const details = (error.details ?? {}) as { minVersion?: string; storeUrl?: string }
         gates.upgradeRequired(details)
         return withRequestId(response)
       }
-      if (classify(error).kind !== 'conflict_refetch') {
+      if (!quiet && classify(error).kind !== 'conflict_refetch') {
         const plan = retryPlan({ method, hasKey }, error, retries)
         if (plan.retry) {
           retries++

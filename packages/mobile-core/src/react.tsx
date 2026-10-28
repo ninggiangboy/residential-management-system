@@ -5,9 +5,17 @@ import {
   formatMoney,
   formatPhone,
   type Language,
+  type UsageScreen,
 } from '@rms/shared-types'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { createContext, type ReactNode, useContext, useMemo, useSyncExternalStore } from 'react'
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from 'react'
 import { Platform } from 'react-native'
 import { PERSIST_MAX_AGE_MS, persister, shouldPersistQuery } from './query'
 import type { MobileRuntime } from './runtime'
@@ -61,6 +69,35 @@ export function MobileProvider({
 export function useSession(): SessionState {
   const { session } = useRuntime()
   return useSyncExternalStore(session.subscribe, session.getState, session.getState)
+}
+
+/** The usage switch of the device (DOC-104 §5.4): read from the tracker, and `set` stores the choice and clears its queue when off. */
+export function useUsageEnabled(): readonly [boolean, (enabled: boolean) => void] {
+  const { usage } = useRuntime()
+  const enabled = useSyncExternalStore(usage.subscribe, usage.isEnabled, usage.isEnabled)
+  return [enabled, usage.setEnabled] as const
+}
+
+/**
+ * Tells the tracker whether a person may be recorded now (DOC-104 §4.1, §5.6): the app is past sign-in, the terms (which describe the
+ * record) are accepted and a unit is chosen. The root layout calls it with `flow.phase === 'ready'` and no open terms gate.
+ */
+export function useUsageGate(active: boolean): void {
+  const { usage } = useRuntime()
+  useEffect(() => {
+    usage.setSignedIn(active)
+  }, [usage, active])
+}
+
+/**
+ * Queues a `screen_view` when the screen of the route in front changes, or when recording starts while a screen is showing
+ * (DOC-104 §5.1). `screen` is `null` for a route that is not in the map of the app, which is then not tracked.
+ */
+export function useScreenTracking(screen: UsageScreen | null, active: boolean): void {
+  const { usage } = useRuntime()
+  useEffect(() => {
+    if (active && screen) usage.screen(screen)
+  }, [usage, screen, active])
 }
 
 export function useSelectedUnitId(): string | null {

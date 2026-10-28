@@ -6,6 +6,8 @@ export const STORAGE_KEYS = {
   language: 'rms.lang',
   /** The push explanation sheet was shown on this device (DR-199); it stays when the account changes. */
   pushAsked: 'rms.push-asked',
+  /** The usage switch (DOC-104 §5.4): on this device, not per account, so another account that signs in inherits it. */
+  usageEnabled: 'usage.enabled',
 } as const
 
 /**
