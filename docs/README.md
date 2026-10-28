@@ -23,7 +23,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-05 | [Feature catalog](01-product/feature-catalog.md) | Approved |
 | DOC-06 | [Glossary](02-glossary.md) | Approved |
 | DOC-07 | [System context and containers](03-architecture/system-context-and-containers.md) | Approved |
-| DOC-08 | Data flows (`03-architecture/data-flows.md`) | Not written |
+| DOC-08 | [Data flows](03-architecture/data-flows.md) (12 flows and 6 failure flows; follows DOC-23 and the proposed DR-284) | Draft |
 | DOC-09 | [Messaging contracts](03-architecture/messaging-contracts.md) | Approved |
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Approved |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Approved |
@@ -38,7 +38,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-20 | [Data lifecycle](05-data/data-lifecycle.md) (skeleton) | Approved |
 | DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes await DOC-18 §2) | Draft |
 | DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Draft |
-| DOC-23 | Payment intents and settlement (`06-design/payment-intents-and-settlement.md`) | Not written |
+| DOC-23 | [Payment intents and settlement](06-design/payment-intents-and-settlement.md) (statements run on PostgreSQL 18.6; follows the proposed DR-27, 28, 30, 31, 280, 281, 283) | Draft |
 | DOC-24 | payOS gateway adapter (`06-design/payos-gateway-adapter.md`) | Not written |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |
 | DOC-26 | [Identity and sessions](06-design/identity-and-sessions.md) | Approved |
@@ -59,7 +59,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-41 | [Configuration reference](06-design/configuration-reference.md) (skeleton) | Approved |
 | DOC-42 | [Error handling](06-design/error-handling.md) | Approved |
 | DOC-43 | [Flows index](06-design/flows/README.md) | Approved |
-| DOC-44 | Fees and payments (ledger level) (`06-design/flows/fees-and-payments.md`) | Not written |
+| DOC-44 | [Fees and payments (ledger level)](06-design/flows/fees-and-payments.md) (FL-01…09, FL-44; follows DOC-21, DOC-22, DOC-23) | Draft |
 | DOC-45 | Online payment (`06-design/flows/online-payment.md`) | Not written |
 | DOC-46 | [Identity and household](06-design/flows/identity-and-household.md) | Approved |
 | DOC-47 | Tickets (`06-design/flows/tickets.md`) | Not written |
