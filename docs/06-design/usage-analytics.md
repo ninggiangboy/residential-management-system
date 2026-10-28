@@ -4,7 +4,7 @@
 > Depends on: [DR](../00-decision-register.md) (DR-279, DR-103, DR-58, DR-64, DR-264, DR-265), [ADR-0028](../04-adr/0028-self-hosted-usage-analytics-without-an-identifier.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-06](../02-glossary.md), [DOC-17](../05-data/operations-model.md) §9A, [DOC-20](../05-data/data-lifecycle.md) §2.5 and §5, [DOC-35](audit-privacy-and-terms.md) §7 to §9, [DOC-38](jobs-and-outbox-runtime.md) §4, [DOC-39](security.md) §6, [DOC-40](observability.md) §4.7, [DOC-41](configuration-reference.md) §13A, [DOC-42](error-handling.md) §10, [DOC-51](../07-api/api-endpoints.md) E-173, [DOC-55](../08-ux-ui/client-architecture.md) §15A, [DOC-56](../08-ux-ui/screens/README.md), [DOC-73](../09-operations/mobile-release.md) §10.2, §10.3
 > Main readers: P1-29 (the build), P6-10 (the store declarations), DOC-103 (go-live), every task that adds a screen or a control
 
-This document says what the system records about how the apps are used, what it never records, how a client sends it, how it is stored, rolled up and read, and what the stores and the privacy notice must say about it. The tables are in DOC-17 §9A, the endpoint contract is E-173 in DOC-51, the keys are in DOC-41 §13A, the metrics in DOC-40. It does not cover errors and crashes (DOC-42 §10, DOC-55 §15) or the counters of business operations (DOC-40).
+This document says what the system records about how the apps are used, what it never records, how a client sends it, how it is stored, rolled up and read, and what the stores and the privacy notice must say about it. The tables are in DOC-17 §9A, the endpoint contracts are E-173 and E-174 in DOC-51, the keys are in DOC-41 §13A, the metrics in DOC-40. It does not cover errors and crashes (DOC-42 §10, DOC-55 §15) or the counters of business operations (DOC-40).
 
 ## 1. Reading guide
 
@@ -132,11 +132,11 @@ A `screen_view` for the same id within one second of the previous one is merged 
 
 ## 6. The server
 
-The module is `analytics` (`modules/analytics`, ADR-0028), a leaf: no module calls it and it calls none. Layout as DOC-12 §4: one command `application/use-cases/record-usage-events.ts` (one class, one `execute`), one handler file, one route file. It runs in `api` and, for the job, in `worker`.
+The module is `analytics` (`modules/analytics`, ADR-0028), a leaf: no module calls it and it calls none. Layout as DOC-12 §4: one command `application/use-cases/record-usage-events.ts` (one class, one `execute`), one handler file, two route files (`presentation/resident-routes.ts` for E-173, `presentation/staff-routes.ts` for E-174) that call the same use case. It runs in `api` and, for the job, in `worker`.
 
 ### 6.1 Route and order of checks
 
-`POST /api/v1/usage-events` (E-173, DOC-51). The audience is `staff: any` or `unit: any member` (a resident acting for a unit, with the `X-Unit-Id` header, a Helper included, no capability); the route metadata lists both (UA-28). In order:
+Two routes share one use case (DOC-51): **E-173 `POST /api/v1/me/usage-events`**, audience `unit: broadcast_notices` (the capability that every member type holds, a Helper included, DOC-27 §3.2; the resident app sends `X-Unit-Id` like any unit call), and **E-174 `POST /api/v1/staff/usage-events`**, audience `staff: any`. They are two routes because a resident token never passes a staff guard (DOC-12 §5.3). In order:
 
 1. Body at most 16 KB, else 413 `payload_too_large`.
 2. Maintenance mode, else 503 `maintenance`.
@@ -153,8 +153,9 @@ The building is the `bid` of a staff token or the building of the resident's act
 ### 6.2 The body
 
 ```http
-POST /api/v1/usage-events
+POST /api/v1/me/usage-events
 Authorization: Bearer <access token>
+X-Unit-Id: 0192f3c4-5a1e-7000-8000-0000000000a1
 Content-Type: application/json
 
 { "app": "resident", "appVersion": "1.0.3", "platform": "ios",
@@ -301,7 +302,7 @@ Adding an account id or a device id to a row, sending a row to a third party, re
 | `usage_rollup` fails | `job_run` records `failed`; the next run recomputes the last 3 days; the alert `JobStale` fires after the threshold of the job (DOC-40 §5.4). Raw rows are not purged past the newest rolled day, so no count is lost |
 | `usage_rollup` does not run for 90 days | Raw rows older than 90 days stay (nothing was rolled); they are purged once a day has been rolled up |
 | A restore | The tables come back with the rest; a day missing from `usage_daily` is recomputed from raw rows if they are still there |
-| The request log | The request line of E-173 is written like any line (DOC-40 §3.3: the request line is never dropped) and carries the account id of the request context; it says that an account sent a batch, not what was in it. The body is never logged (DOC-42 §8.4). Loki keeps it 14 days |
+| The request log | The request line of E-173 and E-174 is written like any line (DOC-40 §3.3: the request line is never dropped) and carries the account id of the request context; it says that an account sent a batch, not what was in it. The body is never logged (DOC-42 §8.4). Loki keeps it 14 days |
 
 ## 11. Metrics and logs
 
@@ -320,7 +321,7 @@ Defined in DOC-41 §13A.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `USAGE_ENABLED` | `true` | `false` makes E-173 discard every event (204) and count it as `disabled`; the clients keep sending and nothing is stored |
+| `USAGE_ENABLED` | `true` | `false` makes E-173 and E-174 discard every event (204) and count it as `disabled`; the clients keep sending and nothing is stored |
 | `USAGE_RAW_RETENTION_DAYS` | `90` | Age at which raw events are purged; 7 to 365 |
 | `USAGE_DAILY_RETENTION_DAYS` | `730` | Age at which the rollup is purged; 90 to 3650 |
 
@@ -339,7 +340,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-05 | An unknown key in the body, in an event | 400 `validation_failed` |
 | UA-06 | 51 events; a body of 17 KB | 400; 413 `payload_too_large` |
 | UA-07 | `ageMs` 3,600,001; `ageMs` 4,000 with the clock fixed | 400; `occurred_at` is 4 s before the receive time |
-| UA-08 | No token; a staff token; a resident token with a unit; a resident token with no `X-Unit-Id`; with a unit of another account | 401; 204 with `audience` `staff`; 204 with `audience` `resident`; 400 `validation_failed`; 403 `membership_inactive` |
+| UA-08 | No token on either route; a staff token on E-174; a resident token with a unit on E-173; a resident token on E-174; a staff token on E-173; a resident token with no `X-Unit-Id`; with the unit of another account | 401; 204 with `audience` `staff`; 204 with `audience` `resident`; 401 (a resident token does not pass the staff guard); 401 (the reverse); 400 `validation_failed`; 403 `membership_inactive` |
 | UA-09 | A token of a demo building | 204; no row; `reason="demo"` |
 | UA-10 | `USAGE_ENABLED=false` | 204; no row; `reason="disabled"` |
 | UA-11 | The 31st request in a minute from one IP; the 121st in an hour for one `sessionId` | 429 `rate_limited`, `scope` `usage_events`, `Retry-After`; no bucket key holds an account id |
@@ -359,7 +360,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-25 | Client: the same screen twice in 1 s; a route with a parameter; a tap | One `screen_view`; the id has no parameter; the tap is not merged; no device id is read |
 | UA-26 | Client: the switch after a restart | The stored choice; the default is on (`USAGE_DEFAULT_ENABLED`) |
 | UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) | The registry equals the rows of DOC-40 §4 with the two metrics of §11 |
-| UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to every staff role and to a resident member of the unit named in the header (Helper included), and to nobody without a token |
+| UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to a member of the unit named in the header, whatever the member type (Helper included), and refused to a staff token; E-174 is allowed to every staff role and refused to a resident token; both refuse a request with no token |
 | UA-29 | The app configs | `PrivacyInfo.xcprivacy` of each app has the entry of §9.2; no `NSUserTrackingUsageDescription` in `Info.plist` |
 
 ### 13.1 Statements run
@@ -393,7 +394,7 @@ All inside DR-279; the points that the DR leaves to this document:
 
 ## 15. Not in this document
 
-Errors and crashes of the apps: DOC-42 §10, DOC-55 §15, DR-264. Business counters and alerts: DOC-40. The DDL: DOC-17 §9A. The endpoint's contract in the catalog form: DOC-51 E-173. The purge statements: DOC-20 §5. The job's row: DOC-38 §4. The keys: DOC-41 §13. The copy of the switch: DOC-68. The store submission: DOC-73. A screen of the web CMS to read the record: not built.
+Errors and crashes of the apps: DOC-42 §10, DOC-55 §15, DR-264. Business counters and alerts: DOC-40. The DDL: DOC-17 §9A. The endpoint's contract in the catalog form: DOC-51 E-173 and E-174. The purge statements: DOC-20 §5. The job's row: DOC-38 §4. The keys: DOC-41 §13A and §7. The copy of the switch: DOC-68. The store submission: DOC-73. A screen of the web CMS to read the record: not built.
 
 ## 16. Traceability
 

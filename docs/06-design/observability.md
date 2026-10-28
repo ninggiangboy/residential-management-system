@@ -355,7 +355,7 @@ groups:
 
 ### 5.4 A job that stopped
 
-A job's gauge is a timestamp. The expected silence of each job is a recorded constant, one rule per job generated from the table below (a rule file with 24 `record` lines):
+A job's gauge is a timestamp. The expected silence of each job is a recorded constant, one rule per job generated from the table below (a rule file with 23 `record` lines):
 
 ```yaml
   - name: rms-job-thresholds
@@ -386,9 +386,11 @@ A job's gauge is a timestamp. The expected silence of each job is a recorded con
 | `push_receipts` | 5 min | 600 |
 | `storage_quota`, `orphan_uploads`, `import_expire`, `export_purge`, `realtime_purge` | 1 h | 7200 |
 | `invariant_check` | daily 03:00 | 129600 (36 h), its own Critical rule |
-| `usage_rollup`, `qr_scan_purge`, `otp_purge`, `token_purge`, `account_deletion`, `demo_reset` | daily | 172800 |
+| `qr_scan_purge`, `otp_purge`, `token_purge`, `account_deletion`, `demo_reset` | daily | 172800 |
 | `integrity_weekly`, `integrity_notices`, `inbox_purge`, `import_purge`, `finance_purge` | weekly | 1209600 |
 | `audit_purge` | monthly | 5356800 (62 d) |
+
+`usage_rollup` (daily, 172800 s) joins the table, the rule file (24 lines) and `ops-rules.test.ts` when P1-29 builds the job (DOC-38 §4.3).
 
 A job that has never reported has no series, so it raises nothing; on a fresh database the first run of a weekly job is the proof (the scheduler's first tick catches a missed slot within its grace window, DOC-38 §3.3). This is a stated limit (DR-155).
 

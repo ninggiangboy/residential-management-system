@@ -394,7 +394,7 @@ The apps log through one public endpoint, `POST /client-errors` (DR-63, DR-127; 
 | As built (P1-16, DR-264) | The web CMS reports (`packages/client-core/src/reporter.ts`, `apps/cms-web/src/lib/report-error.ts`); the apps report through EAS Observe (DOC-55 §15). The tests ER-43 and ER-44 run in `apps/api/tests/integration/client-errors.integration.test.ts` |
 | The app's duty | Never send user input, form values, tokens, URLs with a query string or a response body; send the error class, the message of the error and the stack |
 
-**Usage events are not errors.** `POST /usage-events` (E-173, DR-279, DOC-104) is the other endpoint that the clients call for themselves. It adds no error code: a bad body is `validation_failed` 400, a body over 16 KB is `payload_too_large` 413, a limit is `rate_limited` 429 with `scope: "usage_events"` (the buckets and keys are DOC-39 §6, DOC-41 §7), maintenance is 503, a missing token is 401. The apps drop the batch on every one of them and never show it (DOC-104 §5.3).
+**Usage events are not errors.** `POST /me/usage-events` and `POST /staff/usage-events` (E-173, E-174, DR-279, DOC-104) are the other endpoints that the clients call for themselves. It adds no error code: a bad body is `validation_failed` 400, a body over 16 KB is `payload_too_large` 413, a limit is `rate_limited` 429 with `scope: "usage_events"` (the buckets and keys are DOC-39 §6, DOC-41 §7), maintenance is 503, a missing token is 401. The apps drop the batch on every one of them and never show it (DOC-104 §5.3).
 
 ## 11. Decisions made while writing
 

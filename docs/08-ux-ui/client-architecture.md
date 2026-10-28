@@ -591,7 +591,7 @@ Rules (DR-192):
 
 ## 15A. Usage record
 
-DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of listed controls, with no account or device id, and send them in batches to `POST /usage-events` (E-173). This section says only where the code sits; the rules (session, queue, switch, drops) are DOC-104 §5.
+DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of listed controls, with no account or device id, and send them in batches: the resident app to `POST /me/usage-events` (E-173), the staff app and the web CMS to `POST /staff/usage-events` (E-174). This section says only where the code sits; the rules (session, queue, switch, drops) are DOC-104 §5.
 
 | Piece | Where | Notes |
 | --- | --- | --- |

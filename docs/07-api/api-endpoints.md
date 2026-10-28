@@ -4,7 +4,7 @@
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
-This document numbers every endpoint of the API (`E-01…E-173`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
+This document numbers every endpoint of the API (`E-01…E-174`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
 
 Every new decision in this document is recorded as DR-142…DR-14x and summarized in §13. Sample requests and responses use the sample building (DOC-01): unit `A-1508`, owner Nguyễn Văn An, tenant Trần Thị Bình.
 
@@ -145,7 +145,8 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-170 | `POST /staff/fee-batches/{id}/charges` | `addDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
 | E-171 | `DELETE /staff/charges/{id}` | `removeDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
 | E-172 | `DELETE /staff/fee-batches/{id}` | `discardFeeBatch` | staff: admin, manager | | UC-01 | DOC-21 §3.8 (DR-265, P2) |
-| E-173 | `POST /usage-events` | `recordUsageEvents` | staff: any; unit: any member | | | DOC-104 | §10A |
+| E-173 | `POST /me/usage-events` | `recordMyUsageEvents` | unit: broadcast_notices | | | | §10A |
+| E-174 | `POST /staff/usage-events` | `recordStaffUsageEvents` | staff: any | | | | §10A |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -2683,18 +2684,21 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **As built (P1-13, 2026-10-23, DR-258):** `createdBy.name` is the staff member's full name from `IdentityApi.getStaff`, one call per page; `kind=fee_batch` is 400 until P2-04; `limit` is a string of up to three digits checked to 1…100 (400 `validation_failed`), a cursor that does not decode is 400 `invalid_cursor`.
 
 
-## 10A. Usage events (E-173)
+## 10A. Usage events (E-173, E-174)
 
 Added by DR-279 (2026-10-28); the behavior is DOC-104. Built in P1-29. The section is numbered 10A so that §11…§14 keep the numbers that other documents cite.
 
-### E-173 `POST /usage-events` · `recordUsageEvents`
+Two routes, one body, one use case. A resident token never passes a staff guard and a resident token carries no building (DOC-12 §5.3), so the resident app calls E-173 with the unit header and the staff app and the web CMS call E-174.
+
+### E-173 `POST /me/usage-events` · `recordMyUsageEvents`, E-174 `POST /staff/usage-events` · `recordStaffUsageEvents`
 
 - **Purpose / UC:** The apps and the web CMS report which screens a signed-in person opened and which listed controls they pressed, so the Owner can see what is used (DR-279). No use case: it is not an act of a person on the building's data.
-- **Authorization:** `staff: any` (every role) or `unit: any member` (a resident acting for a unit: `X-Unit-Id` with an active membership of any member type, a Helper included, and no capability); no step-up. The building is the `bid` of the staff token or the building of the active membership (`UnitContext`, DOC-12 §11), never the body. A resident app sends the header like every unit call, and sends nothing before a unit is chosen. Subject to the app-version gate (an app that must update is not tracked). Not exempt from the terms gate: a resident who has not accepted the latest terms cannot call it, which is why `Terms` and `Terms-Update` are not recorded either (DOC-104 §4.1).
-- **Parameters** (body, at most 16 KB, `additionalProperties: false`):
+- **Authorization:** E-173 `unit: broadcast_notices`: a resident acting for a unit, `X-Unit-Id` with an active membership; `broadcast_notices` is the capability that every member type holds, a Helper included (DOC-27 §3.2), so it works as "any member"; the building is that of the `UnitContext` (DOC-12 §11). E-174 `staff: any`: every role; the building is the `bid` of the token. Neither takes a step-up, and neither reads a building from the body. Both are subject to the app-version gate (an app that must update is not tracked). E-173 is not exempt from the terms gate: a resident who has not accepted the latest terms is refused, which is why `Terms` and `Terms-Update` are not recorded (DOC-104 §4.1).
+- **Parameters** (body, at most 16 KB, `additionalProperties: false`; the same for both routes):
 
   | Name | In | Type | Required | Default | Constraints |
   | --- | --- | --- | --- | --- | --- |
+  | `X-Unit-Id` | header | UUID | E-173 only | | The unit the resident acts for (DOC-50 §5.1) |
   | `app` | body | string | yes | | `resident`, `staff`, `web` |
   | `appVersion` | body | string | yes | | `x.y.z`, digits, each part 1…4 digits |
   | `platform` | body | string | yes | | `ios`, `android`, `web` |
@@ -2704,11 +2708,12 @@ Added by DR-279 (2026-10-28); the behavior is DOC-104. Built in P1-29. The secti
   | `events[].name` | body | string | yes | | At most 60 characters; a screen id (`screen_view`) or `<Screen>.<control>` (`tap`) from the lists of DOC-104 §4; a name outside the lists is dropped, not refused |
   | `events[].ageMs` | body | integer | yes | | 0…3,600,000: the age of the event when the batch is sent |
 
-- **Request example:**
+- **Request example** (E-173; E-174 is the same body at `/staff/usage-events` with no `X-Unit-Id`):
 
   ```http
-  POST /api/v1/usage-events
+  POST /api/v1/me/usage-events
   Authorization: Bearer <access token>
+  X-Unit-Id: 0192f3c4-5a1e-7000-8000-0000000000a1
   Content-Type: application/json
 
   { "app": "resident", "appVersion": "1.0.3", "platform": "ios",
@@ -2720,8 +2725,8 @@ Added by DR-279 (2026-10-28); the behavior is DOC-104. Built in P1-29. The secti
   ```
 
 - **Response 204:** no body, also when every event was dropped, when `USAGE_ENABLED` is false and when the building is a demo building.
-- **Errors:** 400 `validation_failed` (an unknown key, a count or a value out of range, `sessionId` not a UUID v4; a missing or malformed `X-Unit-Id`, `header.X-Unit-Id`), 401, 403 `membership_inactive` (a membership that has ended), 403 `terms_required` (the terms gate, DOC-35 §9.2), 413 `payload_too_large` (the body limit, before validation), 426 `upgrade_required` (the version gate), 429 `rate_limited` with `Retry-After` (`scope: "usage_events"`; the app drops the batch silently), 503 `maintenance`. No new error code (DOC-42 §10).
-- **Data source:** one `INSERT … SELECT FROM unnest(…)` into `analytics.usage_event` (DOC-104 §6.3); `audience` is `resident` or `staff` by the kind of the token. Two PostgreSQL buckets in `platform.rate_bucket` (DR-64): `usage-events:ip:<ip>` 30 a minute (`USAGE_EVENTS_PER_MINUTE_PER_IP`) and `usage-events:session:<sessionId>` 120 an hour (`USAGE_EVENTS_PER_HOUR_PER_SESSION`). The counters `usage_events_total` and `usage_events_dropped_total` (DOC-40 §4.7). Nothing identifies the account in a row, a bucket or a metric label; the request line carries the account id like any request line, and never the body (DOC-42 §8.4).
+- **Errors:** 400 `validation_failed` (an unknown key, a count or a value out of range, `sessionId` not a UUID v4; for E-173 also a missing or malformed `X-Unit-Id`, `header.X-Unit-Id`), 401, 403 `membership_inactive` and 403 `terms_required` (E-173), (E-174 takes every role, so it has no 403 `forbidden`), 413 `payload_too_large` (the body limit, before validation), 426 `upgrade_required` (the version gate), 429 `rate_limited` with `Retry-After` (`scope: "usage_events"`; the app drops the batch silently), 503 `maintenance`. No new error code (DOC-42 §10).
+- **Data source:** one `INSERT … SELECT FROM unnest(…)` into `analytics.usage_event` (DOC-104 §6.3); `audience` is `resident` for E-173 and `staff` for E-174. Two PostgreSQL buckets in `platform.rate_bucket` (DR-64), shared by both routes: `usage-events:ip:<ip>` 30 a minute (`USAGE_EVENTS_PER_MINUTE_PER_IP`) and `usage-events:session:<sessionId>` 120 an hour (`USAGE_EVENTS_PER_HOUR_PER_SESSION`). The counters `usage_events_total` and `usage_events_dropped_total` (DOC-40 §4.7). Nothing identifies the account in a row, a bucket or a metric label; the request line carries the account id like any request line, and never the body (DOC-42 §8.4).
 - **Cache:** `no-store`.
 - **Idempotency:** none (not `R`): a repeated batch is counted twice, which DR-279 (9) accepts.
 - **Performance:** p95 under 50 ms (two bucket statements and one insert of at most 50 rows).
@@ -2770,7 +2775,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-170 | `POST /staff/fee-batches/{id}/charges` | Add one unit's charge to a draft (DR-265) |
 | E-171 | `DELETE /staff/charges/{id}` | Remove a draft charge (DR-265) |
 | E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
-| E-173 | `POST /usage-events` | The apps' record of screen views and taps, from closed lists and with no account stored (DR-279) |
+| E-173, E-174 | `POST /me/usage-events`, `POST /staff/usage-events` | The apps' record of screen views and taps, from closed lists and with no account stored (DR-279); two routes because a resident token never passes a staff guard |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |

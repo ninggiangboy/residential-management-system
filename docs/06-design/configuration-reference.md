@@ -109,7 +109,7 @@ A ring is refused when it is empty, when a value has the wrong length or encodin
 | `FEATURE_TICKET_DEADLINES` | bool | `false` | | Ticket deadlines (DOC-36 §3.3, DR-47) |
 | `CLIENT_ERRORS_PER_MINUTE_PER_IP` | int | 10 | | `POST /client-errors` (DOC-42 §10) |
 | `CLIENT_ERRORS_PER_HOUR_PER_ACCOUNT` | int | 30 | | The same, per account |
-| `USAGE_EVENTS_PER_MINUTE_PER_IP` | int | 30 | | `POST /usage-events` (E-173, DOC-104 §6.1); 1 to 600 |
+| `USAGE_EVENTS_PER_MINUTE_PER_IP` | int | 30 | | `POST /me/usage-events` and `POST /staff/usage-events` (E-173, E-174, DOC-104 §6.1); 1 to 600 |
 | `USAGE_EVENTS_PER_HOUR_PER_SESSION` | int | 120 | | The same, per random session id of the client; 1 to 3600 |
 
 ## 8. Identity and sessions
@@ -211,11 +211,11 @@ Grace defaults (DOC-38 §4.1). The hourly jobs (`storage_quota`, `orphan_uploads
 
 ## 13A. Usage analytics
 
-DR-279, DOC-104 §12. Read by `api` (the first) and `worker` (the other two). The rate limits of E-173 are in §7.
+DR-279, DOC-104 §12. Read by `api` (the first) and `worker` (the other two). The rate limits of E-173 and E-174 are in §7.
 
 | Key | Type | Default | Description (source) |
 | --- | --- | --- | --- |
-| `USAGE_ENABLED` | bool | `true` | `false` makes `POST /usage-events` discard every event (204, counted as dropped `disabled`); the clients keep sending and nothing is stored (DOC-104 §5.4, §6.1) |
+| `USAGE_ENABLED` | bool | `true` | `false` makes E-173 and E-174 discard every event (204, counted as dropped `disabled`); the clients keep sending and nothing is stored (DOC-104 §5.4, §6.1) |
 | `USAGE_RAW_RETENTION_DAYS` | int | 90 | Age at which `analytics.usage_event` rows are deleted by `usage_rollup`, only up to the newest rolled-up day; 7 to 365 (DOC-20 §2.5) |
 | `USAGE_DAILY_RETENTION_DAYS` | int | 730 | Age at which `analytics.usage_daily` rows are deleted; 90 to 3650 (DOC-20 §2.5) |
 
