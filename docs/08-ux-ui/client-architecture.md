@@ -602,7 +602,7 @@ DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of li
 | `trackTap(target)` | `@rms/client-core` | `target` is the type `UsageTarget` of `@rms/shared-types`; a handler calls it after it has started its action; it never throws and never awaits |
 | Lists | `@rms/shared-types` | `USAGE_SCREENS`, `USAGE_EXCLUDED_SCREENS`, `USAGE_TARGETS`; the test UA-15 compares them with DOC-56 and DOC-104 §4.2 |
 
-What the clients never do: read a device identifier, keep the session id outside memory, send anything before sign-in or before a unit is chosen, show an error, retry, or wait for the answer. The import rules of §2 hold: the tracker imports no server code.
+Both clients also stop when an answer carries `X-Usage-Enabled: false` (DOC-104 §5.4, UA-30). What the clients never do: read a device identifier, keep the session id outside memory, send anything before sign-in or before a unit is chosen, show an error, retry, or wait for the answer. The import rules of §2 hold: the tracker imports no server code.
 
 ## 16. Updates and the minimum version
 

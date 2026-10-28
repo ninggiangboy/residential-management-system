@@ -215,7 +215,7 @@ DR-279, DOC-104 §12. Read by `api` (the first) and `worker` (the other two). Th
 
 | Key | Type | Default | Description (source) |
 | --- | --- | --- | --- |
-| `USAGE_ENABLED` | bool | `true` | `false` makes E-173 and E-174 discard every event (204, counted as dropped `disabled`); the clients keep sending and nothing is stored (DOC-104 §5.4, §6.1) |
+| `USAGE_ENABLED` | bool | `true` | `false` makes E-173 and E-174 discard every event (204, counted as dropped `disabled`) and answer with `X-Usage-Enabled: false`, so the apps stop sending until their next launch; `true` resumes it with no release (DOC-104 §5.4, §6.1) |
 | `USAGE_RAW_RETENTION_DAYS` | int | 90 | Age at which `analytics.usage_event` rows are deleted by `usage_rollup`, only up to the newest rolled-up day; 7 to 365 (DOC-20 §2.5) |
 | `USAGE_DAILY_RETENTION_DAYS` | int | 730 | Age at which `analytics.usage_daily` rows are deleted; 90 to 3650 (DOC-20 §2.5) |
 
