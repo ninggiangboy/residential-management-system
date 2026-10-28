@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { apiErrorOf } from '../../api/errors'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
-import { ConfirmDialog, Dialog } from '../../components/ui/dialog'
+import { ConfirmDialog, Dialog, FieldSkeleton, useExit } from '../../components/ui/dialog'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Plate } from '../../components/ui/tag'
 import { TextAreaField, TextField } from '../../components/ui/text-field'
@@ -82,6 +82,8 @@ export function ResidentProfileDialog({
   const [approving, setApproving] = useState(false)
   const [ownedUnits, setOwnedUnits] = useState<string[]>([])
   const profile = detail.data?.profile
+  // The search param unmounts the dialog; `useExit` lets it leave with its motion first (DR-304).
+  const { open, close } = useExit(onClose)
 
   useEffect(() => {
     if (profile)
@@ -122,20 +124,20 @@ export function ResidentProfileDialog({
     }
     if (values.note.trim() !== original.note)
       body.note = values.note.trim() === '' ? null : values.note.trim()
-    if (Object.keys(body).length === 0) return onClose()
+    if (Object.keys(body).length === 0) return close()
     update.mutate(
       { accountId, version: profile.version, body },
       {
         onSuccess: () => {
           toast.success(t('web.residents.toast.saved'))
-          onClose()
+          close()
         },
         onError: (thrown) => {
           const failure = apiErrorOf(thrown)
           if (failure.code === 'version_conflict') {
             // A reopen is a new `pii.read`, so the dialog closes and the user opens it again (DOC-65 `W-Residents` §6).
             toast.error(errorText(t, failure))
-            onClose()
+            close()
             return
           }
           const details = Array.isArray(failure.details)
@@ -173,7 +175,7 @@ export function ResidentProfileDialog({
         }
         closeApproval()
         toast.error(errorText(t, failure))
-        if (failure.code === 'deletion_not_requested') onClose()
+        if (failure.code === 'deletion_not_requested') close()
       },
     })
 
@@ -183,16 +185,20 @@ export function ResidentProfileDialog({
   return (
     <>
       <Dialog
-        open
-        onOpenChange={(open) => !open && onClose()}
-        title={t('web.residents.dialog.profile.title', {
-          name: profile?.fullName ?? detail.data?.phone ?? '',
-        })}
+        open={open}
+        onOpenChange={(next) => !next && close()}
+        title={
+          detail.data
+            ? t('web.residents.dialog.profile.title', {
+                name: profile?.fullName ?? formatPhone(detail.data.phone),
+              })
+            : t('web.residents.dialog.profile.title.loading')
+        }
         width="max-w-2xl"
         dismissible={!update.isPending}
         footer={
           <>
-            <Button variant="ghost" onClick={onClose} disabled={update.isPending}>
+            <Button variant="ghost" onClick={close} disabled={update.isPending}>
               {t('common.action.close')}
             </Button>
             <Button
@@ -209,16 +215,27 @@ export function ResidentProfileDialog({
         {detail.isError ? (
           <Banner tone="danger">{errorText(t, apiErrorOf(detail.error))}</Banner>
         ) : !detail.data || !values ? (
-          <div className="flex flex-col gap-4 py-2">
-            <Skeleton className="h-14" />
-            <Skeleton className="h-14" />
-            <Skeleton className="h-14" />
+          // The shape of the form below, so the dialog does not change size when the profile arrives.
+          <div className="flex flex-col gap-4 py-2" aria-hidden="true">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-control-sm w-48 rounded-full" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FieldSkeleton />
+              <FieldSkeleton />
+              <FieldSkeleton />
+              <FieldSkeleton />
+            </div>
+            <FieldSkeleton />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-64" />
           </div>
         ) : (
           <form
             id="resident-profile-form"
             onSubmit={submit}
-            className="flex flex-col gap-4 py-2"
+            className="motion-fade flex flex-col gap-4 py-2"
             noValidate
           >
             {banner && <Banner tone="danger">{banner}</Banner>}

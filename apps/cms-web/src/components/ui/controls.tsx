@@ -145,9 +145,17 @@ export function Chip({
 }
 
 /** A labelled set of chips: a `fieldset`, so a screen reader announces the group name (UX-13). */
-export function ChipGroup({ label, children }: { label: string; children: ReactNode }) {
+export function ChipGroup({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+    <fieldset className={cn('m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0', className)}>
       <legend className="sr-only">{label}</legend>
       {children}
     </fieldset>

@@ -4,8 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Residential Management</title>
+    <script src="/boot.js"></script>
+    <!-- In the head and not imported by main.tsx: the first paint already has the tokens and the background (DR-306). -->
+    <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!--
+      The frame of the page before the scripts run (DR-306): on a signed-in path the same as `ShellSkeleton`
+      (src/components/layout/shell-skeleton.tsx) without the pulse, so React's skeleton takes over in place and its pulse starts
+      from full opacity; on the sign-in page its hero panel. `boot.js` picks one; `main.tsx` removes it once a page (`main`) is
+      in #root.
+    -->
+    <div id="boot" class="fixed inset-0 z-[60] hidden bg-ground" aria-hidden="true">
+      <div class="boot-shell hidden min-h-screen md:flex">
+        <aside class="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col border-r border-line bg-surface lg:w-[248px]">
+          <div class="flex flex-col gap-2 px-4 py-5 lg:px-6">
+            <div class="h-5 w-10 rounded-control bg-fill lg:w-40"></div>
+            <div class="hidden h-3.5 w-24 rounded-control bg-fill lg:block"></div>
+          </div>
+          <div class="flex flex-1 flex-col gap-2 px-3">
+            <div class="h-control-sm rounded-control bg-fill"></div>
+            <div class="h-control-sm rounded-control bg-fill"></div>
+            <div class="h-control-sm rounded-control bg-fill"></div>
+            <div class="h-control-sm rounded-control bg-fill"></div>
+          </div>
+          <div class="m-3 h-[60px] rounded-card bg-fill"></div>
+        </aside>
+        <div class="flex min-w-0 flex-1 flex-col">
+          <div class="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-8">
+            <div class="h-4 w-40 rounded-control bg-fill"></div>
+            <div class="h-10 w-64 rounded-full bg-fill"></div>
+          </div>
+          <div class="min-w-0 flex-1 px-8 pb-10 pt-7">
+            <div class="h-8 w-56 rounded-control bg-fill"></div>
+            <div class="mt-2 h-4 w-80 rounded-control bg-fill"></div>
+            <div class="mt-8 h-96 rounded-card bg-fill"></div>
+          </div>
+        </div>
+      </div>
+      <!-- The sign-in page while its session check runs: the hero panel with the two bars of `login.tsx` (name, hotline). -->
+      <div class="boot-login grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div class="hidden flex-col bg-gradient-to-br from-hero-from to-hero-to p-12 lg:flex">
+          <div class="h-8 w-64 rounded-control bg-on-hero/20"></div>
+          <div class="mt-2 h-5 w-80 rounded-control bg-on-hero/20"></div>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

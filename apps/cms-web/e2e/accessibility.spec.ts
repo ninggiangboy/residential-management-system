@@ -4,6 +4,16 @@ import { signInAndWait } from './support/app'
 
 /** DS-07, UIWO-10: no serious or critical violation on the main pages, in both themes (DOC-54 §12). */
 async function check(page: Page, label: string): Promise<void> {
+  // A page and its rows fade in (DR-304): measured mid-fade, text has less contrast than it ends with. Wait for every finite
+  // animation to end; an infinite one (a spinner) is not waited for.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  )
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()
@@ -43,7 +53,7 @@ for (const scheme of ['light', 'dark'] as const) {
       ] as const) {
         await page.goto(path)
         await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
-        await expect(page.locator('[aria-busy=true], .animate-pulse')).toHaveCount(0)
+        await expect(page.locator('[aria-busy=true], .motion-skeleton')).toHaveCount(0)
         await check(page, path)
       }
     })

@@ -6,8 +6,8 @@ import { Controller, useForm } from 'react-hook-form'
 import { apiErrorOf } from '../../api/errors'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
-import { CardSection } from '../../components/ui/card'
-import { ConfirmDialog, Dialog } from '../../components/ui/dialog'
+import { Card, CardSection } from '../../components/ui/card'
+import { ConfirmDialog, Dialog, FieldSkeleton } from '../../components/ui/dialog'
 import { ErrorState } from '../../components/ui/empty-state'
 import { PageHeader } from '../../components/ui/page'
 import { SegmentedControl } from '../../components/ui/segmented-control'
@@ -78,10 +78,26 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
   if (settings.isPending)
     return (
       <>
-        <PageHeader title={t('web.building.title')} />
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-96" />
+        <PageHeader title={t('web.building.title')} subtitle={t('web.building.subtitle')} />
+        {/* The two columns of the page with cards of their size: the form fills in without moving. */}
+        <div
+          className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+          aria-hidden="true"
+        >
+          <Card className="p-6">
+            <Skeleton className="mb-5 h-6 w-64" />
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: 10 }, (_, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
+                <FieldSkeleton key={index} />
+              ))}
+            </div>
+          </Card>
+          <div className="flex flex-col gap-6">
+            <Skeleton className="h-56 rounded-card" />
+            <Skeleton className="h-44 rounded-card" />
+            <Skeleton className="h-44 rounded-card" />
+          </div>
         </div>
       </>
     )
@@ -549,7 +565,20 @@ function VersionsDialog({ kind, onClose }: { kind: TermsKind | null; onClose: ()
         </Button>
       }
     >
-      <ul className="divide-y divide-line py-2">
+      {versions.isPending && (
+        <ul className="divide-y divide-line py-2" aria-hidden="true">
+          {[0, 1].map((row) => (
+            <li key={row} className="flex items-center justify-between gap-4 py-3">
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-56" />
+                <Skeleton className="h-3.5 w-32" />
+              </div>
+              <Skeleton className="h-3.5 w-24" />
+            </li>
+          ))}
+        </ul>
+      )}
+      <ul className="motion-fade divide-y divide-line py-2">
         {versions.data?.map((version) => (
           <li key={version.versionId} className="flex items-center justify-between gap-4 py-3">
             <div>

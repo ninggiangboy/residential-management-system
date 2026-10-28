@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiErrorOf } from '../../api/errors'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
-import { ConfirmDialog, Dialog } from '../../components/ui/dialog'
+import { ConfirmDialog, Dialog, useExit } from '../../components/ui/dialog'
 import { TextAreaField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
@@ -28,6 +28,8 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
   const [confirming, setConfirming] = useState(false)
   const [seeded, setSeeded] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
+  // The search param unmounts the panel; `useExit` lets it leave with its motion first (DR-304).
+  const { open, close } = useExit(onClose)
 
   // The panel starts from the current text, so a small fix is an edit and not a rewrite.
   useEffect(() => {
@@ -50,7 +52,7 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
         onSuccess: (created) => {
           toast.success(t('web.building.toast.terms-published', { version: created.version }))
           setConfirming(false)
-          onClose()
+          close()
         },
         onError: (thrown) => {
           setConfirming(false)
@@ -67,8 +69,8 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
   return (
     <>
       <Dialog
-        open
-        onOpenChange={(open) => !open && onClose()}
+        open={open}
+        onOpenChange={(next) => !next && close()}
         title={t(
           kind === 'terms' ? 'web.building.card.terms.title' : 'web.building.card.privacy.title',
         )}
@@ -83,7 +85,7 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
         width="max-w-3xl"
         footer={
           <>
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" onClick={close}>
               {t('common.action.cancel')}
             </Button>
             <Button

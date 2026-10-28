@@ -12,6 +12,7 @@ import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots'
 import { Check } from 'phosphor-react-native/src/icons/Check'
 import { CheckCircle } from 'phosphor-react-native/src/icons/CheckCircle'
 import { Clock } from 'phosphor-react-native/src/icons/Clock'
+import { Desktop } from 'phosphor-react-native/src/icons/Desktop'
 import { DoorOpen } from 'phosphor-react-native/src/icons/DoorOpen'
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree'
 import { DownloadSimple } from 'phosphor-react-native/src/icons/DownloadSimple'
@@ -31,6 +32,7 @@ import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass
 import { MapPin } from 'phosphor-react-native/src/icons/MapPin'
 import { Megaphone } from 'phosphor-react-native/src/icons/Megaphone'
 import { Minus } from 'phosphor-react-native/src/icons/Minus'
+import { Moon } from 'phosphor-react-native/src/icons/Moon'
 import { Motorcycle } from 'phosphor-react-native/src/icons/Motorcycle'
 import { NotePencil } from 'phosphor-react-native/src/icons/NotePencil'
 import { Package } from 'phosphor-react-native/src/icons/Package'
@@ -42,6 +44,7 @@ import { Receipt } from 'phosphor-react-native/src/icons/Receipt'
 import { SignOut } from 'phosphor-react-native/src/icons/SignOut'
 import { SquaresFour } from 'phosphor-react-native/src/icons/SquaresFour'
 import { Star } from 'phosphor-react-native/src/icons/Star'
+import { Sun } from 'phosphor-react-native/src/icons/Sun'
 import { Trash } from 'phosphor-react-native/src/icons/Trash'
 import { UploadSimple } from 'phosphor-react-native/src/icons/UploadSimple'
 import { UserCircle } from 'phosphor-react-native/src/icons/UserCircle'
@@ -117,4 +120,7 @@ export const ICONS: Record<IconName, ComponentType<PhosphorProps>> = {
   lightning: Lightning,
   car: Car,
   motorcycle: Motorcycle,
+  desktop: Desktop,
+  sun: Sun,
+  moon: Moon,
 }

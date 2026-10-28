@@ -10,15 +10,16 @@ import { signOut } from '../../auth/session'
 import { env } from '../../env'
 import { useI18n } from '../../lib/i18n'
 import { useOnline } from '../../lib/online'
-import { cn } from '../../lib/utils'
 import { Avatar } from '../ui/avatar'
 import { IconButton } from '../ui/button'
 import { Icon } from '../ui/icon'
 import { Tooltip } from '../ui/menu'
+import { Skeleton } from '../ui/skeleton'
 import { toast } from '../ui/toaster'
 import { useBreadcrumbTail } from './breadcrumb'
 import { LanguageSwitch } from './language-switch'
 import { useBrand } from './public-layout'
+import { ThemeSwitch } from './theme-switch'
 
 interface NavItem {
   to: '/units' | '/residents' | '/staff' | '/building'
@@ -62,7 +63,14 @@ function Sidebar({ role }: { role: StaffRole }) {
   return (
     <aside className="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col border-r border-line bg-surface lg:w-[248px]">
       <div className="px-4 py-5 lg:px-6">
-        <p className="hidden text-title-3 text-ink lg:block">{brand.name}</p>
+        {/* The name arrives with E-03; its line keeps its height meanwhile, so the navigation below does not move. */}
+        {brand.loading ? (
+          <div className="hidden h-6 items-center lg:flex">
+            <Skeleton className="h-4 w-40" />
+          </div>
+        ) : (
+          <p className="hidden truncate text-title-3 text-ink lg:block">{brand.name}</p>
+        )}
         <p className="hidden text-secondary text-ink-muted lg:block">
           {t('web.shell.brand.subtitle')}
         </p>
@@ -157,14 +165,27 @@ function TopBar() {
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-8">
       <nav aria-label={t('web.shell.breadcrumb.label')}>
         <ol className="flex items-center gap-2 text-secondary text-ink-muted">
-          {crumbs?.map((key, index) => (
-            <li key={key} className="flex items-center gap-2">
-              {index > 0 && <span aria-hidden="true">/</span>}
-              <span className={cn(index === crumbs.length - 1 && !tail && 'text-ink')}>
-                {t(key as MessageKey)}
-              </span>
-            </li>
-          ))}
+          {crumbs?.map((crumb, index) => {
+            const current = index === crumbs.length - 1 && !tail
+            return (
+              <li key={crumb.label} className="flex items-center gap-2">
+                {index > 0 && <span aria-hidden="true">/</span>}
+                {current ? (
+                  <span className="text-ink" aria-current="page">
+                    {t(crumb.label as MessageKey)}
+                  </span>
+                ) : (
+                  <Link
+                    to={crumb.to}
+                    search={{}}
+                    className="rounded-plate outline-offset-2 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-focus"
+                  >
+                    {t(crumb.label as MessageKey)}
+                  </Link>
+                )}
+              </li>
+            )
+          })}
           {tail && (
             <li className="flex items-center gap-2">
               <span aria-hidden="true">/</span>
@@ -181,6 +202,7 @@ function TopBar() {
             {env.appEnv}
           </span>
         )}
+        <ThemeSwitch />
         <LanguageSwitch
           disabled={language.pending}
           onChange={me ? (next) => language.change(me, next) : undefined}
@@ -197,6 +219,7 @@ function TopBar() {
 export function AppShell({ role, children }: { role: StaffRole; children: ReactNode }) {
   const { t } = useI18n()
   const online = useOnline()
+  const pageKey = useMatches().find((match) => match.routeId.startsWith('/_app/'))?.routeId
   return (
     <>
       <div className="flex min-h-screen items-center justify-center p-8 text-center md:hidden">
@@ -217,7 +240,8 @@ export function AppShell({ role, children }: { role: StaffRole; children: ReactN
               {t('web.shell.offline')}
             </div>
           )}
-          <main id="main" className="min-w-0 flex-1 px-8 pb-10 pt-7">
+          {/* Keyed by the page route (not its dialogs, not its search), so a new page fades in and a filter does not. */}
+          <main key={pageKey} id="main" className="motion-page min-w-0 flex-1 px-8 pb-10 pt-7">
             {children}
           </main>
         </div>

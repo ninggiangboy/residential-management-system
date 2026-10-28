@@ -13,7 +13,12 @@ const SearchShape = {
 
 /** `/staff` and, over it, the dialog routes `/staff/new` and `/staff/$staffId/edit`: the list stays rendered behind them (DOC-67). */
 export const Route = createFileRoute('/_app/staff')({
-  staticData: { crumbs: ['web.shell.nav.group.system', 'web.shell.nav.staff'] },
+  staticData: {
+    crumbs: [
+      { label: 'web.shell.nav.group.system', to: '/staff' },
+      { label: 'web.shell.nav.staff', to: '/staff' },
+    ],
+  },
   validateSearch: searchParser(SearchShape, { page: 1, pageSize: 10 }),
   component: Layout,
 })

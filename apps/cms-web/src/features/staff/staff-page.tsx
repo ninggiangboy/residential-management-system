@@ -12,14 +12,14 @@ import { ConfirmDialog } from '../../components/ui/dialog'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { Icon } from '../../components/ui/icon'
 import { PageHeader } from '../../components/ui/page'
-import { Skeleton } from '../../components/ui/skeleton'
-import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
+import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
+import { useIdentityKey } from '../../lib/use-identity-key'
 import { type StaffAccount, staffListQuery, staffSummaryQuery, useStaffMutations } from './hooks'
 import { type OpenTicket, OpenTicketsDialog } from './open-tickets-dialog'
 
@@ -60,9 +60,22 @@ export function StaffPage({ search }: { search: StaffSearch }) {
   const debounced = useDebounced(typed.trim())
   const list = useQuery(staffListQuery(search))
   const summary = useQuery(staffSummaryQuery())
+  const rowsKey = useIdentityKey(list.data)
   const mutations = useStaffMutations()
   const [pending, setPending] = useState<Pending | null>(null)
   const [now] = useState(() => Date.now())
+
+  const head = (
+    <THead>
+      <Tr>
+        <Th>{t('web.staff.col.name')}</Th>
+        <Th className="w-40">{t('web.staff.col.role')}</Th>
+        <Th className="w-52">{t('web.staff.col.status')}</Th>
+        <Th className="w-48">{t('web.staff.col.last-login')}</Th>
+        <Th className="w-44">{t('web.staff.col.actions')}</Th>
+      </Tr>
+    </THead>
+  )
 
   // A changed search resets the page (DOC-67 §2).
   useEffect(() => {
@@ -212,6 +225,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
     <>
       <PageHeader
         title={t('web.staff.title')}
+        subtitleLoading={!summary.data}
         subtitle={
           summary.data
             ? t('web.staff.subtitle', { total: summary.data.total, invited, locked: lockedCount })
@@ -229,8 +243,9 @@ export function StaffPage({ search }: { search: StaffSearch }) {
         }
       />
       <Banner className="mb-6">{t('web.staff.banner.roles')}</Banner>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <ChipGroup label={t('web.staff.col.role')}>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+        {/* As tall as the search input, so the chips sit on its centre line beside the label above it. */}
+        <ChipGroup label={t('web.staff.col.role')} className="min-h-control-lg">
           <Chip selected={search.role === undefined} onClick={() => setFilter(undefined)}>
             {t('web.staff.chip.all', { count: counts ? (summary.data?.total ?? 0) : '' })}
           </Chip>
@@ -257,17 +272,9 @@ export function StaffPage({ search }: { search: StaffSearch }) {
           onRetry={() => void list.refetch()}
         />
       ) : list.isPending ? (
-        <DataTable label={t('web.staff.title')}>
-          <TBody>
-            {Array.from({ length: 5 }, (_, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
-              <Tr key={index}>
-                <Td colSpan={5}>
-                  <Skeleton className="h-8" />
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
+        <DataTable label={t('web.staff.title')} busy>
+          {head}
+          <SkeletonRows columns={5} rows={4} rowClassName="h-[69px]" />
         </DataTable>
       ) : items.length === 0 ? (
         <EmptyState
@@ -291,6 +298,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
       ) : (
         <DataTable
           label={t('web.staff.title')}
+          busy={list.isPlaceholderData}
           footer={
             <>
               <span className="text-secondary text-ink-muted">
@@ -319,16 +327,9 @@ export function StaffPage({ search }: { search: StaffSearch }) {
             </>
           }
         >
-          <THead>
-            <Tr>
-              <Th>{t('web.staff.col.name')}</Th>
-              <Th>{t('web.staff.col.role')}</Th>
-              <Th>{t('web.staff.col.status')}</Th>
-              <Th>{t('web.staff.col.last-login')}</Th>
-              <Th>{t('web.staff.col.actions')}</Th>
-            </Tr>
-          </THead>
-          <TBody>
+          {head}
+          {/* Keyed by the answer: new rows (a filter, a page) fade in where the dimmed ones were (DR-306). */}
+          <TBody key={rowsKey} className="motion-fade">
             {items.map((account) => (
               <Tr key={account.id}>
                 <Td>

@@ -3,15 +3,19 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { setSignedOutHandler } from './api/client'
+import { publicConfigQuery } from './api/hooks/public-config'
 import { createQueryClient } from './api/query-client'
 import { listenToOtherTabs } from './auth/refresh'
 import { endSessionLocally, setLoginRedirect } from './auth/session'
+import type { Crumb } from './components/layout/breadcrumb'
 import { RouteErrorBoundary } from './components/route-error-boundary'
 import { I18nProvider } from './lib/i18n'
 import { routeTree } from './routeTree.gen'
-import './styles.css'
 
 const queryClient = createQueryClient()
+// The brand (E-03, public) is asked for now, beside the session refresh, not after the first page has drawn: the sign-in hero
+// and the sidebar then usually open with the building name instead of a placeholder that is replaced (DR-306).
+void queryClient.prefetchQuery(publicConfigQuery())
 
 const router = createRouter({
   routeTree,
@@ -30,8 +34,8 @@ declare module '@tanstack/react-router' {
     email?: string
   }
   interface StaticDataRouteOption {
-    /** Catalog keys of the breadcrumb "Group / Page" (DOC-64 shell). */
-    crumbs?: readonly [string, string]
+    /** The breadcrumb "Group / Page" (DOC-64 shell): a catalog key and the page a click opens (a group opens its first page). */
+    crumbs?: readonly [Crumb, Crumb]
   }
 }
 
@@ -58,6 +62,21 @@ window.addEventListener('vite:preloadError', (event) => {
 
 const root = document.getElementById('root')
 if (!root) throw new Error('#root is missing in index.html')
+
+// The static frame of `index.html` stays until the first page is in #root: every page, its skeleton and the error pages have a
+// `main`, so the frame is never removed onto a blank screen (DR-306). Ten seconds is a backstop for a page that never draws.
+const boot = document.getElementById('boot')
+if (boot) {
+  const observer = new MutationObserver(() => {
+    if (root.querySelector('main')) done()
+  })
+  const done = () => {
+    observer.disconnect()
+    boot.remove()
+  }
+  observer.observe(root, { childList: true, subtree: true })
+  window.setTimeout(done, 10_000)
+}
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>

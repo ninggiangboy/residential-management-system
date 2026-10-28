@@ -8,13 +8,13 @@ import { Avatar } from '../../components/ui/avatar'
 import { Banner } from '../../components/ui/banner'
 import { Button, buttonStyles } from '../../components/ui/button'
 import { Switch } from '../../components/ui/controls'
-import { ConfirmDialog } from '../../components/ui/dialog'
+import { ConfirmDialog, useLastDefined } from '../../components/ui/dialog'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { Icon } from '../../components/ui/icon'
 import { RowMenu } from '../../components/ui/menu'
 import { PageHeader } from '../../components/ui/page'
 import { Skeleton } from '../../components/ui/skeleton'
-import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
+import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { TabList, TabPanel, Tabs } from '../../components/ui/tabs'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { toast } from '../../components/ui/toaster'
@@ -58,17 +58,17 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   useSetBreadcrumbTail(unit.data?.code ?? null)
+  // The member of the phone dialog stays named while the dialog leaves (the param is cleared on close).
+  const phoneMember = useLastDefined(
+    [...(unit.data?.owner ? [unit.data.owner] : []), ...(unit.data?.members ?? [])].find(
+      (row) => row.membershipId === search.membershipId,
+    ),
+  )
 
   const go = (patch: Partial<UnitDetailSearch>) =>
     void navigate({ to: '/units/$unitId', params: { unitId }, search: { ...search, ...patch } })
 
-  if (unit.isPending)
-    return (
-      <>
-        <Skeleton className="mb-6 h-12 w-96" />
-        <Skeleton className="h-64" />
-      </>
-    )
+  if (unit.isPending) return <DetailSkeleton />
   if (unit.isError || !unit.data) {
     const failure = apiErrorOf(unit.error)
     if (failure.status === 404)
@@ -336,12 +336,12 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
         open={search.dialog === 'transfer'}
         onClose={() => go({ dialog: undefined })}
       />
-      {dialogMember && (
+      {phoneMember && (
         <ChangePhoneDialog
-          open={search.dialog === 'phone'}
-          accountId={dialogMember.accountId}
-          name={dialogMember.fullName ?? dialogMember.phone}
-          currentPhone={dialogMember.phone}
+          open={search.dialog === 'phone' && dialogMember !== undefined}
+          accountId={phoneMember.accountId}
+          name={phoneMember.fullName ?? phoneMember.phone}
+          currentPhone={phoneMember.phone}
           unitId={unitId}
           onClose={() => go({ dialog: undefined, membershipId: undefined })}
         />
@@ -423,7 +423,21 @@ function HistoryPage({
 }) {
   const { t, formatDateTime } = label
   const page = useQuery(historyPageQuery(unitId, cursor))
-  if (page.isPending) return <Skeleton className="h-16" />
+  if (page.isPending)
+    return (
+      <ul className="divide-y divide-line rounded-card bg-surface shadow-card" aria-hidden="true">
+        {[0, 1, 2].map((row) => (
+          <li key={row} className="flex items-center gap-4 px-6 py-4">
+            <Skeleton className="size-10 shrink-0" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3.5 w-72" />
+            </div>
+            <Skeleton className="h-3.5 w-28" />
+          </li>
+        ))}
+      </ul>
+    )
   if (page.isError || !page.data)
     return (
       <ErrorState
@@ -436,7 +450,7 @@ function HistoryPage({
     return <EmptyState icon="clock" title={t('web.unit-detail.history.empty')} />
   return (
     <>
-      <ul className="divide-y divide-line rounded-card bg-surface shadow-card">
+      <ul className="motion-fade divide-y divide-line rounded-card bg-surface shadow-card">
         {items.map((item) => (
           <li key={item.id} className="flex items-start gap-4 px-6 py-4">
             <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
@@ -475,4 +489,33 @@ function detailText(item: HistoryItem): string {
     return `${details.removedMembers} ↩`
   if (typeof details.memberType === 'string') return details.memberType
   return ''
+}
+
+/** The shape of the page while the unit loads: plate, title, tabs, the info line and the members table. */
+function DetailSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Skeleton className="h-11 w-28 rounded-plate" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-96" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Skeleton className="h-control-md w-40 rounded-full" />
+          <Skeleton className="h-control-md w-36 rounded-full" />
+        </div>
+      </div>
+      <div className="flex gap-6 border-b border-line pb-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-5 w-16" />
+      </div>
+      <Skeleton className="mt-6 mb-4 h-11 rounded-card" />
+      <DataTable label="" minWidth="min-w-[960px]">
+        <SkeletonRows columns={5} rows={3} rowClassName="h-[61px]" />
+      </DataTable>
+    </div>
+  )
 }

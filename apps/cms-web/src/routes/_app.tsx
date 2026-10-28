@@ -8,9 +8,9 @@ import { ensureSession } from '../auth/session'
 import { StepUpProvider } from '../auth/step-up'
 import { AppShell } from '../components/layout/app-shell'
 import { BreadcrumbProvider } from '../components/layout/breadcrumb'
+import { ShellSkeleton } from '../components/layout/shell-skeleton'
 import { RouteErrorBoundary } from '../components/route-error-boundary'
 import { ErrorState, ForbiddenState } from '../components/ui/empty-state'
-import { Skeleton } from '../components/ui/skeleton'
 import { isWebRole } from '../features/auth/landing'
 import { useUsageRecording } from '../lib/usage'
 
@@ -28,11 +28,11 @@ export const Route = createFileRoute('/_app')({
     if (!me) throw redirect({ to: '/login', search: { redirect: location.href } })
     if (!isWebRole(me.role)) throw redirect({ to: '/wrong-app' })
   },
-  pendingComponent: () => (
-    <div className="p-8">
-      <Skeleton className="h-8 w-64" />
-    </div>
-  ),
+  // The shell's frame appears after 150 ms (a restored session usually answers sooner) and stays at least 200 ms, so a slow
+  // boot shows one calm placeholder instead of a blank page followed by a jump.
+  pendingMs: 150,
+  pendingMinMs: 200,
+  pendingComponent: ShellSkeleton,
   // A failed call keeps the shell and offers a retry; anything else is a render error of the page (reported, DOC-55 §15).
   errorComponent: ({ error }) => {
     const router = useRouter()

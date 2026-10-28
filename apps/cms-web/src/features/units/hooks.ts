@@ -1,5 +1,5 @@
 import { staffKey } from '@rms/client-core'
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import { ifMatch, unwrap } from '../../api/errors'
 
@@ -26,6 +26,8 @@ export const unitsQuery = (filters: UnitFilters) =>
   queryOptions({
     queryKey: staffKey('units', filters),
     queryFn: async () => unwrap(await api.staff.units.get({ query: toQuery(filters) })),
+    // A new filter or page keeps the rows on screen until its answer arrives (`DataTable busy`).
+    placeholderData: keepPreviousData,
   })
 
 export type UnitListItem = NonNullable<

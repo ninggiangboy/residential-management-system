@@ -3,7 +3,28 @@
 @import "@rms/design-tokens/tokens.css";
 @import "@rms/design-tokens/theme.css";
 
+/* The frame of `index.html` (`boot.js`, DR-306): the shell on a signed-in page, the hero on the sign-in page, nothing elsewhere.
+   Outside every layer, so these win over the display utilities on the elements. */
+:root[data-boot] #boot {
+  display: block;
+}
+:root:not([data-boot="shell"]) #boot .boot-shell,
+:root:not([data-boot="login"]) #boot .boot-login {
+  display: none;
+}
+
 @layer base {
+  /* Native controls and scrollbars follow the theme in force (DR-304). */
+  :root {
+    color-scheme: light dark;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-ground text-ink font-sans text-body;
   }
@@ -16,5 +37,129 @@
   /* The tap target of a small control grows to 44 px without growing the control (DR-184). */
   :focus-visible {
     outline-color: var(--focus);
+  }
+}
+
+/*
+ * Enter and exit motion of the overlays, the shadcn pattern written without tw-animate-css: Radix sets `data-state` and keeps a
+ * closing element mounted until its animation ends, so the exit plays too (DR-304).
+ */
+@keyframes rms-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rms-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rms-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes rms-zoom-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes rms-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes rms-slide-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rms-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+@keyframes rms-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes rms-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@layer components {
+  /* The thin bar of a table loading a new page or filter (`DataTable busy`). */
+  .motion-progress {
+    animation: rms-progress 1s ease-in-out infinite;
+  }
+  /* A page arriving: a short fade instead of a cut, so a route change reads as one movement. */
+  .motion-page {
+    animation: rms-rise 180ms ease-out;
+  }
+  /*
+   * A skeleton appears only when the answer takes longer than 150 ms, fading in, then pulses; a faster answer replaces it while
+   * it is still invisible (DR-306). `-now` continues a frame already on screen.
+   */
+  .motion-skeleton {
+    animation:
+      rms-fade-in 200ms ease-out 150ms both,
+      rms-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 350ms infinite;
+  }
+  .motion-skeleton-now {
+    animation: rms-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  /* Content replacing its skeleton fades in rather than popping. */
+  .motion-fade {
+    animation: rms-fade-in 180ms ease-out;
+  }
+  .motion-overlay[data-state="open"] {
+    animation: rms-fade-in 200ms ease-out;
+  }
+  .motion-overlay[data-state="closed"] {
+    animation: rms-fade-out 150ms ease-in forwards;
+  }
+  .motion-dialog[data-state="open"] {
+    animation: rms-zoom-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .motion-dialog[data-state="closed"] {
+    animation: rms-zoom-out 150ms ease-in forwards;
+  }
+  .motion-sheet[data-state="open"] {
+    animation: rms-slide-in-right 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .motion-sheet[data-state="closed"] {
+    animation: rms-slide-out-right 200ms ease-in forwards;
+  }
+  /* Menus, selects and tooltips grow from their trigger (`origin-*` on the element names the Radix transform origin). */
+  .motion-pop[data-state$="open"],
+  .motion-pop:not([data-state]) {
+    animation: rms-zoom-in 150ms ease-out;
+  }
+  .motion-pop[data-state="closed"] {
+    animation: rms-zoom-out 100ms ease-in forwards;
+  }
+}
+
+/*
+ * Reduced motion stops animations and transitions (DOC-54 §12 A6); a near-zero duration still fires `animationend` for Radix. The
+ * rule sits outside every layer, so it wins over the Tailwind utilities and the components above without `!important`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }

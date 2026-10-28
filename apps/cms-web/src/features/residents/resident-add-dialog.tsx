@@ -6,7 +6,7 @@ import { Avatar } from '../../components/ui/avatar'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { Checkbox } from '../../components/ui/controls'
-import { Dialog } from '../../components/ui/dialog'
+import { Dialog, useExit } from '../../components/ui/dialog'
 import { SelectField } from '../../components/ui/select-field'
 import { Plate } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
@@ -62,7 +62,8 @@ export function ResidentAddDialog({
     role ?? (detail.data ? (hasOwner ? 'family' : 'owner') : 'owner')
   const code = detail.data?.code ?? unit?.code ?? ''
 
-  const close = () => void navigate({ to: '/residents', search })
+  // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
+  const { open, close } = useExit(() => void navigate({ to: '/residents', search }))
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -115,8 +116,8 @@ export function ResidentAddDialog({
 
   return (
     <Dialog
-      open
-      onOpenChange={(open) => !open && close()}
+      open={open}
+      onOpenChange={(next) => !next && close()}
       variant="side"
       title={unit ? t('web.resident-add.title', { code }) : t('web.resident-add.title.generic')}
       dismissible={!create.isPending}

@@ -63,6 +63,10 @@ export const ICON_NAMES = [
   // vehicles
   'car',
   'motorcycle',
+  // theme (DR-304)
+  'desktop',
+  'sun',
+  'moon',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 
