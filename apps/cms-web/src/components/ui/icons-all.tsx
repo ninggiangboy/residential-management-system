@@ -1,5 +1,4 @@
 import type { IconName } from '@rms/design-tokens'
-import type { ComponentProps } from 'react'
 import {
   Bell,
   Broom,
@@ -15,6 +14,7 @@ import {
   CheckCircle,
   Clock,
   DoorOpen,
+  Desktop,
   DotsThree,
   DownloadSimple,
   Drop,
@@ -33,6 +33,7 @@ import {
   MapPin,
   Megaphone,
   Minus,
+  Moon,
   Motorcycle,
   NotePencil,
   Package,
@@ -45,6 +46,7 @@ import {
   SignOut,
   SquaresFour,
   Star,
+  Sun,
   Trash,
   UploadSimple,
   UserCircle,
@@ -114,14 +116,7 @@ export const ICONS: Record<IconName, PhosphorIcon> = {
   lightning: Lightning,
   car: Car,
   motorcycle: Motorcycle,
-}
-
-
-/** One component for a name: what `Icon` renders for a name outside its core set. */
-export function ICONS_BY_NAME({
-  name,
-  ...props
-}: { name: IconName } & ComponentProps<PhosphorIcon>) {
-  const Component = ICONS[name]
-  return <Component {...props} />
+  desktop: Desktop,
+  sun: Sun,
+  moon: Moon,
 }

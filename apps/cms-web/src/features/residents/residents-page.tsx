@@ -9,13 +9,13 @@ import { Chip, ChipGroup } from '../../components/ui/controls'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { PageHeader } from '../../components/ui/page'
 import { SelectField } from '../../components/ui/select-field'
-import { Skeleton } from '../../components/ui/skeleton'
-import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
+import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
 import { digitsOf } from '../../lib/phone'
 import { useDebounced } from '../../lib/use-debounced'
+import { useIdentityKey } from '../../lib/use-identity-key'
 import { UnitPicker } from '../units/unit-picker'
 import {
   type MemberType,
@@ -83,6 +83,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
   }, [effectiveQ, navigate, search])
 
   const data = query.data
+  const rowsKey = useIdentityKey(query.data)
   const filter = (patch: Partial<ResidentsSearch>) => {
     visited.current = []
     void navigate({ to: '/residents', search: { ...search, ...patch, cursor: undefined } })
@@ -99,11 +100,25 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
     search.memberType ||
     accountFilterOf(search) !== 'all'
   const page = visited.current.length + 1
+  const head = (
+    <THead>
+      <Tr>
+        <Th className="w-[26%]">{t('web.residents.col.name')}</Th>
+        <Th className="w-[18%]">{t('web.residents.col.phone')}</Th>
+        <Th>{t('web.residents.col.units')}</Th>
+        <Th className="w-44">{t('web.residents.col.status')}</Th>
+        <Th className="w-14">
+          <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
+        </Th>
+      </Tr>
+    </THead>
+  )
 
   return (
     <>
       <PageHeader
         title={t('web.residents.title')}
+        subtitleLoading={!data}
         subtitle={data ? t('web.residents.subtitle', { total: data.summary.total }) : undefined}
         actions={
           <>
@@ -174,17 +189,9 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
           onRetry={() => void query.refetch()}
         />
       ) : !data ? (
-        <DataTable label={t('web.residents.title')}>
-          <TBody>
-            {Array.from({ length: 8 }, (_, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
-              <Tr key={index}>
-                <Td colSpan={5}>
-                  <Skeleton className="h-8" />
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
+        <DataTable label={t('web.residents.title')} busy>
+          {head}
+          <SkeletonRows columns={5} rowClassName="h-[61px]" />
         </DataTable>
       ) : data.items.length === 0 ? (
         <EmptyState
@@ -217,6 +224,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
       ) : (
         <DataTable
           label={t('web.residents.title')}
+          busy={query.isPlaceholderData}
           footer={
             search.q === undefined ? (
               <>
@@ -252,18 +260,9 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
             ) : undefined
           }
         >
-          <THead>
-            <Tr>
-              <Th>{t('web.residents.col.name')}</Th>
-              <Th>{t('web.residents.col.phone')}</Th>
-              <Th>{t('web.residents.col.units')}</Th>
-              <Th>{t('web.residents.col.status')}</Th>
-              <Th className="w-14">
-                <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
-              </Th>
-            </Tr>
-          </THead>
-          <TBody>
+          {head}
+          {/* Keyed by the answer: new rows (a filter, a page) fade in where the dimmed ones were (DR-306). */}
+          <TBody key={rowsKey} className="motion-fade">
             {data.items.map((resident) => (
               <Tr key={resident.accountId}>
                 <Td>

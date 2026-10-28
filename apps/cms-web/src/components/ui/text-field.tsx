@@ -67,18 +67,36 @@ export function TextAreaField({
   )
 }
 
-/** `SearchField` (DOC-54 §7.2): a text field with the magnifier; the caller debounces. */
+/**
+ * `SearchField` (DOC-54 §7.2): a text field with the magnifier; the caller debounces. The label is visible, as on every other
+ * field, so a filter row of labelled fields lines up.
+ */
 export function SearchField({
   label,
+  hint,
+  error,
   className,
+  id,
+  ref,
   ...props
 }: Omit<TextFieldProps, 'type' | 'suffix'> & { label: string }) {
+  const ids = useFieldIds(id)
+  const describedBy = error ? ids.errorId : hint ? ids.hintId : undefined
   return (
-    <div className={cn('relative', className)}>
-      <span className="pointer-events-none absolute left-4 top-0 z-10 flex h-control-lg items-center text-ink-muted">
-        <Icon name="magnifying-glass" />
-      </span>
-      <TextField {...props} aria-label={label} className="[&_input]:pl-12" />
-    </div>
+    <FieldFrame {...ids} label={label} hint={hint} error={error} className={className}>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-ink-muted">
+          <Icon name="magnifying-glass" />
+        </span>
+        <input
+          ref={ref}
+          id={ids.id}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(controlStyles, borderFor(Boolean(error)), 'pl-12')}
+          {...props}
+        />
+      </div>
+    </FieldFrame>
   )
 }

@@ -10,7 +10,7 @@ import { CANCELLED, type StepUpAction, useStepUp, withStepUp } from '../../auth/
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { RadioCards } from '../../components/ui/controls'
-import { ConfirmDialog, Dialog } from '../../components/ui/dialog'
+import { ConfirmDialog, Dialog, FieldSkeleton, useExit } from '../../components/ui/dialog'
 import { SegmentedControl } from '../../components/ui/segmented-control'
 import { Skeleton } from '../../components/ui/skeleton'
 import { TextField } from '../../components/ui/text-field'
@@ -87,7 +87,8 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
       })
   }, [account.data, form])
 
-  const close = () => void navigate({ to: '/staff', search })
+  // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
+  const { open, close } = useExit(() => void navigate({ to: '/staff', search }))
   const requestClose = () => (form.formState.isDirty ? setDiscard(true) : close())
 
   const changed = (values: Values, original: StaffAccount) => ({
@@ -228,8 +229,8 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
   return (
     <>
       <Dialog
-        open
-        onOpenChange={(open) => !open && requestClose()}
+        open={open}
+        onOpenChange={(next) => !next && requestClose()}
         variant="side"
         title={t(edit ? 'web.staff-new.title.edit' : 'web.staff-new.title')}
         dismissible={!pending}
@@ -267,12 +268,25 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
         {account.isError ? (
           <Banner tone="danger">{errorText(t, apiErrorOf(account.error))}</Banner>
         ) : loading ? (
-          <div className="flex flex-col gap-4 py-2">
-            <Skeleton className="h-14" />
-            <Skeleton className="h-14" />
+          // The shape of the form: name, email, language, then the four role cards.
+          <div className="flex flex-col gap-5 py-2" aria-hidden="true">
+            <FieldSkeleton />
+            <FieldSkeleton />
+            <FieldSkeleton />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-16" />
+              {[0, 1, 2, 3].map((card) => (
+                <Skeleton key={card} className="h-[72px] rounded-control" />
+              ))}
+            </div>
           </div>
         ) : (
-          <form id="staff-form" onSubmit={submit} className="flex flex-col gap-5 py-2" noValidate>
+          <form
+            id="staff-form"
+            onSubmit={submit}
+            className="motion-fade flex flex-col gap-5 py-2"
+            noValidate
+          >
             {banner && <Banner tone="danger">{banner}</Banner>}
             <TextField
               label={t('web.staff-new.field.name.label')}
@@ -355,7 +369,10 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
         onOpenChange={setDiscard}
         title={t('web.staff-new.dialog.discard.title')}
         confirmLabel={t('web.staff-new.dialog.discard.confirm')}
-        onConfirm={close}
+        onConfirm={() => {
+          setDiscard(false)
+          close()
+        }}
       />
       <ConfirmDialog
         open={disabling}

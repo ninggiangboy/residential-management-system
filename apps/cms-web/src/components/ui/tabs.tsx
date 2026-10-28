@@ -1,5 +1,5 @@
 import { Tabs as RadixTabs } from 'radix-ui'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
 export function TabList({
@@ -28,4 +28,7 @@ export function TabList({
 }
 
 export const Tabs = RadixTabs.Root
-export const TabPanel = RadixTabs.Content
+/** A tab's content fades in when it is chosen, rather than replacing the previous one in a cut. */
+export function TabPanel({ className, ...props }: ComponentProps<typeof RadixTabs.Content>) {
+  return <RadixTabs.Content className={cn('motion-fade', className)} {...props} />
+}

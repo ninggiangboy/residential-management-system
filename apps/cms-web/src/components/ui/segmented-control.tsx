@@ -4,6 +4,8 @@ import { cn } from '../../lib/utils'
 export interface SegmentOption<V extends string> {
   value: V
   label: ReactNode
+  /** The accessible name when `label` is an icon: an icon loads lazily, so it cannot be the name. */
+  ariaLabel?: string
   disabled?: boolean
 }
 
@@ -57,6 +59,8 @@ export function SegmentedControl<V extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-label={option.ariaLabel}
+            title={option.ariaLabel}
             tabIndex={selected ? 0 : -1}
             disabled={disabled || option.disabled}
             onClick={() => onValueChange(option.value)}

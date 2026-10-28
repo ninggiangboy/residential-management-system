@@ -8,13 +8,13 @@ import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { Icon } from '../../components/ui/icon'
 import { PageHeader } from '../../components/ui/page'
 import { SelectField } from '../../components/ui/select-field'
-import { Skeleton } from '../../components/ui/skeleton'
-import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
+import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
+import { useIdentityKey } from '../../lib/use-identity-key'
 import { type UnitFilters, unitsQuery } from './hooks'
 import { UnitAddDialog } from './unit-add-dialog'
 
@@ -56,6 +56,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
   }, [effectiveQ, navigate, search])
 
   const data = query.data
+  const rowsKey = useIdentityKey(query.data)
   const floors = useMemo(() => {
     const seen = new Set<number>()
     for (const item of data?.items ?? []) if (item.floor !== null) seen.add(item.floor)
@@ -67,6 +68,22 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
     visited.current = []
     void navigate({ to: '/units', search: { ...search, ...patch, cursor: undefined } })
   }
+  const head = (
+    <THead>
+      <Tr>
+        <Th className="w-[120px]">{t('web.units.col.code')}</Th>
+        <Th className="w-20">{t('web.units.col.floor')}</Th>
+        <Th className="w-24">{t('web.units.col.type')}</Th>
+        <Th className="w-28">{t('web.units.col.area')}</Th>
+        <Th className="w-36">{t('web.units.col.status')}</Th>
+        <Th>{t('web.units.col.owner')}</Th>
+        <Th className="w-28">{t('web.units.col.members')}</Th>
+        <Th className="w-10">
+          <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
+        </Th>
+      </Tr>
+    </THead>
+  )
   const filtered =
     search.q !== undefined ||
     search.occupancy !== undefined ||
@@ -77,6 +94,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
     <>
       <PageHeader
         title={t('web.units.title')}
+        subtitleLoading={!data}
         subtitle={
           data
             ? t('web.units.subtitle', {
@@ -151,17 +169,9 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
           onRetry={() => void query.refetch()}
         />
       ) : !data ? (
-        <DataTable label={t('web.units.title')} minWidth="min-w-[960px]">
-          <TBody>
-            {Array.from({ length: 8 }, (_, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
-              <Tr key={index}>
-                <Td colSpan={7}>
-                  <Skeleton className="h-8" />
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
+        <DataTable label={t('web.units.title')} minWidth="min-w-[960px]" busy>
+          {head}
+          <SkeletonRows columns={8} rowClassName="h-[69px]" />
         </DataTable>
       ) : data.items.length === 0 ? (
         filtered ? (
@@ -208,6 +218,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
         <DataTable
           label={t('web.units.title')}
           minWidth="min-w-[960px]"
+          busy={query.isPlaceholderData}
           footer={
             search.q === undefined ? (
               <>
@@ -243,21 +254,9 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
             ) : undefined
           }
         >
-          <THead>
-            <Tr>
-              <Th>{t('web.units.col.code')}</Th>
-              <Th>{t('web.units.col.floor')}</Th>
-              <Th>{t('web.units.col.type')}</Th>
-              <Th>{t('web.units.col.area')}</Th>
-              <Th>{t('web.units.col.status')}</Th>
-              <Th>{t('web.units.col.owner')}</Th>
-              <Th>{t('web.units.col.members')}</Th>
-              <Th className="w-10">
-                <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
-              </Th>
-            </Tr>
-          </THead>
-          <TBody>
+          {head}
+          {/* Keyed by the answer: new rows (a filter, a page) fade in where the dimmed ones were (DR-306). */}
+          <TBody key={rowsKey} className="motion-fade">
             {data.items.map((unit) => (
               <Tr
                 key={unit.unitId}

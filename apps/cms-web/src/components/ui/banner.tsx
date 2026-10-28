@@ -28,14 +28,18 @@ export function Banner({
   return (
     <div
       role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
-      className={cn('flex items-start gap-3 rounded-card p-4 text-secondary', style.box, className)}
+      className={cn('flex items-start gap-3 rounded-card px-4 py-3 text-secondary', style.box, className)}
     >
-      <Icon name={style.icon} weight="fill" className="mt-0.5" />
+      {/* The icon sits in a box as tall as the first line, so it stays on that line's centre whether the text runs to one
+          line or several, with or without a title. */}
+      <span className={cn('flex shrink-0 items-center', title ? 'h-6' : 'h-5')}>
+        <Icon name={style.icon} size="sm" weight="fill" />
+      </span>
       <div className="min-w-0 flex-1">
         {title && <p className="text-body-strong">{title}</p>}
-        {children && <div>{children}</div>}
+        {children && <div className={cn(title && 'mt-0.5')}>{children}</div>}
       </div>
-      {actions}
+      {actions && <div className="flex shrink-0 items-center gap-2 self-center">{actions}</div>}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { pick, publicConfigQuery } from '../../api/hooks/public-config'
 import { useI18n } from '../../lib/i18n'
 import { Skeleton } from '../ui/skeleton'
 import { LanguageSwitch } from './language-switch'
+import { ThemeSwitch } from './theme-switch'
 
 /** The building name from E-03; a failure leaves it empty and the page keeps working (UIWO-09). */
 export function useBrand() {
@@ -32,11 +33,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           )}
           <p className="text-secondary text-ink-muted">{t('web.shell.brand.subtitle')}</p>
         </div>
-        <LanguageSwitch />
+        <div className="flex items-center gap-3">
+          <ThemeSwitch />
+          <LanguageSwitch />
+        </div>
       </header>
       <main
         id="main"
-        className="mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center px-4 pb-16"
+        className="motion-fade mx-auto flex w-full max-w-[520px] flex-1 flex-col justify-center px-4 pb-16"
       >
         {children}
       </main>

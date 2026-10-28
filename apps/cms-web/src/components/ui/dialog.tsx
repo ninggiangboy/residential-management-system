@@ -1,10 +1,60 @@
 import { AlertDialog, Dialog as RadixDialog } from 'radix-ui'
-import type { ReactNode } from 'react'
+import { type ReactNode, useCallback, useRef, useState } from 'react'
 import { useT } from '../../lib/i18n'
 import { cn } from '../../lib/utils'
 import { Button, IconButton } from './button'
+import { Skeleton } from './skeleton'
 
-const OVERLAY = 'fixed inset-0 z-40 bg-scrim'
+const OVERLAY = 'motion-overlay fixed inset-0 z-40 bg-scrim'
+
+/** The longest exit motion of `styles.css` (the side panel, 200 ms); none when the user asks for reduced motion (DR-304). */
+const exitMs = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200
+
+/**
+ * The value of the last render in which `keep` was true. A closing dialog keeps showing its content while it leaves, so a
+ * caller that clears its state on close (`setConfirm(null)`) does not make the title flash empty during the exit motion.
+ */
+export function useHeld<T>(value: T, keep: boolean): T {
+  const held = useRef(value)
+  if (keep) held.current = value
+  return keep ? value : held.current
+}
+
+/** The last value that was not `undefined`: what a dialog keyed by a search param still names while it closes. */
+export function useLastDefined<T>(value: T | undefined): T | undefined {
+  const last = useRef(value)
+  if (value !== undefined) last.current = value
+  return value ?? last.current
+}
+
+/**
+ * A dialog that its parent unmounts to close (a route such as `/staff/new`, a search param): `close()` plays the exit motion
+ * first and calls `onClose` after it, so the panel slides out instead of vanishing. A second call while it leaves is ignored.
+ */
+export function useExit(onClose: () => void) {
+  const [open, setOpen] = useState(true)
+  const latest = useRef(onClose)
+  latest.current = onClose
+  const leaving = useRef(false)
+  const close = useCallback(() => {
+    if (leaving.current) return
+    leaving.current = true
+    setOpen(false)
+    window.setTimeout(() => latest.current(), exitMs())
+  }, [])
+  return { open, close }
+}
+
+/** A label and a field in the size of `TextField`: the shape a loading form shows in its place. */
+export function FieldSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex flex-col gap-1.5', className)} aria-hidden="true">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-control-lg" />
+    </div>
+  )
+}
 
 /**
  * A dialog (DOC-54 §7.2 `Dialog`): focus is trapped, Esc and a click outside close it. `side` is the right-hand panel of the
@@ -32,39 +82,44 @@ export function Dialog({
   dismissible?: boolean
 }) {
   const t = useT()
+  const shown = useHeld({ title, description, children, footer }, open)
   return (
     <RadixDialog.Root open={open} onOpenChange={(next) => (dismissible || next) && onOpenChange(next)}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={OVERLAY} />
         <RadixDialog.Content
-          aria-describedby={description ? undefined : undefined}
           onInteractOutside={(event) => !dismissible && event.preventDefault()}
           onEscapeKeyDown={(event) => !dismissible && event.preventDefault()}
           className={cn(
-            'fixed z-50 flex max-h-[90vh] flex-col bg-surface shadow-float outline-none',
+            'fixed z-50 flex flex-col bg-surface shadow-float outline-none',
+            // The side panel runs the full height of the window; the centred dialog stops at 90% of it.
             variant === 'side'
-              ? 'inset-y-0 right-0 w-full max-w-[480px] rounded-l-card'
-              : 'left-1/2 top-1/2 w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-card',
+              ? 'motion-sheet inset-y-0 right-0 w-full max-w-[480px] rounded-l-card'
+              : 'motion-dialog left-1/2 top-1/2 max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-card',
             variant === 'center' && (width ?? 'max-w-[480px]'),
           )}
         >
           <div className="flex items-start justify-between gap-4 p-6 pb-2">
             <div>
-              <RadixDialog.Title className="text-title-2 text-ink">{title}</RadixDialog.Title>
-              {description ? (
+              <RadixDialog.Title className="text-title-2 text-ink">{shown.title}</RadixDialog.Title>
+              {shown.description ? (
                 <RadixDialog.Description className="mt-1 text-secondary text-ink-muted">
-                  {description}
+                  {shown.description}
                 </RadixDialog.Description>
               ) : (
-                <RadixDialog.Description className="sr-only">{title}</RadixDialog.Description>
+                <RadixDialog.Description className="sr-only">{shown.title}</RadixDialog.Description>
               )}
             </div>
             <RadixDialog.Close asChild>
               <IconButton icon="x" label={t('common.action.close')} size="sm" disabled={!dismissible} />
             </RadixDialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2">{children}</div>
-          {footer && <div className="flex items-center justify-end gap-3 p-6 pt-4">{footer}</div>}
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2">{shown.children}</div>
+          {shown.footer && (
+            <div className="flex items-center justify-end gap-3 p-6 pt-4">
+              {shown.footer}
+            </div>
+          )}
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
@@ -99,16 +154,17 @@ export function ConfirmDialog({
   confirmDisabled?: boolean
 }) {
   const t = useT()
+  const shown = useHeld({ title, body, confirmLabel, tone, children }, open)
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => (!loading || next) && onOpenChange(next)}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={OVERLAY} />
-        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card bg-surface p-6 shadow-float outline-none">
-          <AlertDialog.Title className="text-title-2 text-ink">{title}</AlertDialog.Title>
+        <AlertDialog.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card bg-surface p-6 shadow-float outline-none">
+          <AlertDialog.Title className="text-title-2 text-ink">{shown.title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-body text-ink-muted">
-            {body}
+            {shown.body}
           </AlertDialog.Description>
-          {children && <div className="mt-4">{children}</div>}
+          {shown.children && <div className="mt-4">{shown.children}</div>}
           <div className="mt-6 flex justify-end gap-3">
             <AlertDialog.Cancel asChild>
               <Button variant="ghost" disabled={loading}>
@@ -116,7 +172,7 @@ export function ConfirmDialog({
               </Button>
             </AlertDialog.Cancel>
             <Button
-              variant={tone === 'danger' ? 'danger' : 'primary'}
+              variant={shown.tone === 'danger' ? 'danger' : 'primary'}
               loading={loading}
               disabled={confirmDisabled}
               onClick={(event) => {
@@ -125,7 +181,7 @@ export function ConfirmDialog({
                 onConfirm()
               }}
             >
-              {confirmLabel}
+              {shown.confirmLabel}
             </Button>
           </div>
         </AlertDialog.Content>

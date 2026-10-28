@@ -11,7 +11,10 @@ const SearchShape = {
 /** Admin only: a Manager opening the URL gets the Forbidden state, and the sidebar has no entry (UIWS-20). */
 export const Route = createFileRoute('/_app/building')({
   staticData: {
-    crumbs: ['web.shell.nav.group.system', 'web.shell.nav.building'],
+    crumbs: [
+      { label: 'web.shell.nav.group.system', to: '/staff' },
+      { label: 'web.shell.nav.building', to: '/building' },
+    ],
     roles: ['admin'],
   },
   validateSearch: searchParser(SearchShape, { kind: 'terms' }),

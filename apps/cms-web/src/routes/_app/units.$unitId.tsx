@@ -10,7 +10,12 @@ const SearchShape = {
 }
 
 export const Route = createFileRoute('/_app/units/$unitId')({
-  staticData: { crumbs: ['web.shell.nav.group.residents', 'web.shell.nav.units'] },
+  staticData: {
+    crumbs: [
+      { label: 'web.shell.nav.group.residents', to: '/units' },
+      { label: 'web.shell.nav.units', to: '/units' },
+    ],
+  },
   validateSearch: searchParser(SearchShape, { tab: 'members' }),
   component: Page,
 })

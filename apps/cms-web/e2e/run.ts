@@ -68,6 +68,8 @@ try {
       SMTP_PORT: process.env.RMS_MAIL_PORT ?? '1025',
       // Every spec signs in from one address: the real limit (30 per 15 minutes, DOC-26 §6) is the API's own test, not this run's.
       STAFF_LOGIN_PER_IP: '1000',
+      // The simulated latency of `.env.local` (DR-305) is for a person at the keyboard, not for this run.
+      DEV_LATENCY_MS: '0',
       SMTP_USER: 'rms',
       MAIL_FROM: 'no-reply@sunrise.example',
     },

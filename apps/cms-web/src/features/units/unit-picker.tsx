@@ -71,7 +71,7 @@ export function UnitPicker({
         onChange={(event) => setTyped(event.target.value)}
       />
       {enabled && results.data && results.data.items.length > 0 && (
-        <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface p-1 shadow-float">
+        <ul className="motion-pop absolute z-30 mt-1 origin-top max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface p-1 shadow-float">
           {results.data.items.map((unit) => (
             <li key={unit.unitId}>
               <button

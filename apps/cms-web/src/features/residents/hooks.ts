@@ -1,5 +1,11 @@
 import { staffKey } from '@rms/client-core'
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { api } from '../../api/client'
 import { ifMatch, unwrap } from '../../api/errors'
 import { digitsOf, nationalDigits } from '../../lib/phone'
@@ -32,6 +38,8 @@ export const residentsQuery = (filters: ResidentFilters) =>
   queryOptions({
     queryKey: staffKey('residents', filters),
     queryFn: async () => unwrap(await api.staff.residents.get({ query: toQuery(filters) })),
+    // A new filter or page keeps the rows on screen until its answer arrives (`DataTable busy`).
+    placeholderData: keepPreviousData,
   })
 
 export type ResidentListItem = NonNullable<

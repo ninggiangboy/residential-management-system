@@ -7,6 +7,7 @@ import { pick } from '../api/hooks/public-config'
 import { ensureSession, signInWithPassword } from '../auth/session'
 import { LanguageSwitch } from '../components/layout/language-switch'
 import { useBrand } from '../components/layout/public-layout'
+import { ThemeSwitch } from '../components/layout/theme-switch'
 import { Banner } from '../components/ui/banner'
 import { Button } from '../components/ui/button'
 import { Icon } from '../components/ui/icon'
@@ -129,9 +130,14 @@ function LoginPage(): ReactElement {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="hidden flex-col justify-between bg-gradient-to-br from-hero-from to-hero-to p-12 text-on-hero lg:flex">
-        <div>
+        {/* As tall as the name and the hotline line while E-03 loads, so the text below does not move when they arrive
+            (DR-306); `#boot` of `index.html` draws the same two bars before the scripts run. */}
+        <div className="min-h-[60px]">
           {brand.loading ? (
-            <Skeleton className="h-8 w-64 bg-on-hero/20" />
+            <>
+              <Skeleton immediate className="h-8 w-64 bg-on-hero/20" />
+              <Skeleton immediate className="mt-2 h-5 w-80 bg-on-hero/20" />
+            </>
           ) : (
             <p className="text-title-1">{brand.name}</p>
           )}
@@ -144,7 +150,7 @@ function LoginPage(): ReactElement {
             </p>
           )}
         </div>
-        <div className="max-w-md">
+        <div className="motion-fade max-w-md">
           <h2 className="text-display">{t('web.login.hero.subtitle')}</h2>
           <ul className="mt-8 flex flex-col gap-4">
             {(['point1', 'point2', 'point3'] as const).map((point, index) => (
@@ -159,8 +165,10 @@ function LoginPage(): ReactElement {
         </div>
         <span />
       </aside>
-      <main id="main" className="flex flex-col px-6 py-6 sm:px-12">
-        <div className="flex justify-end">
+      {/* The text fades in over the frame `#boot` drew (the panel itself stays still, DR-306). */}
+      <main id="main" className="motion-fade flex flex-col px-6 py-6 sm:px-12">
+        <div className="flex justify-end gap-3">
+          <ThemeSwitch />
           <LanguageSwitch />
         </div>
         <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center gap-6">

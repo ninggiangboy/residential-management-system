@@ -263,6 +263,7 @@ export const webVi: Record<keyof typeof webEn, string> = {
   'web.residents.dialog.profile.field.name.label': 'Họ tên',
   'web.residents.dialog.profile.field.note.label': 'Ghi chú',
   'web.residents.dialog.profile.title': 'Hồ sơ cư dân · {name}',
+  'web.residents.dialog.profile.title.loading': 'Hồ sơ cư dân',
   'web.residents.dialog.profile.units': 'Các căn',
   'web.residents.empty-filter.title': 'Không có cư dân nào khớp',
   'web.residents.empty.body': 'Nhập từ file Excel hoặc tạo chủ hộ cho một căn.',
@@ -300,6 +301,10 @@ export const webVi: Record<keyof typeof webEn, string> = {
   'web.shell.not-found.cta': 'Về trang chính',
   'web.shell.offline': 'Mất kết nối mạng. Các thao tác ghi tạm thời bị tắt.',
   'web.shell.skip': 'Bỏ qua điều hướng',
+  'web.shell.theme.dark': 'Tối',
+  'web.shell.theme.label': 'Giao diện',
+  'web.shell.theme.light': 'Sáng',
+  'web.shell.theme.system': 'Theo hệ thống',
   'web.shell.unsupported':
     'Web quản lý dành cho máy tính hoặc máy tính bảng. Trên điện thoại, dùng App quản lý.',
   'web.shell.user.open-profile': 'Mở hồ sơ cá nhân',

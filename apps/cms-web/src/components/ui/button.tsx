@@ -1,6 +1,7 @@
 import type { IconName } from '@rms/design-tokens'
 import { cva, type VariantProps } from 'class-variance-authority'
 import type { ButtonHTMLAttributes, Ref } from 'react'
+import { useDelayedFlag } from '../../lib/use-delayed-flag'
 import { cn } from '../../lib/utils'
 import { Icon } from './icon'
 
@@ -49,6 +50,9 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
+  // The button is disabled at once; the spinner shows only for a call that lasts over 150 ms, then for at least 400 ms, so a
+  // fast answer does not flash it (DR-306).
+  const spinning = useDelayedFlag(Boolean(loading))
   return (
     <button
       ref={ref}
@@ -58,7 +62,7 @@ export function Button({
       aria-busy={loading || undefined}
       {...props}
     >
-      {loading ? <Spinner /> : icon ? <Icon name={icon} size={size === 'lg' ? 'md' : 'sm'} /> : null}
+      {spinning ? <Spinner /> : icon ? <Icon name={icon} size={size === 'lg' ? 'md' : 'sm'} /> : null}
       {children}
     </button>
   )

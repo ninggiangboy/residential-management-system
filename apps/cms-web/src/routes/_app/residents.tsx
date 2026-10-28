@@ -19,7 +19,12 @@ const SearchShape = {
 
 /** `/residents` and, over it, the add panel `/residents/new` (DOC-65): the list stays rendered behind the panel. */
 export const Route = createFileRoute('/_app/residents')({
-  staticData: { crumbs: ['web.shell.nav.group.residents', 'web.shell.nav.residents'] },
+  staticData: {
+    crumbs: [
+      { label: 'web.shell.nav.group.residents', to: '/units' },
+      { label: 'web.shell.nav.residents', to: '/residents' },
+    ],
+  },
   validateSearch: searchParser(SearchShape, { limit: 50 }),
   component: Layout,
 })

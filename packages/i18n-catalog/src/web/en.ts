@@ -266,6 +266,7 @@ export const webEn = {
   'web.residents.dialog.profile.field.name.label': 'Full name',
   'web.residents.dialog.profile.field.note.label': 'Note',
   'web.residents.dialog.profile.title': 'Resident profile · {name}',
+  'web.residents.dialog.profile.title.loading': 'Resident profile',
   'web.residents.dialog.profile.units': 'Units',
   'web.residents.empty-filter.title': 'No resident matches',
   'web.residents.empty.body': 'Import from Excel or add an owner to a unit.',
@@ -303,6 +304,10 @@ export const webEn = {
   'web.shell.not-found.cta': 'Back to the main page',
   'web.shell.offline': 'You are offline. Actions that save are turned off for now.',
   'web.shell.skip': 'Skip navigation',
+  'web.shell.theme.dark': 'Dark',
+  'web.shell.theme.label': 'Theme',
+  'web.shell.theme.light': 'Light',
+  'web.shell.theme.system': 'Follow the system',
   'web.shell.unsupported':
     'The management web is for computers and tablets. On a phone, use the staff app.',
   'web.shell.user.open-profile': 'Open my profile',
