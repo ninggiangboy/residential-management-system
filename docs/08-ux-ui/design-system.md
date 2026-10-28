@@ -1,6 +1,6 @@
 # Design system
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-304: the web theme switch, §11, §7.3; overlay motion, §12 A6) · 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
 > Depends on: original SDD §18.2, [DR](../00-decision-register.md) (DR-10, 17, 20, 44, 45, 47, 49, 56, 70, 71, 72, 82, 84), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-03](../01-product/requirements.md) (NFR-13), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §4–6, [DOC-12](../03-architecture/code-architecture.md) §2, [design screens catalog](../references/design-screens.md), the design canvas (design system `Hien`)
 > Main readers: P1-09 (design tokens), P1-16 (web CMS shell), P1-17 (mobile shells), DOC-53, DOC-55, DOC-56…68 (screen specifications), DOC-34 (PDF look)
 
@@ -425,7 +425,7 @@ The canvas draws every icon from **Phosphor** (regular and `fill` weights, `chec
 | Native | `phosphor-react-native` | 3.0.6 | MIT | 2026-04-23 | Pure JavaScript over `react-native-svg` 15.16.0 (the version bundled by Expo SDK 58, no native module of its own); react-native-svg supports Fabric since 13.0.0, so the New Architecture requirement holds (sources: npm registry, Expo `bundledNativeModules.json` for SDK 58, react-native-svg README; 2026-10-20) |
 | shadcn | `components.json` → `"iconLibrary": "phosphor"` | CLI 4.22.1 | | | Generated components import Phosphor names |
 
-Both packages expose an `Icon` component fed by a **registry**: `ICON_NAMES` of `@rms/design-tokens` (`src/icons.ts`, P1-09) is the typed list of the Phosphor names in use (the 50 of the canvas bundle without the three amenity icons of §7.4), and each platform maps exactly those names (the canvas names: `house`, `receipt`, `bell`, `qr-code`, `chat-circle-dots`, `buildings`, `car`, `motorcycle`, `wallet`, `megaphone`, `warning`, `check-circle`, `x-circle`, `info`, `clock`, `wrench`, `sign-out`, …). A name outside the registry does not compile; a screen that needs a new icon adds it to the registry in both packages (test DS-06). Icons are 20 (`icon-sm`), 24 (`icon-md`) or 32 px (`icon-lg`). An icon that conveys meaning has an accessible name; a decorative one is hidden from assistive technology.
+Both packages expose an `Icon` component fed by a **registry**: `ICON_NAMES` of `@rms/design-tokens` (`src/icons.ts`, P1-09) is the typed list of the Phosphor names in use (the 50 of the canvas bundle without the three amenity icons of §7.4, plus `desktop`, `sun` and `moon` for the web theme switch, DR-304), and each platform maps exactly those names (the canvas names: `house`, `receipt`, `bell`, `qr-code`, `chat-circle-dots`, `buildings`, `car`, `motorcycle`, `wallet`, `megaphone`, `warning`, `check-circle`, `x-circle`, `info`, `clock`, `wrench`, `sign-out`, …). A name outside the registry does not compile; a screen that needs a new icon adds it to the registry in both packages (test DS-06). Icons are 20 (`icon-sm`), 24 (`icon-md`) or 32 px (`icon-lg`). An icon that conveys meaning has an accessible name; a decorative one is hidden from assistive technology.
 
 ### 7.4 Components not needed in the first release
 
@@ -500,11 +500,12 @@ Breakpoints (DR-186). The CMS is designed at 1440 px and works from 1024 px: Tai
 
 **Maps.** The product has no maps (no geolocation, no map view in the 115 artboards or in the SDD scope); no map library is pinned. Location in a ticket is free text and a unit code. If the building floor/unit picture is wanted later (a floor grid of the 240 units), it is a grid of `Plate`s colored by the status tones of §6, not a map, and needs a new DR.
 
-## 11. Themes (DR-182)
+## 11. Themes (DR-182, DR-304)
 
 Both themes ship: `light` and `dark` are in `tokens.json` and the canvas offers both for every artboard (`data-theme`). Decision for phase 1:
 
-- Each client **follows the operating system** (`prefers-color-scheme` on the web, `useColorScheme()` on native). There is **no manual toggle** in phase 1 and no stored preference; this keeps the account settings of DOC-26 unchanged and ADR-0019 untouched. A toggle is a later change to `PATCH /me` and `PATCH /staff/me`.
+- Each client **follows the operating system** by default (`prefers-color-scheme` on the web, `useColorScheme()` on native). The mobile apps have no manual toggle in phase 1.
+- The web CMS has a three-way switch, "Theo hệ thống" / "Sáng" / "Tối" (icons `desktop`, `sun`, `moon`), in the top bar and on the public pages beside the language switch (DR-304). The choice lives in this browser only (`localStorage` `rms.theme`; following the system removes the key), so the account settings of DOC-26 do not change; `public/boot.js` sets `data-theme` before the first paint and `color-scheme` follows it. A theme stored per account is a later change to `PATCH /staff/me`.
 - Surfaces that must stay light in both themes use fixed tokens added next to the Hiên ones in `design-tokens`: `paper` `#FFFFFF` and `paper-ink` `#000000` for the resident QR and the VietQR image (a scanner reads dark modules on a light field with a 4-module quiet zone; the black-on-white ratio is 21:1) and for any receipt or PDF preview. The PDFs themselves are always light (DR-56).
 - Dark contrast was computed in §3.2: every text pair is at least 4.63:1 (`on-hero-muted` on `hero-from`), and `lamp`, which fails 3:1 on light surfaces, passes on dark ones (10.47:1 on `surface`).
 - Images and photos are not inverted. The status bar style follows the theme.
@@ -521,7 +522,7 @@ The floor, in the order a reviewer checks it (DR-184):
 | A3 | Color is never the only carrier of meaning | Tags carry text; counts carry numbers; `lamp` marks follow §3.3; charts follow §10 | DS-04, review |
 | A4 | Keyboard focus is visible | 2 px `focus` ring, 2 px offset (`:focus-visible`), inset for list rows; text fields show a 2 px `teal` inner ring | DS-08 |
 | A5 | Every icon-only button has an accessible name | `IconButton` requires a `label` prop (type error without it), used as `aria-label` / `accessibilityLabel`, e.g. "Thông báo, 4 mục chưa đọc", "Đăng xuất", "Trang trước" | type check |
-| A6 | Reduced motion | `prefers-reduced-motion: reduce` stops skeleton and sheet animation and transitions (as in the canvas CSS); on native `useReducedMotion()` from Reanimated and `AccessibilityInfo`. No information moves in only | DS-08 |
+| A6 | Reduced motion | `prefers-reduced-motion: reduce` stops skeleton and sheet animation, the overlay enter and exit motion of DR-304, the page fade and the table loading bar of DR-306 and transitions (as in the canvas CSS); on native `useReducedMotion()` from Reanimated and `AccessibilityInfo`. No information moves in only | DS-08 |
 | A7 | One-time code input | Six cells over one real input: `autocomplete="one-time-code"` (web), `textContentType="oneTimeCode"` and `autoComplete="sms-otp"` (native), numeric keyboard; the group is announced once ("Mã xác thực, 6 chữ số") and a wrong code is announced as an alert | Maestro, DS-08 |
 | A8 | Forms | Every field has a visible label (13 px caption) and help/error text tied by `aria-describedby`; an error is text plus the `danger` ring, never the ring alone; the first invalid field takes focus on submit | DS-08 |
 | A9 | Dialogs and sheets | `role="dialog"` / `alertdialog`, `aria-modal`, a name, focus trapped and returned, Escape closes (web), the hardware back button closes (Android) | DS-08 |
