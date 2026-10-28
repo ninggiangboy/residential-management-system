@@ -1,6 +1,6 @@
 # Flows index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-25: DOC-44 written, its `FF-` blocks) · 2026-10-26 (DR-268: the object store is `s3`, not `r2`) · 2026-10-20 · DOC-43
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: FL-02 previews with E-176, DR-293) · 2026-10-28 (P1-25: DOC-44 written, its `FF-` blocks) · 2026-10-26 (DR-268: the object store is `s3`, not `r2`) · 2026-10-20 · DOC-43
 > Depends on: [DOC-04](../../01-product/use-cases.md), [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-50](../../07-api/api-guidelines.md), [DOC-12](../../03-architecture/code-architecture.md) §4, §5, §8, [DOC-09](../../03-architecture/messaging-contracts.md), [DR](../../00-decision-register.md) (DR-142…), master plan §3.2 (flows), Appendix A.8, [DOC-06](../../02-glossary.md)
 > Main readers: the authors of DOC-44…49, P1-25, every task that implements a flow, DOC-56…67 (screens name the `FL-xx` they start), DOC-88
 
@@ -60,7 +60,7 @@ Endpoints are the `E-xx` of DOC-51 §2 (the method and path are there). Screens 
 | FL | Flow | UC | Screens | Endpoints |
 | --- | --- | --- | --- | --- |
 | FL-01 | Import a fee file and save a draft | UC-01 | `W-Fees`, `W-Fee-Import`, `W-Fee-Batch` | E-36, E-37, E-71, E-72, E-73, E-74, E-93, E-94 |
-| FL-02 | Publish a batch | UC-01 | `W-Fee-Batch`, `W-Fee-Notice` | E-95, E-99 |
+| FL-02 | Publish a batch | UC-01 | `W-Fee-Batch`, `W-Fee-Notice` | E-95, E-176 (preview), E-99 (bulk set, after publish; DR-293) |
 | FL-03 | Recall a batch, with the race | UC-04 | `W-Fee-Recall` | E-96 |
 | FL-04 | Re-issue a batch | UC-04 | `W-Fee-Reissue` | E-92, E-98, E-97 |
 | FL-05 | Record a manual payment | UC-02 | `W-Fee-Record` | E-102, E-104, E-106 |

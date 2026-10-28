@@ -1,6 +1,6 @@
 # Building configuration and demo
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (P1-21: the demo seed, the reset, E-56, the nightly job, the mail skip and boot guard checks 2, 3, 5 and 6 as built, §13 run for the P1 modules, DR-270); earlier 2026-10-22 (P1-07: the module as built, §13 run, VietQR fields provisional, DR-252; DR-243: the `rms.demo_reset` setting holds the demo building's id; earlier DR-203: note on the resident contact block; earlier DR-140: boot guard check 1 uses `buildingIdsOfAccounts`) · DOC-36
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: a replaced logo is kept, DR-296, §4 and BD-10) · 2026-10-27 (P1-21: the demo seed, the reset, E-56, the nightly job, the mail skip and boot guard checks 2, 3, 5 and 6 as built, §13 run for the P1 modules, DR-270); earlier 2026-10-22 (P1-07: the module as built, §13 run, VietQR fields provisional, DR-252; DR-243: the `rms.demo_reset` setting holds the demo building's id; earlier DR-203: note on the resident contact block; earlier DR-140: boot guard check 1 uses `buildingIdsOfAccounts`) · DOC-36
 > Depends on: original SDD §15, §21, [DR](../00-decision-register.md) (DR-26, 33, 36, 37, 39, 59, 60, 65, 74, 87, 98, 111, 112, 115, 126, 238), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0026](../04-adr/0026-demo-building-and-fake-payment-driver.md), [DOC-03](../01-product/requirements.md) (FR-14, FR-15.6, FR-38, FR-41, FR-50), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §4.4, §8, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §4.4, [DOC-17](../05-data/operations-model.md) §1, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-07 (`building` module), P1-11, P1-12, P1-16 (settings screens), P1-21 (demo seed and reset guard), P3-xx (gateway screen), DOC-24, DOC-26, DOC-41, DOC-51, DOC-67, DOC-70, DOC-102, RB-12
 
@@ -134,7 +134,7 @@ An unknown `FEATURE_*` variable stops the boot (a typo must not leave a feature 
 | `company.email`, `email` | A valid address, ≤ 254 |
 | `company.representative` | ≤ 120 |
 | `workingHours` | Bilingual, `vi` required when present, each ≤ 200 |
-| `logoFileId` | A `verified` file of purpose `logo` registered by the Admin; `null` removes the logo. The old logo goes through `FilesApi.remove` in the same transaction (DOC-37) |
+| `logoFileId` | A `verified` file of purpose `logo` registered by the Admin; `null` removes the logo. The old logo goes through `FilesApi.remove` in the same transaction (DOC-37). *Revised 2026-10-28 (DR-296):* the old logo is **not** removed and stays `attached`, because receipt snapshots name it by id and a later void copy must still print it (DOC-34 §8.4) |
 
 A rule breach is 400 `validation_failed` with `details: [{path, code, message}]` and nothing changes. The logo is resized to 512 px once by the worker; the PDFs use that copy (DR-56, DOC-37 §10).
 
@@ -514,7 +514,7 @@ Prefix `BD-` (building and demo; unused before this document; DOC-88 indexes it)
 | BD-07 | `PATCH` changes only `hotline` | `building.version` + 1; the settings version unchanged |
 | BD-08 | `PATCH` carries `timeZone` | 400; nothing changes |
 | BD-09 | Two Admins save the settings at the same version | One succeeds; the other 409 |
-| BD-10 | A logo is replaced | The new file is attached, the old goes through `FilesApi.remove` in the same transaction; a rollback keeps the old logo |
+| BD-10 | A logo is replaced | The new file is attached, the old goes through `FilesApi.remove` in the same transaction; a rollback keeps the old logo. *Revised 2026-10-28 (DR-296):* the old file stays `attached` (no `remove`, no delete command); a rollback keeps the old logo as the building's |
 | BD-11 | `getSettings` after a save in another process | The new value within `SETTINGS_CACHE_SECONDS`; in the saving process at once |
 | BD-12 | `storageQuotaBytes` lowered under the usage | Accepted; the next `register` is 413; the hourly job alerts |
 | BD-13 | `accountDeletionDays` changed from 30 to 7 | An account approved 8 days ago is executed by the next run (AD-45) |

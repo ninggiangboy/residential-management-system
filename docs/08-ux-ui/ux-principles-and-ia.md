@@ -1,6 +1,6 @@
 # UX principles and information architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: `importId` row of `W-Import`; earlier: DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: the `urgent` channel also carries `payment.received`, DR-303, §5.3) · 2026-10-21 (DR-226: `importId` row of `W-Import`; earlier: DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
 > Depends on: original SDD §6.1, §7.4, §18, [DR](../00-decision-register.md) (DR-39, 40, 43, 44, 48, 69, 70, 71, 72, 73, 74, 75, 84, 127), [DOC-01](../01-product/vision-and-scope.md), [DOC-02](../01-product/personas-and-journeys.md), [DOC-03](../01-product/requirements.md) (NFR-02, 03, 12, 13), [DOC-10](../03-architecture/quality-attributes.md), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-39](../06-design/security.md), [DOC-42](../06-design/error-handling.md) §9, [DOC-50](../07-api/api-guidelines.md), [DOC-51](../07-api/api-endpoints.md), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md)
 > Main readers: P1-09, P1-16, P1-17, every screen document DOC-57…67, DOC-54, DOC-55, DOC-68, the E2E tests of P1-16 and P1-17
 
@@ -297,7 +297,7 @@ Two schemes, from DR-69: `rms-resident://` and `rms-staff://`. Phase 1 has no un
 3. **Order on a tap.** (a) Not signed in: keep the link in memory, show `Login`, continue after sign-in and terms. (b) Resident app with `unitId` different from the selected unit: switch unit first (UX-06), then navigate; if the membership is no longer active, show the `Unit-Pick` reason `inactive`. (c) The capability of the target is missing (a helper tapped an old fee push): open Home. (d) Navigate once.
 4. **Cold start, background, foreground.** The root layout handles three entries: the tap that launched the app (`getLastNotificationResponse`/`useLastNotificationResponse`), a tap while the app runs (`addNotificationResponseReceivedListener`), and a link opened by the OS. After routing it calls `clearLastNotificationResponse` so a reload does not navigate again (Expo notifications documentation, verified 2026-10-20).
 5. **Foreground pushes** do not navigate; they update the bell badge and the inbox query and show a toast with the title.
-6. **Android channels** are `default` and `urgent` (the `channel` of the payload). The urgent channel is used for the notice category "Khẩn cấp" only.
+6. **Android channels** are `default` and `urgent` (the `channel` of the payload). The urgent channel is used for the notice category "Khẩn cấp" only. *Revised 2026-10-28 (DR-303):* and for `payment.received`, as DR-52 says ("urgent notices and payment received"); every other template uses `default` (DOC-31 §3.2). The routes a push may carry are the closed list of DOC-31 §6.5.
 
 ## 6. Responsive behavior
 

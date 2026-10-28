@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-28 (P1-29: DLC-16…18 re-run as `rms_app` through the job, §10.1; DR-279: `analytics` rows in §2.5, the job `usage_rollup` in §5, DLC-16…18) · 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-28 (P1-26: device tokens of a dead session, DR-300; PDF keys, DR-293, DR-295; a replaced logo kept, DR-296) · 2026-10-28 (P1-29: DLC-16…18 re-run as `rms_app` through the job, §10.1; DR-279: `analytics` rows in §2.5, the job `usage_rollup` in §5, DLC-16…18) · 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -89,7 +89,7 @@ Rules that hold everywhere:
 | `notices.*` | Notices, attachments, recipients | Never deleted | — | — | DR-50, DR-115 |
 | `notification.inbox_entry` | A resident's inbox entries | Deleted by age | 180 days after `created_at` | `inbox_purge`, weekly Sunday 04:00 | DR-53, DR-62 |
 | `notification.push_ticket` | Expo push tickets | Deleted by age | 3 days (DR-52; DOC-10's estimate uses 7, an upper bound) | `push_receipts`, every 5 minutes | DR-52 |
-| `notification.device_token` | A device's push token | Deleted at sign-out, session revocation, `DeviceNotRegistered` and account deletion | — | the sign-out and deletion paths | DR-52, DR-87 |
+| `notification.device_token` | A device's push token | Deleted at sign-out, session revocation, `DeviceNotRegistered` and account deletion. *Revised 2026-10-28 (DR-300):* also when the push sender finds its session dead (expired without an event, `IdentityApi.liveSessionIds`); one token per session | — | the sign-out and deletion paths; `notification.send_expo_push` | DR-52, DR-87, DR-300 |
 | `wiki.page_version` | The last 50 versions of a page and the published one | The 51st oldest is dropped on save | 50 versions | the save use case | DR-54 |
 | `wiki.*`, other | Folders, pages, attachments | Follows the page or folder | Kept | — | DR-54 |
 | `reporting.export_job` and the export file | The request and the file | Row and file deleted by age | 7 days after the request finished (default for the row) | `export_purge`, hourly | DR-55, DR-115 |
@@ -104,9 +104,9 @@ Keys are `{env}/{building_id}/{module}/{yyyy}/{mm}/{uuid}.{ext}` (DR-61, DR-86).
 | Bucket / prefix | Contents | Lifetime |
 | --- | --- | --- |
 | `rms-<env>-files` / `identity/` | Avatars | Until replaced or the account is cleared |
-| `building/` | Company logo | Until replaced |
+| `building/` | Company logo | Until replaced. *Revised 2026-10-28 (DR-296):* a replaced logo is kept (`attached`), because receipt snapshots name it by id |
 | `residency/` | Units-and-owners import files (CCCD numbers) | Deleted at commit; at expiry within one hour of `expires_at` (DR-22, DR-114) |
-| `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56); a bulk ZIP 7 days (DR-123) |
+| `finance/` | Fee import files; statement files; receipt PDFs; fee-notice PDFs and bulk ZIPs | Imports 30 days; statements 1 year (DR-34); PDFs cached by content hash, kept with the ledger row they document (DR-56); a bulk ZIP 7 days (DR-123). *Revised 2026-10-28 (DR-293, DR-295):* a fee-notice PDF's logical key is `batch/<b>/unit/<u>/<lang>/<hash16>.pdf` and superseded variants stay with the batch; a draft is never stored; a receipt has at most `issued.pdf` and `void.pdf`, the old one removed after the swap (DOC-34 §8) |
 | `tickets/`, `vehicles/`, `notices/`, `wiki/` | Photos, videos, papers, attachments | Follows the owner, which is never deleted (DR-115) |
 | `reporting/` | Export files | 7 days (DR-55) |
 | `rms-<env>-backup` / `pgbackrest/` | The encrypted repository | 4 full + 7 differential backups and the WAL they need (DR-66, DR-268) |
@@ -208,7 +208,7 @@ The classes are those of DR-58 and ADR-0022. This table says where each class li
 | IP address and user agent | personal | `audit_log.ip`, `user_agent`; `terms_acceptance.ip`; `otp_challenge.ip`; `refresh_family.user_agent` | Audit: with the row (5 or 2 years). Terms acceptance: nulled at account deletion. OTP and sessions: with the row (24 h and 30 days after revocation) | Logs (below) |
 | Vehicle papers and plate photos | personal | Files bucket, private prefix, signed URLs of 5 minutes (DR-61) | Never deleted (DR-115); the files stay private and are shown only by signed URL | — |
 | Ticket text and media | operational | `tickets.*`, files bucket | Never deleted (DR-115) | — |
-| Push tokens | personal | `notification.device_token` | Sign-out, session revocation, `DeviceNotRegistered`, account deletion | — |
+| Push tokens | personal | `notification.device_token` | Sign-out, session revocation, `DeviceNotRegistered`, account deletion, a dead session found at send time (DR-300) | — |
 | Logs | personal, masked | Loki, 14 days, collected by Alloy (DR-63) | 14 days | Phones are masked (`+84•••••123`); OTP, tokens, passwords, CCCD and QR tokens are never logged (DR-58) |
 
 ## 8. Account deletion execution
@@ -279,7 +279,7 @@ Tested on PostgreSQL 18.6 on 2026-10-19 on a database built from the DDL of DOC-
 | Item | Why | Done in |
 | --- | --- | --- |
 | ~~DLC-16…18 as `rms_app` (the grants of `analytics`), and the job itself~~ | Done in P1-29: UA-16…20 and UA-34 (`apps/api/tests/integration/usage-events.integration.test.ts`) run the rollup and both purges as `rms_app` on the migrated template, and the job through the runtime with its lock; GRT-98…100 | P1-29 |
-| The statements of the tables not yet written (`qr_scan`, `lookup_log`, `inbox_entry`, `push_ticket`, `export_job`, `events`, `webhook_rejection`, `debt_reminder`) | No DDL yet | When DOC-15 and DOC-17 §5, §6, §9 are written |
+| The statements of the tables not yet written (`qr_scan`, `lookup_log`, `export_job`, `webhook_rejection`, `debt_reminder`) | No DDL yet | When DOC-15 and DOC-17 §5, §9 are written. *Revised 2026-10-28 (P1-26):* the purges of `inbox_entry` and `push_ticket` ran as OPM-S24 (DOC-17 §6) and that of `realtime.events` with DOC-52 §19 (SE-21) |
 | `account_deletion` end to end (events, handlers, idempotency) | Needs the modules | P1-14 (`AD-`, `RM-` tests) |
 | The job runtime: locks, `job_run` rows, missed-run policy | Needs the worker | P1-05 (`JB-`) |
 | Batches of 1,000 on `inbox_entry` and `audit_log` | Tables are small at the design scale; confirmed with real volumes | P5 / P6 |

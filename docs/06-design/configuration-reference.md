@@ -1,6 +1,6 @@
 # Configuration reference
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (DOC-23: the minimum of `INTENT_TTL_MINUTES`; DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1)) · Updated: 2026-10-28 (P1-26: `PUSH_DRIVER`, `EXPO_PUSH_BASE_URL`, `PUSH_REQUEST_TIMEOUT_MS`, `PUSH_MAX_AGE_MINUTES`, `INBOX_RETENTION_DAYS` (DR-301), the `PUSH_*` rows move to P2 (DR-76), `PDF_INLINE_CONCURRENCY`, `PDF_RENDERER_MAX_DOCUMENTS`, `PDF_RENDERER_MAX_RSS_MB` and the meaning of `PDF_CONCURRENCY` (DR-291), streams per `api` process (DR-288); the schema gains the keys) · 2026-10-28 (DOC-23: the minimum of `INTENT_TTL_MINUTES`; DR-279: §13A, two rate-limit keys in §7) · 2026-10-26 (DR-268: the `S3_*` keys for the `vn` profile, SeaweedFS behind the files host; R2 only in `global`) · 2026-10-21 (P1-04: the schema is written, CF-01…18 run, the `_FILE` and prefix rules as built, DR-248; earlier: DR-68, DR-228: `SMS_*` names fixed at P1-22, `STORE_URL_*` placeholders; earlier: skeleton, P0-30; DR-151…156) · DOC-41
 > Depends on: original SDD §6.5, §7.3, §19.1, [DR](../00-decision-register.md) (DR-07, 37, 39, 62, 64, 65, 69, 83, 101, 113, 156, DR-68, DR-228), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §7.2, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §6.4, [DOC-12](../03-architecture/code-architecture.md) §2.3, [DOC-17](../05-data/operations-model.md) §1.2, [DOC-26](identity-and-sessions.md) §9, [DOC-27](residency-and-memberships.md) §14, [DOC-36](building-configuration-and-demo.md) §11, [DOC-37](files-and-uploads.md) §11.1, [DOC-38](jobs-and-outbox-runtime.md) §2.6, §3.6, [DOC-50](../07-api/api-guidelines.md) §16
 > Main readers: P1-03, P1-04 (the configuration slices and the boot check), P1-07, P1-10, P1-11, P1-22, P1-20 (the VPS), DOC-39, DOC-40, DOC-69, DOC-70, DOC-71, DOC-73, every task that adds a key
 
@@ -198,7 +198,7 @@ Grace defaults (DOC-38 §4.1). The hourly jobs (`storage_quota`, `orphan_uploads
 
 | Key | Type | Default | Profiles | Description (source) |
 | --- | --- | --- | --- | --- |
-| `PDF_CONCURRENCY` | int ≥ 1 | 1 | `production` 2 | PDFs rendered at once; set from EXP-08 (DOC-10 §6.2, DOC-38 §4.2) |
+| `PDF_CONCURRENCY` | int ≥ 1 | 1 | `production` 2 | Render host processes in the worker (DOC-34 §4); set from EXP-08 (DOC-10 §6.2, DOC-38 §4.2). *Revised (DR-291):* was "PDFs rendered at once" |
 | `EXPORT_CONCURRENCY` | int ≥ 1 | 2 | | Exports streamed at once (DR-64 "exports 2 concurrent", DOC-38 §4.2); DOC-33 may revise |
 
 ## 13. Observability
@@ -242,12 +242,20 @@ These rows are final names and defaults taken from the decisions; the document i
 | `QR_TTL_SECONDS` | int | 900 | P4 · DR-48, DOC-29 | Lifetime of a QR token (`exp − iat`) |
 | `NOTICE_FANOUT_BATCH` | int | 500 | P3 · DR-51, DOC-31 | Recipients per fan-out transaction |
 | `NOTICE_RECLAIM_AFTER_MINUTES` | int | 5 | P3 · DR-51, DOC-31 | Age of a `sending` heartbeat before a notice is reclaimed |
-| `PUSH_CHUNK_SIZE` | int | 100 | P3 · DR-52, DOC-31 | Messages per Expo request |
-| `PUSH_RECEIPT_DELAY_MINUTES` | int | 15 | P3 · DR-52, DOC-31 | Age of a ticket before its receipt is read |
-| `PUSH_TICKET_RETENTION_DAYS` | int | 3 | P3 · DR-52, DOC-20 | Age at which `push_receipts` deletes tickets |
-| `SSE_MAX_STREAMS_PER_ACCOUNT` | int | 3 | P1 · DR-75, DOC-52 | Concurrent `GET /staff/events` streams per account |
+| `PUSH_DRIVER` | enum `console`, `expo` | `console` | P2 · DR-301, DOC-31 §6.3 | `expo` in `staging` and `production`; from P2-12 `production` refuses `console` (§17) |
+| `EXPO_PUSH_BASE_URL` | url | `https://exp.host/--/api/v2/push` | P2 · DR-301, DOC-31 §6.3 | `/send` and `/getReceipts` are appended; tests and EXP-06 point it at a fake |
+| `PUSH_CHUNK_SIZE` | int 1…100 | 100 | P2 · DR-52, DR-76, DOC-31 | Messages per Expo request and recipients per `notification.push_requested.v1` |
+| `PUSH_REQUEST_TIMEOUT_MS` | int | 10000 | P2 · DR-301, DOC-31 §6.2 | One Expo request |
+| `PUSH_MAX_AGE_MINUTES` | int 5…1440 | 60 | P2 · DR-301, DOC-31 §6.2 | A push request older than this is skipped |
+| `PUSH_RECEIPT_DELAY_MINUTES` | int | 15 | P2 · DR-52, DR-76, DOC-31 | Age of a ticket before its receipt is read |
+| `PUSH_TICKET_RETENTION_DAYS` | int | 3 | P2 · DR-52, DR-76, DOC-20 | Age at which `push_receipts` deletes tickets |
+| `INBOX_RETENTION_DAYS` | int 30…730 | 180 | P2 · DR-53, DR-62, DOC-31 §4.5 | Age at which `inbox_purge` deletes inbox entries |
+| `SSE_MAX_STREAMS_PER_ACCOUNT` | int | 3 | P1 · DR-75, DR-288, DOC-52 §10.3 | Concurrent `GET /staff/events` streams per account, counted per `api` process |
 | `SSE_HEARTBEAT_SECONDS` | int | 25 | P1 · DR-75, DOC-52 | Must stay below 30 (Cloudflare closes a silent request after 100 s, DR-83) |
 | `STATEMENT_MAX_BYTES` | int | 5242880 | P3 · DR-34, DOC-25 | Bank statement file; confirmed with the bank sample |
+| `PDF_INLINE_CONCURRENCY` | int ≥ 1 | 1 | P2 · DR-291, DOC-34 §4 | Render hosts in each `api` process (the inline receipt and one-notice renders) |
+| `PDF_RENDERER_MAX_DOCUMENTS` | int ≥ 1 | 150 | P2 · DR-291, DOC-34 §4.1 | A render host is replaced after this many documents |
+| `PDF_RENDERER_MAX_RSS_MB` | int ≥ 64 | 400 | P2 · DR-291, DOC-34 §4.1 | A render host whose RSS after a render is above this is replaced |
 
 ## 15. Web CMS and mobile apps
 
@@ -270,6 +278,7 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | `LOG_LEVEL` | `debug` | `silent` | `info` | `info` |
 | `SMS_DRIVER` | `console` | `console` | `allowlist` | `provider` |
 | `MAIL_DRIVER` | `console` | `console` | `allowlist` | `smtp` |
+| `PUSH_DRIVER` (from P2-12) | `console` | `console` | `expo` | `expo` |
 | `OPENAPI_ENABLED` | `true` | `false` | `true` | `false` |
 | `TRUSTED_PROXY_HOPS` | 0 | 0 | 1 | 1 |
 | `DB_POOL_MAX` (`api` / `worker`) | 10 / 10 | 5 / 5 | 15 / 10 | 20 / 15 |
@@ -299,6 +308,7 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | 11 | `CORS_ORIGINS` holds no `*` and every item is an origin without a path | all |
 | 12 | `TRUSTED_PROXY_HOPS` is 0 when `TRUSTED_PROXY_CIDRS` is empty | all |
 | 13 | A key that is not in this document is refused when its name starts with a prefix this document owns (`OUTBOX_`, `JOB_`, `FILES_`, `OTP_`, …): a typo must not silently fall back to a default | all |
+| 14 | `PUSH_DRIVER` is `expo` (added by P2-12 with the sender, DR-301) | `production` |
 
 ## 18. Not configuration
 

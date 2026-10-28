@@ -1,6 +1,6 @@
 # Fees and payments flows (ledger level)
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-25: first version) · DOC-44
+> Status: **Draft** · Updated: 2026-10-28 (P1-26: the preview of FL-02 is E-176, DR-293) · 2026-10-28 (P1-25: first version) · DOC-44
 > Depends on: [DOC-43](README.md), [DOC-04](../../01-product/use-cases.md) (UC-01, UC-02, UC-04, UC-05, UC-18, UC-21), [DOC-03](../../01-product/requirements.md) (FR-01…06, FR-08, FR-09, FR-12, FR-44, FR-46, FR-47, FR-49), [DOC-21](../fee-batches-and-import.md), [DOC-22](../ledger-and-allocation.md), [DOC-23](../payment-intents-and-settlement.md), [DOC-15](../../05-data/finance-model.md), [DOC-09](../../03-architecture/messaging-contracts.md) §6, §7, [DOC-37](../files-and-uploads.md), [DOC-35](../audit-privacy-and-terms.md) §4, [DOC-42](../error-handling.md) §5, [DOC-68](../../08-ux-ui/ui-states-and-copy.md), [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-50](../../07-api/api-guidelines.md) §8, §9, [DR](../../00-decision-register.md) (DR-10, 11, 14, 16, 18, 19, 20, 21, 22, 23, 24, 29, 72, 74, 84, 96, 97, 149, 265, 267, DR-280), [DOC-06](../../02-glossary.md)
 > Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-06 (`settle()`), P2-07 (recall, single void), P2-08 (manual payment, receipts), P2-09 (void, money log), P2-10 (debt, reminders), P2-15 and P2-16 (fee screens), DOC-58, DOC-66, DOC-88, EXP-03, EXP-04
 
@@ -15,7 +15,7 @@ The document stays **Draft** while DOC-21, DOC-22 and DOC-23 are Draft. It makes
 | FL | Flow | UC | Endpoints | Sub-flows |
 | --- | --- | --- | --- | --- |
 | [FL-01](#fl-01) | Manager imports a fee file and saves a draft | UC-01 | E-71, E-90, E-36, E-37, E-72, E-73, E-74, E-93, E-94, E-170…E-172 | FL-01.1…2 |
-| [FL-02](#fl-02) | Manager publishes a batch | UC-01 | E-99, E-95, E-94 | |
+| [FL-02](#fl-02) | Manager publishes a batch | UC-01 | E-176, E-95, E-94 | |
 | [FL-03](#fl-03) | Manager recalls a batch, with the race | UC-04 | E-96 | FL-03.1…2 |
 | [FL-04](#fl-04) | Manager re-issues, extends or closes a batch | UC-04 | E-98, E-92, E-97 | FL-04.1…3 |
 | [FL-05](#fl-05) | Manager records a manual payment | UC-02 | E-102, E-104, E-106 | |
@@ -245,7 +245,7 @@ The lower layer is `IM-50…77` (import) and `LG-63`, `LG-68`, `LG-69` (DOC-21 �
 
 ## FL-02 · Manager publishes a batch
 
-- **UC / FR:** UC-01 (main flow 6–9, alternative flow 8a, error flows E4, E6, E7) · FR-03.1…4, FR-02.3 · **Screens:** `W-Fee-Batch`, `W-Fee-Notice` · **Endpoints:** E-99 `POST /staff/fee-batches/{id}/pdf`, E-95 `POST /staff/fee-batches/{id}/publish`, E-94 (refused after publish) · **Events:** `finance.batch_published.v1` (`unitIds` in parts of at most 500)
+- **UC / FR:** UC-01 (main flow 6–9, alternative flow 8a, error flows E4, E6, E7) · FR-03.1…4, FR-02.3 · **Screens:** `W-Fee-Batch`, `W-Fee-Notice` · **Endpoints:** E-176 `GET /staff/charges/{id}/pdf` (the preview), E-95 `POST /staff/fee-batches/{id}/publish`, E-94 (refused after publish) · **Events:** `finance.batch_published.v1` (`unitIds` in parts of at most 500)
 - **Trigger:** The Manager presses "Publish" on `W-Fee-Batch` after previewing a fee notice.
 - **Preconditions:** A draft batch with at least one charge (FL-01). The Manager's screen holds the batch `version` as `If-Match`.
 
@@ -257,8 +257,8 @@ The lower layer is `IM-50…77` (import) and `LG-63`, `LG-68`, `LG-69` (DOC-21 �
 | `W-Fee-Batch`, `W-Fee-Notice` | Screen | draft editor, fee notice preview | DOC-66 |
 | `api` | API | finance staff routes | DOC-51 |
 | `PublishFeeBatch` | Use case | `PublishFeeBatch.execute(staff, batchId, version)` | DOC-21 §3.3 |
-| `db`, `outbox` | Data store | `finance.fee_batch`, `finance.charge`, `finance.fee_notice_job`, `audit.audit_log`; `finance.outbox_messages` | DOC-15 §5, §10.2 |
-| `worker` | Worker | `notification.inbox_on_finance_batch_published`, `finance.fee_notice_run` | DOC-09 §7, DOC-34 |
+| `db`, `outbox` | Data store | `finance.fee_batch`, `finance.charge`, `audit.audit_log`; `finance.outbox_messages` | DOC-15 §5 |
+| `worker` | Worker | `notification.inbox_on_finance_batch_published` | DOC-09 §7 |
 | `ResidencyApi` | Contract | `listRecipients(unitId, 'view_fees')` | DOC-09 §7.1 |
 | `expo-push` | External | the push service | DOC-31 |
 
@@ -278,8 +278,8 @@ sequenceDiagram
   participant RA as ResidencyApi
   participant EP as expo-push
   M->>WFN: Previews the fee notice of A-1508
-  WFN->>API: POST /staff/fee-batches/{id}/pdf (E-99) unitIds A-1508
-  API-->>WFN: 202 fee_notice_job queued, the PDF follows (DOC-34)
+  WFN->>API: GET /staff/charges/{chargeId}/pdf?language=both (E-176) for A-1508
+  API-->>WFN: 200 application/pdf with the draft mark, not cached (DOC-34 §6.3)
   M->>WFB: Presses Publish
   WFB->>API: POST /staff/fee-batches/{id}/publish (E-95) If-Match 5
   API->>PFB: execute(staff, batchId, version 5)
@@ -313,7 +313,7 @@ sequenceDiagram
 
 | Step | From → To | Call | Data | Rules and checks | Error → handling |
 | --- | --- | --- | --- | --- | --- |
-| 2–3 | `W-Fee-Notice` → `api` | E-99 | `{ "unitIds": ["…0021"], "language": "vi-en" }` | A `fee_notice_job` row; the worker renders it (DOC-34). The preview never changes the batch | — |
+| 2–3 | `W-Fee-Notice` → `api` | E-176 | `GET /staff/charges/…0031/pdf?language=both` (`vi`, `en` or `both`; default the building's `feeNoticeLanguage`) | The api renders the draft charge's notice synchronously with the draft mark "BẢN NHÁP · DRAFT" and does not cache it (DR-293, DOC-34 §6.3). The preview never changes the batch. The bulk set of every unit (E-99, `{language?}`, 202 with a `fee_notice_job`) is for a published or closed batch only; on a draft it is 409 `invalid_transition` | No render host free within 10 s → 503 `service_unavailable`, `Retry-After: 5` (DOC-34 §4.2) → "The service is busy. Try again in a moment." |
 | 5 | `W-Fee-Batch` → `api` | E-95 | `If-Match: "5"` | Missing `If-Match` → 428 `precondition_required` (DOC-50 §9) | "Reload and try again." |
 | 7 | `PublishFeeBatch` → `db` | Checks, in order | draft; ≥ 1 charge; every total > 0; `due_date >= buildingToday` (2026-10-15 ≥ 2026-10-05) | The first failure answers; nothing changes (FR-03.1, DOC-21 §3.3) | — |
 | 8 | `api` → `W-Fee-Batch` | 400 | `no_charges`; `charge_total_zero` with the units; `due_date_in_past` | — | E4 → "This batch has no charges yet." / "A charge in this batch has a total of zero." / "The due date cannot be in the past." |

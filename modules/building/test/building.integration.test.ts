@@ -345,7 +345,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
   }
   const status = async (id: string) => (await h.fileRow(id))?.status
 
-  test('BD-10 a replaced logo: the new file is attached and the old one goes through remove in the same transaction', async () => {
+  test('BD-10 a replaced logo: the new file is attached and the old one stays attached (DR-296)', async () => {
     const [first, second] = [await logoFile(), await logoFile()]
     const staff = admin()
     const withFirst = await h.building.useCases.updateBuildingSettings.execute(staff, {
@@ -363,7 +363,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
       etag: await etag(),
       building: { logoFileId: second },
     })
-    expect(await status(first)).toBe('deleted')
+    expect(await status(first)).toBe('attached')
     expect(await status(second)).toBe('attached')
     expect((await buildingRow())?.logo_file).toBe(second)
   })
@@ -386,7 +386,7 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
     expect(await status(replacement)).toBe('verified')
   })
 
-  test('a file that is not a logo is refused, and null removes the logo', async () => {
+  test('a file that is not a logo is refused, and null clears the logo but keeps the file', async () => {
     const actor = h.resident()
     const ticket = await h.building.files.register(actor, {
       module: 'identity',
@@ -407,7 +407,8 @@ describe('the logo (DOC-36 §4.2, BD-10)', () => {
     })
     expect(document.building.logoFileId).toBeNull()
     expect(document.building.logoUrl).toBeNull()
-    expect(await status(logo)).toBe('deleted')
+    // The building has no logo; the file stays for the receipts that name it (DR-296).
+    expect(await status(logo)).toBe('attached')
   })
 })
 

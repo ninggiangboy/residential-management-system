@@ -1,10 +1,10 @@
 # Operations model
 
-> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-28 (P1-29: §9A built as `modules/analytics/migrations/0000_init.sql`; DR-279) · 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
-> Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
-> Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
+> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §6.1–§6.3, the notification tables, and §9.1 `realtime.events` are **Draft** for gate P2; the rest of §4–9 is owed to later phases) · Updated: 2026-10-28 (P1-26: §9.1 `realtime.events`, DR-289; §6.1–§6.3 `inbox_entry`, `device_token`, `push_ticket`, DR-299…301, DDL and `OPM-100…152`, `OPM-S13…S24` run on PostgreSQL 18.6) · 2026-10-28 (P1-29: §9A built as `modules/analytics/migrations/0000_init.sql`; DR-279) · 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
+> Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 52, 53, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113, 115, 146, 289, 299–301), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-31](../06-design/notices-and-notifications.md) (§6), [DOC-06](../02-glossary.md)
+> Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), P2-12 (notification tables), DOC-19 (grants), DOC-20 (retention), DOC-31, DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
-This document holds the tables of the schemas that run the system rather than the business: `building` (building, settings, gateway configuration, terms, files, job runs), `audit`, and the `platform` tables of the core packages. It gives the grain, keys, writers and readers of every table, runnable DDL, the reason of every index, the state machines and sample statements. **Sections 1–3 are complete; sections 4–9 (tickets, access, notices and notification, vehicles, wiki, reporting and realtime) are written when their phases start** (table in "Sections owed"), so the document stays `Draft` until then. It does not hold the rules of the flows (audit writing and the `pii.read` rules are DOC-35, building configuration and the demo reset DOC-36, uploads DOC-37, job runtime DOC-38), the grants (DOC-19), the retention periods (DOC-20) or the conventions every table follows (DOC-14).
+This document holds the tables of the schemas that run the system rather than the business: `building` (building, settings, gateway configuration, terms, files, job runs), `audit`, the `platform` tables of the core packages and, in §6, the `notification` tables. It gives the grain, keys, writers and readers of every table, runnable DDL, the reason of every index, the state machines and sample statements. **Sections 1–3 are complete; §6.1–§6.3 (the notification tables, gate P2) are written and Draft; the rest of sections 4–9 (tickets, access, the notice tables, vehicles, wiki, reporting and realtime) is written when its phase starts** (table in "Sections owed"), so the document stays `Draft` until then. It does not hold the rules of the flows (audit writing and the `pii.read` rules are DOC-35, building configuration and the demo reset DOC-36, uploads DOC-37, job runtime DOC-38), the grants (DOC-19), the retention periods (DOC-20) or the conventions every table follows (DOC-14).
 
 **DDL tested on PostgreSQL 18.6 (`postgres:18.6`, aarch64) on 2026-10-19.** The blocks of §1–§3 were applied in order with `psql -v ON_ERROR_STOP=1` on a database that already held the bootstrap step of DOC-14 §2.2 and the tables of DOC-16, as the role `rms_migrator` of DOC-19; then the 78 constraint tests and 12 statement tests of §13 were run. If a block is edited, §13 is run again.
 
@@ -19,7 +19,9 @@ This document holds the tables of the schemas that run the system rather than th
 | What does an audit row look like, and what deletes one? | §2 |
 | How is a file registered, verified and counted against the quota? | §3.1 |
 | What do the job runner, the outbox, the maintenance flag, the idempotency store and the rate buckets keep? | §3.2–§3.4 |
-| Tickets, access, notices, notification, vehicles, wiki, reporting, realtime | §4–§9 (owed) |
+| What do the inbox entries, device tokens and push tickets keep? | §6.1–§6.3 |
+| What does the replay buffer of the SSE stream keep? | §9.1 |
+| Tickets, access, notices, vehicles, wiki, reporting | §4–§9 (owed) |
 | What do the usage events and their daily rollup keep? | §9A |
 | Which index serves which query | §10 |
 | Retention and purge | §11 (the periods are DOC-20's) |
@@ -33,11 +35,13 @@ This document holds the tables of the schemas that run the system rather than th
 | 3 | `building`, `platform`, each module schema | `file_object`, `job_run`, `outbox_messages`, `inbox`, `maintenance`, `idempotency_key`, `rate_bucket` | P0-25 | Written |
 | 4 | `tickets` | `ticket`, `ticket_event`, `ticket_message`, `ticket_attachment`, `ticket_type`, `ticket_rating`, `document_counter` (DR-43) | P3-11 | Not written |
 | 5 | `access` | `qr_credential`, `qr_scan`, `lookup_log` (DR-48) | P4-11 | Not written |
-| 6 | `notices`, `notification` | `notice`, `notice_attachment`, `notice_recipient`, `inbox_entry`, `device_token`, `push_ticket` (DR-50…53). The notification tables are needed in P2 and are written in P1-26 | P1-26, P3-12 | Not written |
+| 6 | `notification` | `inbox_entry`, `device_token`, `push_ticket` (DR-52, DR-53) | P1-26 (2026-10-28) | Written (§6.1–§6.3), DDL run on PostgreSQL 18.6; Draft for gate P2 |
+| 6 | `notices` | `notice`, `notice_attachment`, `notice_recipient` (DR-50, DR-51) | P4 (DOC-31 §13) | Not written |
 | 7 | `vehicles` | `vehicle`, `vehicle_revision` (DR-49) | P4-11 | Not written |
 | 8 | `wiki` | `folder`, `page`, `page_version`, `page_attachment` (DR-54) | P4-13 | Not written |
 | 9A | `analytics` | `usage_event`, `usage_daily` (DR-279, ADR-0028) | 2026-10-28 (DOC-104) | Written, DDL run on PostgreSQL 18.6; migrated in P1-29 |
-| 9 | `reporting`, `realtime` | `export_job` (DR-55; plus the requester's role, IP, user agent and request id, which the worker needs to write the `pii.read` row of an export, DOC-35 §6, DR-124), `events` (DR-87) | P5-09 | Not written |
+| 9 | `reporting` | `export_job` (DR-55; plus the requester's role, IP, user agent and request id, which the worker needs to write the `pii.read` row of an export, DOC-35 §6, DR-124) | P5-09 | Not written |
+| 9 | `realtime` | `events` (DR-87, DR-289) | P1-26 (2026-10-28, with DOC-52) | Written (§9.1), DDL run on PostgreSQL 18.6; Draft for gate P2 (DR-287 proposed) |
 
 The rules of DOC-14 §5.3 apply to every new table: a table with no `building_id` joins the allow-list in the same change as its DDL. This document adds `building.job_run` (§3.2) to it.
 
@@ -734,7 +738,202 @@ Not written; P4-11 (DR-48, DOC-29).
 
 ## 6. Notices and notification
 
-Not written; P1-26 for the notification tables (`inbox_entry`, `device_token`, `push_ticket`, DR-52, DR-53) and P3-12 for the notice tables (DR-50, DR-51). `notification.device_token` is on the allow-list when it is defined (DOC-14 §5.3).
+The three tables of the `notification` module (DR-52, DR-53), written in P1-26 for gate P2; the behavior that writes and reads them is DOC-31. The notice tables (`notice`, `notice_attachment`, `notice_recipient`, DR-50, DR-51) are owed to P4 (DOC-31 §13). **DDL run on PostgreSQL 18.6 (`postgres:18.6`, x86_64) on 2026-10-28** in a throw-away container, with the constraint and statement tests of §13 (`OPM-100…152`, `OPM-S13…S24`). New decisions are marked `DR-299…301` (DOC-31 §16) until the register numbers them.
+
+```mermaid
+erDiagram
+  INBOX_ENTRY {
+    uuid id PK
+    uuid building_id
+    text account_kind
+    uuid account_id
+    uuid unit_id
+    text template_key
+    jsonb params
+    text source_kind
+    uuid source_id
+    uuid dedupe_id
+    timestamptz read_at
+  }
+  DEVICE_TOKEN {
+    uuid id PK
+    text account_kind
+    uuid account_id
+    uuid session_id UK
+    text expo_push_token UK
+  }
+  PUSH_TICKET {
+    uuid id PK
+    uuid message_id
+    uuid device_token_id
+    text receipt_id
+    text status
+  }
+  DEVICE_TOKEN ||..o{ PUSH_TICKET : "sent to (uuid, no FK)"
+```
+
+`inbox_entry` carries `building_id` and is scoped. `device_token` and `push_ticket` belong to a device of an account that may span buildings and have no `building_id`: they join the allow-list of DOC-14 §5.3, as DOC-14 already says (owed to DOC-14 in the same change, DOC-31 §19); their repositories narrow by account, session or id. No foreign key: `push_ticket.device_token_id` would block the delete of a token whose tickets wait for a receipt, and DOC-14 §12 allows only `NO ACTION` outside drafts.
+
+### 6.1 `inbox_entry`
+
+- **Grain:** one thing one account was told about, for one unit or for none. **Business key:** `uq_inbox_entry_dedupe` (DR-299). **Written by:** `notification` (`CreateInboxEntries`, the handlers of DOC-09 §5.2; `MarkInboxEntryRead`, `ReadAllInbox`; `mark_read_on_notices_notice_read`; `inbox_purge`; the demo reset). **Read by:** `notification` (E-76, E-78); an operator with `rms_readonly`.
+- **No text** (DR-53, DOC-14 §8): `template_key` and `params` are rendered per reader (DOC-31 §3). `params` holds no amount, phone, resident name or text a resident wrote (DOC-09 §3.4).
+- **`dedupe_id`** is the `source_id` for a template that happens once per object (a batch published, a payment received, a notice) and the event id for one that can repeat on an object (a due-date extension, a ticket status change); the catalog says which (DOC-31 §3.2). `unit_id` is part of the key with `NULLS NOT DISTINCT`, so a member of two charged units gets one row per unit and a building-wide row cannot be inserted twice. *Revised (DR-299):* DR-53's key `(account_kind, account_id, source_kind, source_id, template_key)` had neither.
+
+```sql
+CREATE SCHEMA notification;   -- created by the bootstrap step of DOC-14 §2.2; shown for the test run
+
+CREATE TABLE notification.inbox_entry (
+  id           uuid        NOT NULL,
+  building_id  uuid        NOT NULL,
+  account_kind text        NOT NULL,
+  account_id   uuid        NOT NULL,
+  unit_id      uuid,                                       -- the unit the entry is about; null for a building-wide or staff entry
+  template_key text        NOT NULL,
+  params       jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  source_kind  text        NOT NULL,
+  source_id    uuid        NOT NULL,                       -- the object the entry is about (the tap target)
+  dedupe_id    uuid        NOT NULL,                       -- source_id, or the event id for a template that repeats on one object
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  read_at      timestamptz,
+  CONSTRAINT pk_inbox_entry PRIMARY KEY (id),
+  CONSTRAINT uq_inbox_entry_dedupe UNIQUE NULLS NOT DISTINCT
+    (building_id, account_kind, account_id, source_kind, dedupe_id, template_key, unit_id),
+  CONSTRAINT ck_inbox_entry_account_kind CHECK (account_kind IN ('resident', 'staff')),
+  CONSTRAINT ck_inbox_entry_staff_unit   CHECK (account_kind = 'resident' OR unit_id IS NULL),
+  CONSTRAINT ck_inbox_entry_template_key CHECK (template_key ~ '^[a-z]+\.[a-z_]+$' AND char_length(template_key) <= 40),
+  CONSTRAINT ck_inbox_entry_params       CHECK (jsonb_typeof(params) = 'object' AND octet_length(params::text) <= 2048),
+  CONSTRAINT ck_inbox_entry_source_kind  CHECK (source_kind IN ('batch', 'charge', 'debt_reminder', 'payment', 'gateway_event',
+                                                                'statement_line', 'ticket', 'vehicle', 'notice', 'membership',
+                                                                'unit', 'export', 'step_up')),
+  CONSTRAINT ck_inbox_entry_read_at      CHECK (read_at IS NULL OR read_at >= created_at)
+);
+CREATE INDEX ix_inbox_entry_building_account        ON notification.inbox_entry (building_id, account_kind, account_id, id DESC);
+CREATE INDEX ix_inbox_entry_building_account_unread ON notification.inbox_entry (building_id, account_kind, account_id) WHERE read_at IS NULL;
+CREATE INDEX ix_inbox_entry_building_created        ON notification.inbox_entry (building_id, created_at);
+```
+
+- The template key's catalog (21 keys) is checked by the application against `@rms/shared-types` (DOC-31 §2.2); the `CHECK` only refuses a malformed key, so a new key needs no migration.
+- `ck_inbox_entry_read_at` refuses a read time before the creation; the read statements use the database clock (DOC-31 §4.3, found by OPM-S18).
+- No `updated_at`: the only update is `read_at`, which is its own stamp (DOC-14 §4.1 allows a document to say so).
+
+Read state (no status column; `read_at` is the state):
+
+```mermaid
+stateDiagram-v2
+  [*] --> unread: CreateInboxEntries
+  unread --> read: E-77/E-79 read-all (id ≤ upToId) · E-178/E-179 (not a notice entry) · notices.notice_read.v1 (the notice entry)
+  unread --> [*]: inbox_purge (180 days) · demo reset
+  read --> [*]: inbox_purge (180 days) · demo reset
+```
+
+| From → to | By | When |
+| --- | --- | --- |
+| unread → read | the reader (E-77, E-79, E-178, E-179) | once; `WHERE read_at IS NULL` makes a repeat change nothing |
+| unread → read | `notification.mark_read_on_notices_notice_read` | the first open of a notice (DR-51) |
+| any → deleted | `inbox_purge`; the demo reset | 180 days after `created_at` (DR-53); every demo night |
+
+**Sample insert (a handler page):**
+
+```sql
+INSERT INTO notification.inbox_entry (id, building_id, account_kind, account_id, unit_id, template_key, params, source_kind, source_id, dedupe_id)
+SELECT r.id, :buildingId, r.account_kind, r.account_id, r.unit_id, 'fee.batch_published',
+       '{"batchCode": "PH-2610-01", "feeMonth": "2026-10"}', 'batch', :batchId, :batchId
+FROM unnest(:ids::uuid[], :kinds::text[], :accounts::uuid[], :units::uuid[]) AS r(id, account_kind, account_id, unit_id)
+ON CONFLICT ON CONSTRAINT uq_inbox_entry_dedupe DO NOTHING
+RETURNING id, account_kind, account_id, unit_id;
+```
+
+### 6.2 `device_token`
+
+- **Grain:** one Expo push token of one session (`sid`). **Business keys:** `uq_device_token_token` (a token belongs to one account at a time) and `uq_device_token_session` (a session has one token). **Written by:** `notification` (`RegisterDevice` E-22/E-34, `RemoveDevice` E-23/E-35, the two token handlers, `SendExpoPush`, `push_receipts`). **Read by:** `notification` (`SendExpoPush`). **Denied** to `rms_readonly` (DOC-19 §5).
+- *Revised (DR-300):* DR-52's columns `locale` and `last_seen_at` are not built. The push language is the account's `language` read at send time; `updated_at` is set by every registration and plays the part of `last_seen_at`.
+
+```sql
+CREATE TABLE notification.device_token (
+  id              uuid        NOT NULL,
+  account_kind    text        NOT NULL,
+  account_id      uuid        NOT NULL,
+  session_id      uuid        NOT NULL,                    -- the refresh family (sid) that registered it
+  expo_push_token text        NOT NULL,
+  platform        text        NOT NULL,
+  app_version     text        NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),      -- the last registration (DR-52's last_seen_at)
+  CONSTRAINT pk_device_token PRIMARY KEY (id),
+  CONSTRAINT uq_device_token_token   UNIQUE (expo_push_token),
+  CONSTRAINT uq_device_token_session UNIQUE (session_id),
+  CONSTRAINT ck_device_token_account_kind CHECK (account_kind IN ('resident', 'staff')),
+  CONSTRAINT ck_device_token_token   CHECK (char_length(expo_push_token) <= 200
+                                            AND expo_push_token ~ '^Expo(nent)?PushToken\[[A-Za-z0-9_-]{1,180}\]$'),
+  CONSTRAINT ck_device_token_platform CHECK (platform IN ('ios', 'android')),
+  CONSTRAINT ck_device_token_version  CHECK (app_version ~ '^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$')
+);
+CREATE INDEX ix_device_token_account ON notification.device_token (account_kind, account_id);
+```
+
+- `uq_device_token_token` is the target of the registration upsert (a token registered by another account is reassigned, keeping its `id`); `uq_device_token_session` serves the delete by session and keeps one token per session.
+- No status: a token exists or not. It is deleted at sign-out, revocation, `DeviceNotRegistered`, account deletion and when the sender finds its session dead (DOC-31 §5.2); never by age (DR-115).
+
+**Sample upsert (E-22):** DOC-31 §5.1, run as OPM-S19.
+
+### 6.3 `push_ticket`
+
+- **Grain:** one message sent to one device for one push request. **Business key:** `uq_push_ticket_message_device` (a retried push request skips a device that has a ticket, DR-301). **Written by:** `notification` (`SendExpoPush`, `push_receipts`). **Read by:** `push_receipts`; the notice statistics of P4 (by `source_kind = 'notice'`); an operator.
+- `receipt_id` is Expo's ticket id, the key of the receipt request; it is null when Expo refused the message at once (a ticket error).
+
+```sql
+CREATE TABLE notification.push_ticket (
+  id              uuid        NOT NULL,
+  message_id      uuid        NOT NULL,                    -- the envelope id of notification.push_requested.v1
+  device_token_id uuid        NOT NULL,                    -- no foreign key: the token may be deleted before the receipt
+  account_kind    text        NOT NULL,
+  account_id      uuid        NOT NULL,
+  template_key    text        NOT NULL,
+  source_kind     text        NOT NULL,
+  source_id       uuid        NOT NULL,
+  receipt_id      text,                                    -- Expo's ticket id; null when the ticket itself was an error
+  status          text        NOT NULL DEFAULT 'pending',
+  error           text,                                    -- Expo's details.error, e.g. DeviceNotRegistered
+  next_check_at   timestamptz,                             -- when push_receipts may read the receipt; also its lease
+  checked_at      timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT pk_push_ticket PRIMARY KEY (id),
+  CONSTRAINT uq_push_ticket_message_device UNIQUE (message_id, device_token_id),
+  CONSTRAINT ck_push_ticket_account_kind CHECK (account_kind IN ('resident', 'staff')),
+  CONSTRAINT ck_push_ticket_status  CHECK (status IN ('pending', 'ok', 'failed', 'unknown')),
+  CONSTRAINT ck_push_ticket_receipt CHECK (receipt_id IS NULL OR char_length(receipt_id) BETWEEN 1 AND 100),
+  CONSTRAINT ck_push_ticket_shape   CHECK (
+    (status = 'pending' AND receipt_id IS NOT NULL AND next_check_at IS NOT NULL AND error IS NULL AND checked_at IS NULL) OR
+    (status = 'ok'      AND receipt_id IS NOT NULL AND error IS NULL AND checked_at IS NOT NULL) OR
+    (status = 'unknown' AND receipt_id IS NOT NULL AND error IS NULL AND checked_at IS NOT NULL) OR
+    (status = 'failed'  AND error IS NOT NULL AND (receipt_id IS NULL OR checked_at IS NOT NULL)))
+);
+CREATE INDEX ix_push_ticket_pending ON notification.push_ticket (next_check_at) WHERE status = 'pending';
+CREATE INDEX ix_push_ticket_created ON notification.push_ticket (created_at);
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending: ticket ok (SendExpoPush)
+  [*] --> failed: ticket error (SendExpoPush)
+  pending --> ok: receipt ok (push_receipts)
+  pending --> failed: receipt error (push_receipts)
+  pending --> unknown: no receipt 24 h after sending (push_receipts)
+  ok --> [*]: purged after 3 days
+  failed --> [*]: purged after 3 days
+  unknown --> [*]: purged after 3 days
+```
+
+| From → to | By | When |
+| --- | --- | --- |
+| (new) → `pending` | `SendExpoPush` | Expo answered `ok`; `next_check_at` = now + 15 min |
+| (new) → `failed` | `SendExpoPush` | Expo answered `error` (a `DeviceNotRegistered` also deletes the token) |
+| `pending` → `ok`, `failed` | `push_receipts` | the receipt says so; a conditional `UPDATE … WHERE status = 'pending'` |
+| `pending` → `unknown` | `push_receipts` | no receipt and the ticket is older than 24 h (Expo keeps receipts 24 h) |
+| any → deleted | `push_receipts` | 3 days after `created_at` (DR-52, `PUSH_TICKET_RETENTION_DAYS`) |
+
+**Sample claim (`push_receipts`):** DOC-31 §7, run as OPM-S22.
 
 ## 7. Vehicles
 
@@ -746,7 +945,38 @@ Not written; P4-13 (DR-54, DOC-32).
 
 ## 9. Reporting and realtime
 
-Not written; P5-09 (`reporting.export_job`, DR-55; `realtime.events`, DR-87, DR-75).
+`reporting.export_job` (DR-55) is not written; P5-09. `realtime.events` is written below for gate P2 (DR-289; the server side of the stream is built in P2-12 under the proposed DR-287).
+
+### 9.1 `realtime.events` (Draft, gate P2)
+
+**Grain.** One row per outbox event that the stream of the web CMS carries (DOC-52 §6): one source message gives at most one row (`uq_events_source`). **Writer:** the `realtime` handlers in the worker, in one statement that inserts the row and calls `pg_notify` (DOC-52 §9.1); a repeated message inserts nothing and notifies nothing. **Readers:** the replay of E-75 (DOC-52 §8.2). **Purge:** `realtime_purge`, hourly, rows older than 24 hours (DR-115, DOC-20). The table is scoped: each row has its building, and a stream replays its own building only, so it is not on the allow-list of DOC-14 §5.3 (DR-104).
+
+A row targets either one account (`target_account_id`: `inbox.created`, `export.ready`, `session.revoked`) or the staff roles of its building (`target_roles`: `ticket.*`, `money_log.opened`), never both. `close_session_id` is set only on `session.revoked` and names the session whose streams close. `data` is the event payload of DOC-52 §6, ids only, at most 2 KB.
+
+```sql
+CREATE TABLE realtime.events (
+  id                uuid        NOT NULL,
+  building_id       uuid        NOT NULL,
+  source_message_id uuid        NOT NULL,
+  type              text        NOT NULL,
+  target_account_id uuid,
+  target_roles      text[],
+  close_session_id  uuid,
+  data              jsonb       NOT NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT pk_events PRIMARY KEY (id),
+  CONSTRAINT uq_events_source UNIQUE (source_message_id),
+  CONSTRAINT ck_events_id_v7   CHECK (uuid_extract_version(id) = 7),
+  CONSTRAINT ck_events_type    CHECK (type IN ('inbox.created','ticket.created','ticket.changed','money_log.opened','export.ready','session.revoked')),
+  CONSTRAINT ck_events_target  CHECK ((target_account_id IS NULL) <> (target_roles IS NULL)),
+  CONSTRAINT ck_events_roles   CHECK (target_roles IS NULL OR (cardinality(target_roles) >= 1 AND target_roles <@ ARRAY['admin','manager','technician','guard'])),
+  CONSTRAINT ck_events_close   CHECK ((close_session_id IS NOT NULL) = (type = 'session.revoked')),
+  CONSTRAINT ck_events_data    CHECK (jsonb_typeof(data) = 'object' AND octet_length(data::text) <= 2048)
+);
+CREATE INDEX ix_events_building_created ON realtime.events (building_id, created_at);
+```
+
+The table has no status column. The DDL, ten refused rows, the publish statement, the replay and the purge were run on PostgreSQL 18.6 (`postgres:18.6`, x86_64, Docker) on 2026-10-28; the cases and results are DOC-52 §19 (tests `SE-11…13`, `SE-21`).
 
 ## 9A. Analytics
 
@@ -827,7 +1057,7 @@ CREATE TABLE analytics.usage_daily (
 
 ## 10. Index catalog
 
-Every index of §1–§3 with the query it serves, so none is speculative. The tables of §4–§9 add theirs when they are written.
+Every index of §1–§3, §6, §9.1 and §9A with the query it serves, so none is speculative. The tables of §4–§9 add theirs when they are written.
 
 | Index | Kind | Query it serves | Source |
 | --- | --- | --- | --- |
@@ -849,6 +1079,17 @@ Every index of §1–§3 with the query it serves, so none is speculative. The t
 | `outbox_pending_idx` | partial btree | Relay claim | ADR-0009 |
 | `ix_idempotency_key_created` | btree | 24-hour sweep | DR-74 |
 | `ix_rate_bucket_updated` | btree | Idle-bucket purge | DR-64 |
+| `uq_inbox_entry_dedupe` | UNIQUE `NULLS NOT DISTINCT` | The `ON CONFLICT` of every inbox handler; the mark-read of a notice entry (DOC-31 §4.3) | DR-53, DR-299 |
+| `ix_inbox_entry_building_account` | btree | Inbox page E-76/E-78, keyset on `id` (OPM-S14) | DR-53 |
+| `ix_inbox_entry_building_account_unread` | partial btree | `unreadCount` (OPM-S15) and read-all (OPM-S17) | DR-53 |
+| `ix_inbox_entry_building_created` | btree | `inbox_purge` (OPM-S24) | DR-53, DR-62 |
+| `uq_device_token_token` | UNIQUE | Registration upsert (OPM-S19) | DR-52 |
+| `uq_device_token_session` | UNIQUE | One token per session; delete by session (OPM-S20) | DR-52, DR-300 |
+| `ix_device_token_account` | btree | Tokens of a push request's accounts (OPM-S21); delete by account | DR-52 |
+| `uq_push_ticket_message_device` | UNIQUE | A retried push skips devices already sent (the anti-join of OPM-S21) | DR-301 |
+| `ix_push_ticket_pending` | partial btree | `push_receipts` claim (OPM-S22) | DR-52 |
+| `ix_push_ticket_created` | btree | `unknown` after 24 h (OPM-S23) and the 3-day purge (OPM-S24) | DR-52 |
+| `ix_events_building_created` | btree | Replay of E-75 by building and time; `realtime_purge` (DOC-52 §8.2) | DR-75, DR-289 |
 | `ix_usage_event_building_at` | btree | Rollup window and raw purge of `usage_event` (§9A.1) | DR-279 |
 | `pk_usage_daily` | primary key | Top names over a period; the rollup upsert; the 730-day purge (§9A.2) | DR-279 |
 
@@ -869,6 +1110,10 @@ The periods are fixed in DOC-20 and run by the jobs of DOC-38 (DR-62); this tabl
 | `platform.idempotency_key` | 24 hours (DR-74) | — |
 | `platform.rate_bucket` | Idle buckets, `token_purge` | — |
 | `platform.maintenance` | One row | The row |
+| `notification.inbox_entry` | 180 days after `created_at`, read or not, `inbox_purge` weekly, batches of 1,000 (DR-53, `INBOX_RETENTION_DAYS`); demo rows every demo night | — |
+| `notification.device_token` | No age purge: deleted with its session, its account, a `DeviceNotRegistered` or a dead session (DR-115, DOC-31 §5.2) | — |
+| `notification.push_ticket` | 3 days, `push_receipts` (DR-52, `PUSH_TICKET_RETENTION_DAYS`) | — |
+| `realtime.events` | 24 hours, `realtime_purge` hourly (DR-115, DR-120) | — |
 | `analytics.usage_event` | 90 days, `usage_rollup`, only up to the newest rolled-up day (DR-279) | — |
 | `analytics.usage_daily` | 730 days, `usage_rollup` (DR-279) | — |
 
@@ -882,6 +1127,8 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | DR-111 | Building settings: `termsVersion` is not a setting; `data` stores only saved keys and the reader overlays defaults; ranges and defaults of each key (quota 50 GiB, `feeNoticeLanguage` `vi`); `terms_version` is write-once; `hasAcceptedLatestTerms` takes the building | §1.2, §1.4 |
 | DR-112 | Platform tables: `file_object` carries the registering account and the status stamps, and the orphan job covers verified files too; `job_run` is written at the end with two statuses and joins the allow-list; the maintenance flag is written only by the migration role | §3 |
 
+§6 was written with DOC-31 (P1-26); its decisions are proposed there as `DR-299` (the inbox entry's key: `dedupe_id` and `unit_id`), `DR-300` (the device token's columns, one token per session) and `DR-301` (the push ticket per message and device) and take register numbers when merged.
+
 The decision on database roles, the grants step and the denied tables is DOC-19's and is listed there.
 
 ## 13. DDL tests
@@ -891,6 +1138,8 @@ The decision on database roles, the grants step and the denied tables is DOC-19'
 **As run in P1-07 and P1-08 (2026-10-22):** the constraint and statement tests below are `modules/building/test/opm.integration.test.ts` (OPM-01…99 and S01, S02, S03, S04, S05, S09…S12, each as `rms_migrator` in a rolled-back transaction, against the tables that the migrations create); OPM-44 is a test of its own because the purge flag lives as long as the transaction that sets it. OPM-S06, S07 and S08 (the idempotency insert, the audit pages, the outbox claim) belong to the tasks that own those statements. The method below is the one of 2026-10-19.
 
 DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container removed afterwards) on 2026-10-19. The files of DOC-14 §2.2, DOC-16 §3.1, §4–§5 and the blocks of §1–§3 above were applied in this order, as the role `rms_migrator`, with `psql -v ON_ERROR_STOP=1` on a fresh database; then each test below inserted or updated rows and compared the SQLSTATE: `23505` unique violation, `23514` check violation, `23503` foreign-key violation, `23000` raised by a trigger, `428C9` generated column, `22023` bad argument, or success. Result: **78 of 78 constraint tests and 12 of 12 statement tests passed.** The prefix `OPM-` (operations model) is new; DOC-88 indexes it. The business tests of the flows keep their own prefixes (`AD-` in DOC-35, `BD-` in DOC-36, `FS-` in DOC-37, `JB-` in DOC-38).
+
+**§6, run in P1-26 (2026-10-28):** the DDL of §6 alone (no other table is referenced) on `postgres:18.6` (x86_64, Docker, throw-away container, removed afterwards) as the superuser; each constraint test ran through a helper that executes the statement and compares the SQLSTATE, and the statement tests ran on 20,000 background inbox entries and 20,200 device tokens with `ANALYZE` (no `enable_seqscan = off`). Result: **41 of 41 constraint tests (`OPM-100…117`, `120…129`, `140…152`) and 12 of 12 statement tests (`OPM-S13…S24`) passed.** P2-12 reruns them as `modules/notification/test/opm.integration.test.ts` as `rms_migrator`.
 
 ### 13.2 Constraint tests
 
@@ -976,6 +1225,47 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | OPM-97 | Complete with status 201 and a body | accepted |
 | OPM-98 | Insert of the same key again | 23505 |
 | OPM-99 | First row of a platform rate bucket | accepted |
+| OPM-100 | Inbox entry `fee.batch_published` for a resident and a unit | accepted |
+| OPM-101 | The same account, object, template and unit again | 23505 |
+| OPM-102 | The same account and object, template `fee.batch_recalled` | accepted |
+| OPM-103 | `fee.batch_due_extended` with an event id as `dedupe_id` | accepted |
+| OPM-104 | A second extension of the same batch (another event id) | accepted |
+| OPM-105 | A staff entry with a `unit_id` | 23514 |
+| OPM-106 | A staff entry `finance.money_unposted` without a unit | accepted |
+| OPM-107 | `account_kind = 'robot'` | 23514 |
+| OPM-108 | Template key `Fee.BatchPublished` | 23514 |
+| OPM-109 | `params` an array | 23514 |
+| OPM-110 | `params` of 2,100 bytes | 23514 |
+| OPM-111 | Source kind `invoice` | 23514 |
+| OPM-112 | `read_at` before `created_at` | 23514 |
+| OPM-113 | The same object in another building | accepted |
+| OPM-114 | The same template and object for a staff account | accepted |
+| OPM-115 | The same object for the account's second unit | accepted |
+| OPM-116 | A building-wide `notice.published` entry (unit null) | accepted |
+| OPM-117 | The same building-wide entry again (`NULLS NOT DISTINCT`) | 23505 |
+| OPM-120 | Device token `ExponentPushToken[…]` for a resident session | accepted |
+| OPM-121 | The same token for another account by `INSERT` (not the upsert) | 23505 |
+| OPM-122 | A second token for the same session | 23505 |
+| OPM-123 | A staff token `ExpoPushToken[Ab_9-zz]` | accepted |
+| OPM-124 | Token `fcm:abcdef` | 23514 |
+| OPM-125 | Token with a space inside the brackets | 23514 |
+| OPM-126 | Token with 181 characters inside the brackets | 23514 |
+| OPM-127 | Platform `web` | 23514 |
+| OPM-128 | App version `1.0.3-beta` | 23514 |
+| OPM-129 | Account kind `guest` | 23514 |
+| OPM-140 | `pending` ticket with a receipt id and `next_check_at` | accepted |
+| OPM-141 | A second ticket for the same message and device | 23505 |
+| OPM-142 | `failed` ticket without a receipt id (a ticket error) | accepted |
+| OPM-143 | `pending` without a receipt id | 23514 |
+| OPM-144 | `failed` without an error | 23514 |
+| OPM-145 | Status `sent` | 23514 |
+| OPM-146 | `ok` without `checked_at` | 23514 |
+| OPM-147 | `ok` with `checked_at` | accepted |
+| OPM-148 | `failed` from a receipt (`MessageTooBig`) with `checked_at` | accepted |
+| OPM-149 | `ok` with an error | 23514 |
+| OPM-150 | `failed` with a receipt id but no `checked_at` | 23514 |
+| OPM-151 | `unknown` with `checked_at` | accepted |
+| OPM-152 | Receipt id of 101 characters | 23514 |
 
 ### 13.3 Statement tests
 
@@ -993,6 +1283,18 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | OPM-S10 | `audit.purge(now(), 'standard')` with standard rows of 3 and 1 years | 1 row (the 3-year row) |
 | OPM-S11 | `audit.purge('1990-01-01', 'standard')` | 0 rows (the caller asked for less than the floor) |
 | OPM-S12 | Retention class of `finance.payment.void`, `finance.payment.post`, `pii.read` | `finance`, `finance`, `standard` |
+| OPM-S13 | A handler page for one owner of two charged units, run twice (DOC-31 §4.1) | 2 rows, then 0 |
+| OPM-S14 | Inbox page of 20 (+1) with the unit filter (one unit inactive), then the next page by cursor | 21 rows, none of the inactive unit; 16 on page 2; `ix_inbox_entry_building_account` |
+| OPM-S15 | Unread count capped at 100 | 36; `ix_inbox_entry_building_account_unread` |
+| OPM-S16 | Read one `payment.received` entry twice; read a `notice` entry | 1, then 0; 0 |
+| OPM-S17 | Read-all up to the fourth newest id, twice | 43, then 0; 3 stay unread; `ix_inbox_entry_building_account_unread` |
+| OPM-S18 | Mark the notice entry read (`notices.notice_read.v1`), twice | 1, then 0. The first version set `read_at` from the event's `readAt`, which `ck_inbox_entry_read_at` refused for an entry created later: the statement uses `now()` |
+| OPM-S19 | Register a token; the same session with a new token; another account with the same token | inserted; the old row replaced (1 row for the session); the same `id`, `inserted = false`, the new account |
+| OPM-S20 | Delete by id by the former owner of a reassigned token; delete by session twice | 0; 1, then 0 |
+| OPM-S21 | Tokens of 100 accounts minus the devices already ticketed for the message (20,200 tokens) | 148 of 150; `ix_device_token_account` and an anti-join on `uq_push_ticket_message_device` |
+| OPM-S22 | Claim of 1,500 due tickets, twice inside the lease; a receipt outcome twice | 1,000, then 500; 1, then 0; `ix_push_ticket_pending` with `LockRows` |
+| OPM-S23 | Tickets with no receipt after 25 h | 2 become `unknown` |
+| OPM-S24 | Ticket purge after 3 days; inbox purge after 180 days in batches of 1,000 | 612 tickets (`ix_push_ticket_created`); 1,000, 1,000, 500 entries (`ix_inbox_entry_building_created`, then `pk_inbox_entry` through `id = ANY(ARRAY(…))`) |
 
 ### 13.4 Not run
 
@@ -1002,6 +1304,8 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | The core helper's own DDL for `outbox_messages` and `inbox` | **Done in P1-07**: the SQL that drizzle-kit makes from `outboxTable` and `inboxTable` has the columns, the defaults and the partial index `outbox_pending_idx` of this block; the inbox primary key is named `inbox_message_id_handler_pk` by the helper (OPM-80…83) | P1-02 (compare the generated SQL with this block) |
 | Behaviour under concurrent writers (two Admins saving settings, two `register` calls at the quota edge) | **Done in P1-07**: two Admins saving at the same version (BD-09), two Admins publishing the same version (BD-45), a change of the receiving account against an intent that holds the share lock (BD-25). Two `register` calls at the quota edge are the accepted overshoot of DOC-37 §11 and are not tested | P1-07 (`BD-`, `FS-`) |
 | Grants and the role that runs each statement | Written in DOC-19 and tested there with the same DDL | P1-06 |
+| §6 as `rms_migrator` and `rms_app`, the Drizzle schema of `notification`, the grants of the three tables (`device_token` denied to `rms_readonly`) | §6 ran as the superuser on its own DDL; the module does not exist yet | P2-12 (`OPM-100…152`, `OPM-S13…S24` again; GRT- rows of DOC-19) |
+| `IdentityApi.liveSessionIds` (the statement on `identity.refresh_family`) | Identity's statement; owed to DOC-26 (DOC-31 §19) | P2-12 |
 
 ## 14. Not in this document
 
@@ -1018,6 +1322,7 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | Job runner, outbox relay settings | DOC-38 |
 | Event envelope and the list of schemas with an outbox | DOC-09 |
 | Configuration keys (`SETTINGS_ENCRYPTION_KEYS`, `JOB_RUN_RETENTION_DAYS`, `OUTBOX_RETENTION_DAYS`) | DOC-41 |
+| What writes and reads the notification tables: the template catalog, unit visibility, the push sender, the receipts job | DOC-31 |
 
 ## 15. Traceability
 
@@ -1031,7 +1336,10 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | §3.2 job runs | DR-62, DR-101 | NFR-09; OPM-70…74, OPM-S04 |
 | §3.3 outbox and inbox | DR-42, DR-101, ADR-0009 | OPM-80…83, OPM-S08 |
 | §3.4 platform | DR-74, DR-64, DR-85 | FR-05.4; OPM-90…99, OPM-S06 |
+| §6.1 inbox entries | DR-53, DR-51, DR-299 | FR-29.4, FR-29.5; OPM-100…117, OPM-S13…S18, OPM-S24 |
+| §6.2 device tokens | DR-52, DR-115, DR-146, DR-300 | FR-29.6; OPM-120…129, OPM-S19…S21 |
+| §6.3 push tickets | DR-52, DR-301 | FR-29.6; OPM-140…152, OPM-S21…S24 |
 
 ## Open questions
 
-None for §1–§3. The decisions made while writing (DR-110…112) are decided and do not block Phase 1. Sections 4–9 raise their own questions when they are written.
+None for §1–§3. The decisions made while writing (DR-110…112) are decided and do not block Phase 1. §6.1–§6.3 depend on DR-299…301 (DOC-31 §16), proposed for a delegated decision; they stay Draft until the register records them. Sections 4–9 raise their own questions when they are written.

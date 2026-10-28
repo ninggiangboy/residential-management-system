@@ -1,6 +1,6 @@
 # Observability
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (DR-282: two settlement metrics in §4.5, the alert `GatewayErrors` in §5.3; DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (P1-26: §4.8 notification and PDF metrics, DR-291, DR-301; two SSE counters and the phase of `sse_streams_open`, DR-287…289; the `push` reasons of `delivery_failed_total`) · 2026-10-28 (DR-282: two settlement metrics in §4.5, the alert `GatewayErrors` in §5.3; DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
 > Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
@@ -130,11 +130,13 @@ Rules for every metric (DR-154):
 | `client_errors_total` | counter | `app` (`resident`, `staff`, `web`), `kind` (`crash`, `unhandled_rejection`, `render`, `network`) | `api` | DOC-42 §8.5 | P1 |
 | `readiness_ok` | gauge (1 or 0) | none | `api`, `worker` | DOC-51 §3 | P1 |
 | `db_pool_waiting` | gauge | none (top-level transactions in flight beyond `DB_POOL_MAX`: each holds a connection from `begin`, so the excess waits for one; a single statement outside a transaction is not counted, so it is a lower bound) | `api`, `worker` | DOC-10 §6.3 | P1 |
-| `sse_streams_open` | gauge | none | `api` | DOC-52 (DR-75) | P4 (with the SSE stream) |
+| `sse_streams_open` | gauge | none | `api` | DOC-52 §15 (DR-75) | P2-12 (the server side of the stream; P4 if the Owner rejects the proposed DR-287) |
+| `sse_stream_opens_total` | counter | `outcome` (`resumed`, `fresh`, `limited`) | `api` | DOC-52 §15 (DR-289) | P2-12 (as above) |
+| `sse_events_published_total` | counter | `type` (`inbox.created`, `ticket.created`, `ticket.changed`, `money_log.opened`, `export.ready`, `session.revoked`) | `worker` | DOC-52 §15 (DR-289) | P2-12 (as above) |
 | `metrics_collection_errors_total` | counter | `gauge` (the metric that timed out or failed) | all | §4 rule 3 | P1 |
 | `provider_auth_failed_total` | counter | `provider` (`sms`, `mail`, `push`, `payos`, `storage`) | `worker`, `api` | DOC-42 §7.1 | P1-22 (the provider adapters) |
 | `handler_outcomes_total` | counter | `handler`, `outcome` (`ok`, `deferred`, `failed`; `skipped`, an inbox hit, is not seen by the bus) | `worker` | DOC-42 §8.5 | P1 |
-| `delivery_failed_total` | counter | `channel` (`sms`, `mail`, `push`), `reason` | `worker` | DOC-42 §8.5 | P1-22 (the provider adapters) |
+| `delivery_failed_total` | counter | `channel` (`sms`, `mail`, `push`), `reason` (for `push`: `device_not_registered`, `message_too_big`, `message_rate_exceeded`, `mismatch_sender_id`, `invalid_credentials`, `other`, DOC-31 §10) | `worker` | DOC-42 §8.5 | P1-22 (the provider adapters) |
 | `process_cpu_seconds_total`, `process_resident_memory_bytes` | counter, gauge | none | all | the library's default process metrics (§2, verified in P1-18) | P1 |
 
 ### 4.2 Outbox and jobs
@@ -221,6 +223,19 @@ Added by DR-279 (DOC-104 §11). The labels hold no person: `name` is a screen id
 | `usage_events_total` | counter | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`), `event` (`screen_view`, `tap`, `app_open`, `app_close`), `name` | DOC-104 §11 | P1 |
 | `usage_foreground_seconds` | histogram, buckets 10, 30, 60, 180, 600, 1800, 3600 | `app` (`resident`, `staff`, `web`), `audience` (`resident`, `staff`) | DOC-104 §11 | P1 |
 | `usage_events_dropped_total` | counter | `reason` (`unknown_name`, `disabled`, `demo`) | DOC-104 §11 | P1 |
+
+### 4.8 Notification and PDF (specified here, built in P2)
+
+Added by P1-26 (DR-291, DR-301). No label holds a person or a token; `template_key` is the closed catalog of DOC-31 §3.2. No new alert: a credential failure raises the provider alert, a stopped job its staleness alert, a dead-lettered push or receipt render `OutboxDeadLetters` (RB-05).
+
+| Metric | Type | Labels | Defined in | Phase |
+| --- | --- | --- | --- | --- |
+| `inbox_entries_created_total` | counter | `template_key` (the 21 keys of DOC-31 §3.2) | DOC-31 §10 | P2-12 |
+| `push_sent_total` | counter | `outcome` (`accepted`, `ticket_error`, `skipped_off`, `skipped_no_device`, `skipped_session_dead`, `skipped_expired`) | DOC-31 §10 (DR-301) | P2-12 |
+| `push_receipts_total` | counter | `outcome` (`ok`, `failed`, `unknown`) | DOC-31 §10 (DR-301) | P2-12 |
+| `pdf_renders_total` | counter | `document` (`fee_notice`, `receipt`, `report`, `wiki_page`), `outcome` (`rendered`, `cached`, `failed`) | DOC-34 §14 (DR-291) | P2-13 |
+| `pdf_render_duration_seconds` | histogram, buckets 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30 | `document` | DOC-34 §14 (DR-291) | P2-13 |
+| `pdf_renderer_restarts_total` | counter | `reason` (`documents`, `rss`, `timeout`, `crash`) | DOC-34 §14 (DR-291) | P2-13 |
 
 ## 5. Alert rules
 

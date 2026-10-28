@@ -1,6 +1,6 @@
 # Files and uploads
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: no R2 in the `vn` profile; files in SeaweedFS on the VPS behind `files.<domain>`; R2 kept as the `global` profile) · 2026-10-22 (P1-07: §12 results, the signer, `FileActor.role`, DR-252) · 2026-10-19 · DOC-37
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: `findByOwnerRef`, DR-293; store then swap, DR-295; a replaced logo is kept, DR-296) · 2026-10-26 (DR-268: no R2 in the `vn` profile; files in SeaweedFS on the VPS behind `files.<domain>`; R2 kept as the `global` profile) · 2026-10-22 (P1-07: §12 results, the signer, `FileActor.role`, DR-252) · 2026-10-19 · DOC-37
 > Depends on: original SDD §12, §16, §19.1, [DR](../00-decision-register.md) (DR-07, 21, 22, 55, 56, 61, 64, 74, 83, 86, 111, 112, 115, 119, 122, 123, 268), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md) (the `global` profile), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6.4, [DOC-09](../03-architecture/messaging-contracts.md), [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-17](../05-data/operations-model.md) §3.1, [DOC-20](../05-data/data-lifecycle.md) §3, [DOC-38](jobs-and-outbox-runtime.md)
 > Main readers: P1-07 (`building` module and files), every task that uploads or serves a file (tickets, vehicles, notices, library, imports, statements, PDFs, exports), DOC-34, DOC-39, DOC-51, DOC-70, RB-12
 
@@ -62,6 +62,7 @@ interface FilesApi {
   signedUrl(fileId: Uuid, opts?: { variant?: 'original' | 'thumb'; downloadName?: string }): Promise<string | null>
   storeGenerated(input: { buildingId: Uuid; module: ModuleName; purpose: GeneratedPurpose; ownerRef: string;
                           mime: string; body: Uint8Array | ReadableStream<Uint8Array> }): Promise<FileDto>
+  findByOwnerRef(buildingId: Uuid, key: { module: ModuleName; purpose: Purpose; ownerRef: string }): Promise<FileDto | null>   // DR-293
 }
 interface UploadTicket { fileId: Uuid; method: 'PUT'; url: string; headers: { 'Content-Type': string }; expiresAt: Instant; maxBytes: number }
 interface FileDto { fileId: Uuid; purpose: Purpose; mime: string; size: number; status: 'pending' | 'verified' | 'attached' | 'deleted'; createdAt: Instant }
@@ -77,6 +78,7 @@ interface FileDto { fileId: Uuid; purpose: Purpose; mime: string; size: number; 
 | `usage` | None | The quota sum of §11 |
 | `signedUrl` | None; no store call | §8. Returns `null` for an unknown or `deleted` file |
 | `storeGenerated` | Its own short transactions around the upload | §9 |
+| `findByOwnerRef` | None (also inside one); no store call | *Added 2026-10-28 (DR-293).* The `attached` row of the building with that module, purpose and `owner_ref`, through `ix_file_object_building_owner`; `null` when none. The PDF cache of DOC-34 §8 finds a rendered fee notice or receipt with it; the bytes are then read with `read` |
 
 An ordinary module never reads `building.file_object` or the bucket (DOC-07 §6.1); a repository holds the `file_id` of its own row (no cross-schema foreign key, ADR-0014) and the owner reference goes the other way as `owner_ref`.
 
@@ -87,7 +89,7 @@ An ordinary module never reads `building.file_object` or the bucket (DOC-07 §6.
 | Purpose | Module | Who may register | Types (MIME → extension) | Maximum | Thumbnail | Signed URL | Leaves |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `avatar` | identity | resident, staff | image | 10 MB | 480 px | 15 min | When replaced (the owner calls `remove`) or the account is cleared (DOC-20 §8) |
-| `logo` | building | Admin | `image/png`, `image/jpeg` | 1 MB | 512 px (the PDFs use this copy, DR-56) | 15 min | When replaced |
+| `logo` | building | Admin | `image/png`, `image/jpeg` | 1 MB | 512 px (the PDFs use this copy, DR-56) | 15 min | When replaced. *Revised 2026-10-28 (DR-296):* never; a replaced logo stays `attached`, because receipt snapshots name it by id |
 | `import` | residency or finance (the caller says which) | Manager, Admin | `.xlsx` | 5 MB | none | never given out: the server reads it | Commit, expiry or 30 days (DOC-20 §3) |
 | `statement` | finance | Manager, Admin | `.xlsx`, `.csv` | 5 MB | none | never given out | 1 year (DR-34) |
 | `ticket_media` | tickets | resident, Technician, Manager, Admin | image; `video/mp4`, `video/quicktime` | 10 MB image; 50 MB video | images, 480 px | 15 min | Never (DR-115) |
@@ -97,8 +99,8 @@ An ordinary module never reads `building.file_object` or the bucket (DOC-07 §6.
 | `notice_image` | notices | Manager, Admin | image | 10 MB | 480 px | 15 min | Never |
 | `wiki_attachment` | wiki | Manager, Admin | as `notice_attachment` | 20 MB | none | 15 min | Never |
 | `wiki_image` | wiki | Manager, Admin | image | 10 MB | 480 px | 15 min | Never |
-| `fee_notice_pdf` | finance | the system | `application/pdf` | 5 MB | none | 15 min | Cached with the batch (DR-56) |
-| `receipt_pdf` | finance | the system | `application/pdf` | 2 MB | none | 15 min | With the receipt; a void receipt gets a second file (DR-17) |
+| `fee_notice_pdf` | finance | the system | `application/pdf` | 5 MB | none | 15 min | Cached with the batch (DR-56). *Revised 2026-10-28 (DR-293):* one row per language and render-input hash, `owner_ref = batch/<b>/unit/<u>/<lang>/<hash16>.pdf`; superseded variants stay; a draft is never stored |
+| `receipt_pdf` | finance | the system | `application/pdf` | 2 MB | none | 15 min | With the receipt; a void receipt gets a second file (DR-17). *Revised 2026-10-28 (DR-295):* `owner_ref` `receipt/<id>/issued.pdf` or `receipt/<id>/void.pdf`; the issued copy is removed once the void copy is in place |
 | `bulk_zip` | finance | the system | `application/zip` | 1 GiB | none | 15 min | **7 days** (DR-123) |
 | `export` | reporting | the system | `.xlsx`, `application/pdf` | 100 MB | none | 15 min | 7 days (DR-55) |
 | `thumbnail` | the original's module | the system | `image/webp` | 1 MB | — | 15 min | With its original |
@@ -260,12 +262,14 @@ A URL is regenerated on every response, so a client never stores one; a list of 
 
 `storeGenerated` is called by the worker (receipt and fee-notice PDFs, bulk ZIPs, exports) as account kind `system` with `account_id` = the nil UUID `00000000-0000-0000-0000-000000000000`.
 
-1. Insert a `pending` row (quota is **not** checked: DR-123), key of §5, `owner_ref` = the logical key (DR-86), for example `batch/0192…/unit/0192….pdf`.
+1. Insert a `pending` row (quota is **not** checked: DR-123), key of §5, `owner_ref` = the logical key (DR-86), for example `batch/0192…/unit/0192….pdf` (*revised 2026-10-28, DR-293, DR-295:* `batch/<b>/unit/<u>/<lang>/<hash16>.pdf`, `receipt/<id>/issued.pdf`; the shapes are DOC-34 §8).
 2. Upload the body: a `Uint8Array` with `PutObject`; a stream (a ZIP, a large export) with the multipart writer of `ObjectStorage.writeStream`, parts of 8 MB with a flush after each (that bounds memory, U9); on an error the parts already sent are left to the lifecycle rule of §5, which aborts them within a day. The SHA-256 is computed while streaming.
 3. One transaction: `status = 'attached'` with `verified_at` and `attached_at` both set (the `CHECK` of the table allows it), real `size`, `checksum`.
 4. A failure leaves the row `pending`; the orphan job removes it after 24 hours and the lifecycle rule aborts the multipart parts after 1 day.
 
 Replacing a cached file (a void receipt, a re-rendered notice): the worker calls `remove` on the old row and `storeGenerated` for the new one in that order. A content hash in the logical key (DOC-34) makes a re-render of unchanged data find the existing row and skip.
+
+*Revised 2026-10-28 (DR-295):* the order is reversed, so the pointer never names a missing file: the worker calls `storeGenerated` for the new file first, swaps the owner's pointer in one conditional update, and calls `remove` on the old row in that same transaction; if the swap finds another path already won, it removes the file it just stored (DOC-34 §8.2). A fee notice is never replaced: a changed input has a new hash and a new row (DR-293).
 
 ## 10. Thumbnails
 
@@ -381,7 +385,7 @@ stateDiagram-v2
 
 - **The logical delete is a status change in a transaction**; the physical delete is a command. Every move to `deleted` (verify failure, `remove`, the orphan job) writes `building.file_delete_requested.v1 {buildingId, fileId}` in the same transaction (DR-122). The handler `building.delete_file_object` loads the row, does nothing unless its status is `deleted` (it never deletes the object of a live file), calls `DeleteObject` (idempotent: a missing key is success) and returns. Store errors throw and are retried by the default class; a dead letter alerts (RB-05). The row stays `deleted` for 90 days, then `orphan_uploads` deletes it (DOC-20 §3).
 - **`orphan_uploads`** (hourly, per building): marks `pending` and `verified` rows older than 24 hours `deleted` and writes one command each, in batches of 1,000; then deletes `deleted` rows older than 90 days (statements: DOC-20 §5, DOC-38 §4.2).
-- **Owners** call `remove` when they drop a file (the avatar replaced, an import committed or expired, a statement past one year, an export past 7 days) and never delete a `file_object` row themselves. Tickets, vehicles, notices and the library keep their files for ever (DR-115).
+- **Owners** call `remove` when they drop a file (the avatar replaced, an import committed or expired, a statement past one year, an export past 7 days) and never delete a `file_object` row themselves. *Revised 2026-10-28 (DR-296):* a replaced logo is not removed. Tickets, vehicles, notices and the library keep their files for ever (DR-115).
 - **`bulk_zip`** objects are removed 7 days after creation by the weekly `finance_purge` (so a ZIP lives 7 to 14 days). The per-unit PDFs stay as the cache of DR-56.
 - **Account deletion** removes the avatar through `FilesApi.remove` (DOC-20 §8). Vehicle papers and ticket photos stay (DR-115).
 - **Nothing lists the bucket.** If a delete command is lost beyond repair, the object stays, costs storage, and is found by the operator from the dead-letter list. A `files:reconcile` script that compares a prefix with the table is not built; it can be added when a real loss appears.

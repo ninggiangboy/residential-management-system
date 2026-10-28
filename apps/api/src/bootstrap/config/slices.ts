@@ -357,7 +357,7 @@ const jobsConfig = defineSlice({
 const concurrencyConfig = defineSlice({
   title: 'Concurrency of the worker (DOC-41 §12)',
   schema: z.object({
-    PDF_CONCURRENCY: int(1, { min: 1 }).describe('PDFs rendered at once.'),
+    PDF_CONCURRENCY: int(1, { min: 1 }).describe('Render host processes in the worker.'),
     EXPORT_CONCURRENCY: int(2, { min: 1 }).describe('Exports streamed at once.'),
   }),
 })
@@ -420,20 +420,40 @@ const laterConfig = defineSlice({
     NOTICE_RECLAIM_AFTER_MINUTES: int(5, { min: 1 }).describe(
       'Age of a `sending` heartbeat before a notice is reclaimed.',
     ),
-    PUSH_CHUNK_SIZE: int(100, { min: 1 }).describe('Messages per Expo request.'),
+    PUSH_DRIVER: enumOf(['console', 'expo'], 'console').describe(
+      '`expo` in staging and production; production refuses `console` from P2-12.',
+    ),
+    EXPO_PUSH_BASE_URL: url
+      .default('https://exp.host/--/api/v2/push')
+      .describe('`/send` and `/getReceipts` are appended; tests point it at a fake.'),
+    PUSH_CHUNK_SIZE: int(100, { min: 1, max: 100 }).describe('Messages per Expo request.'),
+    PUSH_REQUEST_TIMEOUT_MS: int(10000, { min: 1 }).describe('One Expo request.'),
+    PUSH_MAX_AGE_MINUTES: int(60, { min: 5, max: 1440 }).describe(
+      'A push request older than this is skipped.',
+    ),
     PUSH_RECEIPT_DELAY_MINUTES: int(15, { min: 1 }).describe(
       'Age of a ticket before its receipt is read.',
     ),
     PUSH_TICKET_RETENTION_DAYS: int(3, { min: 1 }).describe(
       'Age at which `push_receipts` deletes tickets.',
     ),
+    INBOX_RETENTION_DAYS: int(180, { min: 30, max: 730 }).describe(
+      'Age at which `inbox_purge` deletes inbox entries.',
+    ),
     SSE_MAX_STREAMS_PER_ACCOUNT: int(3, { min: 1 }).describe(
-      'Concurrent `GET /staff/events` streams per account.',
+      'Concurrent `GET /staff/events` streams per account per `api` process.',
     ),
     SSE_HEARTBEAT_SECONDS: int(25, { min: 1 }).describe(
       'Must stay below 30 (Cloudflare closes a silent request after 100 s).',
     ),
     STATEMENT_MAX_BYTES: int(5242880, { min: 1 }).describe('Bank statement file.'),
+    PDF_INLINE_CONCURRENCY: int(1, { min: 1 }).describe('Render hosts in each api process.'),
+    PDF_RENDERER_MAX_DOCUMENTS: int(150, { min: 1 }).describe(
+      'A render host is replaced after this many documents.',
+    ),
+    PDF_RENDERER_MAX_RSS_MB: int(400, { min: 64 }).describe(
+      'A render host whose RSS after a render is above this is replaced.',
+    ),
   }),
 })
 

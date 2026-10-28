@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: usage event, session, switch and rollup) · 2026-10-26 (DR-268: SeaweedFS replaces the R2 row; rows for the `vn`/`global` profiles and the files host; VPS, pgBackRest, web CMS, presigned PUT, inbox mode) · 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: dedupe id, push route, replay buffer, render host, render-input hash, void copy, `manifest.csv`; SSE and device token reworded) · 2026-10-28 (DR-279: usage event, session, switch and rollup) · 2026-10-26 (DR-268: SeaweedFS replaces the R2 row; rows for the `vn`/`global` profiles and the files host; VPS, pgBackRest, web CMS, presigned PUT, inbox mode) · 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -120,6 +120,10 @@ This document defines the words of the project, as the project uses them. Every 
 | e-invoice | — | A legal electronic invoice. Out of the system: the company issues one only when a resident asks (a request of type "Khác"). | DR-17, DOC-01 |
 | fee item | — | The name of a charge line (for example Management fee, Parking); the unit of the report "collection per fee item". | FR-35 |
 | fee notice | — | The PDF and in-app view of a published charge, in Vietnamese, English or both. | FR-36, DR-56 |
+| render host | — | A child process that renders PDFs and is replaced after 150 documents or above 400 MiB, because the renderer keeps memory per document. The worker and each `api` process hold a small pool. | DR-291, DOC-34 §4 |
+| render-input hash | — | The 16-character hash of everything a fee notice shows, part of its cache key; a changed charge or setting gives a new key, so a stale PDF is never served. | DR-293, DOC-34 §8.1 |
+| void copy | — | The receipt PDF with a diagonal "VOID" watermark that replaces the cached PDF when a receipt is voided; the receipt keeps its number. | DR-17, DR-295 |
+| `manifest.csv` | — | The list of units in a bulk fee-notice ZIP, with each unit's file name or `failed`. | DR-294, DOC-34 §9.2 |
 | fee notice language | — | The building setting `feeNoticeLanguage`: `vi`, `en` or `both`. | DR-60 |
 | bulk fee-notice request | — | A row of `finance.fee_notice_job`: the Manager's request for the fee notices of a whole batch, rendered by the worker as one PDF per unit and a ZIP; one active request per batch. | DR-56, DR-245, DOC-15 §10.2 |
 | batch code | — | `PH-YYMM-NN`, from the fee month; not gapless. | DR-10 |
@@ -271,8 +275,10 @@ This document defines the words of the project, as the project uses them. Every 
 | template key | — | The key of a notification text in the shared vi/en catalog (`fee.batch_published`, `payment.received`, …). The inbox stores keys and parameters, never text. | DR-53, DR-71 |
 | push notification / Expo push | — | A message to a device through Expo Push (FCM and APNs). The text comes from a template in the recipient's language. | FR-29, DR-52 |
 | payload privacy rule | — | A push contains no amounts, names, phone numbers or ticket text; `data` carries only `{route, unitId, entityId}`. | DR-52 |
-| device token | — | `notification.device_token`: an Expo push token of a session; reassigned if registered to another account, deleted on sign-out. | DR-52 |
+| device token | — | `notification.device_token`: the Expo push token of one session (one per session); reassigned if registered to another account, deleted on sign-out and when its session is found dead. | DR-52, DR-300 |
 | push ticket / push receipt | — | The id Expo returns for an accepted message, stored in `push_ticket`; its receipt is read 15 minutes later. `DeviceNotRegistered` deletes the token. | DR-52 |
+| dedupe id (inbox) | — | `inbox_entry.dedupe_id`: with the account, template and unit it makes an entry unique. It is the source object's id for a template that happens once per object, and the event id for one that repeats. | DR-299, DOC-31 §4.1 |
+| push route | — | A parameterless app route path from the closed list of DOC-31 §6.5 that a push or an inbox tap opens, optionally followed by `/entityId`; an unknown route opens Home. | DR-177, DR-303 |
 | unit visibility (inbox) | — | An inbox entry with a `unit_id` is shown only while the account has an active membership of that unit. | DR-53 |
 | SMS brandname | — | A registered sender name for OTP SMS in Vietnam; approval takes calendar time. | DR-68 |
 
@@ -363,7 +369,8 @@ This document defines the words of the project, as the project uses them. Every 
 | retention class | — | The generated column `audit_log.retention_class`: `finance` (action starts with `finance.`, kept 5 years) or `standard` (kept 2 years). `audit.purge` selects on it. | DR-57, DR-110 |
 | append-only table | — | A table the runtime role can only `SELECT` and `INSERT` (`audit.audit_log`); a trigger is a second layer. | DR-57, DR-110 |
 | maintenance flag | — | The single row `platform.maintenance`: while `active`, every process answers 503 `maintenance`. Written by the deploy script with the migration role, read by the application role. | DR-85, DR-112 |
-| SSE | — | Server-sent events: the stream `GET /staff/events` that updates the web CMS; heartbeat at least every 30 s. Mobile apps do not use it. | DR-75 |
+| SSE | — | Server-sent events: the stream `GET /staff/events` (E-75) that updates the web CMS; heartbeat at least every 30 s; at most 3 streams per account per `api` process; a stream ends at its access token's expiry and on `session.revoked`. Mobile apps do not use it. | DR-75, DR-288 |
+| replay buffer | — | `realtime.events`, the 24-hour store of SSE events that a reconnecting tab reads with `Last-Event-ID`: at most 200 events from the last 23 hours, otherwise the stream says `resumed: false` and the tab refetches. | DR-75, DR-289 |
 | `api` role / `worker` role | — | The two values of `APP_ROLES` of the one image: `api` serves HTTP; `worker` runs the relay and the jobs. | DR-05 |
 | core packages (`core-*`) | — | The reference repository's infrastructure packages, copied (vendored) into this repository under `@core/*`. The reference's `kit-*` names appear only in the mapping table of DOC-12. | DR-02, ADR-0003 |
 | `CORE_VERSION` | — | The file `packages/CORE_VERSION` holding the upstream commit SHA of the vendored packages. | DR-02 |
