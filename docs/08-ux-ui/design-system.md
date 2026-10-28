@@ -1,6 +1,6 @@
 # Design system
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-304: the web theme switch, §11, §7.3; overlay motion, §12 A6) · 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (§17 the web interaction quality bar, DS-09, DS-10; DR-304, DR-306) · 2026-10-28 (DR-304: the web theme switch, §11, §7.3; overlay motion, §12 A6) · 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
 > Depends on: original SDD §18.2, [DR](../00-decision-register.md) (DR-10, 17, 20, 44, 45, 47, 49, 56, 70, 71, 72, 82, 84), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-03](../01-product/requirements.md) (NFR-13), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §4–6, [DOC-12](../03-architecture/code-architecture.md) §2, [design screens catalog](../references/design-screens.md), the design canvas (design system `Hien`)
 > Main readers: P1-09 (design tokens), P1-16 (web CMS shell), P1-17 (mobile shells), DOC-53, DOC-55, DOC-56…68 (screen specifications), DOC-34 (PDF look)
 
@@ -20,6 +20,7 @@ The visual source of truth is the design canvas <https://claude.ai/artifact/PLqx
 | How to print money, dates, codes, phones | §9 |
 | A chart | §10 |
 | Accessibility rules and the tests that enforce them | §12, §14 |
+| How a web screen moves and loads, what to build it from, and how to accept it | §17 |
 
 What was checked of the canvas: all 33 web artboards, `tokens.json`, `tokens.css`, the component bundle and its stylesheet, and 30 mobile artboards (§7.4). The canvas file lists 110 artboards on 2026-10-20 (the catalog counts 115; DOC-56 reconciles the two); where this document says "not used", it says how many were read. Sample data in the canvas (names, amounts, codes such as `YC-1009-010`) is illustrative: the formats of the codes are those of DR-10.
 
@@ -538,7 +539,7 @@ None.
 
 ## 14. Required tests
 
-Prefix `DS-` (design system; unused before this document; master plan §0.2; DOC-88 indexes it). They run in the `unit` and `integration` stages of CI (DOC-71), except DS-07 and DS-08, which run in the web Playwright job (P1-16) and the Maestro flows (P1-17).
+Prefix `DS-` (design system; unused before this document; master plan §0.2; DOC-88 indexes it). They run in the `unit` and `integration` stages of CI (DOC-71), except DS-07…DS-10, which run in the web Playwright job (P1-16) and the Maestro flows (P1-17).
 
 | ID | Given | When | Then |
 | --- | --- | --- | --- |
@@ -549,7 +550,9 @@ Prefix `DS-` (design system; unused before this document; master plan §0.2; DOC
 | DS-05 | The shipped font files (web `woff2`, native `ttf`) | `cmap` is read with fontTools (CI helper) | All 147 Vietnamese letters, `đ`, `Đ` and `₫` are present in Geologica (400, 500, 600, 700) and Big Shoulders (700); a missing glyph fails |
 | DS-06 | The icon registries of `apps/cms-web` and `ui-native` | The names are compared and the source is scanned | Same names on both; no `Icon name` outside the registry; no `lucide-react` import remains |
 | DS-07 | Every interactive component at its smallest size | Rendered (web in Playwright, native in the test renderer) | The hit area is at least 44 × 44 px, including `hitSlop` or padding |
-| DS-08 | The web sign-in, profile, staff list, units and import pages, in light and dark, at 200% zoom and with reduced motion | Playwright with axe | 0 serious or critical axe violations; focus ring visible; no clipped text; no running animation under `reduce`; `<html lang>` equals the chosen language |
+| DS-08 | The web sign-in, profile, staff list, units and import pages, in light and dark, at 200% zoom and with reduced motion | Playwright with axe, after every finite animation has ended | 0 serious or critical axe violations; focus ring visible; no clipped text; no running animation under `reduce`; `<html lang>` equals the chosen language |
+| DS-09 | The web CMS with an API that answers in a few milliseconds (`DEV_LATENCY_MS=0`) | A page change and a filter, watched every frame (Playwright, `e2e/motion.spec.ts`) | No skeleton reaches any opacity, no table loading bar and no button spinner is drawn (§17.3) |
+| DS-10 | The side panel of `/staff/new` | Cancel is clicked | Within 100 ms the panel is still drawn with `data-state=closed` and the address is unchanged; then the address is `/staff` and the panel is gone (§17.4) |
 
 ## 15. Decisions made in this document
 
@@ -609,3 +612,102 @@ Each is recorded in the decision register (DR-180…187), decided by Claude unde
 | DOC-55 | Font loading, theme following the OS, the icon registry, `ui-native` dependencies |
 | P1-09 | Done 2026-10-22: the outputs of §2.1, the fonts, DS-01…05; DS-06 compares the platform registries with `ICON_NAMES` in P1-16 and P1-17 |
 | Configuration reference, observability | None |
+
+## 17. Web interaction quality bar (DR-304, DR-306)
+
+The Owner reviewed the first web CMS build on 2026-10-28 and found it unfinished in ways no test caught: no theme switch, breadcrumbs that did not click, dialogs and side panels that appeared and vanished without motion, filter rows out of line, an info banner whose text sat off its icon, a white page on arrival, tables that collapsed and regrew on every filter, icons that appeared after the page, and, once the API was fast, skeletons and spinners that flashed. This section turns that review into rules for every web screen: how a screen moves and loads, what to build it from, and how to accept it. A screen document (DOC-64…67) may tighten a rule, never loosen it.
+
+### 17.1 Principles
+
+1. **Nothing jumps.** Content that arrives fills a place already shaped for it; nothing already on screen moves because data, a font, an icon or a name arrived.
+2. **Nothing flashes, nothing blinks, at any API speed.** An indicator shows only when a wait is long enough to notice (over 150 ms) and, once shown, stays long enough to read. A fast API shows no indicator at all; a slow one shows a calm one.
+3. **Everything that appears also leaves.** An overlay animates in and out, whatever closes it: Esc, the scrim, a button, a saved form, a route or a search param.
+4. **The first paint is the page.** The arrival shows the page's frame from the first frame, never a white or empty screen.
+5. **Motion is short and quiet.** It helps the eye follow a change; it never delays the user or carries information alone (A6). Reduced motion turns it off.
+6. **Lines line up.** Controls in a row share a baseline; an icon sits on the centre line of the first line of its text.
+
+### 17.2 Motion values
+
+The keyframes and classes live in `apps/cms-web/src/styles.css` (`motion-*`); they are the only motion of the web CMS. A new motion is added there, with its values here.
+
+| What | Class | In | Out | Easing |
+| --- | --- | --- | --- | --- |
+| Scrim | `motion-overlay` | fade 200 ms | fade 150 ms | ease-out / ease-in |
+| Centred dialog, confirmation | `motion-dialog` | fade and grow from 96%, 200 ms | fade and shrink, 150 ms | `cubic-bezier(0.16, 1, 0.3, 1)` / ease-in |
+| Side panel | `motion-sheet` | slide from the right, 300 ms | slide out, 200 ms | `cubic-bezier(0.32, 0.72, 0, 1)` / ease-in |
+| Menu, select, tooltip, picker list | `motion-pop` with `origin-(--radix-…-transform-origin)` | grow from the trigger, 150 ms | 100 ms | ease-out / ease-in |
+| A page arriving (keyed by its route, not its search or dialog route) | `motion-page` | fade and rise 4 px, 180 ms | — | ease-out |
+| Content replacing a skeleton, new rows, a chosen tab | `motion-fade` | fade 180 ms | — | ease-out |
+| Skeleton | `motion-skeleton` | fade in after 150 ms (200 ms), then pulse 2 s | replaced | ease-out |
+| Skeleton continuing a frame already drawn | `motion-skeleton-now` | pulse at once | replaced | — |
+| Table loading bar | `motion-progress` | 1 s loop | — | ease-in-out |
+
+`prefers-reduced-motion: reduce` sets every animation and transition to 0.01 ms (the rule outside every layer in `styles.css`), so Radix still receives `animationend` and exits complete at once.
+
+### 17.3 Loading at any API speed
+
+| Situation | Rule | Built with |
+| --- | --- | --- |
+| First load of a list | The table and its real header are drawn at once; skeleton bars fill rows of the data's height under fixed column widths | `DataTable` + `SkeletonRows` (`rowClassName` = the row height), `Th` widths |
+| First load of a page header line that comes from data | The line keeps its height | `PageHeader subtitleLoading` |
+| First load of a detail page or a form | A skeleton of the page's own layout: the same columns, cards and fields | `FieldSkeleton`, page skeletons (`DetailSkeleton` of `W-Unit-Detail`, `W-Building`) |
+| A dialog whose data loads | The body shows the form's shape, so the dialog keeps its size; the title has a loading form without the missing name | `FieldSkeleton`, a `.title.loading` key |
+| A new filter, search or page | The previous rows stay; after 150 ms they dim to 60% under a 2 px bar for at least 300 ms; the new rows fade in | `placeholderData: keepPreviousData`, `DataTable busy`, `TBody key={useIdentityKey(data)}` |
+| A refetch that brings equal data (focus, reconnect) | Nothing moves and nothing refades | Structural sharing + `useIdentityKey` |
+| A button that sends | Disabled at once; its spinner shows after 150 ms and stays at least 400 ms | `Button loading` (`useDelayedFlag`) |
+| Any skeleton | Invisible for its first 150 ms, so an answer under 150 ms replaces it unseen | `Skeleton` (`motion-skeleton`) |
+| The arrival (boot) | The first paint is the page's frame: the stylesheet is a `<link>` in the head; `#boot` in `index.html` draws the shell (signed-in paths) or the sign-in hero (`/login`), chosen by `public/boot.js` with the theme; `main.tsx` removes it once a `main` is in `#root`; `ShellSkeleton` (the same frame, `immediate`) holds while the session is restored | `index.html`, `boot.js`, `ShellSkeleton`; a change to the shell's frame is made in both |
+| Data every page needs | Asked for at start, beside the session refresh, not after the first draw | `queryClient.prefetchQuery(publicConfigQuery())` in `main.tsx` |
+| Icons | The icon chunk starts at start and renders from a store the moment it arrives; before that the icon keeps its box | `Icon` (never `React.lazy`: React holds a revealed Suspense boundary ~300 ms) |
+
+### 17.4 Overlays
+
+- Every dialog, panel, menu, select and tooltip uses the `motion-*` class of §17.2; a Radix content without one is a defect.
+- A dialog its parent unmounts to close (a route such as `/staff/new`, a search param such as `?dialog=profile`) closes through `useExit(onClose)`: every close path (Esc, scrim, Cancel, after a save, after a conflict) calls the returned `close`, which plays the exit and then navigates. A parent that renders the dialog only while a value exists keeps that value with `useLastDefined` while it closes.
+- `Dialog` and `ConfirmDialog` keep the content of their last open render while they leave (`useHeld`), so a caller may clear its state on close.
+- The side panel runs the full height of the window; a centred dialog stops at 90%.
+
+### 17.5 Layout and alignment
+
+- Controls in one row are all labelled or all unlabelled. `SearchField` shows its label like every field; a row of chips beside a labelled field takes the field's height (`ChipGroup className="min-h-control-lg"`) and the row aligns to the end.
+- An icon beside text sits in a box as tall as the first line (`h-5` for `secondary`, `h-6` for `body-strong`), so it stays on that line whatever the number of lines (`Banner`).
+- Table headers do not wrap (`Th` is `whitespace-nowrap`); columns whose content varies have widths, so paging does not move them.
+- A placeholder has the height of what replaces it: a brand line keeps the line's height, a skeleton bar the height of its text line.
+- Every page has one `main` (the boot frame is removed when it appears).
+
+### 17.6 Shell
+
+- The top bar holds the breadcrumb (crumbs before the current page are links: a group opens its first page), the theme switch (system, light, dark; DR-304), the language switch, and later the bell. The public pages show the theme and language switches.
+- An icon-only control carries its name on the control itself (`aria-label`, and `title` for a hover hint), not on a lazily drawn icon.
+
+### 17.7 Acceptance
+
+A pull request that adds or changes a web screen is accepted when the author has checked, and a reviewer can repeat:
+
+| # | Check | How |
+| --- | --- | --- |
+| Q1 | Slow API: run with `DEV_LATENCY_MS=400` (the `.env.local` default, DR-305); reload the screen, navigate to it, change every filter, search and page, switch every tab, open and close every dialog and panel, submit every form | No white frame; skeletons have the final layout; nothing already on screen moves when data arrives; rows stay dimmed while a filter loads |
+| Q2 | Fast API: the same with `DEV_LATENCY_MS=0` | No skeleton, bar or spinner is seen; content fades in; nothing flashes. DS-09 automates a page change and a filter |
+| Q3 | Every overlay opens and closes with its motion, by every close path, including after a save | DS-10 automates a route-driven panel |
+| Q4 | Rows of controls share a baseline; icons sit on their text's first line; nothing wraps that should not, at 1024, 1280 and 1440 px | Look at the screen at the three widths |
+| Q5 | Light, dark and reduced motion | The theme switch; the OS setting or DevTools "Emulate CSS prefers-reduced-motion" |
+| Q6 | Accessibility | DS-08 (axe in both themes) passes; icon-only controls are named |
+| Q7 | Budget | `bun run check:bundle`: `/login` stays under 170 KB (DOC-53 §8); it stood at 169.7 KB on 2026-10-28, so the sign-in page takes nothing new without a plan |
+| Q8 | Recording | For a change to loading or motion, a frame-by-frame look (Playwright with the CDP screencast, or DevTools Performance with screenshots) at both speeds, attached to the pull request |
+
+### 17.8 Lessons from the 2026-10-28 review
+
+| Seen | Cause | Rule now |
+| --- | --- | --- |
+| No theme switch | DR-182 had ruled one out for phase 1 | DR-304: a three-way switch on the web |
+| Breadcrumbs did not click | Crumbs were catalog keys without a target | A crumb carries `{ label, to }` (§17.6) |
+| Dialogs and panels without motion; "is this shadcn?" | The components are hand-written over Radix without the shadcn animation classes | §17.2; any Radix content takes a `motion-*` class |
+| No exit motion on many dialogs | They were unmounted by a route or a search param, so Radix had nothing to animate | `useExit`, `useLastDefined`, `useHeld` (§17.4) |
+| Search field higher than the selects beside it | It had no visible label; the others had one | §17.5, one row is all labelled |
+| Info banner text off its icon | A 24 px icon with a top margin beside a 20 px line | §17.5, the icon box is the line's height |
+| Table collapsed and regrew on every filter; header gone; subtitle gone | A new query key cleared the data and the skeleton had no header; columns sized by content | `keepPreviousData`, `DataTable busy`, `SkeletonRows` under the real header, column widths, `subtitleLoading` |
+| White page for about a second on arrival | The stylesheet was imported by the script and nothing was drawn before the session refresh answered | §17.3 boot row |
+| Sign-in hero jumped | The hotline line appeared under the name after E-03 answered, pushing the title down | The brand block keeps its height; E-03 is asked for at start |
+| Icons appeared after the page | `React.lazy` suspends even with its chunk loaded, and React holds a Suspense reveal ~300 ms | Icons render from a store (§17.3) |
+| Skeletons and spinners flashed once the API was fast | Indicators showed the instant a request started | §17.3: 150 ms before any indicator, 300–400 ms minimum once shown |
+| The axe check failed after the motion was added | It measured contrast in the middle of a fade | DS-08 waits for finite animations before measuring |

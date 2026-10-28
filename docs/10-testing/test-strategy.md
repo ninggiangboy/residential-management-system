@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: `NT-` written in DOC-31, `PD-` in DOC-34, new prefix `SE-` in DOC-52, `OPM-100…152`; P1-25: `IN-` written in DOC-23, `FF-` in DOC-44; DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (`DS-09`, `DS-10` in DOC-54 §17) · 2026-10-28 (P1-26: `NT-` written in DOC-31, `PD-` in DOC-34, new prefix `SE-` in DOC-52, `OPM-100…152`; P1-25: `IN-` written in DOC-23, `FF-` in DOC-44; DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -548,7 +548,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `SC-` | Security | [DOC-39](../06-design/security.md) §16 | `SC-01…31` | Draft | P1-15, P1-16, P1-20, P3, P6-08 |
 | `OB-` | Observability | [DOC-40](../06-design/observability.md) §10 | `OB-01…18` | OB-01…08, 12, 13 run in P1-18 (2026-10-27); OB-14 run locally; the rest wait for P1-20, P2-20, P3-09, P6-06 | P1-18 |
 | `CF-` | Configuration | [DOC-41](../06-design/configuration-reference.md) §19 | `CF-01…18` | Draft | P1-04 |
-| `DS-` | Design system (tokens, contrast, status table) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…08` | Review | P1-09 |
+| `DS-` | Design system (tokens, contrast, status table, motion and loading) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…10` | Review | P1-09 |
 | `CL-` | Clients (fetcher, refresh, unit context, offline, push) | [DOC-55](../08-ux-ui/client-architecture.md) §18 | `CL-01…30` | Review | P1-16, P1-17 |
 | `UIRA-` | Screens: resident sign-in and home | [DOC-57](../08-ux-ui/screens/resident-signin-home.md) | `UIRA-01…55` | Review | P1-11, P1-17 |
 | `UIRF-` | Screens: resident fees and payment | DOC-58 | not written | planned (P2, P3) | P2, P3 |
