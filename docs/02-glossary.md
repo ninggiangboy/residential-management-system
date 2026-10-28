@@ -1,6 +1,6 @@
 # Glossary
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: SeaweedFS replaces the R2 row; rows for the `vn`/`global` profiles and the files host; VPS, pgBackRest, web CMS, presigned PUT, inbox mode) · 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: usage event, session, switch and rollup) · 2026-10-26 (DR-268: SeaweedFS replaces the R2 row; rows for the `vn`/`global` profiles and the files host; VPS, pgBackRest, web CMS, presigned PUT, inbox mode) · 2026-10-22 (DR-243…245: ledger guard, bulk fee-notice request, match status; DR-239: the trunk is `dev`; earlier: DR-96: `unmatchedTransfer` outcomes; earlier: DR-174…219: UX/UI terms; earlier: DR-157…173: operations, testing; DR-128…150) · DOC-06
 > Depends on: original SDD §1–§22, [DR](00-decision-register.md) (DR-01…127), [master plan](00-master-plan.md) §0.2, §3.2
 > Main readers: every document (DOC-01…103), P0-17…P0-35, every task that names a term in code or in a screen
 
@@ -345,6 +345,10 @@ This document defines the words of the project, as the project uses them. Every 
 | request id | — | The `X-Request-Id` on every request and log line; the only means of following one request in phase 1 (no traces). | DR-63 |
 | rate bucket | — | A PostgreSQL token bucket (`identity.rate_bucket`) that limits OTP, sign-in and other endpoints. | DR-64 |
 | audit log | — | `audit.audit_log`: an append-only row per staff mutation, written in the mutation's transaction. | FR-37, DR-57 |
+| usage event | — | One `screen_view` or one `tap` that a signed-in client reports, named from a closed list, with no account, device, IP address or user agent: `analytics.usage_event`. Not an outbox event and not an audit row. | DR-279, DOC-104 |
+| usage session | — | A random UUID that a client makes in memory at launch and renews after 30 minutes in the background; it groups the usage events of one use of the app and joins nothing else. Not a login session (`refresh_family`). | DR-279, DOC-104 §5.2 |
+| usage switch | Chia sẻ dữ liệu sử dụng ẩn danh | The setting, on the device and on by default, that stops a client from recording usage events. | DR-279, DOC-104 §5.4 |
+| usage rollup | — | `analytics.usage_daily`: the events and the distinct sessions of a day per app, platform, audience, event and name, made by the job `usage_rollup` and kept 730 days; the raw events are purged after 90. | DR-279, DOC-104 §7 |
 | `actor_kind = 'system'` | — | The audit actor of a settlement posted by the webhook, the re-query or the statement path. | DR-57 |
 | `pii.read` | — | The audit action for reading CCCD or date of birth: one row per detail view and one per export (with the record count). | DR-57, DR-58 |
 | audit action | — | The name of an audited mutation, `<module>.<object>.<verb>` (or `pii.read`), declared in the module's manifest and listed in DOC-35 §4; `AuditApi.record` refuses an undeclared one. | DR-124 |
