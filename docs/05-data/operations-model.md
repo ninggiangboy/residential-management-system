@@ -1,6 +1,6 @@
 # Operations model
 
-> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
+> Status: **Approved** (Owner, 2026-10-21, for §1–3 (gate P1); §4–9 are owed to later phases) · Updated: 2026-10-28 (DR-279: §9A, the `analytics` tables) · 2026-10-26 (DR-268: the object store is SeaweedFS in `vn`, R2 in `global`) · 2026-10-22 (P1-07 and P1-08: the migrations exist, §13 run) · 2026-10-20 (DR-132: bucket `stepup:staff:<id>`; DR-154: label `job_name`) · DOC-17
 > Depends on: original SDD §15, §16, [DR](../00-decision-register.md) (DR-33, 57, 58, 59, 60, 61, 62, 64, 74, 85, 86, 87, 101, 105, 110–113), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0016](../04-adr/0016-files-on-r2-presigned-put.md), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-14](data-conventions.md) §2–§12, [DOC-16](identity-and-residency-model.md) §1.2, [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-12](../03-architecture/code-architecture.md) §8, [DOC-06](../02-glossary.md)
 > Main readers: P1-05 (platform plugins), P1-06 (migrations), P1-07 (building and files), P1-08 (audit), DOC-19 (grants), DOC-20 (retention), DOC-35, DOC-36, DOC-37, DOC-38, DOC-41
 
@@ -20,6 +20,7 @@ This document holds the tables of the schemas that run the system rather than th
 | How is a file registered, verified and counted against the quota? | §3.1 |
 | What do the job runner, the outbox, the maintenance flag, the idempotency store and the rate buckets keep? | §3.2–§3.4 |
 | Tickets, access, notices, notification, vehicles, wiki, reporting, realtime | §4–§9 (owed) |
+| What do the usage events and their daily rollup keep? | §9A |
 | Which index serves which query | §10 |
 | Retention and purge | §11 (the periods are DOC-20's) |
 
@@ -35,6 +36,7 @@ This document holds the tables of the schemas that run the system rather than th
 | 6 | `notices`, `notification` | `notice`, `notice_attachment`, `notice_recipient`, `inbox_entry`, `device_token`, `push_ticket` (DR-50…53). The notification tables are needed in P2 and are written in P1-26 | P1-26, P3-12 | Not written |
 | 7 | `vehicles` | `vehicle`, `vehicle_revision` (DR-49) | P4-11 | Not written |
 | 8 | `wiki` | `folder`, `page`, `page_version`, `page_attachment` (DR-54) | P4-13 | Not written |
+| 9A | `analytics` | `usage_event`, `usage_daily` (DR-279, ADR-0028) | 2026-10-28 (DOC-104) | Written, DDL run on PostgreSQL 18.6 |
 | 9 | `reporting`, `realtime` | `export_job` (DR-55; plus the requester's role, IP, user agent and request id, which the worker needs to write the `pii.read` row of an export, DOC-35 §6, DR-124), `events` (DR-87) | P5-09 | Not written |
 
 The rules of DOC-14 §5.3 apply to every new table: a table with no `building_id` joins the allow-list in the same change as its DDL. This document adds `building.job_run` (§3.2) to it.
@@ -746,6 +748,74 @@ Not written; P4-13 (DR-54, DOC-32).
 
 Not written; P5-09 (`reporting.export_job`, DR-55; `realtime.events`, DR-87, DR-75).
 
+## 9A. Analytics
+
+The two tables of the usage record (DR-279, ADR-0028; behavior in DOC-104). Schema `analytics`, owned by the module `analytics`. **DDL run on PostgreSQL 18.6 (`postgres:18.6`, aarch64) on 2026-10-28** in a scratch database, with the statements of DOC-104 §7 (DOC-104 §13.1). The section is numbered 9A so that §10…§15 keep the numbers that other documents cite.
+
+Both tables carry `building_id` (the building of the token) and no foreign key (ADR-0014); every query on them carries the scope (`check:scope`). Neither is on the allow-list of DOC-14 §5.3.
+
+### 9A.1 `usage_event`
+
+- **Grain:** one screen view or one tap that a signed-in client reported. **Business key:** `id` (UUIDv7, made by the application, DOC-14 §3). **Written by:** `analytics` (`RecordUsageEvents`, E-173), one `INSERT … SELECT FROM unnest(…)` per batch. **Read by:** the job `usage_rollup`; an operator with `rms_readonly`. Never updated.
+- **No person:** the table has no column for an account, membership, unit, role, device, token, IP address or user agent, and none may be added without a new DR (DR-279 (3)). `session_id` is a random UUID that the client made in memory; it is not a key to anything else.
+
+```sql
+CREATE SCHEMA analytics;
+
+CREATE TABLE analytics.usage_event (
+  id          uuid        NOT NULL,
+  building_id uuid        NOT NULL,
+  occurred_at timestamptz NOT NULL,                      -- the receive time minus ageMs, to the second
+  app         text        NOT NULL,
+  platform    text        NOT NULL,
+  app_version text        NOT NULL,
+  audience    text        NOT NULL,                      -- the kind of the token, never the role
+  session_id  uuid        NOT NULL,
+  event       text        NOT NULL,
+  name        text        NOT NULL,                      -- a screen id, or '<Screen>.<control>' for a tap
+  CONSTRAINT pk_usage_event PRIMARY KEY (id),
+  CONSTRAINT ck_usage_event_app       CHECK (app IN ('resident', 'staff', 'web')),
+  CONSTRAINT ck_usage_event_platform  CHECK (platform IN ('ios', 'android', 'web')),
+  CONSTRAINT ck_usage_event_version   CHECK (app_version ~ '^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$'),
+  CONSTRAINT ck_usage_event_audience  CHECK (audience IN ('resident', 'staff')),
+  CONSTRAINT ck_usage_event_event     CHECK (event IN ('screen_view', 'tap')),
+  CONSTRAINT ck_usage_event_name      CHECK (char_length(name) <= 60 AND name ~ '^[A-Z][A-Za-z0-9-]*(\.[a-z][a-z0-9_]*)?$'),
+  CONSTRAINT ck_usage_event_name_form CHECK ((event = 'tap') = (position('.' IN name) > 0))
+);
+CREATE INDEX ix_usage_event_building_at ON analytics.usage_event (building_id, occurred_at);
+```
+
+- The checks are the last line: the application validates the lists (DOC-104 §4) and drops a name that is not in them; the checks refuse a name with a query string, a path or a space, and a tap without a control, whatever the application does.
+- `ix_usage_event_building_at` serves the rollup window and the purge, both by `(building_id, occurred_at)`.
+
+### 9A.2 `usage_daily`
+
+- **Grain:** one day (in the building's time zone), app, platform, audience, event and name. **Business key:** the primary key. **Written by:** the job `usage_rollup` (an upsert that recomputes the day from `usage_event`). **Read by:** an operator with `rms_readonly`; Grafana does not read it (DOC-104 §9).
+- `events` is the count of events of the group; `sessions` the count of distinct `session_id` in it. A session that crosses midnight counts on both days, so a sum of `sessions` over days is an upper bound.
+
+```sql
+CREATE TABLE analytics.usage_daily (
+  building_id uuid    NOT NULL,
+  day         date    NOT NULL,
+  app         text    NOT NULL,
+  platform    text    NOT NULL,
+  audience    text    NOT NULL,
+  event       text    NOT NULL,
+  name        text    NOT NULL,
+  events      integer NOT NULL,
+  sessions    integer NOT NULL,
+  CONSTRAINT pk_usage_daily PRIMARY KEY (building_id, day, app, platform, audience, event, name),
+  CONSTRAINT ck_usage_daily_app      CHECK (app IN ('resident', 'staff', 'web')),
+  CONSTRAINT ck_usage_daily_platform CHECK (platform IN ('ios', 'android', 'web')),
+  CONSTRAINT ck_usage_daily_audience CHECK (audience IN ('resident', 'staff')),
+  CONSTRAINT ck_usage_daily_event    CHECK (event IN ('screen_view', 'tap')),
+  CONSTRAINT ck_usage_daily_counts   CHECK (events >= 1 AND sessions BETWEEN 1 AND events)
+);
+```
+
+- The primary key leads with `(building_id, day)`, so "the top names of the last 30 days" is a range scan of the key; no other index is built.
+- The table holds no session id and no time of day: it cannot be joined back to a person or to a moment.
+
 ## 10. Index catalog
 
 Every index of §1–§3 with the query it serves, so none is speculative. The tables of §4–§9 add theirs when they are written.
@@ -770,6 +840,8 @@ Every index of §1–§3 with the query it serves, so none is speculative. The t
 | `outbox_pending_idx` | partial btree | Relay claim | ADR-0009 |
 | `ix_idempotency_key_created` | btree | 24-hour sweep | DR-74 |
 | `ix_rate_bucket_updated` | btree | Idle-bucket purge | DR-64 |
+| `ix_usage_event_building_at` | btree | Rollup window and raw purge of `usage_event` (§9A.1) | DR-279 |
+| `pk_usage_daily` | primary key | Top names over a period; the rollup upsert; the 730-day purge (§9A.2) | DR-279 |
 
 Primary keys serve the by-id lookups. The plans were read on PostgreSQL 18.6 (§13, S01–S08); the sample tables are too small for a cost-based choice, so the plans were read with `enable_seqscan = off`. The two indexes of `file_object` were also read on a table of 20,000 to 20,030 rows (after `VACUUM ANALYZE` for the quota), where the planner chose them without help.
 
@@ -788,6 +860,8 @@ The periods are fixed in DOC-20 and run by the jobs of DOC-38 (DR-62); this tabl
 | `platform.idempotency_key` | 24 hours (DR-74) | — |
 | `platform.rate_bucket` | Idle buckets, `token_purge` | — |
 | `platform.maintenance` | One row | The row |
+| `analytics.usage_event` | 90 days, `usage_rollup`, only up to the newest rolled-up day (DR-279) | — |
+| `analytics.usage_daily` | 730 days, `usage_rollup` (DR-279) | — |
 
 ## 12. Decisions made while writing
 
