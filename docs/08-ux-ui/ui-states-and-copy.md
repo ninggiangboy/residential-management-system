@@ -1,6 +1,6 @@
 # UI states and copy
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-28 (DR-279: §4.6 the usage switch) · 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
 > Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 
@@ -313,6 +313,15 @@ Strings used by three screens or more, or by the shell, move here (DOC-56 §6.4)
 | `common.time.today-at` | Hôm nay {time} | Today {time} | Used when the instant is earlier today and 24 h have not passed in a deadline context |
 | `common.time.days-left` | Còn {count} ngày | {count, plural, one {# day left} other {# days left}} | Deadlines (`res.main.fee.due-in` is its screen alias) |
 | `common.time.days-overdue` | Quá hạn {count} ngày | {count, plural, one {# day overdue} other {# days overdue}} | Staff debt rows |
+
+### 4.6 Usage switch
+
+The switch of DR-279 (DOC-104 §5.4) is on three screens (`Account`, `S-Account`, `W-Profile`), so its strings are shared keys (DOC-56 §6.4).
+
+| Key | `vi` | `en` | Note |
+| --- | --- | --- | --- |
+| `common.usage.title` | Chia sẻ dữ liệu sử dụng ẩn danh | Share anonymous usage data | The label of the switch |
+| `common.usage.hint` | Giúp ban quản lý biết màn hình nào được dùng nhiều để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn. | Helps the management see which screens are used so it can improve the app. It is not tied to your account or phone number. | Helper text under the label; no toast on change |
 
 ## 5. `status.*` labels
 
