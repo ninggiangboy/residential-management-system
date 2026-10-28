@@ -157,14 +157,16 @@ All three return at once, never throw and never await the network.
 
 ### 5.3 The queue and the batch
 
+**No request per action.** A press or a screen change only appends to the queue in memory. The queue goes to the server in one request when the person leaves the app, so a normal use of the app costs one request, not one per action.
+
 | Rule | Value |
 | --- | --- |
 | Queue | In memory, at most 100 events; the oldest is dropped beyond that |
-| A batch is sent when | 20 events are queued, or 30 seconds have passed since the first queued event, or the app goes to the background |
+| A batch is sent when | The app goes to the background (mobile: `AppState` `background`; web: `visibilitychange` to `hidden` and `pagehide`, sent with `fetch(…, { keepalive: true })` so that closing the tab does not cancel it), **or** 50 events are queued (the size of one request), **or** 5 minutes have passed since the first queued event (so a long session is not held back, and a crash loses at most 5 minutes) |
 | Size | At most 50 events and 16 KB per request (the server's limit, §6.2) |
 | In flight | One request at a time |
 | On `X-Usage-Enabled: false` | The queue is cleared and nothing is queued or sent until the next launch (§5.4) |
-| On any failure | The batch is **dropped**: a network error, 401, 413, 429, 503, anything else. No retry, no log to the person |
+| On a failure | If **no answer** arrives (a network error), the events stay queued and go with the next batch; an event older than 1 hour is dropped (the server refuses a larger `ageMs`) and the queue never holds more than 100. If **any answer** arrives, 401, 413, 429, 503 or the like, the batch is **dropped**. No retry loop and no message to the person |
 | Sent with | The token of the signed-in account (DOC-55 §5) and, in the resident app, the `X-Unit-Id` of the active unit, like any unit call; through the fetcher without the idempotency header and without the retry of reads. Nothing is sent while no unit is chosen |
 | On sign-out | The queue is cleared before the token is dropped, so events of one account are never sent with the token of the next |
 | Persistence | None. A killed app loses its queue |
@@ -405,7 +407,7 @@ Defined in DOC-41 §13A.
 | `USAGE_RAW_RETENTION_DAYS` | `90` | Age at which raw events are purged; 7 to 365 |
 | `USAGE_DAILY_RETENTION_DAYS` | `730` | Age at which the rollup is purged; 90 to 3650 |
 
-The two rate limits of §6.1 are keys too (DOC-41 §7, DOC-39 §6): `USAGE_EVENTS_PER_MINUTE_PER_IP` (30) and `USAGE_EVENTS_PER_HOUR_PER_SESSION` (120). The other limits (50 events and 16 KB per batch, 3 days of rollup, 30 minutes of session, 20 events or 30 seconds per batch, 100 queued events) are constants of the code, not keys.
+The two rate limits of §6.1 are keys too (DOC-41 §7, DOC-39 §6): `USAGE_EVENTS_PER_MINUTE_PER_IP` (30) and `USAGE_EVENTS_PER_HOUR_PER_SESSION` (120). The other limits (50 events and 16 KB per batch, 3 days of rollup, 30 minutes of session, a batch at the background, at 50 events or after 5 minutes, 100 queued events) are constants of the code, not keys.
 
 ## 13. Required tests
 
@@ -435,7 +437,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-20 | Two `usage_rollup` runs at once (barrier) | One runs, one is skipped by the lock; the rows are as for one run |
 | UA-21 | Client: the switch off | No event queued, the queue cleared, no request |
 | UA-22 | Client: the session id | The same for 29 minutes in the background, new after 31; absent from the device storage |
-| UA-23 | Client: a network error, 429, 503 | The batch is dropped, no retry, nothing thrown |
+| UA-23 | Client: no answer (a network error); 429; 503 | After a network error the events stay queued and go with the next batch, those over 1 hour old are dropped, the queue holds at most 100; after 429 or 503 the batch is dropped; no retry loop; nothing thrown |
 | UA-24 | Client: sign-out with 5 queued events, then another account signs in | The queue is empty; no event of the first account is sent with the second token |
 | UA-25 | Client: the same screen twice in 1 s; a route with a parameter; a tap | One `screen_view`; the id has no parameter; the tap is not merged; no device id is read |
 | UA-26 | Client: the switch after a restart | The stored choice; the default is on (`USAGE_DEFAULT_ENABLED`) |
@@ -443,6 +445,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to a member of the unit named in the header, whatever the member type (Helper included), and refused to a staff token; E-174 is allowed to every staff role and refused to a resident token; both refuse a request with no token |
 | UA-29 | The app configs | `PrivacyInfo.xcprivacy` of each app has the entry of §9.2; no `NSUserTrackingUsageDescription` in `Info.plist` |
 | UA-30 | Client: the answer carries `X-Usage-Enabled: false` | The queue is cleared; no event is queued or sent until a new launch; the first batch of the new launch is sent |
+| UA-31 | Client: batching | 30 events in 4 minutes make no request; the app going to the background makes one request holding all 30; the 50th queued event sends at once; 5 minutes after the first queued event sends; the web sends on `visibilitychange` to `hidden` with `keepalive` |
 
 ### 13.1 Statements run
 
