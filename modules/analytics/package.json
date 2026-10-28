@@ -27,8 +27,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test src --pass-with-no-tests",
-    "test:integration": "bun --env-file=../../.env.local test ./test --timeout 60000 --pass-with-no-tests"
+    "test": "bun test src --pass-with-no-tests"
   },
   "dependencies": {
     "@core/db": "workspace:*",
