@@ -1,10 +1,10 @@
 # ADR index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-19 · DOC-13
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (ADR-0028, DR-279) · DOC-13
 > Depends on: [DR](../00-decision-register.md), [master plan](../00-master-plan.md) §3.2, [ADR-0001](0001-record-architecture-decisions.md)
 > Main readers: every task `Pn-00` (doc gate), reviewers of pull requests that touch an architecture decision
 
-This index lists the 27 architecture decision records of the project. An ADR is written for a decision that is hard to reverse and touches many modules; every other decision stays in the decision register. Detail lives in the design documents; an ADR gives the reason and the rejected options (ADR-0001).
+This index lists the 28 architecture decision records of the project. An ADR is written for a decision that is hard to reverse and touches many modules; every other decision stays in the decision register. Detail lives in the design documents; an ADR gives the reason and the rejected options (ADR-0001).
 
 ## 1. How to read this index
 
@@ -16,7 +16,7 @@ This index lists the 27 architecture decision records of the project. An ADR is 
 | Gate | The phase that needs the ADR `Accepted` before it starts |
 | Source | The decision register entries (`DR-xx`) and original SDD sections it records |
 
-## 2. The 27 ADRs
+## 2. The 28 ADRs
 
 | ADR | Title | Status | Gate | Source |
 | --- | --- | --- | --- | --- |
@@ -47,6 +47,7 @@ This index lists the 27 architecture decision records of the project. An ADR is 
 | ADR-0025 | Notice fan-out, heartbeat reclaim and single-source read state; allowed rich-text subset | Not written | P4 | DR-50, DR-51 |
 | [ADR-0026](0026-demo-building-and-fake-payment-driver.md) | Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept | Proposed | P1 | DR-26, DR-60 |
 | [ADR-0027](0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md) | In Vietnam, keep files and backups in SeaweedFS on the VPS instead of Cloudflare R2, and keep the Cloudflare domain, HTTPS and Tunnel | Accepted | P1 | DR-268 |
+| [ADR-0028](0028-self-hosted-usage-analytics-without-an-identifier.md) | Record screen views and taps as allowlisted events without an account or device identifier, in an `analytics` schema on the same PostgreSQL, and read them through a counter | Accepted | P1 | DR-279 |
 
 ## 3. Rules
 
@@ -60,6 +61,7 @@ This index lists the 27 architecture decision records of the project. An ADR is 
 | --- | --- |
 | P0-22 | ADR-0001…0011 and this index |
 | P0-23 (done) | ADR-0013…0023 and ADR-0026 |
+| 2026-10-28 | ADR-0028 (with DR-279) |
 | Before P2 / P4 / P5 | ADR-0024 (P2); ADR-0025 (P4); ADR-0012 (P5) |
 
 ## Open questions

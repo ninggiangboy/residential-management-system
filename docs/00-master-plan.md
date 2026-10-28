@@ -301,7 +301,7 @@ The Gate column is the phase that needs the document Approved before it starts. 
 
 | DOC | Document | Required content | Gate |
 | --- | --- | --- | --- |
-| DOC-13 | ADR index | Table `ADR · title · status · gate · source DR` for the 27 ADRs below | P1 |
+| DOC-13 | ADR index | Table `ADR · title · status · gate · source DR` for the 28 ADRs below | P1 |
 
 | ADR | Subject | Source | Gate |
 | --- | --- | --- | --- |
@@ -332,6 +332,7 @@ The Gate column is the phase that needs the document Approved before it starts. 
 | ADR-0025 | Notice fan-out, heartbeat reclaim and single-source read state; allowed rich-text subset | DR-50, DR-51 | P4 |
 | ADR-0026 | Demo building and fake payment driver | DR-26, DR-60 | P1 |
 | ADR-0027 | In Vietnam, files and backups in SeaweedFS on the VPS instead of Cloudflare R2; the Cloudflare domain, HTTPS and Tunnel stay; two profiles `vn` and `global` | DR-268, DR-83, DR-58, DR-61, DR-66, DR-67 | P1 |
+| ADR-0028 | Self-hosted usage analytics: screen views and taps from closed lists, no account or device id, an `analytics` schema, a counter to read it | DR-279, DR-103, DR-58 | P1 |
 
 #### 05-data
 
