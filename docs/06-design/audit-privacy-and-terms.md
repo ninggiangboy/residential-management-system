@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: §7.2 rule 6, §8 and §9.4 for the usage record) · 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -288,6 +288,7 @@ Classes are those of DR-58 and ADR-0022: **sensitive** (CCCD number), **personal
 3. **Push is generic.** Title and body come from templates and carry no amount, name, phone or ticket text; `data` is `{route, unitId, entityId}` (DR-52, FR-29.3).
 4. **Cross-border flows, and only these:** Expo, FCM and APNs (generic payload); Cloudflare edge (DNS, Tunnel, WAF; in transit) and Pages, which holds no personal data (DR-83, DR-268); files and backups are in SeaweedFS on the VPS in Vietnam, so storage is not a cross-border flow (R2 only in the `global` profile); the SMS and mail providers, chosen from Vietnam-hosted vendors where possible (DR-68). No error tracker (DR-103). A new processor needs a new DR that adds it to this list and to the privacy notice.
 5. **The CCCD number is never a file.** No upload purpose holds a CCCD image (DOC-37 §2).
+6. **The usage record holds no personal data by construction** (DR-279, DOC-104 §2): its tables have no account, membership, unit, role, device, token, IP address or user agent column (UA-02), so it has no row in §7.1. A column added to `analytics` that matches the pattern of §7.3 fails AD-30 and needs a new DR and a new ADR. It adds no processor to rule 4: nothing leaves the VPS.
 
 ### 7.3 Keeping the inventory true
 
@@ -307,6 +308,8 @@ DOC-20 §2 is the table of every table and file; §5 holds the purge statements 
 | Resident personal fields | Cleared at account deletion | `accountDeletionDays` after approval (30) | §10 |
 | OTP challenges; reset, invite and step-up tokens; sessions | Deleted by age | 24 h; 7 days; 30 days after revocation | `otp_purge`, `token_purge` daily 03:45 |
 | Scans and Guard lookups | Deleted by age | 90 days | `qr_scan_purge` |
+| Usage events (`analytics.usage_event`): screen views and taps, no person | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup` (DR-279) |
+| Usage rollup (`analytics.usage_daily`): daily counts | Deleted by age | 730 days (`USAGE_DAILY_RETENTION_DAYS`) | `usage_rollup` (DR-279) |
 | Logs | Deleted by age | 14 days in Loki | Alloy and Loki (DR-63) |
 | Backups | Deleted by age | About 5 weeks tail (DOC-20 §6) | pgBackRest retention; the notice says so |
 
@@ -380,6 +383,7 @@ The texts are the client's legal deliverable (P0-06, `vi` and `en`). The system 
 | --- | --- |
 | Terms of use (all members) | Who the management company is (`building.company`); that fees are paid in full per charge, with no partial payment or credit; that the receipt is a "Biên lai thu tiền" and not a tax invoice, and that an e-invoice is issued on request outside the system (DR-17) |
 | Terms of use, owner section | That **debt follows the unit but history does not**: a member sees the open charges of the unit at any time, and paid history, receipts and payer names only from the start of their own membership (DR-40, DR-59) |
+| Privacy notice (usage) | That the apps record which screens are opened and which listed controls are pressed, without the account, phone, device or location; that the record is kept 90 days and then only as daily counts for 730 days; that it stays on the building's server; that the person can turn it off in `Account`, `S-Account` or `W-Profile`; the Manager's contact (DR-279, DOC-104 §9.1). A new `privacy` version carries it before the first build that sends events reaches a resident |
 | Privacy notice | The data kept (§7.1), why, and who sees it; the processors outside Vietnam (§7.2); the retention periods (§8); that payer names stay on receipts after deletion; the backup tail of about 5 weeks; the deletion procedure and its cooling-off (`accountDeletionDays`); the Manager's contact for questions |
 
 ### 9.5 Not built

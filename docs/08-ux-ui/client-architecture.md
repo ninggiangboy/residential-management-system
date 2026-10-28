@@ -1,6 +1,6 @@
 # Client architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-09: catalog and design-tokens rows, DR-235, DR-236; DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: §15A the usage record) · 2026-10-22 (P1-09: catalog and design-tokens rows, DR-235, DR-236; DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
 > Depends on: original SDD §4.3, §18.2, [DR](../00-decision-register.md) (DR-04, 38, 52, 61, 63, 64, 69, 70, 71, 74, 75, 82, 94, 127, DR-226), [ADR-0004](../04-adr/0004-repository-layout-scopes-and-boundaries.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-12](../03-architecture/code-architecture.md) §2, §5.4, §6.1, §13, [DOC-11](../03-architecture/tech-stack-and-versions.md) §4, §6, [DOC-26](../06-design/identity-and-sessions.md) §3, [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-37](../06-design/files-and-uploads.md) §6, [DOC-42](../06-design/error-handling.md) §9–10, [DOC-50](../07-api/api-guidelines.md) §5, §8–11, [DOC-51](../07-api/api-endpoints.md), [DOC-73](../09-operations/mobile-release.md), [DOC-41](../06-design/configuration-reference.md) §15
 > Main readers: P1-09 (i18n, tokens), P1-16 (web shell), P1-17 (mobile shells), every later screen task, DOC-53, DOC-54, DOC-56…68, DOC-88
 
@@ -588,6 +588,21 @@ Rules (DR-192):
 - Development builds log to the console and do not report.
 
 *As built for the apps (P1-17, DR-265):* the root layout of each app is `ObserveRoot.wrap(RootLayout)`; `markInteractive()` runs when the first screen is decided (the boot and the first reads are done), and the route tree sits in an `ObserveErrorBoundary` whose fallback is the "Something went wrong" screen with a reload. `expo-observe` has no config plugin; it is a native module, so a development or production build is needed (it does not run in Expo Go) and the first JavaScript error reaches the dashboard only from a build with an EAS project id (`EAS_PROJECT_ID`, DOC-73 §3).
+
+## 15A. Usage record
+
+DR-279, DOC-104 §5. The apps and the web CMS record screen views and taps of listed controls, with no account or device id, and send them in batches to `POST /usage-events` (E-173). This section says only where the code sits; the rules (session, queue, switch, drops) are DOC-104 §5.
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| `createUsageTracker` | `@rms/client-core` | Pure TypeScript: the queue (100), the session, the batching (20 events or 30 s), the merge of a repeated `screen_view`, the sender port; the clock, the id maker and the sender are injected, so the tests (UA-21…26) need no timers or network |
+| Device binding | `@rms/mobile-core` | The switch in the device storage (`usage.enabled`); `AppState` for the flush on background and the 30-minute session renewal; the sender is the authenticated fetcher with `X-Unit-Id`, no `Idempotency-Key`, no retry |
+| Screen hook | each app's route layout | `routeToScreen` maps an Expo Router route name to a DOC-56 section id; a route not in it is not tracked; parameters never reach the id |
+| Web binding | `apps/cms-web` | TanStack Router `onResolved` calls `usage.screen`; the switch in `localStorage` (`rms.usage.enabled`) in a `try/catch` |
+| `trackTap(target)` | `@rms/client-core` | `target` is the type `UsageTarget` of `@rms/shared-types`; a handler calls it after it has started its action; it never throws and never awaits |
+| Lists | `@rms/shared-types` | `USAGE_SCREENS`, `USAGE_EXCLUDED_SCREENS`, `USAGE_TARGETS`; the test UA-15 compares them with DOC-56 and DOC-104 §4.2 |
+
+What the clients never do: read a device identifier, keep the session id outside memory, send anything before sign-in or before a unit is chosen, show an error, retry, or wait for the answer. The import rules of §2 hold: the tracker imports no server code.
 
 ## 16. Updates and the minimum version
 

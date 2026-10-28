@@ -1,6 +1,6 @@
 # Web: sign-in, dashboard, operations
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the rest is owed to P4, P5 and P6) · Updated: 2026-10-20 · DOC-64
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the rest is owed to P4, P5 and P6) · Updated: 2026-10-28 (DR-279: the usage switch on `W-Profile`) · 2026-10-20 · DOC-64
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-38, 39, 41…47, 64, 71, 72, 75, 84, 128, 130, 147, 150), [DOC-03](../../01-product/requirements.md) (FR-13, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-17, UC-26), [DOC-26](../../06-design/identity-and-sessions.md) §3.3, §4, [DOC-37](../../06-design/files-and-uploads.md) §4, [DOC-42](../../06-design/error-handling.md) §5, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-05…E-08, E-11, E-12, E-30…E-38), [DOC-53](../ux-principles-and-ia.md) §3.4, §4, [DOC-55](../client-architecture.md) §5, §6, §17, [DOC-56](README.md) §5, §6, [DOC-54](../design-system.md)
 > Main readers: P1-16 (web CMS shell), P1-14, P1-15, the writers of DOC-65 and DOC-67 (they use the shell described here), P4, P5 and P6 tasks that build the later screens of this file
 
@@ -364,6 +364,7 @@ Do not copy:
 | Save | E-31 `PATCH /staff/me {fullName?, avatarFileId?}` with `If-Match` and only the changed fields; disabled while nothing changed and while in flight | 200 → cache replaced by the answer, toast `web.profile.toast.saved`, the shell shows the new name and photo | 409 `version_conflict` → refetch E-30, keep the typed name, banner `error.version_conflict` (UX-02); 422 `file_not_verified` → the pending photo is dropped; 400 `validation_failed` → under "Họ và tên" (1 to 120 characters after trimming) |
 | Remove photo | none until save | The avatar shows initials; save sends `avatarFileId: null` | |
 | Change language | E-31 `PATCH /staff/me {language}` with `If-Match`, at once (not with "Lưu thay đổi", DR-211); the same call as the top-bar switch | The catalog switches, toast `web.profile.toast.language` | The control returns to its old value; 409 as above |
+| Usage switch (DR-279) | None: a switch with `common.usage.title` and the hint `common.usage.hint` (DOC-68 §4.6), on by default, kept in `localStorage` (DOC-104 §5.4); like the language it applies at once, not with "Lưu thay đổi". Tracked controls on this page: `W-Profile.language`, `W-Profile.reset_link` (DOC-104 §4.2) | The switch shows the new state | |
 | Send the reset link | E-06 `POST /auth/staff/password-reset {email}` with the email of E-30 | 202 → toast `web.profile.toast.reset_sent`; the button is disabled for 45 s | 429 → toast with the wait (3 per hour per email) |
 | End another session | dialog `web.profile.dialog.revoke.*` (names the consequence, UX-14) → E-33 `DELETE /staff/sessions/{id}` | 204 → the row disappears, toast | 404 → refetch E-32 (already gone) |
 | Leave with unsaved changes | the router blocker opens a dialog | "Ở lại" / "Bỏ thay đổi" | |

@@ -60,7 +60,7 @@ Every event also carries `ageMs`: the milliseconds between the event and the mom
 A `screen_view` name is the **section id of a screen in DOC-56** (`Main`, `Fees`, `S-Account`, `W-Residents`…).
 
 - The constant `USAGE_SCREENS` in `@rms/shared-types` lists the ids of the screens that the apps have when the code is written; a screen is added with the task that builds it. Every id in it must be a section id of DOC-56 (UA-15).
-- **Not recorded:** a screen shown without a session, and the consent screens. The rule: every section of DOC-56 whose *Role or member type* says "signed out" (`Login`, `Login-Error`, `OTP`, `S-Login`, `S-Login-Error`, `W-Login`, `W-Forgot-Sent`, `W-Reset`…), and `Terms` and `Terms-Update` (the person has not yet accepted the privacy notice that describes this record). The constant `USAGE_EXCLUDED_SCREENS` lists them and a test checks it against DOC-56 (UA-15).
+- **Not recorded:** a screen shown without a session, and the consent screens. The rule: every section of DOC-56 whose *Role or member type* says "signed out" (`Login`, `Login-Error`, `OTP`, `S-Login`, `S-Login-Error`, `W-Login`, `W-Forgot-Sent`, `W-Reset`…), and `Terms` and `Terms-Update` (the person has not yet accepted the privacy notice that describes this record), and `Unit-Pick` (no unit is chosen yet, so there is no building to record under, §6.1). The constant `USAGE_EXCLUDED_SCREENS` lists them and a test checks it against DOC-56 (UA-15).
 - A screen with several states (`Fees` and `Fees-NoPay`) is several ids; the client reports the id of the state shown, as DOC-56 lists it.
 - A modal or a sheet is not a screen unless DOC-56 gives it a section id.
 
@@ -113,13 +113,13 @@ All three return at once, never throw and never await the network.
 | Size | At most 50 events and 16 KB per request (the server's limit, §6.2) |
 | In flight | One request at a time |
 | On any failure | The batch is **dropped**: a network error, 401, 413, 429, 503, anything else. No retry, no log to the person |
-| Sent with | The token of the signed-in account (DOC-55 §5), like any call; the call goes through the fetcher without the idempotency header and without the retry of reads |
+| Sent with | The token of the signed-in account (DOC-55 §5) and, in the resident app, the `X-Unit-Id` of the active unit, like any unit call; through the fetcher without the idempotency header and without the retry of reads. Nothing is sent while no unit is chosen |
 | On sign-out | The queue is cleared before the token is dropped, so events of one account are never sent with the token of the next |
 | Persistence | None. A killed app loses its queue |
 
 ### 5.4 The switch
 
-- **Copy.** Title `usage.switch.title`: vi "Chia sẻ dữ liệu sử dụng ẩn danh", en "Share anonymous usage data". Hint `usage.switch.hint`: vi "Giúp ban quản lý biết màn hình nào được dùng nhiều để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn.", en "Helps the management see which screens are used so it can improve the app. It is not tied to your account or phone number." (DOC-68.)
+- **Copy.** Title `common.usage.title`: vi "Chia sẻ dữ liệu sử dụng ẩn danh", en "Share anonymous usage data". Hint `common.usage.hint`: vi "Giúp ban quản lý biết màn hình nào được dùng nhiều để cải thiện ứng dụng. Không gắn với tài khoản hay số điện thoại của bạn.", en "Helps the management see which screens are used so it can improve the app. It is not tied to your account or phone number." (DOC-68 §4.6; shared keys because three screens use them.)
 - **Where.** `Account` (resident app, DOC-60), `S-Account` (staff app, DOC-61), `W-Profile` (web CMS, DOC-64).
 - **Default.** On (DR-279 (5)). The default is the constant `USAGE_DEFAULT_ENABLED` in `@rms/client-core`; counsel's answer (DR-279 (11)) may turn it off.
 - **Stored** on the device (mobile: the device storage of `@rms/mobile-core`, key `usage.enabled`; web: `localStorage`, key `rms.usage.enabled`, read in a `try/catch`), not on the server and not per account. Another account that signs in on the same device inherits the choice.
@@ -136,7 +136,7 @@ The module is `analytics` (`modules/analytics`, ADR-0028), a leaf: no module cal
 
 ### 6.1 Route and order of checks
 
-`POST /api/v1/usage-events` (E-173, DOC-51). The audience is any signed-in account, staff or resident, with no role condition; the route metadata lists both kinds (UA-28). In order:
+`POST /api/v1/usage-events` (E-173, DOC-51). The audience is `staff: any` or `unit: any member` (a resident acting for a unit, with the `X-Unit-Id` header, a Helper included, no capability); the route metadata lists both (UA-28). In order:
 
 1. Body at most 16 KB, else 413 `payload_too_large`.
 2. Maintenance mode, else 503 `maintenance`.
@@ -148,7 +148,7 @@ The module is `analytics` (`modules/analytics`, ADR-0028), a leaf: no module cal
 8. Each event whose name is not in the lists is dropped and counted (`unknown_name`); the rest are written.
 9. One statement writes the batch; the counter `usage_events_total` rises by the written events; answer 204.
 
-The building is the one of the token (`BuildingScope`, DR-12), never read from the body.
+The building is the `bid` of a staff token or the building of the resident's active membership (`UnitContext`, DOC-12 §11), never read from the body. The membership is used to find the building and to apply the terms gate; it is not stored.
 
 ### 6.2 The body
 
@@ -339,13 +339,13 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-05 | An unknown key in the body, in an event | 400 `validation_failed` |
 | UA-06 | 51 events; a body of 17 KB | 400; 413 `payload_too_large` |
 | UA-07 | `ageMs` 3,600,001; `ageMs` 4,000 with the clock fixed | 400; `occurred_at` is 4 s before the receive time |
-| UA-08 | No token; a staff token; a resident token | 401; 204 with `audience` `staff`; 204 with `audience` `resident` |
+| UA-08 | No token; a staff token; a resident token with a unit; a resident token with no `X-Unit-Id`; with a unit of another account | 401; 204 with `audience` `staff`; 204 with `audience` `resident`; 400 `validation_failed`; 403 `membership_inactive` |
 | UA-09 | A token of a demo building | 204; no row; `reason="demo"` |
 | UA-10 | `USAGE_ENABLED=false` | 204; no row; `reason="disabled"` |
 | UA-11 | The 31st request in a minute from one IP; the 121st in an hour for one `sessionId` | 429 `rate_limited`, `scope` `usage_events`, `Retry-After`; no bucket key holds an account id |
 | UA-12 | Maintenance mode | 503 `maintenance` |
 | UA-13 | A tap whose screen is unknown; a known screen with an unlisted control | Both dropped, `unknown_name` |
-| UA-14 | A `screen_view` named `Login`, `OTP`, `Terms` | Dropped, `unknown_name` |
+| UA-14 | A `screen_view` named `Login`, `OTP`, `Terms`, `Unit-Pick` | Dropped, `unknown_name` |
 | UA-15 | The lists against the documents | `USAGE_SCREENS` ⊆ section ids of DOC-56; `USAGE_EXCLUDED_SCREENS` = the signed-out sections and `Terms*`; `USAGE_TARGETS` = the rows of §4.2 |
 | UA-16 | The rollup of §7.1 on the fixture of §13.1 | Five rows; 7 events; the event at 23:30 local is in the earlier day |
 | UA-17 | The rollup twice (run-twice) | The rows are identical |
@@ -359,7 +359,7 @@ Prefix `UA-` (usage analytics; unused before this document; DOC-88 §15 indexes 
 | UA-25 | Client: the same screen twice in 1 s; a route with a parameter; a tap | One `screen_view`; the id has no parameter; the tap is not merged; no device id is read |
 | UA-26 | Client: the switch after a restart | The stored choice; the default is on (`USAGE_DEFAULT_ENABLED`) |
 | UA-27 | `apps/api/src/bootstrap/metrics.test.ts` (OB-01) | The registry equals the rows of DOC-40 §4 with the two metrics of §11 |
-| UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to both kinds, to every role, and to nobody without a token |
+| UA-28 | The authorization matrix (EXP-10) | E-173 is allowed to every staff role and to a resident member of the unit named in the header (Helper included), and to nobody without a token |
 | UA-29 | The app configs | `PrivacyInfo.xcprivacy` of each app has the entry of §9.2; no `NSUserTrackingUsageDescription` in `Info.plist` |
 
 ### 13.1 Statements run
