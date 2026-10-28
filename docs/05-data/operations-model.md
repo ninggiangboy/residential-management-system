@@ -756,7 +756,7 @@ Both tables carry `building_id` (the building of the token) and no foreign key (
 
 ### 9A.1 `usage_event`
 
-- **Grain:** one screen view or one tap that a signed-in client reported. **Business key:** `id` (UUIDv7, made by the application, DOC-14 §3). **Written by:** `analytics` (`RecordUsageEvents`, E-173 and E-174), one `INSERT … SELECT FROM unnest(…)` per batch. **Read by:** the job `usage_rollup`; an operator with `rms_readonly`. Never updated.
+- **Grain:** one screen view, one tap, one opening or one closing of the app that a signed-in client reported. **Business key:** `id` (UUIDv7, made by the application, DOC-14 §3). **Written by:** `analytics` (`RecordUsageEvents`, E-173 and E-174), one `INSERT … SELECT FROM unnest(…)` per batch. **Read by:** the job `usage_rollup`; an operator with `rms_readonly`. Never updated.
 - **No person:** the table has no column for an account, membership, unit, role, device, token, IP address or user agent, and none may be added without a new DR (DR-279 (3)). `session_id` is a random UUID that the client made in memory; it is not a key to anything else.
 
 ```sql
@@ -772,26 +772,33 @@ CREATE TABLE analytics.usage_event (
   audience    text        NOT NULL,                      -- the kind of the token, never the role
   session_id  uuid        NOT NULL,
   event       text        NOT NULL,
-  name        text        NOT NULL,                      -- a screen id, or '<Screen>.<control>' for a tap
+  name        text        NOT NULL,                      -- a screen id, '<Screen>.<control>' for a tap, Launch / Resume / Background
+  duration_s  integer,                                   -- app_close only: the seconds of the foreground stretch
   CONSTRAINT pk_usage_event PRIMARY KEY (id),
   CONSTRAINT ck_usage_event_app       CHECK (app IN ('resident', 'staff', 'web')),
   CONSTRAINT ck_usage_event_platform  CHECK (platform IN ('ios', 'android', 'web')),
   CONSTRAINT ck_usage_event_version   CHECK (app_version ~ '^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$'),
   CONSTRAINT ck_usage_event_audience  CHECK (audience IN ('resident', 'staff')),
-  CONSTRAINT ck_usage_event_event     CHECK (event IN ('screen_view', 'tap')),
+  CONSTRAINT ck_usage_event_event     CHECK (event IN ('screen_view', 'tap', 'app_open', 'app_close')),
   CONSTRAINT ck_usage_event_name      CHECK (char_length(name) <= 60 AND name ~ '^[A-Z][A-Za-z0-9-]*(\.[a-z][a-z0-9_]*)?$'),
-  CONSTRAINT ck_usage_event_name_form CHECK ((event = 'tap') = (position('.' IN name) > 0))
+  CONSTRAINT ck_usage_event_name_form CHECK ((event = 'tap') = (position('.' IN name) > 0)),
+  CONSTRAINT ck_usage_event_lifecycle CHECK (
+    (event = 'app_open'  AND name IN ('Launch', 'Resume')) OR
+    (event = 'app_close' AND name = 'Background') OR
+    event IN ('screen_view', 'tap')),
+  CONSTRAINT ck_usage_event_duration  CHECK ((event = 'app_close') = (duration_s IS NOT NULL) AND (duration_s IS NULL OR duration_s BETWEEN 0 AND 86400))
 );
 CREATE INDEX ix_usage_event_building_at ON analytics.usage_event (building_id, occurred_at);
 ```
 
-- The checks are the last line: the application validates the lists (DOC-104 §4) and drops a name that is not in them; the checks refuse a name with a query string, a path or a space, and a tap without a control, whatever the application does.
+- The checks are the last line: the application validates the lists (DOC-104 §4) and drops a name that is not in them; the checks refuse a name with a query string, a path or a space, a tap without a control, an `app_open` or `app_close` with a name that is not one of the three lifecycle words, and a duration on any event but `app_close` (or none on it), whatever the application does.
+- `duration_s` is a number of seconds of one foreground stretch that the client measured on its monotonic clock (DOC-104 §5.6). It is not a time of day and not an identifier.
 - `ix_usage_event_building_at` serves the rollup window and the purge, both by `(building_id, occurred_at)`.
 
 ### 9A.2 `usage_daily`
 
 - **Grain:** one day (in the building's time zone), app, platform, audience, event and name. **Business key:** the primary key. **Written by:** the job `usage_rollup` (an upsert that recomputes the day from `usage_event`). **Read by:** an operator with `rms_readonly`; Grafana does not read it (DOC-104 §9).
-- `events` is the count of events of the group; `sessions` the count of distinct `session_id` in it. A session that crosses midnight counts on both days, so a sum of `sessions` over days is an upper bound.
+- `events` is the count of events of the group; `sessions` the count of distinct `session_id` in it, and `seconds` the sum of `duration_s` (0 for every event but `app_close`). A session that crosses midnight counts on both days, so a sum of `sessions` over days is an upper bound.
 
 ```sql
 CREATE TABLE analytics.usage_daily (
@@ -804,12 +811,14 @@ CREATE TABLE analytics.usage_daily (
   name        text    NOT NULL,
   events      integer NOT NULL,
   sessions    integer NOT NULL,
+  seconds     bigint  NOT NULL DEFAULT 0,                -- the sum of duration_s of the app_close rows of the group
   CONSTRAINT pk_usage_daily PRIMARY KEY (building_id, day, app, platform, audience, event, name),
   CONSTRAINT ck_usage_daily_app      CHECK (app IN ('resident', 'staff', 'web')),
   CONSTRAINT ck_usage_daily_platform CHECK (platform IN ('ios', 'android', 'web')),
   CONSTRAINT ck_usage_daily_audience CHECK (audience IN ('resident', 'staff')),
-  CONSTRAINT ck_usage_daily_event    CHECK (event IN ('screen_view', 'tap')),
-  CONSTRAINT ck_usage_daily_counts   CHECK (events >= 1 AND sessions BETWEEN 1 AND events)
+  CONSTRAINT ck_usage_daily_event    CHECK (event IN ('screen_view', 'tap', 'app_open', 'app_close')),
+  CONSTRAINT ck_usage_daily_counts   CHECK (events >= 1 AND sessions BETWEEN 1 AND events),
+  CONSTRAINT ck_usage_daily_seconds  CHECK (event = 'app_close' OR seconds = 0)
 );
 ```
 
