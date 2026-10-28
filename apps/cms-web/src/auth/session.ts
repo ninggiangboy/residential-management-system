@@ -4,7 +4,7 @@ import { api } from '../api/client'
 import { unwrap } from '../api/errors'
 import { type StaffMe, staffMeQuery } from '../api/hooks/staff-me'
 import { languageStore } from '../lib/i18n'
-import { usage } from '../lib/usage'
+import { endUsage } from '../lib/usage-end'
 import { announceSignedOut, forgetSharedToken, refreshSession } from './refresh'
 import { tokenStore } from './token-store'
 
@@ -61,7 +61,7 @@ export async function signInWithPassword(
 /** The local steps of DOC-55 §5.4, always run, even when E-12 fails. */
 export async function signOut(queryClient: QueryClient, reason: SignOutReason): Promise<void> {
   // The queue goes before the token does, so nothing leaves with the token of the next account (DOC-104 §5.3).
-  usage.setSignedIn(false)
+  endUsage()
   if (reason === 'user') {
     try {
       await api.auth.logout.post()
@@ -78,7 +78,7 @@ export async function signOut(queryClient: QueryClient, reason: SignOutReason): 
 
 /** A refused refresh (or a revoked session) ends this tab's session without another call. */
 export function endSessionLocally(queryClient: QueryClient, reason: SignOutReason): void {
-  usage.setSignedIn(false)
+  endUsage()
   tokenStore.setAccessToken(null)
   forgetSharedToken()
   queryClient.clear()
