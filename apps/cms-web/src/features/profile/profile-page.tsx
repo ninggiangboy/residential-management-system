@@ -12,6 +12,7 @@ import { Avatar } from '../../components/ui/avatar'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { CardSection } from '../../components/ui/card'
+import { Switch } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/dialog'
 import { ErrorState } from '../../components/ui/empty-state'
 import { PageHeader } from '../../components/ui/page'
@@ -23,6 +24,7 @@ import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { uploadFile } from '../../lib/uploads'
+import { trackTap, useUsageEnabled } from '../../lib/usage'
 import { clock, useCountdown } from '../../lib/use-countdown'
 import { SessionsCard } from './sessions-card'
 
@@ -46,6 +48,7 @@ export function ProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
   const [nameError, setNameError] = useState<string | null>(null)
+  const [usageEnabled, setUsageEnabled] = useUsageEnabled()
   const reset = useCountdown(0)
   const [sendingReset, setSendingReset] = useState(false)
 
@@ -131,6 +134,7 @@ export function ProfilePage() {
   }
 
   const sendResetLink = async () => {
+    trackTap('W-Profile.reset_link')
     setSendingReset(true)
     try {
       unwrap(await api.auth.staff['password-reset'].post({ email: current.email }))
@@ -257,16 +261,24 @@ export function ProfilePage() {
               label={t('web.profile.card.language.title')}
               value={current.language}
               disabled={!canWrite || language.pending}
-              onValueChange={(next) =>
+              onValueChange={(next) => {
+                trackTap('W-Profile.language')
                 language.change(current, next, () => {
                   setLang(next)
                   toast.success(t('web.profile.toast.language'))
                 })
-              }
+              }}
               options={[
                 { value: 'vi', label: 'Tiếng Việt' },
                 { value: 'en', label: 'English' },
               ]}
+            />
+          </CardSection>
+          <CardSection title={t('common.usage.title')} description={t('common.usage.hint')}>
+            <Switch
+              label={t('common.usage.title')}
+              checked={usageEnabled}
+              onCheckedChange={setUsageEnabled}
             />
           </CardSection>
         </div>

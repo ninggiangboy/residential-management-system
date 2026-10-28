@@ -18,6 +18,7 @@ import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { uploadFile } from '../../lib/uploads'
+import { trackTap } from '../../lib/usage'
 import { settingsQuery, type TermsKind, termsQuery, useSaveSettings } from './hooks'
 import {
   type BuildingDocument,
@@ -137,6 +138,7 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
         )
       return
     }
+    trackTap('W-Building.save')
     save.mutate(
       { etag: settings.data?.etag ?? '', patch },
       {

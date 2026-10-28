@@ -39,6 +39,19 @@ const config: ExpoConfig = {
     bundleIdentifier: ID,
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    // The usage record (DR-279, DOC-104 §9.2): Usage Data > Product Interaction, for analytics, not linked to the user and not
+    // used for tracking. No App Tracking Transparency prompt, so no NSUserTrackingUsageDescription either.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyCollectedDataTypes: [
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeProductInteraction',
+          NSPrivacyCollectedDataTypeLinked: false,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAnalytics'],
+        },
+      ],
+    },
   },
   android: { package: ID },
   // OS permission strings per language (DOC-73 §3.2); not part of the i18n catalog.

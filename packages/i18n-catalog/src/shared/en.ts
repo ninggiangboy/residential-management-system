@@ -167,6 +167,9 @@ export const en = {
   'common.app.name': 'Hiên',
   'common.language.switch-to-en': 'English',
   'common.language.switch-to-vi': 'Tiếng Việt',
+  'common.usage.title': 'Share anonymous usage data',
+  'common.usage.hint':
+    'Helps the management see which screens are used, and how often and how long the app is open, so it can improve the app. It is not tied to your account or phone number.',
   'common.unit.label': 'Home',
   'common.unit.role-line':
     '{memberType, select, owner {You are the owner} family {You are a family member} tenant {You are a tenant} helper {You are a helper} other {}}',

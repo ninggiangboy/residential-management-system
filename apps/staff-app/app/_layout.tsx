@@ -1,19 +1,23 @@
 import {
   MobileProvider,
+  screenOfSegments,
   setForegroundNotificationHandler,
   setupConnectivity,
   useRuntime,
+  useScreenTracking,
+  useUsageGate,
 } from '@rms/mobile-core'
 import { FONT_SOURCES } from '@rms/ui-native'
 import { useFonts } from 'expo-font'
 import { ObserveErrorBoundary, ObserveRoot, useObserve } from 'expo-observe'
-import { Stack } from 'expo-router'
+import { Stack, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ErrorFallback } from '../src/features/error-fallback'
 import { UpgradeScreen } from '../src/features/upgrade-screen'
+import { STAFF_SCREENS } from '../src/features/usage-screens'
 import { useFlow } from '../src/features/use-flow'
 import { useUpgradeCheck } from '../src/features/use-upgrade'
 import { runtime } from '../src/runtime'
@@ -27,6 +31,7 @@ function Routes() {
   const flow = useFlow()
   const upgrade = useUpgradeCheck()
   const { markInteractive } = useObserve()
+  const segments = useSegments()
   const settled = flow.phase !== 'booting' && flow.phase !== 'loading'
 
   useEffect(() => {
@@ -38,6 +43,11 @@ function Routes() {
     void SplashScreen.hideAsync()
     markInteractive()
   }, [settled, markInteractive])
+
+  // The usage record (DOC-104): recorded once the staff member is past sign-in and in the right app; the screen is named by the map.
+  const recording = flow.phase === 'ready'
+  useUsageGate(recording)
+  useScreenTracking(screenOfSegments(STAFF_SCREENS, segments), recording)
 
   if (upgrade) return <UpgradeScreen {...upgrade} />
   if (!settled) return null

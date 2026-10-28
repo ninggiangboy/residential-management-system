@@ -12,6 +12,7 @@ import { RouteErrorBoundary } from '../components/route-error-boundary'
 import { ErrorState, ForbiddenState } from '../components/ui/empty-state'
 import { Skeleton } from '../components/ui/skeleton'
 import { isWebRole } from '../features/auth/landing'
+import { useUsageRecording } from '../lib/usage'
 
 declare module '@tanstack/react-router' {
   interface StaticDataRouteOption {
@@ -48,6 +49,7 @@ export const Route = createFileRoute('/_app')({
 function AppLayout() {
   const me = useQuery(staffMeQuery()).data
   const matches = useMatches()
+  useUsageRecording(matches.at(-1)?.fullPath)
   if (!me) return null
   const roles = [...matches].reverse().find((match) => match.staticData?.roles)?.staticData?.roles
   const allowed = !roles || roles.includes(me.role)

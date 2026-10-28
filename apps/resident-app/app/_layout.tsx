@@ -3,17 +3,21 @@ import {
   setForegroundNotificationHandler,
   setupConnectivity,
   useRuntime,
+  useScreenTracking,
+  useSelectedUnitId,
+  useUsageGate,
 } from '@rms/mobile-core'
 import { FONT_SOURCES } from '@rms/ui-native'
 import { useFonts } from 'expo-font'
 import { ObserveErrorBoundary, ObserveRoot, useObserve } from 'expo-observe'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, useRouter, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ErrorFallback } from '../src/features/error-fallback'
 import { UpgradeScreen } from '../src/features/upgrade-screen'
+import { screenOfRoute } from '../src/features/usage-screens'
 import { useFlow } from '../src/features/use-flow'
 import { useUpgradeCheck } from '../src/features/use-upgrade'
 import { runtime } from '../src/runtime'
@@ -28,6 +32,8 @@ function Routes() {
   const flow = useFlow()
   const upgrade = useUpgradeCheck()
   const { markInteractive } = useObserve()
+  const segments = useSegments()
+  const unitId = useSelectedUnitId()
   const settled = flow.phase !== 'booting' && flow.phase !== 'loading'
 
   useEffect(() => {
@@ -56,6 +62,15 @@ function Routes() {
     const frame = requestAnimationFrame(() => router.replace('/unit-pick'))
     return () => cancelAnimationFrame(frame)
   }, [flow.phase, router])
+
+  // The usage record (DOC-104): a person is recorded once past sign-in, with the terms accepted and a unit chosen, and the screen
+  // of the route in front is named by the map of this app, never by its path.
+  const recording = flow.phase === 'ready' && !flow.gateOpen
+  useUsageGate(recording)
+  useScreenTracking(
+    screenOfRoute(segments, flow.memberships.find((m) => m.unitId === unitId) ?? null),
+    recording,
+  )
 
   if (upgrade) return <UpgradeScreen {...upgrade} />
   if (!settled) return null

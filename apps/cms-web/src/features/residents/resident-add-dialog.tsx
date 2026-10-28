@@ -12,6 +12,7 @@ import { Plate } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
+import { trackTap } from '../../lib/usage'
 import { useIntent } from '../../lib/use-intent'
 import { unitQuery } from '../units/hooks'
 import { type PickedUnit, UnitPicker } from '../units/unit-picker'
@@ -79,6 +80,7 @@ export function ResidentAddDialog({
       ...(!existing && email.trim() ? { email: email.trim() } : {}),
       ...(!existing && note.trim() ? { note: note.trim() } : {}),
     }
+    trackTap('W-Resident-Add.submit')
     create.mutate(
       { body, key: intent.keyFor(body) },
       {
