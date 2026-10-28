@@ -27,7 +27,7 @@ Every `W-` screen after sign-in sits in one shell, described here once. DOC-65, 
 | --- | --- | --- |
 | Sidebar (`aside`, 248 px, `surface`, right border `line`) | Brand block: the building name and the words "Web quản lý". Navigation groups Tổng quan / Vận hành / Cư dân / Tài chính / Hệ thống; the entries a role and a phase allow are the table of DOC-53 §3.4 (not repeated). Active entry: `teal-soft` background, `on-teal-soft` text, weight 600, filled icon. Counter badges on "Phiếu hỗ trợ" and "Phương tiện" appear with P4 and P5 | Brand: `contact.name` of E-03 (60 s cache), never hard-coded (N8). Role and name: E-30 |
 | User block (bottom of the sidebar) | Avatar, full name, role label, `sign-out` icon button. The block opens `/profile`; the icon button signs out | E-30; sign-out E-12 |
-| Top bar (64 px) | Breadcrumb "Group / Page", language switch VI / EN, bell with an unread count | E-30 `language`; bell: see below |
+| Top bar (64 px) | Breadcrumb "Group / Page": each crumb before the current page is a link (a group opens its first page, a detail page's middle crumb opens its list); theme switch (system, light, dark, DR-304), language switch VI / EN, bell with an unread count | E-30 `language`; theme: this browser only; bell: see below |
 | Page area | Padding 28 / 32 px; `h1` (26 / 32, weight 600), one line of subtitle (14 / 20, `ink-muted`), page actions at the right | The screen |
 
 Behavior:
