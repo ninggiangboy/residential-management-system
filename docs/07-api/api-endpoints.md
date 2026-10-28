@@ -2692,7 +2692,7 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
 
 ### E-173 `POST /me/usage-events` · `recordMyUsageEvents`, E-174 `POST /staff/usage-events` · `recordStaffUsageEvents`
 
-- **Purpose / UC:** The apps and the web CMS report which screens a signed-in person opened and which listed controls they pressed, so the Owner can see what is used (DR-279). No use case: it is not an act of a person on the building's data.
+- **Purpose / UC:** The apps and the web CMS report which screens a signed-in person opened, which listed controls they pressed and when the app was opened and left (with the seconds of each stretch), so the Owner can see what is used (DR-279). No use case: it is not an act of a person on the building's data.
 - **Authorization:** E-173 `unit: broadcast_notices`: a resident acting for a unit, `X-Unit-Id` with an active membership; `broadcast_notices` is the capability that every member type holds, a Helper included (DOC-27 §3.2), so it works as "any member"; the building is that of the `UnitContext` (DOC-12 §11). E-174 `staff: any`: every role; the building is the `bid` of the token. Neither takes a step-up, and neither reads a building from the body. Both are subject to the app-version gate (an app that must update is not tracked). E-173 is not exempt from the terms gate: a resident who has not accepted the latest terms is refused, which is why `Terms` and `Terms-Update` are not recorded (DOC-104 §4.1).
 - **Parameters** (body, at most 16 KB, `additionalProperties: false`; the same for both routes):
 
@@ -2704,9 +2704,10 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
   | `platform` | body | string | yes | | `ios`, `android`, `web` |
   | `sessionId` | body | string | yes | | A UUID v4 that the client made in memory (DOC-104 §5.2) |
   | `events` | body | array | yes | | 1…50 items |
-  | `events[].event` | body | string | yes | | `screen_view`, `tap` |
-  | `events[].name` | body | string | yes | | At most 60 characters; a screen id (`screen_view`) or `<Screen>.<control>` (`tap`) from the lists of DOC-104 §4; a name outside the lists is dropped, not refused |
+  | `events[].event` | body | string | yes | | `screen_view`, `tap`, `app_open`, `app_close` |
+  | `events[].name` | body | string | yes | | At most 60 characters; a screen id (`screen_view`), `<Screen>.<control>` (`tap`), `Launch` or `Resume` (`app_open`) or `Background` (`app_close`) from the lists of DOC-104 §3 and §4; a name outside the lists is dropped, not refused |
   | `events[].ageMs` | body | integer | yes | | 0…3,600,000: the age of the event when the batch is sent |
+  | `events[].durationSec` | body | integer | on `app_close` only | | 0…86,400: the seconds of the foreground stretch that the event closes; refused (400) on any other event |
 
 - **Request example** (E-173; E-174 is the same body at `/staff/usage-events` with no `X-Unit-Id`):
 
@@ -2719,19 +2720,21 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
   { "app": "resident", "appVersion": "1.0.3", "platform": "ios",
     "sessionId": "0192f3c4-9d02-4000-8000-00000000a001",
     "events": [
+      { "event": "app_open", "name": "Launch", "ageMs": 61200 },
       { "event": "screen_view", "name": "Fees", "ageMs": 4200 },
-      { "event": "tap", "name": "Account.language", "ageMs": 900 }
+      { "event": "tap", "name": "Account.language", "ageMs": 900 },
+      { "event": "app_close", "name": "Background", "ageMs": 0, "durationSec": 61 }
     ] }
   ```
 
 - **Response 204:** no body, also when every event was dropped and when the building is a demo building. When `USAGE_ENABLED` is false the answer is the same 204 plus the header `X-Usage-Enabled: false`, which tells the client to stop sending until its next launch (DOC-104 §5.4); the header is in the exposed list of DOC-50 §5.3.
 - **Errors:** 400 `validation_failed` (an unknown key, a count or a value out of range, `sessionId` not a UUID v4; for E-173 also a missing or malformed `X-Unit-Id`, `header.X-Unit-Id`), 401, 403 `membership_inactive` and 403 `terms_required` (E-173), (E-174 takes every role, so it has no 403 `forbidden`), 413 `payload_too_large` (the body limit, before validation), 426 `upgrade_required` (the version gate), 429 `rate_limited` with `Retry-After` (`scope: "usage_events"`; the app drops the batch silently), 503 `maintenance`. No new error code (DOC-42 §10).
-- **Data source:** one `INSERT … SELECT FROM unnest(…)` into `analytics.usage_event` (DOC-104 §6.3); `audience` is `resident` for E-173 and `staff` for E-174. Two PostgreSQL buckets in `platform.rate_bucket` (DR-64), shared by both routes: `usage-events:ip:<ip>` 30 a minute (`USAGE_EVENTS_PER_MINUTE_PER_IP`) and `usage-events:session:<sessionId>` 120 an hour (`USAGE_EVENTS_PER_HOUR_PER_SESSION`). The counters `usage_events_total` and `usage_events_dropped_total` (DOC-40 §4.7). Nothing identifies the account in a row, a bucket or a metric label; the request line carries the account id like any request line, and never the body (DOC-42 §8.4).
+- **Data source:** one `INSERT … SELECT FROM unnest(…)` into `analytics.usage_event` (DOC-104 §6.3); `audience` is `resident` for E-173 and `staff` for E-174. Two PostgreSQL buckets in `platform.rate_bucket` (DR-64), shared by both routes: `usage-events:ip:<ip>` 30 a minute (`USAGE_EVENTS_PER_MINUTE_PER_IP`) and `usage-events:session:<sessionId>` 120 an hour (`USAGE_EVENTS_PER_HOUR_PER_SESSION`). The counters `usage_events_total` and `usage_events_dropped_total` and the histogram `usage_foreground_seconds` (DOC-40 §4.7). Nothing identifies the account in a row, a bucket or a metric label; the request line carries the account id like any request line, and never the body (DOC-42 §8.4).
 - **Cache:** `no-store`.
 - **Idempotency:** none (not `R`): a repeated batch is counted twice, which DR-279 (9) accepts.
 - **Performance:** p95 under 50 ms (two bucket statements and one insert of at most 50 rows).
 - **Events:** none (no outbox row, no audit row; DOC-104 §6.3).
-- **Tests:** UA-01…14, UA-28, UA-30 (DOC-104 §13).
+- **Tests:** UA-01…14, UA-28, UA-30, UA-32 (DOC-104 §13).
 
 ## 11. Later groups
 
@@ -2775,7 +2778,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-170 | `POST /staff/fee-batches/{id}/charges` | Add one unit's charge to a draft (DR-265) |
 | E-171 | `DELETE /staff/charges/{id}` | Remove a draft charge (DR-265) |
 | E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
-| E-173, E-174 | `POST /me/usage-events`, `POST /staff/usage-events` | The apps' record of screen views and taps, from closed lists and with no account stored (DR-279); two routes because a resident token never passes a staff guard |
+| E-173, E-174 | `POST /me/usage-events`, `POST /staff/usage-events` | The apps' record of screen views, taps, opening, closing and the time of use, from closed lists and with no account stored (DR-279); two routes because a resident token never passes a staff guard |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |
