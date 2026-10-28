@@ -1,7 +1,6 @@
 import {
   isUsageName,
   type UsageApp,
-  type UsageAudience,
   type UsageEventKind,
   type UsageName,
   type UsagePlatform,
