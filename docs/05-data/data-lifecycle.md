@@ -94,7 +94,7 @@ Rules that hold everywhere:
 | `wiki.*`, other | Folders, pages, attachments | Follows the page or folder | Kept | — | DR-54 |
 | `reporting.export_job` and the export file | The request and the file | Row and file deleted by age | 7 days after the request finished (default for the row) | `export_purge`, hourly | DR-55, DR-115 |
 | `realtime.events` | The replay buffer for `Last-Event-ID` | Deleted by age | 24 hours (default) | the realtime module, hourly (DOC-17 §9 confirms) | DR-75, DR-115 |
-| `analytics.usage_event` | Screen views and taps without an account or device id (DOC-17 §9A.1) | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup`, daily 02:30 | DR-279 |
+| `analytics.usage_event` | Screen views, taps, opening and closing of the app without an account or device id (DOC-17 §9A.1) | Deleted by age, only up to the newest rolled-up day | 90 days (`USAGE_RAW_RETENTION_DAYS`) | `usage_rollup`, daily 02:30 | DR-279 |
 | `analytics.usage_daily` | The daily rollup: events and sessions per app, platform, audience, event and name (DOC-17 §9A.2) | Deleted by age | 730 days (`USAGE_DAILY_RETENTION_DAYS`) | `usage_rollup`, daily 02:30 | DR-279 |
 
 ## 3. Object storage
@@ -245,7 +245,7 @@ DOC-10 §5 holds the estimate (computed by `docs/03-architecture/capacity/capaci
 | Files (SeaweedFS volume in `vn`) | About 4.6 GB per building per year; the 50 GiB quota is reached after about 10.8 years and the 80% alert after about 8.7 years | DOC-10 §5.3 |
 | WAL | Up to 1,440 objects per day of 16 MB before compression; measured in P1-20 | DOC-10 §5.5 |
 | Logs and metrics | About 42 MB per day of raw logs for the sample building (8 MB in Loki, 14 days); Prometheus about 25 MB per day | DOC-10 §5.4 |
-| `analytics.usage_event` | About 20,000 rows a day for the sample building, 1.8 million at 90 days, about 400 MB with its index (planned, not measured: 650 accounts at 30 events a day, 100 bytes a row; DOC-104 §7.2); bounded by the 90 days, so it does not grow with the years. `usage_daily` is a few hundred rows a day | DR-279 |
+| `analytics.usage_event` | About 23,000 rows a day for the sample building, 2.1 million at 90 days, about 450 MB with its index (planned, not measured: 650 accounts at 36 events a day, 100 bytes a row; DOC-104 §7.2); bounded by the 90 days, so it does not grow with the years. `usage_daily` is a few hundred rows a day | DR-279 |
 
 What the retention rules of §2 change in that estimate: the outbox, inbox, `job_run`, idempotency keys, OTP and token rows are bounded by days, so none grows with the years; `audit_log` is bounded by 5 years (the upper bound DOC-10 uses); the ledger, tickets, notices and the library grow without a purge. They stay unbounded by decision (DR-115); the quota (50 GiB per building) is the limit, and the Admin sees the alert at 80%.
 

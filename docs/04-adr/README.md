@@ -47,7 +47,7 @@ This index lists the 28 architecture decision records of the project. An ADR is 
 | ADR-0025 | Notice fan-out, heartbeat reclaim and single-source read state; allowed rich-text subset | Not written | P4 | DR-50, DR-51 |
 | [ADR-0026](0026-demo-building-and-fake-payment-driver.md) | Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept | Proposed | P1 | DR-26, DR-60 |
 | [ADR-0027](0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md) | In Vietnam, keep files and backups in SeaweedFS on the VPS instead of Cloudflare R2, and keep the Cloudflare domain, HTTPS and Tunnel | Accepted | P1 | DR-268 |
-| [ADR-0028](0028-self-hosted-usage-analytics-without-an-identifier.md) | Record screen views and taps as allowlisted events without an account or device identifier, in an `analytics` schema on the same PostgreSQL, and read them through a counter | Accepted | P1 | DR-279 |
+| [ADR-0028](0028-self-hosted-usage-analytics-without-an-identifier.md) | Record screen views, taps, opening and closing of the app as allowlisted events without an account or device identifier, in an `analytics` schema on the same PostgreSQL, and read them through a counter | Accepted | P1 | DR-279 |
 
 ## 3. Rules
 
