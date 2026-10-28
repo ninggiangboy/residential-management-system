@@ -27,6 +27,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       'import_purge',
       'orphan_uploads',
       'storage_quota',
+      'usage_rollup',
     ])
     for (const { module, job } of defined) {
       const row = JOB_CATALOG.find((entry) => entry.name === job.name)
@@ -35,7 +36,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     }
   })
 
-  test('the audit purge catches up for 168 hours, the demo reset for 2, the import purge for 24, the hourly jobs not at all', () => {
+  test('the audit purge catches up for 168 hours, the demo reset for 2, the import purge for 24, the usage rollup for 12, the hourly jobs not at all', () => {
     const graces = Object.fromEntries(
       container.modules.flatMap((module) =>
         (module.jobs ?? []).map((job) => [job.name, job.graceMinutes]),
@@ -48,13 +49,14 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       orphan_uploads: 0,
       import_expire: 0,
       import_purge: 1_440,
+      usage_rollup: 720,
     })
   })
 })
 
 describe('the module catalog (DOC-12 §5.2)', () => {
-  test('audit comes before building, identity and residency, and a module is installed for every manifest', () => {
-    const order = ['audit', 'building', 'identity', 'residency']
+  test('audit comes before building, identity and residency, analytics comes last, and a module is installed for every manifest', () => {
+    const order = ['audit', 'building', 'identity', 'residency', 'analytics']
     expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(order)
     expect(container.modules.map((module) => module.name)).toEqual(order)
   })

@@ -6,7 +6,7 @@ BEGIN;
 DO $grants$
 DECLARE
   schemas       text[] := ARRAY['identity', 'building', 'residency', 'finance', 'tickets', 'access', 'vehicles',
-                                'notices', 'notification', 'wiki', 'audit', 'reporting', 'realtime', 'platform'];
+                                'notices', 'notification', 'wiki', 'audit', 'reporting', 'realtime', 'analytics', 'platform'];
   denied_tables text[] := ARRAY['identity.otp_challenge', 'identity.password_token', 'identity.refresh_family',
                                 'identity.refresh_token', 'identity.rate_bucket', 'platform.idempotency_key',
                                 'platform.rate_bucket', 'notification.device_token'];

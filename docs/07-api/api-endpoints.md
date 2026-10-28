@@ -2686,7 +2686,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 
 ## 10A. Usage events (E-173, E-174)
 
-Added by DR-279 (2026-10-28); the behavior is DOC-104. Built in P1-29. The section is numbered 10A so that §11…§14 keep the numbers that other documents cite.
+Added by DR-279 (2026-10-28); the behavior is DOC-104. Built in P1-29 (2026-10-28; the version gate is not applied until the API has one, DOC-104 §13.2). The section is numbered 10A so that §11…§14 keep the numbers that other documents cite.
 
 Two routes, one body, one use case. A resident token never passes a staff guard and a resident token carries no building (DOC-12 §5.3), so the resident app calls E-173 with the unit header and the staff app and the web CMS call E-174.
 

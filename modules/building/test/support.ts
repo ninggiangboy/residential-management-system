@@ -186,7 +186,9 @@ export async function createHarness(options: HarnessOptions = {}) {
     metrics: {
       inc() {},
       add() {},
-      observe: (name, seconds) => observed.push({ name, seconds }),
+      observe(name, seconds, ..._labels) {
+        observed.push({ name, seconds })
+      },
     },
   })
 

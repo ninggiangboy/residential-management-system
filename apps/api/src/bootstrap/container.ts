@@ -14,6 +14,7 @@ import { OutboxStats } from '@core/messaging'
 import { type AppModule, createRuntime, type MaintenanceStore, SqlJobRunStore } from '@core/runtime'
 import { createObjectStorage, type ObjectStorage } from '@core/storage'
 import type { Logger } from '@core/telemetry'
+import { installAnalytics } from '@mod/analytics'
 import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
@@ -319,6 +320,28 @@ export function createContainer(
   })
   installed.push(residency)
 
+  // A leaf (DR-279): nothing calls it. It asks `building` whether the building of a batch is the demo one.
+  const { usage: usageConfig } = config
+  const analytics = installAnalytics({
+    logger,
+    clock,
+    ids,
+    database,
+    building: building.api,
+    guards,
+    config: {
+      enabled: usageConfig.USAGE_ENABLED,
+      rawRetentionDays: usageConfig.USAGE_RAW_RETENTION_DAYS,
+      dailyRetentionDays: usageConfig.USAGE_DAILY_RETENTION_DAYS,
+      eventsPerMinutePerIp: http.USAGE_EVENTS_PER_MINUTE_PER_IP,
+      eventsPerHourPerSession: http.USAGE_EVENTS_PER_HOUR_PER_SESSION,
+      timeZone: core.JOBS_TIME_ZONE,
+      rollupGraceMinutes: jobsConfig.JOB_USAGE_ROLLUP_GRACE_MINUTES,
+    },
+    metrics: metrics.port,
+  })
+  installed.push(analytics)
+
   const runtime = createRuntime({
     modules: installed,
     manifests: MODULE_CATALOG,
@@ -404,6 +427,7 @@ export function createContainer(
     building,
     identity,
     residency,
+    analytics,
     /** The seed of the demo building (DOC-36 §9.1). */
     demoPlan,
     guards,

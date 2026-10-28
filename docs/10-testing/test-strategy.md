@@ -530,7 +530,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `JB-` | Jobs and outbox runtime | [DOC-38](../06-design/jobs-and-outbox-runtime.md) §9 | `JB-01…26` | Review | P1-05 |
 | `MC-` | Messaging contracts | [DOC-09](../03-architecture/messaging-contracts.md) §9 | `MC-01…20` | Review | P1-02, P1-05 |
 | `ER-` | Error handling | [DOC-42](../06-design/error-handling.md) §14 | `ER-01…45` | Review | P1-03, P1-04, P1-05 |
-| `UA-` | Usage analytics | [DOC-104](../06-design/usage-analytics.md) §13 | `UA-01…36` | Review | P1-29 |
+| `UA-` | Usage analytics | [DOC-104](../06-design/usage-analytics.md) §13 | `UA-01…36` | Written in P1-29 (DOC-104 §13.2) | P1-29 |
 | `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 holds `IM-50…77` (fee import) | `IM-01…43`, `IM-50…77` | Draft (DOC-18, DOC-21) | P1-13, P2-04 |
 | `IDM-` | Identity and residency tables (statement and constraint tests) | [DOC-16](../05-data/identity-and-residency-model.md) §9 | `IDM-01…68`; statement tests `IDM-S01…S14` | Review | P1-05 |
 | `OPM-` | Operations-model tables | [DOC-17](../05-data/operations-model.md) §13 | `OPM-01…44`, `50…66`, `70…74`, `80…83`, `90…99` (80 tests); statement tests `OPM-S01…S12` | Draft | P1-05, P1-07 |

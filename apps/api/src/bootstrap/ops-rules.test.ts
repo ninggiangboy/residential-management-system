@@ -21,7 +21,7 @@ describe('OB-07: the job thresholds of DOC-40 §5.4 are the jobs of DOC-38 §4.1
     const recorded = rulesOf('ops/prometheus/rules/rms-jobs.yml')
       .filter((rule) => rule.record === 'job_stale_after_seconds')
       .map((rule) => rule.labels?.job_name)
-    expect(recorded).toHaveLength(23)
+    expect(recorded).toHaveLength(24)
     expect([...recorded].sort()).toEqual(JOB_CATALOG.map((job) => job.name).sort())
   })
 })

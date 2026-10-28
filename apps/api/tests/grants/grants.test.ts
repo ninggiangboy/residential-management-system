@@ -138,6 +138,10 @@ const ROWS: Row[] = [
   ['GRT-41', 'rms_readonly', 'SELECT full_name, cccd_last4 FROM residency.resident_profile', 'ok'],
   ['GRT-42', 'rms_readonly', 'SELECT * FROM platform.idempotency_key', '42501'],
   ['GRT-43', 'rms_readonly', 'SELECT * FROM audit.audit_log', 'ok'],
+  // the usage record (DR-279): written and rolled up by rms_app, read by rms_readonly, which has no write privilege
+  ['GRT-98', 'rms_app', 'DELETE FROM analytics.usage_event WHERE false', 'ok'],
+  ['GRT-99', 'rms_readonly', 'SELECT * FROM analytics.usage_daily', 'ok'],
+  ['GRT-100', 'rms_readonly', 'DELETE FROM analytics.usage_event WHERE false', '42501'],
   [
     'GRT-44',
     'rms_readonly',
@@ -209,7 +213,7 @@ describe('the grants step fails closed and is idempotent (GRT-68…76)', () => {
     (
       (await su`SELECT md5(string_agg(n.nspname || '.' || c.relname || ':' || coalesce(c.relacl::text, ''), ',' ORDER BY n.nspname, c.relname)) AS h
         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('r', 'p', 'S') AND n.nspname = ANY (ARRAY['identity','building','residency','finance','tickets','access','vehicles','notices','notification','wiki','audit','reporting','realtime','platform'])`) as {
+       WHERE c.relkind IN ('r', 'p', 'S') AND n.nspname = ANY (ARRAY['identity','building','residency','finance','tickets','access','vehicles','notices','notification','wiki','audit','reporting','realtime','analytics','platform'])`) as {
         h: string
       }[]
     )[0]?.h
@@ -328,7 +332,7 @@ describe('login tests (DOC-19 §9.3)', () => {
 })
 
 describe('catalog checks: each must return no rows (DOC-19 §9.4)', () => {
-  const SCHEMA_LIST = `ARRAY['identity','building','residency','finance','tickets','access','vehicles','notices','notification','wiki','audit','reporting','realtime','platform']`
+  const SCHEMA_LIST = `ARRAY['identity','building','residency','finance','tickets','access','vehicles','notices','notification','wiki','audit','reporting','realtime','analytics','platform']`
   const checks: [string, string][] = [
     [
       'GRT-89 rms_app holds TRUNCATE, REFERENCES or TRIGGER',

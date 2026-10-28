@@ -19,6 +19,7 @@ CREATE SCHEMA IF NOT EXISTS wiki;
 CREATE SCHEMA IF NOT EXISTS audit;
 CREATE SCHEMA IF NOT EXISTS reporting;
 CREATE SCHEMA IF NOT EXISTS realtime;
+CREATE SCHEMA IF NOT EXISTS analytics;
 
 -- Shared helpers (they belong to platform, i.e. to the core packages)
 CREATE OR REPLACE FUNCTION platform.immutable_unaccent(text) RETURNS text

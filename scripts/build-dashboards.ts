@@ -1,7 +1,7 @@
 /**
  * `bun run ops:dashboards` writes the Grafana dashboards of DOC-40 §7 to `ops/grafana/dashboards/`; `--check` fails when a file
  * differs from what it would write (stage `verify`, like `dependabot:sync`). Edit the lists below, never the JSON.
- * Money (P2, P3) and Backup (P1-21) join with their tasks.
+ * Money (P2, P3) and Backup (P1-21) join with their tasks; Usage is DR-279.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -400,6 +400,122 @@ const identityDashboard: Dashboard = {
   ],
 }
 
+/** DR-279, DOC-104 §8.1: the one dashboard that exists for a decision of the Owner and supports no alert. */
+const usageDashboard: Dashboard = {
+  uid: 'rms-usage',
+  title: 'RMS · Usage',
+  description:
+    'Which screens and controls are used, how often the apps are opened and for how long (DR-279). Prometheus keeps 15 days; longer periods are SQL on analytics.usage_daily (DOC-104 §8.2).',
+  panels: [
+    table(
+      'Top 10 screens, 7 days',
+      [
+        {
+          expr: 'topk(10, sum by (name) (increase(usage_events_total{event="screen_view"}[7d])))',
+          instant: true,
+        },
+      ],
+      {
+        w: 12,
+        h: 9,
+        supports: 'DR-279',
+        transformations: [
+          { id: 'organize', options: { excludeByName: { Time: true, __name__: true } } },
+        ],
+      },
+    ),
+    table(
+      'Top 10 controls, 7 days',
+      [
+        {
+          expr: 'topk(10, sum by (name) (increase(usage_events_total{event="tap"}[7d])))',
+          instant: true,
+        },
+      ],
+      {
+        w: 12,
+        h: 9,
+        supports: 'DR-279',
+        transformations: [
+          { id: 'organize', options: { excludeByName: { Time: true, __name__: true } } },
+        ],
+      },
+    ),
+    timeseries(
+      'Opens per day by app',
+      [
+        {
+          expr: 'sum by (app) (increase(usage_events_total{event="app_open"}[1d]))',
+          legend: '{{app}}',
+        },
+      ],
+      { supports: 'DR-279' },
+    ),
+    stat(
+      'Average time of a stretch, 7 days',
+      [
+        {
+          expr: 'sum(increase(usage_foreground_seconds_sum[7d])) / sum(increase(usage_foreground_seconds_count[7d]))',
+        },
+      ],
+      {
+        unit: 's',
+        w: 6,
+        description: 'The mean of the seconds the apps are kept in the foreground per stretch.',
+        supports: 'DR-279',
+      },
+    ),
+    stat(
+      'Median time of a stretch, 7 days',
+      [
+        {
+          expr: 'histogram_quantile(0.5, sum by (le) (increase(usage_foreground_seconds_bucket[7d])))',
+        },
+      ],
+      {
+        unit: 's',
+        w: 6,
+        description: 'Only as fine as the buckets: 10 s, 30 s, 1, 3, 10, 30 and 60 minutes.',
+        supports: 'DR-279',
+      },
+    ),
+    timeseries(
+      'Events per hour by app',
+      [
+        {
+          expr: 'sum by (app) (increase(usage_events_total{event=~"screen_view|tap"}[1h]))',
+          legend: '{{app}}',
+        },
+      ],
+      { supports: 'DR-279' },
+    ),
+    timeseries(
+      'Residents against staff, 7 days',
+      [
+        {
+          expr: 'sum by (audience) (increase(usage_events_total[7d]))',
+          legend: '{{audience}}',
+        },
+      ],
+      { supports: 'DR-279' },
+    ),
+    timeseries(
+      'Dropped events by reason',
+      [
+        {
+          expr: 'sum by (reason) (increase(usage_events_dropped_total[1d]))',
+          legend: '{{reason}}',
+        },
+      ],
+      {
+        description:
+          'unknown_name: an old, new or modified client; disabled: USAGE_ENABLED is off; demo: the demo building.',
+        supports: 'DR-279',
+      },
+    ),
+  ],
+}
+
 /** The saved queries of DOC-40 §3.4; the `requestId` box feeds the first. */
 const logsDashboard: Dashboard = {
   uid: 'rms-logs',
@@ -439,6 +555,7 @@ export const DASHBOARDS: Array<[string, Dashboard]> = [
   ['worker-jobs', workerJobs],
   ['identity', identityDashboard],
   ['storage-database', storageDatabase],
+  ['usage', usageDashboard],
   ['logs', logsDashboard],
 ]
 

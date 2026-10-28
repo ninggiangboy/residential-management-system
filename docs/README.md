@@ -119,7 +119,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-101 | EXP 12: restore drill (`10-testing/experiments/EXP-12-restore-drill.md`) | Not written |
 | DOC-102 | Demo script (`10-testing/demo-script.md`) | Not written |
 | DOC-103 | Go-live checklist and UAT (`10-testing/go-live-checklist-and-uat.md`) | Not written |
-| DOC-104 | [Usage analytics](06-design/usage-analytics.md) (DR-279, task P1-29) | Review |
+| DOC-104 | [Usage analytics](06-design/usage-analytics.md) (DR-279, task P1-29 built) | Review |
 
 ## Structure
 

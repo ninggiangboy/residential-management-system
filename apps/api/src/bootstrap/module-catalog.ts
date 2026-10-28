@@ -1,4 +1,5 @@
 import type { ModuleManifest } from '@core/runtime'
+import { analyticsManifest } from '@mod/analytics/manifest'
 import { auditManifest } from '@mod/audit/manifest'
 import { buildingManifest } from '@mod/building/manifest'
 import { identityManifest } from '@mod/identity/manifest'
@@ -18,6 +19,8 @@ export const MODULE_CATALOG: readonly ModuleManifest[] = [
   buildingManifest,
   identityManifest,
   residencyManifest,
+  // analytics is a leaf that asks building whether a building is a demo one (DR-279), so it comes after it.
+  analyticsManifest,
 ]
 
 export const MODULE_NAMES: readonly string[] = MODULE_CATALOG.map((manifest) => manifest.name)

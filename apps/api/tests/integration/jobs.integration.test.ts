@@ -186,17 +186,17 @@ describe('the lock of a job (DOC-38 §3.2)', () => {
 })
 
 describe('the catalog (DOC-38 §4)', () => {
-  test('JB-10 the 23 job names and the 9 cleanup locks hash to 32 distinct values', async () => {
+  test('JB-10 the 24 job names and the 9 cleanup locks hash to 33 distinct values', async () => {
     const names = [
       ...JOB_CATALOG.map((entry) => `job:${entry.name}`),
       ...OUTBOX_CLEANUP_SOURCES.map((s) => `outbox-cleanup:${s}`),
     ]
-    expect(JOB_CATALOG).toHaveLength(23)
-    expect(names).toHaveLength(32)
+    expect(JOB_CATALOG).toHaveLength(24)
+    expect(names).toHaveLength(33)
     const hashes = await db.sql<
       { h: number }[]
     >`SELECT hashtext(n) AS h FROM unnest(${names}::text[]) AS n`
-    expect(new Set(hashes.map((row) => row.h)).size).toBe(32)
+    expect(new Set(hashes.map((row) => row.h)).size).toBe(33)
   })
 
   test('every entry has a valid name and schedule; the catalog equals the table of DOC-38 §4.1', () => {

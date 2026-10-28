@@ -4,6 +4,7 @@
  * not list; the registry behind the port lives in `apps/api` (`bootstrap/metrics.ts`) and the test OB-01 keeps both equal to the
  * document. A label never holds a person: an email, a phone or an id of an account or unit is not a value here (DOC-40 §4 rule 2).
  */
+import type { UsageApp, UsageAudience, UsageEventKind, UsageName } from './usage'
 
 /** The counters, with the labels of each (`undefined` = none). */
 export interface CounterLabels {
@@ -46,10 +47,25 @@ export interface CounterLabels {
     app: 'resident' | 'staff' | 'web'
     kind: 'crash' | 'unhandled_rejection' | 'render' | 'network'
   }
+  /** DR-279, DOC-104 §11: the labels hold no person, and `name` is a screen, a control or a lifecycle word of the closed lists. */
+  usage_events_total: {
+    app: UsageApp
+    audience: UsageAudience
+    event: UsageEventKind
+    name: UsageName
+  }
+  usage_events_dropped_total: { reason: 'unknown_name' | 'disabled' | 'demo' }
 }
 
-/** The histograms, observed in seconds. */
-export type HistogramName = 'import_validate_duration_seconds' | 'demo_reset_duration_seconds'
+/** The histograms, observed in seconds, with the labels of each (`undefined` = none). */
+export interface HistogramLabels {
+  import_validate_duration_seconds: undefined
+  demo_reset_duration_seconds: undefined
+  /** One observation of `durationSec` per `app_close` written (DOC-104 §11). */
+  usage_foreground_seconds: { app: UsageApp; audience: UsageAudience }
+}
+
+export type HistogramName = keyof HistogramLabels
 
 export type CounterName = keyof CounterLabels
 
@@ -60,7 +76,11 @@ export interface MetricsPort {
   inc<N extends CounterName>(name: N, ...labels: Args<CounterLabels[N]>): void
   /** `by` is 1 unless a batch is counted at once (`audit_purge_rows_total`). */
   add<N extends CounterName>(name: N, by: number, ...labels: Args<CounterLabels[N]>): void
-  observe(name: HistogramName, seconds: number): void
+  observe<N extends HistogramName>(
+    name: N,
+    seconds: number,
+    ...labels: Args<HistogramLabels[N]>
+  ): void
 }
 
 /** For the tests of a module and for a process that exports nothing. */

@@ -1,8 +1,8 @@
 import type { JobMode, Schedule } from '@core/runtime'
 
 /**
- * The 23 jobs of DOC-38 §4.1 as data: name, owning module, schedule and mode. A module's `jobs` must match its rows (the
- * catalog test of P1-05 checks the names, the schedules and the 32 distinct lock hashes, JB-10); the grace window of a clock
+ * The 24 jobs of DOC-38 §4.1 as data: name, owning module, schedule and mode. A module's `jobs` must match its rows (the
+ * catalog test of P1-05 checks the names, the schedules and the 33 distinct lock hashes, JB-10); the grace window of a clock
  * job is the key `JOB_<NAME>_GRACE_MINUTES` of DOC-41 §11. The catalog builds nothing, so a script can read it.
  */
 export interface JobCatalogEntry {
@@ -25,6 +25,7 @@ export const JOB_CATALOG: readonly JobCatalogEntry[] = [
   { name: 'push_receipts', module: 'notification', schedule: every(300), mode: 'claim' },
   { name: 'export_run', module: 'reporting', schedule: every(5), mode: 'claim' },
   { name: 'fee_notice_run', module: 'finance', schedule: every(5), mode: 'claim' },
+  { name: 'usage_rollup', module: 'analytics', schedule: daily('02:30'), mode: 'lock' },
   { name: 'storage_quota', module: 'building', schedule: hourly(5), mode: 'lock' },
   { name: 'orphan_uploads', module: 'building', schedule: hourly(15), mode: 'lock' },
   { name: 'import_expire', module: 'residency', schedule: hourly(25), mode: 'lock' },

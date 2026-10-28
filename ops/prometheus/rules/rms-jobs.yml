@@ -55,6 +55,9 @@ groups:
         expr: vector(172800)
         labels: { job_name: demo_reset }
       - record: job_stale_after_seconds
+        expr: vector(172800)
+        labels: { job_name: usage_rollup }
+      - record: job_stale_after_seconds
         expr: vector(1209600)
         labels: { job_name: integrity_weekly }
       - record: job_stale_after_seconds

@@ -5,7 +5,13 @@ import type { JobRunEvent } from '@core/runtime'
 import { Metrics } from '@core/telemetry'
 import type { AuditMetrics } from '@mod/audit'
 import type { UsageReporter } from '@mod/building'
-import type { CounterLabels, CounterName, HistogramName, MetricsPort } from '@rms/shared-types'
+import type {
+  CounterLabels,
+  CounterName,
+  HistogramLabels,
+  HistogramName,
+  MetricsPort,
+} from '@rms/shared-types'
 
 /**
  * The metric catalog of DOC-40 §4 as code: every name, type and label set below is a row of that document, and the test
@@ -54,16 +60,37 @@ const COUNTERS: {
     help: 'Errors reported by the clients, by app and kind.',
     labels: ['app', 'kind'],
   },
+  usage_events_total: {
+    help: 'Usage events written, by app, audience, event and name (DR-279).',
+    labels: ['app', 'audience', 'event', 'name'],
+  },
+  usage_events_dropped_total: {
+    help: 'Usage events discarded after validation, by reason (DR-279).',
+    labels: ['reason'],
+  },
 }
 
-const HISTOGRAMS: { [N in HistogramName]: { help: string; buckets: number[] } } = {
+const HISTOGRAMS: {
+  [N in HistogramName]: {
+    help: string
+    buckets: number[]
+    labels: Array<keyof NonNullable<HistogramLabels[N]>>
+  }
+} = {
   import_validate_duration_seconds: {
     help: 'Duration of the synchronous validation of an import (NFR-12: 2,000 rows in 10 s).',
     buckets: [0.5, 1, 2, 5, 10, 20],
+    labels: [],
   },
   demo_reset_duration_seconds: {
     help: 'Duration of a reset of the demo building (DOC-36 §10.2: 10 s on the staging host).',
     buckets: [1, 2, 5, 10, 20, 60],
+    labels: [],
+  },
+  usage_foreground_seconds: {
+    help: 'Seconds of one foreground stretch of an app, one observation per app_close written (DR-279).',
+    buckets: [10, 30, 60, 180, 600, 1800, 3600],
+    labels: ['app', 'audience'],
   },
 }
 
@@ -141,7 +168,10 @@ export function createAppMetrics(settings: MetricsSettings) {
   )
   const histograms = new Map(
     (Object.entries(HISTOGRAMS) as Array<[HistogramName, (typeof HISTOGRAMS)[HistogramName]]>).map(
-      ([name, { help, buckets }]) => [name, metrics.histogram(name, help, buckets)],
+      ([name, { help, buckets, labels }]) => [
+        name,
+        metrics.histogram(name, help, buckets, labels as string[]),
+      ],
     ),
   )
   /** What the modules receive (`MetricsPort`): the compiler holds names and label values to DOC-40, the maps below hold the series. */
@@ -150,7 +180,10 @@ export function createAppMetrics(settings: MetricsSettings) {
       counters.get(name)?.inc(((labels as unknown[])[0] ?? {}) as Record<string, string>),
     add: (name, by, ...labels) =>
       counters.get(name)?.inc(((labels as unknown[])[0] ?? {}) as Record<string, string>, by),
-    observe: (name, seconds) => histograms.get(name)?.observe(seconds),
+    observe: (name, seconds, ...labels) =>
+      histograms
+        .get(name)
+        ?.observe(((labels as unknown[])[0] ?? {}) as Record<string, string>, seconds),
   }
 
   return {

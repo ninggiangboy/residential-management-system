@@ -33,6 +33,7 @@
         "@core/storage": "workspace:*",
         "@core/telemetry": "workspace:*",
         "@elysiajs/openapi": "1.4.16",
+        "@mod/analytics": "workspace:*",
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
         "@mod/identity": "workspace:*",
@@ -98,6 +99,7 @@
         "@rms/client-core": "workspace:*",
         "@rms/design-tokens": "workspace:*",
         "@rms/mobile-core": "workspace:*",
+        "@rms/shared-types": "workspace:*",
         "@rms/ui-native": "workspace:*",
         "@tanstack/react-query": "5.104.4",
         "expo": "~58.0.16",
@@ -138,6 +140,7 @@
         "@rms/client-core": "workspace:*",
         "@rms/design-tokens": "workspace:*",
         "@rms/mobile-core": "workspace:*",
+        "@rms/shared-types": "workspace:*",
         "@rms/ui-native": "workspace:*",
         "@tanstack/react-query": "5.104.4",
         "expo": "~58.0.16",
@@ -167,6 +170,26 @@
         "@app/api": "workspace:*",
         "@types/react": "19.3.0",
         "tailwindcss": "3.4.19",
+      },
+    },
+    "modules/analytics": {
+      "name": "@mod/analytics",
+      "version": "0.0.0",
+      "dependencies": {
+        "@core/db": "workspace:*",
+        "@core/http": "workspace:*",
+        "@core/kernel": "workspace:*",
+        "@core/runtime": "workspace:*",
+        "@mod/building": "workspace:*",
+        "@rms/shared-types": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
+        "drizzle-orm": "0.45.4",
+        "elysia": "1.4.30",
+      },
+      "devDependencies": {
+        "@rms/test-support": "workspace:*",
+        "@types/bun": "1.4.3",
+        "drizzle-kit": "0.31.11",
       },
     },
     "modules/audit": {
@@ -1019,6 +1042,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@mod/analytics": ["@mod/analytics@workspace:modules/analytics"],
 
     "@mod/audit": ["@mod/audit@workspace:modules/audit"],
 

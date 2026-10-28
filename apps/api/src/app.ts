@@ -35,6 +35,7 @@ const EXPOSED_HEADERS = [
   'Idempotent-Replayed',
   'Location',
   'Content-Disposition',
+  'X-Usage-Enabled',
 ]
 
 /**
@@ -102,6 +103,7 @@ export function buildApp(container: Container) {
       .use(container.identity.routes)
       .use(container.building.routes)
       .use(container.residency.routes)
+      .use(container.analytics.routes)
     // One static `.use()` per module on purpose: Eden Treaty infers the client types from this chain, and a loop over the
     // module list would turn them into `any`. A test fails when a module with routes is not mounted here.
   )
