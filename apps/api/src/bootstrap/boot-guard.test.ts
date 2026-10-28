@@ -90,6 +90,24 @@ describe('reportBootGuard', () => {
     expect(lines.map((line) => line.level)).toEqual(['warn'])
   })
 
+  test('the logger is called as a method: a logger that reads `this`, as pino does, works', () => {
+    class ThisLogger {
+      readonly seen: string[] = []
+      error(_fields: unknown, message: string) {
+        this.seen.push(`error ${message}`)
+      }
+      warn(_fields: unknown, message: string) {
+        this.seen.push(`warn ${message}`)
+      }
+    }
+    const strict = new ThisLogger()
+    expect(reportBootGuard(failure, 'production', strict)).toBe(true)
+    const lax = new ThisLogger()
+    expect(reportBootGuard(failure, 'local', lax)).toBe(false)
+    expect(strict.seen).toEqual(['error boot_guard_failed: m'])
+    expect(lax.seen).toEqual(['warn boot_guard_failed: m'])
+  })
+
   test('no failure starts, quietly, in every environment', () => {
     const { lines, log } = logger()
     expect(reportBootGuard([], 'production', log)).toBe(false)
