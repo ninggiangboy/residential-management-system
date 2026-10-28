@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-22 (P1-07 and P1-08: the first `schema.ts` files, `drizzle.config.ts` and migrations, §14.1, §16.1) · 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: `device_token` and `push_ticket` on the allow-list, §5.3) · 2026-10-22 (P1-07 and P1-08: the first `schema.ts` files, `drizzle.config.ts` and migrations, §14.1, §16.1) · 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 
@@ -182,6 +182,7 @@ A table is on the allow-list only for one of three reasons: it is **looked up be
 | `building.building` | The scope root: its `id` is the building id | |
 | `<schema>.outbox_messages`, `<schema>.inbox` (every schema that publishes or consumes) | Core-package tables read only by the relay; the event payload carries `buildingId` (DOC-12 §7.1) | |
 | `building.job_run` | Infrastructure: one row per run of a job, with no business reads and no building (DR-112, DOC-17 §3.2) | Added by DOC-17 |
+| `notification.device_token`, `notification.push_ticket` | Belong to a device of an account that may span buildings; no `building_id` (DR-52, DR-300, DR-301, DOC-17 §6.2, §6.3) | *Added 2026-10-28 (P1-26):* the repositories narrow by account, session, message or id |
 
 Rules for the list:
 

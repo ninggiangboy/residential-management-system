@@ -1,6 +1,6 @@
 # Messaging contracts
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (DR-272: R8 and MC-21, the worker restarts first) · 2026-10-26 (DR-268: R2 named as the S3 store) · 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: DR-289, 292, 293, 295, 299…301, 303: inbox, SSE and push natural keys, `push_requested` recipients, `liveSessionIds`, `unitOwnerNames`, `findByOwnerRef`) · 2026-10-27 (DR-272: R8 and MC-21, the worker restarts first) · 2026-10-26 (DR-268: R2 named as the S3 store) · 2026-10-20 (DR-129, DR-132, DR-135, DR-140: session revocation reasons, step-up, `IdentityApi` and `ResidencyApi` additions) · DOC-09
 > Depends on: original SDD §4.1, §4.2, §10.4, [DR](../00-decision-register.md) (DR-02, 42, 48, 51, 52, 53, 55, 62, 75, 84, 87, 97, 98, 101, 114, 115, 116, 117, 118, 119, 122), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0015](../04-adr/0015-jobs-and-worker-topology.md), [DOC-07](system-context-and-containers.md) §5–§6, [DOC-12](code-architecture.md) §4, §6, §8, [DOC-17](../05-data/operations-model.md) §3.3, [DOC-38](../06-design/jobs-and-outbox-runtime.md)
 > Main readers: P1-04, P1-05 (messaging runtime), every task that adds an event, a handler or a contract, DOC-31 (notification handlers), DOC-38, DOC-42, DOC-88
 
@@ -158,18 +158,20 @@ The inbox row `(message_id, handler)` makes a handler's database effect happen o
 | --- | --- | --- | --- |
 | `transactional` | The effect is rows in the consumer's own schema (and follow-up outbox rows) | One transaction: insert the inbox row `ON CONFLICT DO NOTHING RETURNING`, return if it conflicted, else do the writes | None: effectively once |
 | `afterSideEffect` | The effect leaves the database (SMTP, SMS, Expo, payOS, the S3 store) | Check the inbox row, do the effect, insert the inbox row | One repeat if the process dies between the effect and the insert; the effect must tolerate it |
-| none | A live push to connected browsers (`realtime`) | No inbox row | A repeat is harmless: the browser gets the same SSE event twice and ignores it |
+| none | A live push to connected browsers (`realtime`) | No inbox row | A repeat is harmless: the browser gets the same SSE event twice and ignores it. *Revised 2026-10-28 (DR-289):* the handler inserts one `realtime.events` row per source message and notifies in the same statement, so a repeat inserts and sends nothing (the natural key below) |
 
 A second net under every `transactional` handler is a natural key on the rows it writes, so a bug in the inbox cannot create a duplicate:
 
 | Effect | Natural key |
 | --- | --- |
-| Inbox entry | `UNIQUE (account_kind, account_id, source_kind, source_id, template_key)` (DR-53) |
+| Inbox entry | `UNIQUE (account_kind, account_id, source_kind, source_id, template_key)` (DR-53). *Revised 2026-10-28 (DR-299):* `uq_inbox_entry_dedupe` `UNIQUE NULLS NOT DISTINCT (building_id, account_kind, account_id, source_kind, dedupe_id, template_key, unit_id)`; `dedupe_id` is the source id, or the event id for a template that repeats on one object (DOC-17 §6.1, DOC-31 §4.1) |
+| SSE replay row | `realtime.events` `UNIQUE (source_message_id)` (DR-289, DOC-17 §9.1) |
+| Push ticket | `push_ticket` `UNIQUE (message_id, device_token_id)` (DR-301, DOC-17 §6.3) |
 | Notice recipient | `UNIQUE (notice_id, account_id)` (original SDD §16.2) |
 | Device token delete, membership removal, profile clear | Idempotent statements: a second run changes no row |
-| Receipt PDF | One cached file per `(owner_ref, variant)`; a second render reuses the content hash (DOC-34) |
+| Receipt PDF | One cached file per `(owner_ref, variant)`; a second render reuses the content hash (DOC-34). *Revised 2026-10-28 (DR-295):* the logical keys are `receipt/<id>/issued.pdf` and `receipt/<id>/void.pdf`; the handler stores the new file first and swaps `receipt.pdf_file` in a conditional update (DOC-34 §8.2) |
 
-A repeat of the Expo push (the only accepted duplicate side effect besides a repeat SMS) costs one extra notification; the inbox entry is the record. Expo has no idempotency key, so no stronger rule exists.
+A repeat of the Expo push (the only accepted duplicate side effect besides a repeat SMS) costs one extra notification; the inbox entry is the record. Expo has no idempotency key, so no stronger rule exists. *Revised 2026-10-28 (DR-301):* a retried push message skips every device that already has a `push_ticket` of that message; only a crash between Expo's answer and the ticket insert repeats a push, for that chunk only (DOC-31 §6.2).
 
 ### 4.4 What a handler does when it fails
 
@@ -226,38 +228,38 @@ A message that reaches `dead_at` raises `outbox_dead_letters` and the alert of R
 
 | Handler | Consumes | Inbox mode | Effect | Second net (natural key) |
 | --- | --- | --- | --- | --- |
-| `notification.inbox_on_finance_batch_published` | `finance.batch_published.v1` | transactional | Per unit: inbox entry `fee.batch_published` and a push for each active owner, family member and tenant; none for helpers | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_batch_recalled` | `finance.batch_recalled.v1` | transactional | Per unit: inbox entry `fee.batch_recalled` and a push to the same recipients as the publish | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_batch_due_extended` | `finance.batch_due_extended.v1` | transactional | Per unit: inbox entry `fee.batch_due_extended` and a push | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_charge_voided` | `finance.charge_voided.v1` | transactional | Inbox entry `fee.charge_voided` and a push for the unit's recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_payment_posted` | `finance.payment_posted.v1` | transactional | Inbox entry `payment.received` and a push "Payment received" for the unit's recipients who can see fees, the payer included | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_payment_voided` | `finance.payment_voided.v1` | transactional | Inbox entry `payment.voided` and a push for the unit's recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_finance_money_unposted` | `finance.money_unposted.v1` | transactional | Inbox entry `finance.money_unposted` for every active Manager and Admin; no push content with an amount | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `realtime.sse_on_finance_money_unposted` | `finance.money_unposted.v1` | none | SSE `money_log.opened` | none: a repeated SSE event is ignored by the browser |
+| `notification.inbox_on_finance_batch_published` | `finance.batch_published.v1` | transactional | Per unit: inbox entry `fee.batch_published` and a push for each active owner, family member and tenant; none for helpers | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_batch_recalled` | `finance.batch_recalled.v1` | transactional | Per unit: inbox entry `fee.batch_recalled` and a push to the same recipients as the publish | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_batch_due_extended` | `finance.batch_due_extended.v1` | transactional | Per unit: inbox entry `fee.batch_due_extended` and a push | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_charge_voided` | `finance.charge_voided.v1` | transactional | Inbox entry `fee.charge_voided` and a push for the unit's recipients who can see fees | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_payment_posted` | `finance.payment_posted.v1` | transactional | Inbox entry `payment.received` and a push "Payment received" for the unit's recipients who can see fees, the payer included | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_payment_voided` | `finance.payment_voided.v1` | transactional | Inbox entry `payment.voided` and a push for the unit's recipients who can see fees | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_finance_money_unposted` | `finance.money_unposted.v1` | transactional | Inbox entry `finance.money_unposted` for every active Manager and Admin; no push content with an amount | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `realtime.sse_on_finance_money_unposted` | `finance.money_unposted.v1` | none | SSE `money_log.opened` | `realtime.events` `UNIQUE (source_message_id)`: a repeat writes and sends nothing (DR-289) |
 | `finance.cancel_intent_link` | `finance.intent_cancel_requested.v1` | afterSideEffect | `CancelIntentLink`: cancel the link at the gateway; if it is already paid, run `getStatus` and `settle` (DR-31) | Conditional update of the intent status; the gateway cancel is idempotent |
 | `finance.render_receipt_pdf` | `finance.receipt_render_requested.v1` | afterSideEffect | Render the PDF from the frozen snapshot and write it to the files bucket (DOC-34) | One cached file per `(owner_ref, variant)`; the content hash skips a re-render |
-| `notification.inbox_on_finance_debt_reminder_sent` | `finance.debt_reminder_sent.v1` | transactional | Per unit: inbox entry `fee.reminder` and a push for recipients who can see fees | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_residency_membership_changed` | `residency.membership_changed.v1` | transactional | For `added`: inbox entry `member.added` for the added account; other changes produce nothing | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_residency_owner_changed` | `residency.owner_changed.v1` | transactional | Inbox entry `member.added` for the new owner (no new template key) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_finance_debt_reminder_sent` | `finance.debt_reminder_sent.v1` | transactional | Per unit: inbox entry `fee.reminder` and a push for recipients who can see fees | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_residency_membership_changed` | `residency.membership_changed.v1` | transactional | For `added`: inbox entry `member.added` for the added account; other changes produce nothing | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_residency_owner_changed` | `residency.owner_changed.v1` | transactional | Inbox entry `member.added` for the new owner (no new template key) | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
 | `identity.send_sms` | `identity.sms_requested.v1` | afterSideEffect | Send through the SMS driver (DR-68); skip if `expiresAt` has passed | none: a repeat sends a second message; `expiresAt` bounds it |
 | `identity.send_mail` | `identity.mail_requested.v1` | afterSideEffect | Send through SMTP; skip if `expiresAt` has passed | none: a repeat sends a second message; `expiresAt` bounds it |
-| `notification.inbox_on_identity_mail_requested` | `identity.mail_requested.v1` | transactional | Only for kind `step_up_notice`: inbox entry `staff.step_up_done` for `staffId`; all other kinds are ignored | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `realtime.close_stream_on_identity_session_revoked` | `identity.session_revoked.v1` | none | Close the SSE streams of that session; SSE `session.revoked` (staff only) | none: a repeated SSE event is ignored by the browser |
+| `notification.inbox_on_identity_mail_requested` | `identity.mail_requested.v1` | transactional | Only for kind `step_up_notice`: inbox entry `staff.step_up_done` for `staffId`; all other kinds are ignored | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `realtime.close_stream_on_identity_session_revoked` | `identity.session_revoked.v1` | none | Close the SSE streams of that session; SSE `session.revoked` (staff only) | `realtime.events` `UNIQUE (source_message_id)`: a repeat writes and sends nothing (DR-289) |
 | `notification.drop_device_token_on_identity_session_revoked` | `identity.session_revoked.v1` | transactional | Delete the `device_token` rows of that session | `DELETE` by session or account: a second run deletes nothing |
 | `residency.clear_profile_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Remove the account's memberships and clear its `resident_profile` rows (DOC-16 §5.2) | Clearing fields that are already null; `cleared_at` is set once |
 | `notification.drop_tokens_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Delete the account's device tokens | `DELETE` by session or account: a second run deletes nothing |
 | `building.null_terms_ip_on_identity_account_deletion_executed` | `identity.account_deletion_executed.v1` | transactional | Set `terms_acceptance.ip` to null for the account (DR-115) | `SET ip = NULL`: a second run changes nothing |
-| `notification.inbox_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | transactional | Maps `change` and `toStatus` to the `ticket.*` template keys of DR-53 and picks the recipients (resident side or staff side) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `realtime.sse_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | none | SSE `ticket.created` when `change = created`, otherwise `ticket.changed` | none: a repeated SSE event is ignored by the browser |
-| `notification.inbox_on_tickets_ticket_assigned` | `tickets.ticket_assigned.v1` | transactional | Inbox entry `ticket.assigned` and a push for the assignee | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_vehicles_vehicle_submitted` | `vehicles.vehicle_submitted.v1` | transactional | Inbox entry `vehicle.pending_review` for the reviewers (recipients: DOC-31) | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_vehicles_vehicle_reviewed` | `vehicles.vehicle_reviewed.v1` | transactional | Inbox entry `vehicle.approved` or `vehicle.rejected` and a push for the submitter | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `notification.inbox_on_notices_notice_sent_batch` | `notices.notice_sent_batch.v1` | transactional | Insert `inbox_entry` rows (`ON CONFLICT DO NOTHING`) and write `notification.push_requested.v1` in groups of 100 | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
+| `notification.inbox_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | transactional | Maps `change` and `toStatus` to the `ticket.*` template keys of DR-53 and picks the recipients (resident side or staff side) | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `realtime.sse_on_tickets_ticket_changed` | `tickets.ticket_changed.v1` | none | SSE `ticket.created` when `change = created`, otherwise `ticket.changed` | `realtime.events` `UNIQUE (source_message_id)`: a repeat writes and sends nothing (DR-289) |
+| `notification.inbox_on_tickets_ticket_assigned` | `tickets.ticket_assigned.v1` | transactional | Inbox entry `ticket.assigned` and a push for the assignee | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_vehicles_vehicle_submitted` | `vehicles.vehicle_submitted.v1` | transactional | Inbox entry `vehicle.pending_review` for the reviewers (recipients: DOC-31) | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_vehicles_vehicle_reviewed` | `vehicles.vehicle_reviewed.v1` | transactional | Inbox entry `vehicle.approved` or `vehicle.rejected` and a push for the submitter | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `notification.inbox_on_notices_notice_sent_batch` | `notices.notice_sent_batch.v1` | transactional | Insert `inbox_entry` rows (`ON CONFLICT DO NOTHING`) and write `notification.push_requested.v1` in groups of 100 | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
 | `notification.mark_read_on_notices_notice_read` | `notices.notice_read.v1` | transactional | Set `inbox_entry.read_at` where `source_kind = notice` and `source_id = noticeId` for the account | `read_at` set only where null: a second run changes no row |
-| `notification.send_expo_push` | `notification.push_requested.v1` | afterSideEffect | Resolve device tokens and languages, send in one Expo request of at most 100, store `push_ticket`s | none: a repeat sends a second push; the inbox entry is the record |
-| `realtime.sse_on_notification_staff_inbox_created` | `notification.staff_inbox_created.v1` | none | SSE `inbox.created` to the streams of that staff member | none: a repeated SSE event is ignored by the browser |
-| `notification.inbox_on_reporting_export_ready` | `reporting.export_ready.v1` | transactional | Inbox entry `report.export_ready` for the requester | `inbox_entry` `(account_kind, account_id, source_kind, source_id, template_key)` |
-| `realtime.sse_on_reporting_export_ready` | `reporting.export_ready.v1` | none | SSE `export.ready` | none: a repeated SSE event is ignored by the browser |
+| `notification.send_expo_push` | `notification.push_requested.v1` | afterSideEffect | Resolve device tokens and languages, send in one Expo request of at most 100, store `push_ticket`s. *Revised 2026-10-28 (DR-300, DR-301):* only to devices of live sessions (`IdentityApi.liveSessionIds`), skipping devices that already have a ticket of this message; a push older than 60 minutes is skipped (DOC-31 §6.2) | `push_ticket` `UNIQUE (message_id, device_token_id)`: a retry skips devices already sent (DR-301) |
+| `realtime.sse_on_notification_staff_inbox_created` | `notification.staff_inbox_created.v1` | none | SSE `inbox.created` to the streams of that staff member | `realtime.events` `UNIQUE (source_message_id)`: a repeat writes and sends nothing (DR-289) |
+| `notification.inbox_on_reporting_export_ready` | `reporting.export_ready.v1` | transactional | Inbox entry `report.export_ready` for the requester | `inbox_entry` `uq_inbox_entry_dedupe` (DR-299) |
+| `realtime.sse_on_reporting_export_ready` | `reporting.export_ready.v1` | none | SSE `export.ready` | `realtime.events` `UNIQUE (source_message_id)`: a repeat writes and sends nothing (DR-289) |
 | `building.delete_file_object` | `building.file_delete_requested.v1` | afterSideEffect | Load the row; if its status is `deleted`, call `DeleteObject` on the files bucket (a missing key is success); otherwise do nothing (DOC-37 §14) | `DeleteObject` of a missing key is success |
 | `building.make_thumbnail` | `building.thumbnail_requested.v1` | afterSideEffect | Resize with `sharp` to 480 px (512 px for the logo), WebP, and register it as a `thumbnail` file with `owner_ref = thumb:<fileId>`; skip if it exists; an undecodable image is logged and skipped (DOC-37 §10) | A `thumbnail` row with `owner_ref = thumb:<fileId>` exists: skip |
 
@@ -276,7 +278,7 @@ Every template key of the inbox catalog (DR-53) has exactly one source, so addin
 | `ticket.assigned` | `tickets.ticket_assigned` | the assignee |
 | `ticket.status_changed`, `ticket.commented` | `tickets.ticket_changed` (`status_changed`; `message_added` with `messageVisibility = public`) | the unit's recipients who hold the `tickets` capability |
 | `ticket.rejected`, `ticket.awaiting_close` | `tickets.ticket_changed` whose `toStatus` is the technician's rejection or `resolved` (DOC-28 names the literals) | the Manager and Admin |
-| `vehicle.pending_review` | `vehicles.vehicle_submitted` | the reviewers (DOC-31) |
+| `vehicle.pending_review` | `vehicles.vehicle_submitted` | the reviewers (DOC-31). *Revised 2026-10-28 (DR-303):* active Manager and Admin |
 | `vehicle.approved`, `vehicle.rejected` | `vehicles.vehicle_reviewed` | `submittedByAccountId` |
 | `notice.published` | `notices.notice_sent_batch` | the `recipients` of the message |
 | `member.added` | `residency.membership_changed` with `change = added`; `residency.owner_changed` | the added account; the new owner |
@@ -940,20 +942,19 @@ Example payload:
 #### `notification.push_requested.v1`
 
 - **Command**, produced by `notification` when: An inbox handler asks for a push to up to 100 accounts (DR-52). `aggregate_id` = `sourceId`. Retry class `push`.
-- Payload privacy (DR-52): the template key and `params` carry no amount, name, phone number or ticket text; `route`, `unitId`, `entityId` are the only `data` the device gets.
+- Payload privacy (DR-52): the template key and `params` carry no amount, name, phone number or ticket text; `route`, `unitId`, `entityId` are the only `data` the device gets (the recipient's `unitId`, DR-301).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `buildingId` | uuid | The building. The first field of every payload. |
 | `templateKey` | string | Push template key in the shared catalog. |
 | `sourceKind` | string | Kind of the source object. |
-| `sourceId` | uuid | Id of the source object; also the collapse key of the push. |
+| `sourceId` | uuid | Id of the source object. *Revised 2026-10-28 (DR-301):* no longer the collapse key; a push has no `collapseId`. |
 | `params` | object | Template parameters. |
 | `channel` | `default` · `urgent` | Android channel. |
 | `route` | string | App route opened by a tap, e.g. `/fees`. |
-| `unitId` | uuid or `null` | The unit the tap should select, or `null`. |
 | `entityId` | uuid or `null` | The object the tap should open, or `null`. |
-| `recipients` | array of object {accountKind, accountId} (≤ 100) | At most 100 accounts. |
+| `recipients` | array of object {accountKind, accountId, unitId} (≤ 100) | At most 100 accounts. *Revised 2026-10-28 (DR-301):* each recipient carries `unitId` (uuid or `null`), the unit the tap should select; the top-level `unitId` is removed, because one message serves the members of many units. The command had no producer when this changed, so the schema stays `v1`. |
 
 Example payload:
 
@@ -966,9 +967,8 @@ Example payload:
   "params": {"title":"Water shut-off on 21 October"},
   "channel": "default",
   "route": "/notices",
-  "unitId": null,
   "entityId": "0192f3c4-5a1e-7000-8000-000000000072",
-  "recipients": [{"accountKind":"resident","accountId":"0192f3c4-5a1e-7000-8000-000000000041"}]
+  "recipients": [{"accountKind":"resident","accountId":"0192f3c4-5a1e-7000-8000-000000000041","unitId":null}]
 }
 ```
 
@@ -1102,6 +1102,7 @@ interface ResidencyApi {
   listActiveMemberships(accountId: Uuid): Promise<ActiveMembershipDto[]>                  // DR-140
   buildingIdsOfAccounts(accountIds: Uuid[]): Promise<Array<{ accountId: Uuid; buildingId: Uuid }>>   // DR-140
   lookup(buildingId: Uuid, q: string, opts?: { limitPerKind?: number }): Promise<LookupDto>          // DR-140
+  unitOwnerNames(buildingId: Uuid, unitIds: Uuid[]): Promise<Array<{ unitId: Uuid; ownerName: string | null }>>   // DR-292, to confirm: ≤ 500 ids, the fee notice PDF
 }
 interface ActiveMembershipDto { membershipId: Uuid; buildingId: Uuid; unitId: Uuid; unitCode: string; memberType: MemberType; canPay: boolean }
 interface LookupDto { units: UnitHitDto[]; residents: ResidentHitDto[] }    // the hit DTOs are in DOC-27 §2.1; the phone is full E.164, masked by the caller's audience
@@ -1131,6 +1132,7 @@ interface ScanMembershipDto {
 | `listActiveMemberships` | The `active` memberships of the account with the unit code, ordered by unit code; a `locked` one is not returned. More than 500 rows is a data defect and the call throws. The sign-in answer, `GET /me` and `Unit-Pick` use it (DOC-26 §3.4, DOC-27 §2.1). |
 | `buildingIdsOfAccounts` | The distinct buildings of the non-removed memberships of up to 500 accounts; an account with none is absent. The boot guard check 1 of DOC-36 §10.1 uses it. |
 | `lookup` | The union search of units and residents (DOC-27 §11), `limitPerKind` 1…20, default 20. The DTO holds the full phone; the route that serves `GET /staff/lookup` (in `access`, DR-140) maps it to the audience (a Guard gets it masked, DOC-29). |
+| `unitOwnerNames` | *Added 2026-10-28 (DR-292, to confirm).* For up to 500 units of the building, the `resident_profile.full_name` of the unit's `active` owner, or `null` when the unit has none or the profile has no name; more than 500 ids is a `RangeError`. Only the fee-notice renderer calls it (DOC-34 §6.1); the name is printed and never logged. |
 
 ### 7.3 `IdentityApi` (provider `identity`)
 
@@ -1146,6 +1148,7 @@ interface IdentityApi {
   findOrCreateResidentAccount(phone: string, displayName: string): Promise<{ accountId: Uuid; created: boolean }>   // DR-135
   changeResidentPhone(accountId: Uuid, newPhone: string): Promise<void>                                          // DR-135
   queueMemberInvitation(accountId: Uuid, params: { unitCode: string }): Promise<void>                          // DR-135
+  liveSessionIds(sessionIds: Uuid[]): Promise<Uuid[]>                                                          // DR-300
 }
 type StepUpAction = 'gateway_config' | 'admin_change' | 'staff_email'     // DR-39, the stored names of password_token.action (DR-126)
 interface StaffDto { staffId: Uuid; fullName: string; role: StaffRole; status: 'invited' | 'active' | 'locked' | 'disabled'
@@ -1166,6 +1169,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `verifyStepUp` | In the caller's transaction: checks the password, consumes the live step-up code of `(staff, action)` with the atomic statement of `password_token`, counts a wrong password toward the lockout. Throws `StepUpFailedError` on any failure; the failure counters are committed in an **autonomous transaction** before the throw, the one exception to rule 2 (DR-132, DOC-26 §4.5). On success it writes one `identity.mail_requested.v1` kind `step_up_notice` per active Admin of the building. The caller (`building`) does its change in the same transaction, so a rollback leaves the code consumed only if the transaction committed (DR-39). |
 | `findOrCreateResidentAccount` | Parses the phone (`libphonenumber-js/max`, region VN); invalid: `ValidationError` rule `phone_invalid`. `INSERT … ON CONFLICT (phone) DO NOTHING`; an existing account is returned unchanged (its name is not overwritten) with `created: false`. Used by the household add, the owner creation and the units-import commit (DOC-26 §2.2, DOC-27). |
 | `changeResidentPhone` | One conditional `UPDATE` of the phone (`status` `active` or `deletion_requested`): none is `NotFoundError`, `23505` is 409 `phone_in_use`; revokes every refresh family with reason `phone_changed` and writes one `identity.session_revoked.v1` each. The audit row is the caller's (DOC-26 §2.2). |
+| `liveSessionIds` | *Added 2026-10-28 (DR-300).* Of up to 500 session ids, the ones that are still live: `revoked_at IS NULL AND absolute_expires_at > now()`, the predicate of the session list (DOC-26 §3.7); an unknown id is absent. The push sender asks it before each send and deletes the device tokens of the sessions it does not return (DOC-31 §6.2). |
 | `queueMemberInvitation` | Writes `identity.sms_requested.v1` kind `member_invitation` after drawing one token from `otp:phone:<e164>`; an empty bucket throws `RateLimitedError`, so the caller's transaction rolls back. The owner's daily cap is the caller's (DOC-26 §2.2, DOC-27). |
 
 ### 7.4 Other contracts
@@ -1176,7 +1180,7 @@ interface ResidentAccountDto { accountId: Uuid; phone: string; displayName: stri
 | `FinanceApi.reportQueries` | finance | an object of named read methods, one per report kind of DR-55 (`collectionByFeeItem`, `debtAging`, `collectionByMonth`, `onlineTransactions`), each `(filter) → Page<Row>`; no join on another schema | reporting | Rows and filters: DOC-33 |
 | `TicketsApi.getDashboardCounts`, `VehiclesApi.getDashboardCounts`, `NoticesApi.getDashboardCounts` | tickets, vehicles, notices | `(buildingId) → Record<string, number>`; each answers from its own indexed tables | reporting | The keys are DOC-33's dashboard definition (FR-34) |
 | `AuditApi.record` | audit | `(entry: { actor: StaffContext \| SystemActor, action: string, object: { type: string, id: Uuid }, changes: AuditChange[], reason?: string, details?: object }) → void` | every module | Joins the caller's transaction; fills actor, role, IP and request id from the request context (DOC-12 §8.3; columns: DOC-17 §2) |
-| `FilesApi` | building | `register`, `verify`, `attach`, `remove`, `usage` (DR-42), plus `signedUrl` and `storeGenerated` (DR-119) | every module with files | Signatures, errors and the status machine: [DOC-37](../06-design/files-and-uploads.md) §3 |
+| `FilesApi` | building | `register`, `verify`, `attach`, `remove`, `usage` (DR-42), plus `signedUrl` and `storeGenerated` (DR-119), plus `findByOwnerRef` (DR-293: the live file of a logical key, the PDF cache) | every module with files | Signatures, errors and the status machine: [DOC-37](../06-design/files-and-uploads.md) §3 |
 | `BuildingApi.getSettings` | building | `(buildingId) → BuildingSettings`, the saved keys overlaid on the code defaults (DR-111) | all | Keys and ranges: DOC-17 §1.2, DOC-36 |
 | `BuildingApi.getGatewayConfig` | building | `(buildingId, provider, opts?: { lock?: 'share' }) → { id, provider, driver, status, receivingAccount, secrets: Record<string, string> } \| null`; with `lock: 'share'` it skips the cache and takes `FOR SHARE` (DR-126) | finance (intent creation uses the lock), the webhook route | `secrets` is decrypted in memory only, cached 60 s per process, never logged (DOC-10 §4.1) |
 | `BuildingApi.hasAcceptedLatestTerms` | building | `(accountId, buildingId) → boolean`; true when the account has accepted the highest `version` of every kind (DR-111) | resident guard | `terms_required` (403) when false |

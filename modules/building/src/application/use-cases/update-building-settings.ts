@@ -137,7 +137,10 @@ export class UpdateBuildingSettings {
     )
   }
 
-  /** The new logo is attached and the old one removed, in the transaction of the update: a rollback keeps the old (BD-10). */
+  /**
+   * The new logo is attached in the transaction of the update; a rollback keeps the old (BD-10). The old logo stays
+   * attached: receipt snapshots name it by file id, so a later void copy still prints it (DR-296).
+   */
   private async swapLogo(staff: StaffContext, current: BuildingRecord, next: string | null) {
     const { files, filesApi } = this
     const actor = {
@@ -153,7 +156,6 @@ export class UpdateBuildingSettings {
         throw new RuleViolationError('not_a_logo', 'The file is not a logo', 'building.logoFileId')
       await filesApi.attach(actor, next, `building:${current.id}`)
     }
-    if (current.logoFile) await filesApi.remove(actor, current.logoFile)
   }
 
   private buildAuditedSettings() {

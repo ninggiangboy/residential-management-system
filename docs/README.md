@@ -28,11 +28,11 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Approved |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Approved |
 | DOC-12 | [Code architecture](03-architecture/code-architecture.md) | Approved |
-| DOC-13 | [ADR index](04-adr/README.md) | Approved (28 ADRs; ADR-0028, DR-279: self-hosted usage analytics; ADR-0027, DR-268: files and backups in SeaweedFS on the VPS for `vn`, ADR-0016, 0017, 0020 superseded in part) |
+| DOC-13 | [ADR index](04-adr/README.md) | Approved (28 ADRs; ADR-0024 written in P1-26; ADR-0028, DR-279: self-hosted usage analytics; ADR-0027, DR-268: files and backups in SeaweedFS on the VPS for `vn`, ADR-0016, 0017, 0020 superseded in part) |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Approved |
 | DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; intent and statement tables follow proposed DR-27, 28, 30, 34, 35) | Draft |
 | DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Approved |
-| DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written, §4–9 owed) | Approved |
+| DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written; §6.1–6.3 notification tables and §9.1 `realtime.events` Draft for P2; the rest of §4–9 owed) | Approved (§1–3) |
 | DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Approved |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Approved |
 | DOC-20 | [Data lifecycle](05-data/data-lifecycle.md) (skeleton) | Approved |
@@ -46,10 +46,10 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-28 | Tickets (`06-design/tickets.md`) | Not written |
 | DOC-29 | Resident QR (`06-design/resident-qr.md`) | Not written |
 | DOC-30 | Vehicles (`06-design/vehicles.md`) | Not written |
-| DOC-31 | Notices and notifications (`06-design/notices-and-notifications.md`) | Not written |
+| DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core written, DDL and statements run on PostgreSQL 18.6; notices owed to P4) | Draft |
 | DOC-32 | Document library (`06-design/document-library.md`) | Not written |
 | DOC-33 | Reports and exports (`06-design/reports-and-exports.md`) | Not written |
-| DOC-34 | PDF rendering (`06-design/pdf-rendering.md`) | Not written |
+| DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; follows the proposed DR-298) | Draft |
 | DOC-35 | [Audit, privacy and terms](06-design/audit-privacy-and-terms.md) | Approved |
 | DOC-36 | [Building configuration and demo](06-design/building-configuration-and-demo.md) | Approved |
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Approved |
@@ -67,7 +67,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Approved |
 | DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74 and E-169 specified, E-75…E-168 numbered) | Approved |
-| DOC-52 | SSE and webhooks (`07-api/sse-and-webhooks.md`) | Not written |
+| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE written, statements run on PostgreSQL 18.6; follows the proposed DR-287; webhook owed to P3) | Draft |
 | DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Approved |
 | DOC-54 | [Design system](08-ux-ui/design-system.md) | Approved |
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |

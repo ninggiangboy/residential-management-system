@@ -1,10 +1,10 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-28 (DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
-> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228, DR-293, DR-300, DR-302), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
-This document numbers every endpoint of the API (`E-01…E-174`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
+This document numbers every endpoint of the API (`E-01…E-179`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
 
 Every new decision in this document is recorded as DR-142…DR-14x and summarized in §13. Sample requests and responses use the sample building (DOC-01): unit `A-1508`, owner Nguyễn Văn An, tenant Trần Thị Bình.
 
@@ -148,21 +148,25 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-173 | `POST /me/usage-events` | `recordMyUsageEvents` | unit: broadcast_notices | | | | §10A |
 | E-174 | `POST /staff/usage-events` | `recordStaffUsageEvents` | staff: any | | | | §10A |
 | E-175 | `POST /staff/payments/intents/{id}/cancel` | `cancelPaymentIntentByStaff` | staff: admin, manager | | | UC-03 | DOC-23 §5.3 (DR-282, P3) |
+| E-176 | `GET /staff/charges/{id}/pdf` | `downloadChargeFeeNotice` | staff: admin, manager | | | UC-01 | DOC-34 §6.3, §8.1 (DR-293, P2) |
+| E-177 | `GET /staff/fee-batches/{id}/pdf` | `getBatchPdfJob` | staff: admin, manager | | | UC-01 | DOC-34 §9.1 (DR-293, P2) |
+| E-178 | `POST /me/inbox/{id}/read` | `readMyInboxEntry` | unit: personal_notifications | | | UC-19 | DOC-31 §4.4 (DR-302, P2) |
+| E-179 | `POST /staff/inbox/{id}/read` | `readStaffInboxEntry` | staff: any | | | UC-19 | DOC-31 §4.4 (DR-302, P2) |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
 | ID | Method and path | `operationId` | Audience | Idem | UC | Written in |
 | --- | --- | --- | --- | --- | --- | --- |
-| E-75 | `GET /staff/events` | `streamStaffEvents` | staff: any | | UC-19, UC-26 | DOC-52 (P1-26) |
-| E-76 | `GET /staff/inbox` | `listStaffInbox` | staff: any | | UC-19 | DOC-31 (P1-26) |
-| E-77 | `POST /staff/inbox/read-all` | `readAllStaffInbox` | staff: any | | UC-19 | DOC-31 |
-| E-78 | `GET /me/inbox` | `listMyInbox` | unit: personal_notifications | | UC-19 | DOC-31 |
-| E-79 | `POST /me/inbox/read-all` | `readAllMyInbox` | unit: personal_notifications | | UC-19 | DOC-31 |
+| E-75 | `GET /staff/events` | `streamStaffEvents` | staff: any | | UC-19, UC-26 | DOC-52 §4 (P1-26; built per DR-287) |
+| E-76 | `GET /staff/inbox` | `listStaffInbox` | staff: any | | UC-19 | DOC-31 §4.4 (P1-26, DR-302) |
+| E-77 | `POST /staff/inbox/read-all` | `readAllStaffInbox` | staff: any | | UC-19 | DOC-31 §4.4 (body `upToId`, DR-302) |
+| E-78 | `GET /me/inbox` | `listMyInbox` | unit: personal_notifications | | UC-19 | DOC-31 §4.4 (DR-302) |
+| E-79 | `POST /me/inbox/read-all` | `readAllMyInbox` | unit: personal_notifications | | UC-19 | DOC-31 §4.4 (body `upToId`, DR-302) |
 | E-80 | `GET /me/fees` | `listMyFees` | unit: view_fees | | UC-03 | DOC-22, DOC-58 (P2) |
 | E-81 | `GET /me/fees/{chargeId}` | `getMyFee` | unit: view_fees | | UC-03 | P2 |
 | E-82 | `GET /me/fees/history` | `listMyFeeHistory` | unit: view_fees | | UC-03 | P2 |
 | E-83 | `GET /me/receipts` | `listMyReceipts` | unit: view_fees | | UC-03 | P2 |
-| E-84 | `GET /me/receipts/{id}/pdf` | `downloadMyReceipt` | unit: view_fees | | UC-03 | P2 |
+| E-84 | `GET /me/receipts/{id}/pdf` | `downloadMyReceipt` | unit: view_fees | | UC-03 | P2; the PDF and its on-demand render: DOC-34 §8.2 |
 | E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 §4 (P3); the sample is DOC-23 §4.6, copied here when the P3 group is specified |
 | E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P3 (the response carries `unmatchedTransfer {amount, receivedAt}` for the outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, DR-96) |
 | E-87 | `POST /me/payments/intents/{id}/cancel` | `cancelPaymentIntent` | unit: pay | | UC-03 | P3 |
@@ -177,14 +181,14 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-96 | `POST /staff/fee-batches/{id}/recall` | `recallFeeBatch` | staff: admin, manager | | UC-04 | P2; **sample owed** |
 | E-97 | `POST /staff/fee-batches/{id}/close` | `closeFeeBatch` | staff: admin, manager | | UC-04 | P2 |
 | E-98 | `POST /staff/fee-batches/{id}/reissue` | `reissueFeeBatch` | staff: admin, manager | | UC-04 | P2 |
-| E-99 | `POST /staff/fee-batches/{id}/pdf` | `requestBatchPdf` | staff: admin, manager | | UC-01 | P2 |
+| E-99 | `POST /staff/fee-batches/{id}/pdf` | `requestBatchPdf` | staff: admin, manager | | UC-01 | DOC-34 §9.1 (P2). *Revised 2026-10-28 (DR-293):* the bulk request only: a published or closed batch, body `{language?}` (`vi`, `en`, `both`), 202 with the job; a repeat returns the active job. One unit's notice is E-176, the job's state E-177 |
 | E-100 | `POST /staff/charges/{id}/void` | `voidCharge` | staff: admin, manager | | UC-04 | P2; **sample owed** |
 | E-101 | `GET /staff/debts` | `listDebts` | staff: admin, manager | | UC-05 | P2 |
 | E-102 | `GET /staff/units/{id}/debt` | `getUnitDebt` | staff: admin, manager | | UC-05 | P2 |
 | E-103 | `POST /staff/debts/reminders` | `sendDebtReminders` | staff: admin, manager | R | UC-05 | P2 |
 | E-104 | `POST /staff/payments` | `recordManualPayment` | staff: admin, manager | R | UC-02 | P2; **sample owed** |
 | E-105 | `POST /staff/payments/{id}/void` | `voidPayment` | staff: admin, manager | | UC-02 | P2 |
-| E-106 | `GET /staff/receipts/{id}/pdf` | `downloadStaffReceipt` | staff: admin, manager | | UC-02 | P2 |
+| E-106 | `GET /staff/receipts/{id}/pdf` | `downloadStaffReceipt` | staff: admin, manager | | UC-02 | P2; the PDF and its on-demand render: DOC-34 §8.2 |
 | E-107 | `GET /staff/payments/intents` | `listPaymentIntents` | staff: admin, manager | | UC-18 | P3 |
 | E-108 | `GET /staff/money-log` | `listMoneyLog` | staff: admin, manager | | UC-21 | P2 |
 | E-109 | `POST /staff/money-log/{kind}/{id}/review` | `reviewMoneyLogRow` | staff: admin, manager | | UC-21 | P2 |
@@ -878,7 +882,7 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 
   | Name | In | Type | Required | Default | Constraints |
   | --- | --- | --- | --- | --- | --- |
-  | `expoPushToken` | body | string | yes | | an Expo push token (`ExponentPushToken[…]` or `ExpoPushToken[…]`); the pattern is verified against the Expo documentation in P1-26 |
+  | `expoPushToken` | body | string | yes | | an Expo push token (`ExponentPushToken[…]` or `ExpoPushToken[…]`). *Revised 2026-10-28 (DR-300):* `^Expo(nent)?PushToken\[[A-Za-z0-9_-]{1,180}\]$`, at most 200 characters; anything else is 400 rule `pattern` (DOC-31 §5.1) |
   | `platform` | body | string | yes | | `ios`, `android` |
   | `appVersion` | body | string | yes | | semver, at most 20 characters |
 
@@ -896,11 +900,11 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
   ```
 
 - **Errors:** 400 `validation_failed`; 401.
-- **Data source:** `notification.device_token` upsert on the unique token: `ON CONFLICT (expo_push_token) DO UPDATE SET account_kind, account_id, session_id, platform, app_version, updated_at` (a token registered by another account is **reassigned**, glossary "device token"). The table's DDL is **owed to DOC-17 (notification tables) and DOC-31, P1-26**; the table is denied to `rms_readonly` (DOC-19).
+- **Data source:** `notification.device_token` upsert on the unique token: `ON CONFLICT (expo_push_token) DO UPDATE SET account_kind, account_id, session_id, platform, app_version, updated_at` (a token registered by another account is **reassigned**, glossary "device token"). *Revised 2026-10-28 (DR-300):* one token per session: the same transaction first deletes the session's row with another token (`uq_device_token_session`); the statement is DOC-31 §5.1 (OPM-S19) and the DDL DOC-17 §6.2. The table is denied to `rms_readonly` (DOC-19).
 - **Cache:** `no-store`.
 - **Performance:** p95 under 100 ms.
 - **Events:** none.
-- **Tests:** owed to DOC-31 (`NT-`); P1-17 acceptance: an EAS development build registers a token.
+- **Tests:** NT-40…43 (DOC-31 §14.4); P1-17 acceptance: an EAS development build registers a token.
 
 ### E-23 `DELETE /me/devices/{id}` · `removeMyDevice`
 
@@ -909,11 +913,11 @@ Rules shared by the group. The routes `E-13` to `E-23` have audience `resident`:
 - **Parameters:** `id` (path, UUID, from E-22).
 - **Response 204:** also when the id is unknown or belongs to another account (nothing is deleted and nothing is revealed).
 - **Errors:** 401.
-- **Data source:** `DELETE FROM notification.device_token WHERE id = :id AND account_kind = 'resident' AND account_id = :account_id` (DDL owed to DOC-17/DOC-31).
+- **Data source:** `DELETE FROM notification.device_token WHERE id = :id AND account_kind = 'resident' AND account_id = :account_id` (DDL DOC-17 §6.2, DOC-31 §5.2).
 - **Cache:** `no-store`.
 - **Performance:** p95 under 100 ms.
 - **Events:** none.
-- **Tests:** owed to DOC-31 (`NT-`).
+- **Tests:** NT-41 (DOC-31 §14.4).
 
 ### E-24 `POST /me/uploads` · `registerMyUpload`
 
@@ -1222,7 +1226,7 @@ These endpoints belong to the signed-in staff member and need no capability beyo
 
   | Name | In | Type | Required | Default | Constraints |
   | --- | --- | --- | --- | --- | --- |
-  | `expoPushToken` | body | string | yes | | `ExponentPushToken[…]` or `ExpoPushToken[…]`, at most 200 characters (the exact rule is DOC-31's) |
+  | `expoPushToken` | body | string | yes | | `ExponentPushToken[…]` or `ExpoPushToken[…]`, at most 200 characters. *Revised 2026-10-28 (DR-300):* the rule is E-22's (DOC-31 §5.1) |
   | `platform` | body | string | yes | | `ios` or `android` |
   | `appVersion` | body | string | yes | | semver, at most 20 characters |
 
@@ -1233,19 +1237,19 @@ These endpoints belong to the signed-in staff member and need no capability beyo
   ```
 - **Response 200:** `{ "id": "0192f3c4-5a1e-7000-8000-000000000071" }`. The call is an upsert on the token: the same token again returns the same `id`; a token registered to another account is reassigned to this session (glossary "device token"). The row is tied to the session (`sid`), so E-33, a logout and any revocation of that session delete it (DOC-09 §5.2).
 - **Errors:** 400 `validation_failed` (`pattern`, `enum`).
-- **Data source:** `notification.device_token` (DOC-17, written with DOC-31 in P1-26); `ON CONFLICT (expo_push_token) DO UPDATE SET account_kind, account_id, session_id, platform, app_version, updated_at`.
+- **Data source:** `notification.device_token` (DOC-17 §6.2); `ON CONFLICT (expo_push_token) DO UPDATE SET account_kind, account_id, session_id, platform, app_version, updated_at`. *Revised 2026-10-28 (DR-300):* one token per session, as E-22 (DOC-31 §5.1).
 - **Performance:** p95 ≤ 100 ms.
-- **Tests:** owed to DOC-31 (`NT-`); AU-31 covers the deletion on revoke.
+- **Tests:** NT-40…44 (DOC-31 §14.4); AU-31 covers the deletion on revoke.
 
 ### E-35 `DELETE /staff/devices/{id}` · `removeStaffDevice`
 
 - **Purpose / UC:** The staff app removes its push token, for instance when the user turns push off on the device (UC-26). Sign-out removes it without this call.
 - **Authorization:** `staff: admin, manager, technician, guard`.
 - **Parameters:** `id` (path, uuid, required): the `id` that E-34 returned.
-- **Response 204:** no body.
-- **Errors:** 404 `not_found` (unknown, already removed, or another account's device).
+- **Response 204:** no body. *Revised 2026-10-28 (DR-300, applying DR-146):* also when the id is unknown, already removed or another account's device; nothing is deleted and nothing is revealed, as E-23. The earlier 404 `not_found` is dropped.
+- **Errors:** 401.
 - **Data source:** `DELETE FROM notification.device_token WHERE id = :id AND account_kind = 'staff' AND account_id = :account_id`.
-- **Tests:** owed to DOC-31.
+- **Tests:** NT-46 (DOC-31 §14.4).
 
 ### E-36 `POST /staff/uploads` · `registerStaffUpload`
 
@@ -2743,9 +2747,9 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
 
 | Group | Endpoints | Written in | Before |
 | --- | --- | --- | --- |
-| Real-time and inbox | E-75…E-79 | DOC-52 (SSE), DOC-31 (inbox) | P2-00 |
+| Real-time and inbox | E-75…E-79, E-178, E-179 | **written:** DOC-52 §4 (E-75), DOC-31 §4.4 (E-76…E-79, E-178, E-179) | P2-00 |
 | Resident fees and payment | E-80…E-88 | DOC-22, DOC-23, DOC-58 | P2-00 (E-80…E-84), P3-00 (E-85…E-88) |
-| Staff fee batches, charges, debts, payments, money log | E-89…E-110 | DOC-21, DOC-22, DOC-66 | P2-00 |
+| Staff fee batches, charges, debts, payments, money log | E-89…E-110, E-176, E-177 | DOC-21, DOC-22, DOC-66; the PDF endpoints E-84, E-99, E-106, E-176, E-177 in DOC-34 §8, §9 | P2-00 |
 | Statements, webhook | E-111…E-117 | DOC-25, DOC-24, DOC-52 | P3-00 |
 | Tickets | E-118…E-132 | DOC-28 | P4-00 |
 | Notices | E-143…E-149 | DOC-31 | P4-00 |
@@ -2781,6 +2785,9 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
 | E-173, E-174 | `POST /me/usage-events`, `POST /staff/usage-events` | The apps' record of screen views, taps, opening, closing and the time of use, from closed lists and with no account stored (DR-279); two routes because a resident token never passes a staff guard |
 | E-175 | `POST /staff/payments/intents/{id}/cancel` | A Manager or Admin cancels a resident's open payment (DR-28 rule 4, DR-282) |
+| E-176 | `GET /staff/charges/{id}/pdf` | One unit's fee notice, the "Tải PDF căn này" button of `W-Fee-Notice`; drafts render with the draft mark (DR-293) |
+| E-177 | `GET /staff/fee-batches/{id}/pdf` | The state of the latest bulk fee-notice job and its ZIP (DR-293) |
+| E-178, E-179 | `POST /me/inbox/{id}/read`, `POST /staff/inbox/{id}/read` | Mark one inbox entry read when it is opened (DR-302) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |

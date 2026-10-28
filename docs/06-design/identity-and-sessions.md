@@ -1,6 +1,6 @@
 # Identity and sessions
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-23 (P1-14: the staff accounts and the calls for `residency` as built, §4.4, §12, DR-261; P1-11: the resident OTP as built, §5.6, §12, DR-256; earlier 2026-10-21: DR-68: providers picked at P1-22, fake drivers before; DR-225: `client` in the session lists; DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: `liveSessionIds` in §3.7, DR-300) · 2026-10-23 (P1-14: the staff accounts and the calls for `residency` as built, §4.4, §12, DR-261; P1-11: the resident OTP as built, §5.6, §12, DR-256; earlier 2026-10-21: DR-68: providers picked at P1-22, fake drivers before; DR-225: `client` in the session lists; DR-189: client handling note in §3.3; earlier DR-147, DR-150: staff account states, step-up order, reset response floor) · DOC-26
 > Depends on: original SDD §7, §17.1, §19.3, [DR](../00-decision-register.md) (DR-36…39, 59, 60, 64, 65, 68, 73, 74, 83, 85, 87, 99, 107, 108, 125, 127), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [DOC-03](../01-product/requirements.md) (FR-13…15, 45, 50), [DOC-04](../01-product/use-cases.md) (UC-14, UC-17, UC-26), [DOC-09](../03-architecture/messaging-contracts.md) §6.3, §7.3, [DOC-12](../03-architecture/code-architecture.md) §5.3, §8, §12, [DOC-16](../05-data/identity-and-residency-model.md) §4, [DOC-17](../05-data/operations-model.md) §3, [DOC-35](audit-privacy-and-terms.md) §10, [DOC-36](building-configuration-and-demo.md) §3, §7, §9, §10, [DOC-42](error-handling.md) §5.3, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity: staff), P1-11 (identity: resident OTP), P1-14 (staff API), P1-22 (SMS and mail adapters), DOC-27, DOC-39, DOC-41, DOC-51, EXP-09, EXP-10, RB-12
 
@@ -252,6 +252,13 @@ SELECT id, client, user_agent, created_at, last_used_at, id = :sid AS current
     "lastUsedAt": "2026-10-20T01:02:11.000Z", "current": true },
   { "id": "0192f3c4-5a1e-7000-8000-000000000063", "client": "app", "device": "Pixel 9, Android 16", "createdAt": "2026-09-02T10:20:44.000Z",
     "lastUsedAt": "2026-10-18T16:59:08.000Z", "current": false } ] }
+```
+
+*Added 2026-10-28 (DR-300):* `IdentityApi.liveSessionIds(sessionIds)` applies the same predicate to a list of at most 500 session ids (any kind, any account) and returns the live ones; the push sender uses it to skip and delete the device tokens of sessions that ended by expiry, which writes no event (DOC-31 §6.2, DOC-09 §7.3):
+
+```sql
+SELECT id FROM identity.refresh_family
+ WHERE id = ANY(:session_ids) AND revoked_at IS NULL AND absolute_expires_at > now();
 ```
 
 `client` (`web` | `app`) is the column of the family, written at sign-in from the request's `client` (DR-130; a resident is always `app`, DR-225); a client picks the icon from it. `device` is computed on read from `user_agent` (it is stored raw, at most 300 characters). The apps send `User-Agent: rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` (the staff app `rms-staff/…`); the label is `"<model>, <os>"`. A browser agent becomes `"<browser> on <os>"` by five patterns (Chrome, Edge, Firefox, Safari; macOS, Windows, Linux, Android, iOS); anything else is `"Unknown device"`. No library is used.

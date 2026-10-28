@@ -1,6 +1,6 @@
 # Client architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (DR-279: §15A the usage record) · 2026-10-22 (P1-09: catalog and design-tokens rows, DR-235, DR-236; DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: the push route list is DOC-31 §6.5, DR-303, §10.2; the SSE client, replay and limits, DR-288…290, §13) · 2026-10-28 (DR-279: §15A the usage record) · 2026-10-22 (P1-09: catalog and design-tokens rows, DR-235, DR-236; DR-226: query key and E-169; earlier: DR-180…182, 199, 205, 208, 216 pointers) · DOC-55
 > Depends on: original SDD §4.3, §18.2, [DR](../00-decision-register.md) (DR-04, 38, 52, 61, 63, 64, 69, 70, 71, 74, 75, 82, 94, 127, DR-226), [ADR-0004](../04-adr/0004-repository-layout-scopes-and-boundaries.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-12](../03-architecture/code-architecture.md) §2, §5.4, §6.1, §13, [DOC-11](../03-architecture/tech-stack-and-versions.md) §4, §6, [DOC-26](../06-design/identity-and-sessions.md) §3, [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-37](../06-design/files-and-uploads.md) §6, [DOC-42](../06-design/error-handling.md) §9–10, [DOC-50](../07-api/api-guidelines.md) §5, §8–11, [DOC-51](../07-api/api-endpoints.md), [DOC-73](../09-operations/mobile-release.md), [DOC-41](../06-design/configuration-reference.md) §15
 > Main readers: P1-09 (i18n, tokens), P1-16 (web shell), P1-17 (mobile shells), every later screen task, DOC-53, DOC-54, DOC-56…68, DOC-88
 
@@ -496,7 +496,7 @@ The payload carries no personal text; `data` is `{ route, unitId, entityId }` (D
 1. A tap arrives through `addNotificationResponseReceivedListener`, or through `useLastNotificationResponse()` when the app was closed (a plain tap has `actionIdentifier === DEFAULT_ACTION_IDENTIFIER`); the stored response is cleared with `clearLastNotificationResponseAsync()` after handling.
 2. If the app is signed out, the intent `{route, unitId, entityId}` is kept in memory and replayed after sign-in.
 3. **Resident:** if `unitId` is one of the active memberships and differs from the selected unit, the app calls `select(unitId)` first (§7.3), then navigates; if it is not an active membership the tap opens Home (DR-193).
-4. `route` is a name from a closed list mapped to an expo-router path by one table in `mobile-core`; an unknown name opens Home. The list is DOC-31's (not written); the provisional names are `fees`, `fee`, `receipt`, `request`, `notice`, `inbox`, `ticket`, `vehicle`.
+4. `route` is a name from a closed list mapped to an expo-router path by one table in `mobile-core`; an unknown name opens Home. The list is DOC-31's (not written); the provisional names are `fees`, `fee`, `receipt`, `request`, `notice`, `inbox`, `ticket`, `vehicle`. *Revised 2026-10-28 (DR-303):* the closed list is DOC-31 §6.5 (`PUSH_ROUTES` in `@rms/shared-types`): app paths without parameters such as `/fees`, `/requests`, `/notices`, `/jobs`, with `route/entityId` when `entityId` is set; the provisional names are dropped. Each recipient of a push carries its own `unitId` (DR-301).
 5. Arriving data also invalidates the query keys of that area, so a screen opened from a push shows current data.
 
 Deep link schemes are `rms-resident://` and `rms-staff://` (DR-69); the same router handles links opened from outside.
@@ -539,15 +539,16 @@ Failures (DOC-37 §6.5): a `PUT` 403 or an expired URL (`expiresAt`, 15 minutes)
 
 ## 13. Real-time (web)
 
-Contract only; the event schema and the endpoint belong to DOC-52 (not written) and DR-75. **Not built in P1-16; it waits for P4 (DR-264).** The web is ready to take it without a redesign: the `_app` layout is the one place that would open the stream after `ensureSession` and close it in `endSessionLocally`; the event to cache map below is a plain table of query-key prefixes (`staffKey(...)`) to invalidate; `session.revoked` ends in `endSessionLocally(queryClient, 'revoked')`, the function another tab's sign-out already calls; and the top bar of the shell has room for the bell (DOC-64, DR-174). Until then a revoked session ends at the next refresh, at most 15 minutes later (the access token's life), and a list shows what changed at the next focus or navigation.
+Contract only; the event schema and the endpoint belong to DOC-52 (not written) and DR-75. *Revised 2026-10-28 (P1-26):* DOC-52 is written (Draft); under the proposed DR-287 the server side is built in P2-12 and the web side below in P4. **Not built in P1-16; it waits for P4 (DR-264).** The web is ready to take it without a redesign: the `_app` layout is the one place that would open the stream after `ensureSession` and close it in `endSessionLocally`; the event to cache map below is a plain table of query-key prefixes (`staffKey(...)`) to invalidate; `session.revoked` ends in `endSessionLocally(queryClient, 'revoked')`, the function another tab's sign-out already calls; and the top bar of the shell has room for the bell (DOC-64, DR-174). Until then a revoked session ends at the next refresh, at most 15 minutes later (the access token's life), and a list shows what changed at the next focus or navigation.
 
 | Point | Rule |
 | --- | --- |
 | Client | the fetch-based SSE client of `@core/web` to `GET /staff/events` with the bearer token (an `EventSource` cannot send the header) |
-| Auth | opens after sign-in; a token refresh does not close the stream (the next reconnect uses the new token); `session.revoked` closes it and signs the tab out |
-| Reconnect | on close or error, backoff 1 s, 2 s, 5 s, 10 s (cap 30 s) with `Last-Event-ID`; a 401 goes through the refresh rule of §5.2; 429 (a fourth stream) stops and shows a banner |
-| Streams | at most 3 per account (DR-75): one stream per tab would exceed it, so a tab holds the stream only while it is visible: `visibilitychange` hidden for 60 s closes it, visible reopens it and invalidates everything the events cover |
-| Heartbeat | a silent stream for 45 s is closed and reopened (the server sends at least every 30 s) |
+| Auth | opens after sign-in; a token refresh does not close the stream (the next reconnect uses the new token); `session.revoked` closes it and signs the tab out. *Revised 2026-10-28 (DR-288):* the server also closes the stream when the access token it was opened with expires; the client reconnects with the current token |
+| Reconnect | on close or error, backoff 1 s, 2 s, 5 s, 10 s (cap 30 s) with `Last-Event-ID`; a 401 goes through the refresh rule of §5.2; 429 (a fourth stream) stops and shows a banner. *Revised 2026-10-28 (DR-290):* the vendored `RealtimeClient` of `@core/web` is kept with its backoff of 1, 2, 4, 8 s, capped at 15 s and reset by the `ready` frame; the stop on 429 (`scope: "sse_streams"`) is a local change to `core-web` made in the P4 web task |
+| Streams | at most 3 per account (DR-75; *revised 2026-10-28, DR-288:* counted per `api` process): one stream per tab would exceed it, so a tab holds the stream only while it is visible: `visibilitychange` hidden for 60 s closes it, visible reopens it and invalidates everything the events cover |
+| Heartbeat | a silent stream for 45 s is closed and reopened (the server sends at least every 30 s). *Revised 2026-10-28 (DR-290):* the 45-second watchdog is the second local change to `core-web` in the P4 web task |
+| Replay | *Added 2026-10-28 (DR-289).* A `ready` frame with `resumed: false` (no `Last-Event-ID`, a cursor older than 23 hours, or 200 events missed) invalidates every key of the map below; an event may arrive twice, which the map tolerates (DOC-52 §8) |
 | Mobile | no SSE: refresh on focus and on push (DR-75) |
 
 Event to cache map (the web owns it; DOC-52 owns the event names):
@@ -557,7 +558,7 @@ Event to cache map (the web owns it; DOC-52 owns the event names):
 | `inbox.created` | `['staff', 'inbox']` and the bell counter |
 | `ticket.created`, `ticket.changed` | `['staff', 'tickets']`, `['staff', 'dashboard']` |
 | `money_log.opened` | `['staff', 'money-log']`, `['staff', 'dashboard']` |
-| `export.ready` | `['staff', 'exports']` and a toast with the download |
+| `export.ready` | `['staff', 'exports']` and a toast with the download (*revised 2026-10-28, DR-289:* the toast is keyed by `exportId`, so a repeated event replaces it) |
 | `session.revoked` | sign out (§5.4) |
 
 ## 14. Forms

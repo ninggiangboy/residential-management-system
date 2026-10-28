@@ -1,6 +1,6 @@
 # Quality attributes
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-27 (DR-272: the order of the rolling restart and the drain of the api) · 2026-10-26 (DR-268: SeaweedFS on the VPS replaces R2 in the `vn` profile; §6 gets a provisional SeaweedFS line; NFR-11 and §7 scoped to PostgreSQL faults; earlier 2026-10-20 (DR-179: pointer to the client budgets; earlier DR-154: label `job_name`) · DOC-10
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: render hosts in the memory plan, DR-291, §6.1) · 2026-10-27 (DR-272: the order of the rolling restart and the drain of the api) · 2026-10-26 (DR-268: SeaweedFS on the VPS replaces R2 in the `vn` profile; §6 gets a provisional SeaweedFS line; NFR-11 and §7 scoped to PostgreSQL faults; earlier 2026-10-20 (DR-179: pointer to the client budgets; earlier DR-154: label `job_name`) · DOC-10
 > Depends on: original SDD §3.4, §19, §20, [DR](../00-decision-register.md) (DR-05, 06, 21, 30, 52, 56, 57, 61…64, 66, 67, 75, 77, 78, 80, 83, 85, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [DOC-01](../01-product/vision-and-scope.md) §4, [DOC-03](../01-product/requirements.md) §2, [DOC-06](../02-glossary.md), [DOC-07](system-context-and-containers.md) §3–§4
 > Main readers: DOC-38, DOC-40, DOC-70, DOC-72, DOC-96 (EXP-07), DOC-97 (EXP-08), P1-03, P1-18, P1-20, P6-05, P6-07
 
@@ -206,8 +206,8 @@ Ceilings are container `mem_limit` values (DR-06), except PostgreSQL, which is n
 | --- | --- | --- | --- | --- |
 | Operating system, Docker daemon, `sshd` | 0.5 GB | 0.5 GB | 0.6 GB | 0.6 GB |
 | PostgreSQL 18 (`shared_buffers`, work memory, backends) | 1.2 GB (`shared_buffers` 512 MB) | 0.8 GB | 3.0 GB (`shared_buffers` 1 GB, DR-06) | 1.6 GB |
-| `api` | 1.0 GB × 1 | 0.25 GB | 1.0 GB × 2 | 0.25 GB × 2 |
-| `worker` | 1.5 GB | 0.35 GB (1.0 GB during bulk PDF) | 1.5 GB | 0.35 GB (1.0 GB during bulk PDF) |
+| `api` | 1.0 GB × 1 | 0.25 GB (*revised 2026-10-28, DR-291:* ≈ 0.65 GiB while an on-demand PDF renders in its one render host) | 1.0 GB × 2 | 0.25 GB × 2 (the same, per process) |
+| `worker` | 1.5 GB | 0.35 GB (1.0 GB during bulk PDF; *revised 2026-10-28, DR-291:* ≈ 0.6 GiB planned, one render host ≤ 400 MiB) | 1.5 GB | 0.35 GB (1.0 GB during bulk PDF; *revised, DR-291:* ≈ 1.0 GiB planned, two render hosts ≤ 400 MiB each) |
 | Caddy | 0.128 GB | 0.03 GB | 0.128 GB | 0.03 GB |
 | `cloudflared` | 0.128 GB (placeholder until EXP-07 measures it) | 0.05 GB | 0.128 GB (placeholder) | 0.05 GB |
 | Monitoring (Prometheus, Alertmanager, Grafana, Loki, Alloy, `postgres_exporter`) | 0.6 GB (no Loki on staging, DR-06) | 0.5 GB | 1.0 GB (DR-06) | 0.7 GB |
@@ -215,6 +215,8 @@ Ceilings are container `mem_limit` values (DR-06), except PostgreSQL, which is n
 | **Sum of ceilings** | **5.1 GB** without SeaweedFS, **5.6 GB** with it (1.6 GB over the host) | **≈ 2.5 GB**, **≈ 2.75 GB** with it | **8.4 GB** without SeaweedFS, **8.9 GB** with it (0.9 GB over the host) | **≈ 3.8 GB**, **≈ 4.05 GB** with it |
 
 The ceilings add up to more than the hosts have. The overcommit is deliberate and bounded: the `api` and the worker reach their ceilings only in different situations (the worker at bulk PDF, the `api` at a request peak), and the monitoring stack is far below its ceiling. The rules that keep an overshoot from taking the database down are DR-102: PostgreSQL gets `OOMScoreAdjust=-900`, containers get `memswap_limit` equal to `mem_limit` (no swap for containers), the host has 2 GB of swap, and EXP-07 and EXP-08 never run together on staging. The `cloudflared` limit and the real worker need are set from EXP-07 and EXP-08.
+
+*Revised 2026-10-28 (DR-291):* PDFs render in child processes (render hosts) inside the worker and `api` containers, each replaced after 150 documents or 400 MB, because `@react-pdf/renderer` keeps about 1.2 MiB per document (measured 2026-10-28, a scratch run, not EXP-08). The figures above are *planned*; DOC-34 §4.3 holds the budget and EXP-08 measures it. The container limit counts the parent and its hosts together.
 
 ### 6.2 CPU
 
