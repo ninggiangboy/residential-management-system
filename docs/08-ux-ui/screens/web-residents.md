@@ -125,6 +125,8 @@ Loading: 8 skeleton rows after 150 ms. Empty with no filter: title and body belo
 | `web.units.field.search.label` | Tìm căn hộ | Search units |
 | `web.units.field.search.placeholder` | Tìm theo mã căn | Search by unit code |
 | `web.units.field.search.hint` | Nhập ít nhất 2 ký tự. | Type at least 2 characters. |
+| `web.units.field.search.loading` | Đang tìm… | Searching… |
+| `web.units.field.search.empty` | Không có căn nào khớp mã này. | No unit matches this code. |
 | `web.units.field.floor.label` | Tầng | Floor |
 | `web.units.field.floor.all` | Tất cả tầng | All floors |
 | `web.units.field.bedrooms.label` | Loại | Type |
