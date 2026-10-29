@@ -135,6 +135,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
               to="/residents/new"
               search={{}}
               state={OPENED_HERE}
+              resetScroll={false}
               className={buttonStyles({ variant: 'primary' })}
             >
               {t('web.residents.cta')}
@@ -230,6 +231,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                 to="/residents/new"
                 search={{}}
                 state={OPENED_HERE}
+                resetScroll={false}
                 className={buttonStyles({ variant: 'primary' })}
               >
                 {t('web.residents.cta')}
@@ -326,6 +328,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                         to: '/residents',
                         search: { ...search, dialog: 'profile', accountId: resident.accountId },
                         state: OPENED_HERE,
+                        resetScroll: false,
                       })
                     }
                   />
@@ -346,6 +349,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                   to: '/residents',
                   search: { ...search, dialog: undefined, accountId: undefined },
                   replace: true,
+                  resetScroll: false,
                 }),
             )
           }
