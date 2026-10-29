@@ -2,7 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-card bg-surface shadow-card', className)} {...props} />
+  return <div className={cn('rounded-card border border-line bg-surface shadow-raised', className)} {...props} />
 }
 
 export function CardSection({
@@ -19,7 +19,7 @@ export function CardSection({
   className?: string
 }) {
   return (
-    <Card className={cn('p-6', className)}>
+    <Card className={cn('p-5', className)}>
       {(title || actions) && (
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>

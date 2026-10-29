@@ -20,20 +20,23 @@ export function Checkbox({
 }) {
   const id = useId()
   return (
-    <div className={cn('flex items-start gap-3', className)}>
+    <div className={cn('flex items-start gap-2.5', className)}>
       <RadixCheckbox.Root
         id={id}
         checked={checked}
         onCheckedChange={(value) => onCheckedChange(value === true)}
         disabled={disabled}
-        className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-plate border border-line-strong bg-surface outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:border-teal data-[state=checked]:bg-teal data-[disabled]:opacity-50"
+        className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-plate border border-line-control bg-surface hover:border-line-strong outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:border-teal data-[state=checked]:bg-teal data-[disabled]:opacity-50"
       >
         <RadixCheckbox.Indicator className="text-on-teal">
-          <Icon name="check" size="sm" weight="bold" />
+          <Icon name="check" weight="bold" className="size-3.5" />
         </RadixCheckbox.Indicator>
       </RadixCheckbox.Root>
       <div>
-        <label htmlFor={id} className="text-body text-ink">
+        <label
+          htmlFor={id}
+          className={cn('text-body text-ink', disabled ? 'cursor-not-allowed' : 'cursor-pointer')}
+        >
           {label}
         </label>
         {hint && <p className="text-secondary text-ink-muted">{hint}</p>}
@@ -60,9 +63,9 @@ export function Switch({
       onCheckedChange={onCheckedChange}
       disabled={disabled}
       aria-label={label}
-      className="relative h-6 w-11 shrink-0 rounded-full bg-line-strong outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:bg-teal data-[disabled]:opacity-50"
+      className="relative h-5 w-9 shrink-0 rounded-full bg-line-control outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:bg-teal data-[disabled]:opacity-50"
     >
-      <RadixSwitch.Thumb className="block size-5 translate-x-0.5 rounded-full bg-surface transition-transform data-[state=checked]:translate-x-[22px]" />
+      <RadixSwitch.Thumb className="block size-4 translate-x-0.5 rounded-full bg-surface shadow-raised transition-transform data-[state=checked]:translate-x-[18px]" />
     </RadixSwitch.Root>
   )
 }
@@ -100,10 +103,10 @@ export function RadioCards<V extends string>({
           key={option.value}
           value={option.value}
           disabled={option.disabled}
-          className="flex items-start gap-3 rounded-control border border-line bg-surface p-4 text-left outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[disabled]:opacity-50 data-[state=checked]:border-teal data-[state=checked]:bg-teal-soft"
+          className="flex items-start gap-2.5 rounded-control border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-line-control outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[disabled]:opacity-50 data-[state=checked]:border-teal data-[state=checked]:bg-teal-soft"
         >
-          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface">
-            <RadioGroup.Indicator className="size-2.5 rounded-full bg-teal" />
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-line-control bg-surface">
+            <RadioGroup.Indicator className="size-2 rounded-full bg-teal" />
           </span>
           <span>
             <span className="block text-body-strong text-ink">{option.label}</span>
@@ -133,10 +136,10 @@ export function Chip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        'h-control-sm rounded-full border px-4 text-label outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus',
+        'h-control-sm rounded-full border px-3 text-label outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus',
         selected
           ? 'border-teal bg-teal-soft text-on-teal-soft'
-          : 'border-line-strong bg-surface text-ink hover:bg-fill',
+          : 'border-line bg-surface text-ink hover:bg-ground',
       )}
     >
       {children}

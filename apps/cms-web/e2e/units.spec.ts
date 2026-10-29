@@ -9,10 +9,10 @@ async function addUnit(page: Page, code: string, floor = '7'): Promise<void> {
   // First: an empty list repeats the action in its empty state.
   await page.getByRole('button', { name: 'Thêm căn' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Thêm căn hộ' })
-  await dialog.getByLabel('Mã căn *').fill(code)
+  await dialog.getByLabel('Mã căn').fill(code)
   await dialog.getByLabel('Tầng').fill(floor)
   await dialog.getByLabel('Số phòng ngủ').fill('2')
-  await dialog.getByLabel('Diện tích (m²)').fill('68.5')
+  await dialog.getByLabel('Diện tích').fill('68.5')
   await dialog.getByRole('button', { name: 'Thêm căn' }).click()
 }
 
@@ -78,7 +78,7 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     await expect(page).toHaveURL(/\/residents\/new\?.*unitId=/)
     const panel = page.getByRole('dialog')
     await panel.getByLabel('SĐT đăng nhập').fill(ownerPhone)
-    await panel.getByLabel('Họ tên *').fill('Trần Văn Chủ')
+    await panel.getByLabel('Họ tên').fill('Trần Văn Chủ')
     await panel.getByRole('button', { name: 'Tạo chủ hộ' }).click()
     await expect(page.getByText(`Đã tạo tài khoản và thêm vào căn ${code}`)).toBeVisible()
     await expect(page).toHaveURL(unitUrl)
@@ -95,7 +95,7 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     )
     const memberPanel = page.getByRole('dialog')
     await memberPanel.getByLabel('SĐT đăng nhập').fill(phone())
-    await memberPanel.getByLabel('Họ tên *').fill('Trần Thị Con')
+    await memberPanel.getByLabel('Họ tên').fill('Trần Thị Con')
     // The unit has an owner now: "Chủ hộ" is disabled and the role starts at a family member.
     await expect(memberPanel.getByRole('combobox', { name: 'Vai trò ở căn này' })).toContainText(
       'Thành viên gia đình',
@@ -114,11 +114,11 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     // The transfer needs a reason of 5 characters, removes the members by default, and the history shows it (UIWR-08).
     await page.getByRole('button', { name: 'Chuyển chủ hộ' }).click()
     const transfer = page.getByRole('dialog', { name: /Chuyển chủ hộ/ })
-    await transfer.getByLabel('SĐT chủ hộ mới *').fill(phone())
-    await transfer.getByLabel('Họ tên *').fill('Lê Chủ Mới')
-    await transfer.getByLabel('Lý do (ít nhất 5 ký tự) *').fill('Bán')
+    await transfer.getByLabel('SĐT chủ hộ mới').fill(phone())
+    await transfer.getByLabel('Họ tên').fill('Lê Chủ Mới')
+    await transfer.getByLabel('Lý do (ít nhất 5 ký tự)').fill('Bán')
     await expect(transfer.getByRole('button', { name: 'Chuyển chủ hộ' })).toBeDisabled()
-    await transfer.getByLabel('Lý do (ít nhất 5 ký tự) *').fill('Bán căn hộ cho người mới')
+    await transfer.getByLabel('Lý do (ít nhất 5 ký tự)').fill('Bán căn hộ cho người mới')
     await transfer.getByRole('button', { name: 'Chuyển chủ hộ' }).click()
     await expect(page.getByText(/Đã chuyển chủ hộ, đã xóa 2 người khỏi căn/)).toBeVisible()
     await expect(page.getByText('Chủ hộ Lê Chủ Mới')).toBeVisible()
@@ -141,7 +141,7 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
       await page.goto(unitUrl.replace(/\/units\/([0-9a-f-]{36}).*/, '/residents/new?unitId=$1'))
       const panel = page.getByRole('dialog')
       await panel.getByLabel('SĐT đăng nhập').fill(number)
-      await panel.getByLabel('Họ tên *').fill(name)
+      await panel.getByLabel('Họ tên').fill(name)
       await panel.getByRole('combobox', { name: 'Vai trò ở căn này' }).click()
       await page.getByRole('option', { name: 'Thành viên gia đình' }).click()
       await panel.getByRole('button', { name: 'Thêm cư dân' }).click()

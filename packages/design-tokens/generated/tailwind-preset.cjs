@@ -47,6 +47,7 @@ const preset = {
       "on-violet-soft": "var(--on-violet-soft)",
       "focus": "var(--focus)",
       "scrim": "var(--scrim)",
+      "line-control": "var(--line-control)",
       "paper": "var(--paper)",
       "paper-ink": "var(--paper-ink)"
     },
@@ -292,6 +293,7 @@ const light = {
   "--on-violet-soft": "#4B37A6",
   "--focus": "#0F2A2B",
   "--scrim": "rgba(15, 42, 43, 0.5)",
+  "--line-control": "#7E8D89",
   "--paper": "#FFFFFF",
   "--paper-ink": "#000000"
 }
@@ -340,6 +342,7 @@ const dark = {
   "--on-violet-soft": "#C9BEFF",
   "--focus": "#FFC53D",
   "--scrim": "rgba(0, 0, 0, 0.62)",
+  "--line-control": "#667773",
   "--paper": "#FFFFFF",
   "--paper-ink": "#000000"
 }

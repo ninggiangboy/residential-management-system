@@ -276,7 +276,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
             <div className="flex flex-col gap-2">
               <Skeleton className="h-4 w-16" />
               {[0, 1, 2, 3].map((card) => (
-                <Skeleton key={card} className="h-[72px] rounded-control" />
+                <Skeleton key={card} className="h-[60px] rounded-control" />
               ))}
             </div>
           </div>
@@ -290,6 +290,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
             {banner && <Banner tone="danger">{banner}</Banner>}
             <TextField
               label={t('web.staff-new.field.name.label')}
+              placeholder={t('common.field.name.placeholder')}
               autoComplete="off"
               disabled={readOnly}
               error={form.formState.errors.fullName?.message}
@@ -299,6 +300,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
               <TextField
                 type="email"
                 label={t('web.staff-new.field.email.label')}
+                placeholder={t('web.login.field.email.placeholder')}
                 hint={t('web.staff-new.field.email.hint')}
                 autoComplete="off"
                 disabled={readOnly}

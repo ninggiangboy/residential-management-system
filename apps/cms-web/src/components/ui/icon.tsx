@@ -45,7 +45,7 @@ export function Icon({ name, size = 'md', weight = 'regular', label, className }
     () => registry,
     () => null,
   )
-  const classes = cn('shrink-0', SIZES[size], className)
+  const classes = cn('shrink-0', SIZES[size], weight === 'regular' && 'icon-medium', className)
   const accessible = { 'aria-hidden': label ? undefined : true, 'aria-label': label, role: label ? 'img' : undefined } as const
   const Component = CORE[name] ?? icons?.[name]
   // Before the chunk arrives the icon keeps its box, so nothing moves when it is drawn.

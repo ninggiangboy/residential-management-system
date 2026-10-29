@@ -16,8 +16,8 @@ export function TabList({
           key={tab.value}
           value={tab.value}
           className={cn(
-            'relative h-control-md px-4 text-label text-ink-muted outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[state=active]:text-ink',
-            'data-[state=active]:after:absolute data-[state=active]:after:inset-x-3 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-teal',
+            'relative h-control-lg px-3 text-label text-ink-muted transition-colors hover:text-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[state=active]:text-ink',
+            'data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-teal',
           )}
         >
           {tab.label}

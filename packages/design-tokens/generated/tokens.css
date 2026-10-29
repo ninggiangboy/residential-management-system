@@ -46,6 +46,7 @@
   --on-violet-soft: #4B37A6;
   --focus: #0F2A2B;
   --scrim: rgba(15, 42, 43, 0.5);
+  --line-control: #7E8D89;
   --paper: #FFFFFF;
   --paper-ink: #000000;
   --shadow-card: 0 1px 2px rgba(15, 42, 43, 0.05), 0 8px 24px rgba(15, 42, 43, 0.07);
@@ -53,6 +54,7 @@
   --shadow-bar: 0 -2px 20px rgba(15, 42, 43, 0.09);
   --shadow-float: 0 8px 24px rgba(15, 42, 43, 0.14), 0 1px 2px rgba(15, 42, 43, 0.08);
   --shadow-sheet: 0 -6px 32px rgba(15, 42, 43, 0.16);
+  --shadow-raised: 0 1px 2px rgba(15, 42, 43, 0.05);
 }
 
 [data-theme="dark"] {
@@ -99,6 +101,7 @@
   --on-violet-soft: #C9BEFF;
   --focus: #FFC53D;
   --scrim: rgba(0, 0, 0, 0.62);
+  --line-control: #667773;
   --paper: #FFFFFF;
   --paper-ink: #000000;
   --shadow-card: 0 0 0 1px rgba(234, 241, 239, 0.07);
@@ -106,6 +109,7 @@
   --shadow-bar: 0 -1px 0 rgba(234, 241, 239, 0.08);
   --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(234, 241, 239, 0.08);
   --shadow-sheet: 0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08);
+  --shadow-raised: none;
 }
 
 /* Follows the operating system until a script sets `data-theme` (DR-182). */
@@ -154,6 +158,7 @@
     --on-violet-soft: #C9BEFF;
     --focus: #FFC53D;
     --scrim: rgba(0, 0, 0, 0.62);
+    --line-control: #667773;
     --paper: #FFFFFF;
     --paper-ink: #000000;
     --shadow-card: 0 0 0 1px rgba(234, 241, 239, 0.07);
@@ -161,6 +166,7 @@
     --shadow-bar: 0 -1px 0 rgba(234, 241, 239, 0.08);
     --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(234, 241, 239, 0.08);
     --shadow-sheet: 0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08);
+    --shadow-raised: none;
   }
 }
 
@@ -174,53 +180,53 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-14: 56px;
-  --radius-plate: 8px;
-  --radius-control: 16px;
-  --radius-card: 24px;
-  --radius-sheet: 32px;
+  --radius-plate: 4px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-sheet: 16px;
   --radius-full: 999px;
-  --tap-min: 48px;
-  --control-lg: 52px;
-  --control-md: 44px;
-  --control-sm: 36px;
-  --icon-sm: 20px;
-  --icon-md: 24px;
-  --icon-lg: 32px;
+  --tap-min: 32px;
+  --control-lg: 40px;
+  --control-md: 36px;
+  --control-sm: 32px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 28px;
   --gutter: 20px;
   --topbar-height: 56px;
   --tabbar-height: 64px;
   --font-sans: "Geologica", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-plate: "Big Shoulders", "Geologica", system-ui, sans-serif;
-  --text-display-size: 34px;
-  --text-display-line-height: 40px;
+  --text-display-size: 28px;
+  --text-display-line-height: 36px;
   --text-display-weight: 700;
   --text-display-tracking: -0.02em;
-  --text-title-1-size: 26px;
-  --text-title-1-line-height: 32px;
+  --text-title-1-size: 22px;
+  --text-title-1-line-height: 28px;
   --text-title-1-weight: 600;
   --text-title-1-tracking: -0.015em;
-  --text-title-2-size: 20px;
-  --text-title-2-line-height: 28px;
+  --text-title-2-size: 17px;
+  --text-title-2-line-height: 24px;
   --text-title-2-weight: 600;
   --text-title-2-tracking: -0.01em;
-  --text-title-3-size: 17px;
-  --text-title-3-line-height: 24px;
+  --text-title-3-size: 15px;
+  --text-title-3-line-height: 22px;
   --text-title-3-weight: 600;
-  --text-title-3-tracking: 0em;
-  --text-body-size: 16px;
-  --text-body-line-height: 24px;
+  --text-title-3-tracking: -0.005em;
+  --text-body-size: 14px;
+  --text-body-line-height: 20px;
   --text-body-weight: 400;
   --text-body-tracking: 0em;
-  --text-body-strong-size: 16px;
-  --text-body-strong-line-height: 24px;
-  --text-body-strong-weight: 600;
+  --text-body-strong-size: 14px;
+  --text-body-strong-line-height: 20px;
+  --text-body-strong-weight: 500;
   --text-body-strong-tracking: 0em;
-  --text-label-size: 15px;
+  --text-label-size: 14px;
   --text-label-line-height: 20px;
-  --text-label-weight: 600;
+  --text-label-weight: 500;
   --text-label-tracking: 0em;
-  --text-secondary-size: 14px;
-  --text-secondary-line-height: 20px;
+  --text-secondary-size: 13px;
+  --text-secondary-line-height: 18px;
   --text-secondary-weight: 400;
   --text-secondary-tracking: 0em;
   --text-caption-size: 13px;
@@ -229,21 +235,21 @@
   --text-caption-tracking: 0em;
   --text-micro-size: 12px;
   --text-micro-line-height: 16px;
-  --text-micro-weight: 600;
+  --text-micro-weight: 500;
   --text-micro-tracking: 0em;
-  --text-plate-xl-size: 44px;
-  --text-plate-xl-line-height: 44px;
+  --text-plate-xl-size: 36px;
+  --text-plate-xl-line-height: 36px;
   --text-plate-xl-weight: 800;
   --text-plate-xl-tracking: 0.01em;
-  --text-plate-lg-size: 28px;
-  --text-plate-lg-line-height: 28px;
+  --text-plate-lg-size: 24px;
+  --text-plate-lg-line-height: 24px;
   --text-plate-lg-weight: 700;
   --text-plate-lg-tracking: 0.02em;
-  --text-plate-md-size: 20px;
-  --text-plate-md-line-height: 20px;
+  --text-plate-md-size: 17px;
+  --text-plate-md-line-height: 18px;
   --text-plate-md-weight: 700;
   --text-plate-md-tracking: 0.03em;
-  --text-plate-sm-size: 15px;
+  --text-plate-sm-size: 14px;
   --text-plate-sm-line-height: 16px;
   --text-plate-sm-weight: 700;
   --text-plate-sm-tracking: 0.04em;

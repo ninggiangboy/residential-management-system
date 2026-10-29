@@ -17,6 +17,7 @@ export function FieldFrame({
   errorId,
   children,
   className,
+  required,
 }: {
   id: string
   label?: ReactNode
@@ -26,12 +27,19 @@ export function FieldFrame({
   errorId: string
   children: ReactNode
   className?: string
+  /** Marks the label with a `danger` asterisk; the control carries `aria-required` (DOC-54 §17.9). */
+  required?: boolean
 }) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
         <label htmlFor={id} className="text-caption text-ink">
           {label}
+          {required && (
+            <span aria-hidden="true" className="ml-0.5 text-danger">
+              *
+            </span>
+          )}
         </label>
       )}
       {children}
@@ -50,6 +58,9 @@ export function FieldFrame({
   )
 }
 
+/** A text field, text area or select: the focus is a 2 px `teal` inner ring, `danger` on a field in error (DOC-54 §12 A4, A8). */
 export const controlStyles =
-  'h-control-lg w-full rounded-control border bg-surface px-4 text-body text-ink placeholder:text-ink-disabled outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-muted read-only:bg-fill'
-export const borderFor = (error: boolean) => (error ? 'border-danger' : 'border-line-strong')
+  'h-control-md w-full rounded-control border bg-surface px-3 text-body text-ink shadow-raised placeholder:text-ink-disabled transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal aria-invalid:focus-visible:outline-danger disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-muted [&:is(input,textarea):read-only]:bg-fill'
+/** `line-control`, the lightest border that keeps 3:1, darkening under the pointer (DOC-54 §5.5, DR-307). */
+export const borderFor = (error: boolean) =>
+  error ? 'border-danger' : 'border-line-control hover:border-line-strong'

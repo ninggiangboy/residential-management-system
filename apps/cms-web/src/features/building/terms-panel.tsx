@@ -104,6 +104,7 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
             <TextAreaField
               label="Tiếng Việt"
               rows={14}
+              maxRows={14}
               value={vi}
               onChange={(event) => setVi(event.target.value)}
               error={problemText(viProblem)}
@@ -111,6 +112,7 @@ export function TermsPanel({ kind, onClose }: { kind: TermsKind; onClose: () => 
             <TextAreaField
               label="English"
               rows={14}
+              maxRows={14}
               value={en}
               onChange={(event) => setEn(event.target.value)}
               error={problemText(enProblem)}

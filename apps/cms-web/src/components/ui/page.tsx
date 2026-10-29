@@ -25,20 +25,20 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
         <h1 className="text-title-1 text-ink">{title}</h1>
         {subtitle ? (
           <p className="mt-1 text-secondary text-ink-muted">{subtitle}</p>
         ) : (
           subtitleLoading && (
-            <div className="mt-1 flex h-5 items-center">
-              <Skeleton className="h-3.5 w-72" />
+            <div className="mt-1 flex h-4.5 items-center">
+              <Skeleton className="h-3 w-72" />
             </div>
           )
         )}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   )
 }

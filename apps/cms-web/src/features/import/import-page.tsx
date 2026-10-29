@@ -215,7 +215,7 @@ function StepOne({
       {error && <Banner tone="danger">{error}</Banner>}
       {phase.name === 'idle' ? (
         <Card
-          className={`flex flex-col items-center gap-3 border-2 border-dashed p-10 text-center ${over ? 'border-teal bg-teal-soft' : 'border-line-strong'}`}
+          className={`flex flex-col items-center gap-3 border border-dashed p-8 text-center ${over ? 'border-teal bg-teal-soft' : 'border-line-control'}`}
           onDragOver={(event) => {
             event.preventDefault()
             setOver(true)
@@ -435,7 +435,7 @@ function Preview({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="flex flex-wrap items-center justify-between gap-4 p-6">
+      <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="flex items-center gap-4">
           <span className="flex size-12 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
             <Icon name="file-text" />
@@ -476,7 +476,7 @@ function Preview({
             ['update', counts.unitsToUpdate, 'web.import.count.update'],
           ] as const
         ).map(([key, value, label]) => (
-          <Card key={key} className="p-6">
+          <Card key={key} className="p-5">
             <p className="text-display text-ink tabular-nums" data-testid={`count-${key}`}>
               {value}
             </p>
@@ -532,8 +532,8 @@ function Preview({
         </section>
       )}
       {warnings.length > 0 && (
-        <details className="rounded-card bg-surface p-4 shadow-card">
-          <summary className="cursor-pointer text-body-strong">
+        <details className="rounded-card border border-line bg-surface p-4 shadow-raised">
+          <summary className="text-body-strong">
             {t('web.import.warnings.title', { count: warnings.length })}
           </summary>
           <ul className="mt-3 flex flex-col gap-1 text-secondary">
@@ -547,8 +547,8 @@ function Preview({
         </details>
       )}
       {validRows.length > 0 && (
-        <details className="rounded-card bg-surface p-4 shadow-card">
-          <summary className="cursor-pointer text-body-strong">
+        <details className="rounded-card border border-line bg-surface p-4 shadow-raised">
+          <summary className="text-body-strong">
             {t('web.import.valid.title', { count: validRows.length })}
           </summary>
           <div className="mt-3 overflow-x-auto">

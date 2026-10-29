@@ -1,4 +1,4 @@
-import { createTranslator, type Translator } from '@rms/i18n-catalog/web'
+import { createTranslator, loadWebLanguage, type Translator } from '@rms/i18n-catalog/web'
 import {
   formatDate,
   formatDateTime,
@@ -21,18 +21,43 @@ function initialLanguage(): Language {
   return 'vi'
 }
 
+/** The language shown; it changes only once its catalog is in memory, so no page draws keys or the other language. */
 let current: Language = initialLanguage()
+/** The language last asked for: when two switches cross, the later one wins. */
+let wanted: Language = current
 const listeners = new Set<() => void>()
+
+const show = (next: Language) => {
+  current = next
+  if (typeof document !== 'undefined') document.documentElement.lang = next
+  for (const listener of listeners) listener()
+}
+
+/**
+ * The catalog of the starting language (Vietnamese is in the bundle, English is a chunk, DR-308): `main.tsx` draws the first
+ * page once it is in, behind the frame of `index.html`. A chunk that cannot be fetched falls back to Vietnamese.
+ */
+export const i18nReady: Promise<void> = loadWebLanguage(current).catch(() => {
+  wanted = 'vi'
+  show('vi')
+})
 
 /** Outside React (the fetcher sends `Accept-Language`) the language is read here. */
 export const languageStore = {
   get: () => current,
   set(next: Language, persist = true) {
-    if (next === current) return
-    current = next
+    if (next === wanted) return
+    wanted = next
     if (persist) storage.set(KEY, next)
-    if (typeof document !== 'undefined') document.documentElement.lang = next
-    for (const listener of listeners) listener()
+    loadWebLanguage(next).then(
+      () => {
+        if (wanted === next && current !== next) show(next)
+      },
+      () => {
+        // The chunk could not be fetched (offline, a deploy in between): the page stays in the language it shows.
+        if (wanted === next) wanted = current
+      },
+    )
   },
   subscribe(listener: () => void) {
     listeners.add(listener)

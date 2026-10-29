@@ -29,7 +29,7 @@ export function RowMenu({ label, items }: { label: string; items: readonly MenuI
               key={item.key}
               disabled={item.disabled}
               onSelect={item.onSelect}
-              className={`flex min-h-control-md cursor-pointer items-center rounded-control px-3 text-body outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill ${item.danger ? 'text-danger' : 'text-ink'}`}
+              className={`flex min-h-control-sm cursor-pointer items-center rounded-plate px-2.5 text-body outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill ${item.danger ? 'text-danger' : 'text-ink'}`}
             >
               {item.label}
             </DropdownMenu.Item>
@@ -48,7 +48,7 @@ export function Tooltip({ text, children }: { text: ReactNode; children: ReactNo
         <RadixTooltip.Portal>
           <RadixTooltip.Content
             sideOffset={6}
-            className="motion-pop z-50 origin-(--radix-tooltip-content-transform-origin) rounded-control bg-plate px-3 py-1.5 text-caption text-on-plate shadow-float"
+            className="motion-pop z-50 origin-(--radix-tooltip-content-transform-origin) rounded-plate bg-plate px-2 py-1 text-caption text-on-plate shadow-float"
           >
             {text}
           </RadixTooltip.Content>

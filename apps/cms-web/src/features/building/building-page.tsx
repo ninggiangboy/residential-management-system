@@ -84,19 +84,29 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
           className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
           aria-hidden="true"
         >
-          <Card className="p-6">
-            <Skeleton className="mb-5 h-6 w-64" />
+          <Card className="p-5">
+            <Skeleton className="mb-4 h-5.5 w-64" />
+            {/* The building's fields, then the company's under their heading; `true` is a field across both columns. */}
             <div className="grid grid-cols-2 gap-4">
-              {Array.from({ length: 10 }, (_, index) => (
+              {[false, false, true, false, false, false, false].map((wide, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
-                <FieldSkeleton key={index} />
+                <FieldSkeleton key={index} className={wide ? 'col-span-2' : undefined} />
+              ))}
+            </div>
+            <div className="mt-6 mb-4 border-t border-line pt-5">
+              <Skeleton className="h-5.5 w-40" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[false, false, false, false, true, false, false].map((wide, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
+                <FieldSkeleton key={index} className={wide ? 'col-span-2' : undefined} />
               ))}
             </div>
           </Card>
           <div className="flex flex-col gap-6">
-            <Skeleton className="h-56 rounded-card" />
-            <Skeleton className="h-44 rounded-card" />
-            <Skeleton className="h-44 rounded-card" />
+            <Skeleton className="h-[268px] rounded-card" />
+            <Skeleton className="h-[254px] rounded-card" />
+            <Skeleton className="h-[254px] rounded-card" />
           </div>
         </div>
       </>
@@ -249,6 +259,7 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
             <div className="grid gap-4 md:grid-cols-2">
               <TextField
                 label={t('web.building.field.name.label')}
+                required
                 error={err('nameVi')}
                 {...field('nameVi')}
               />
@@ -259,49 +270,15 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
                 {...field('nameEn')}
               />
               <TextField
-                label={t('web.building.field.company.label')}
-                error={err('companyNameVi')}
-                {...field('companyNameVi')}
-              />
-              <TextField
-                label="Company name (English)"
-                error={err('companyNameEn')}
-                {...field('companyNameEn')}
-              />
-              <TextField
-                label="Mã số thuế / Tax code"
-                error={err('taxCode')}
-                {...field('taxCode')}
-              />
-              <TextField
-                label="Người đại diện / Representative"
-                error={err('representative')}
-                {...field('representative')}
-              />
-              <TextField
-                className="md:col-span-2"
-                label="Địa chỉ công ty / Company address"
-                error={err('companyAddress')}
-                {...field('companyAddress')}
-              />
-              <TextField
-                label="SĐT công ty / Company phone"
-                error={err('companyPhone')}
-                {...field('companyPhone')}
-              />
-              <TextField
-                label="Email công ty / Company email"
-                error={err('companyEmail')}
-                {...field('companyEmail')}
-              />
-              <TextField
                 className="md:col-span-2"
                 label={t('web.building.field.address.label')}
+                required
                 error={err('address')}
                 {...field('address')}
               />
               <TextField
                 label={t('web.building.field.hotline.label')}
+                placeholder={t('common.field.phone.placeholder')}
                 error={err('hotline')}
                 {...field('hotline')}
               />
@@ -320,6 +297,53 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
                 label={`${t('web.building.field.hours.label')} (EN)`}
                 error={err('hoursEn')}
                 {...field('hoursEn')}
+              />
+            </div>
+            {/* The company's fields under their own heading, apart from the building's (DOC-67 W-Building §4). */}
+            <h3 className="mt-6 mb-4 border-t border-line pt-5 text-title-3 text-ink">
+              {t('web.building.card.info.company')}
+            </h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TextField
+                label={t('web.building.field.company.label')}
+                required
+                error={err('companyNameVi')}
+                {...field('companyNameVi')}
+              />
+              <TextField
+                label={t('web.building.field.company-en.label')}
+                error={err('companyNameEn')}
+                {...field('companyNameEn')}
+              />
+              <TextField
+                label={t('web.building.field.tax-code.label')}
+                placeholder={t('web.building.field.tax-code.placeholder')}
+                inputMode="numeric"
+                error={err('taxCode')}
+                {...field('taxCode')}
+              />
+              <TextField
+                label={t('web.building.field.representative.label')}
+                error={err('representative')}
+                {...field('representative')}
+              />
+              <TextField
+                className="md:col-span-2"
+                label={t('web.building.field.company-address.label')}
+                error={err('companyAddress')}
+                {...field('companyAddress')}
+              />
+              <TextField
+                label={t('web.building.field.company-phone.label')}
+                placeholder={t('common.field.phone.placeholder')}
+                error={err('companyPhone')}
+                {...field('companyPhone')}
+              />
+              <TextField
+                type="email"
+                label={t('web.building.field.company-email.label')}
+                error={err('companyEmail')}
+                {...field('companyEmail')}
               />
             </div>
           </CardSection>

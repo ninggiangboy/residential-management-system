@@ -282,7 +282,9 @@ export function ResidentProfileDialog({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <TextField
-                label={`${t('web.residents.dialog.profile.field.name.label')} *`}
+                label={t('web.residents.dialog.profile.field.name.label')}
+                required
+                placeholder={t('common.field.name.placeholder')}
                 value={values.fullName}
                 onChange={set('fullName')}
                 error={errors.fullName}
@@ -290,12 +292,14 @@ export function ResidentProfileDialog({
               <TextField
                 type="email"
                 label={t('web.residents.dialog.profile.field.email.label')}
+                placeholder={t('common.field.email.placeholder')}
                 value={values.email}
                 onChange={set('email')}
                 error={errors.email}
               />
               <TextField
                 label={t('web.residents.dialog.profile.field.cccd.label')}
+                placeholder={t('web.residents.dialog.profile.field.cccd.placeholder')}
                 inputMode="numeric"
                 value={values.cccd}
                 onChange={set('cccd')}

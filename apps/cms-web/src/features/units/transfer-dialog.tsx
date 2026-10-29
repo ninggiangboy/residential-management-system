@@ -103,7 +103,9 @@ export function TransferDialog({
         <TextField
           type="tel"
           autoComplete="off"
-          label={`${t('web.unit-detail.dialog.transfer.field.phone.label')} *`}
+          label={t('web.unit-detail.dialog.transfer.field.phone.label')}
+          required
+          placeholder={t('common.field.phone.placeholder')}
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
           error={fieldErrors.phone}
@@ -117,7 +119,9 @@ export function TransferDialog({
         )}
         <TextField
           autoComplete="off"
-          label={`${t('web.unit-detail.dialog.transfer.field.name.label')} *`}
+          label={t('web.unit-detail.dialog.transfer.field.name.label')}
+          required
+          placeholder={t('common.field.name.placeholder')}
           value={fullName}
           disabled={existing !== null}
           onChange={(event) => setName(event.target.value)}
@@ -130,7 +134,9 @@ export function TransferDialog({
           />
         )}
         <TextAreaField
-          label={`${t('web.unit-detail.dialog.transfer.field.reason.label')} *`}
+          label={t('web.unit-detail.dialog.transfer.field.reason.label')}
+          required
+          placeholder={t('web.unit-detail.dialog.transfer.field.reason.placeholder')}
           rows={3}
           value={reason}
           error={fieldErrors.reason}

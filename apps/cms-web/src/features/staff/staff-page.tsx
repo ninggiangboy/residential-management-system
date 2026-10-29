@@ -281,7 +281,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
       ) : list.isPending ? (
         <DataTable label={t('web.staff.title')} busy>
           {head}
-          <SkeletonRows columns={5} rows={4} rowClassName="h-[69px]" />
+          <SkeletonRows columns={5} rows={4} rowClassName="h-[59px]" />
         </DataTable>
       ) : items.length === 0 ? (
         <EmptyState

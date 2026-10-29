@@ -158,7 +158,7 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" disabled={!canWrite} onClick={() => go({ dialog: 'edit' })}>
             {t('web.unit-detail.cta.edit')}
           </Button>
@@ -425,9 +425,12 @@ function HistoryPage({
   const page = useQuery(historyPageQuery(unitId, cursor))
   if (page.isPending)
     return (
-      <ul className="divide-y divide-line rounded-card bg-surface shadow-card" aria-hidden="true">
+      <ul
+        className="divide-y divide-line rounded-card border border-line bg-surface shadow-raised"
+        aria-hidden="true"
+      >
         {[0, 1, 2].map((row) => (
-          <li key={row} className="flex items-center gap-4 px-6 py-4">
+          <li key={row} className="flex items-center gap-3 px-4 py-3">
             <Skeleton className="size-10 shrink-0" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-48" />
@@ -450,9 +453,9 @@ function HistoryPage({
     return <EmptyState icon="clock" title={t('web.unit-detail.history.empty')} />
   return (
     <>
-      <ul className="motion-fade divide-y divide-line rounded-card bg-surface shadow-card">
+      <ul className="motion-fade divide-y divide-line rounded-card border border-line bg-surface shadow-raised">
         {items.map((item) => (
-          <li key={item.id} className="flex items-start gap-4 px-6 py-4">
+          <li key={item.id} className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
               <Icon name="clock" />
             </span>
@@ -497,24 +500,24 @@ function DetailSkeleton() {
     <div aria-hidden="true">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Skeleton className="h-11 w-28 rounded-plate" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-8 w-96" />
-            <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-9 w-24 rounded-plate" />
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-7 w-96" />
+            <Skeleton className="h-3.5 w-64" />
           </div>
         </div>
-        <div className="flex gap-3">
-          <Skeleton className="h-control-md w-40 rounded-full" />
-          <Skeleton className="h-control-md w-36 rounded-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-control-md w-36" />
+          <Skeleton className="h-control-md w-32" />
         </div>
       </div>
-      <div className="flex gap-6 border-b border-line pb-3">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-5 w-16" />
+      <div className="flex h-control-lg items-center gap-6 border-b border-line px-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-16" />
       </div>
-      <Skeleton className="mt-6 mb-4 h-11 rounded-card" />
+      <Skeleton className="mt-6 mb-4 h-9.5" />
       <DataTable label="" minWidth="min-w-[960px]">
-        <SkeletonRows columns={5} rows={3} rowClassName="h-[61px]" />
+        <SkeletonRows columns={5} rows={3} rowClassName="h-[59px]" />
       </DataTable>
     </div>
   )

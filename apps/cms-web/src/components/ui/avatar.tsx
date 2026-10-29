@@ -1,7 +1,7 @@
 import { Avatar as RadixAvatar } from 'radix-ui'
 import { cn } from '../../lib/utils'
 
-const SIZES = { sm: 'size-8 text-caption', md: 'size-10 text-label', lg: 'size-20 text-title-2' } as const
+const SIZES = { sm: 'size-7 text-micro', md: 'size-8 text-caption', lg: 'size-16 text-title-2' } as const
 
 const initialsOf = (name: string) =>
   name

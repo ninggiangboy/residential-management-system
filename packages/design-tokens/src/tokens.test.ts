@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import * as native from '../generated/native'
 import hien from '../tokens.json' with { type: 'json' }
+import density from '../web.json' with { type: 'json' }
 import { OUTPUTS } from './generate'
 
 const root = join(import.meta.dir, '..')
@@ -38,9 +39,14 @@ describe('DS-01: tokens.json and tokens.css hold the same values', () => {
     return alias ? raw(theme, hien.color.tokens.find((t) => t.name === alias)!.value[theme]) : value
   }
 
-  test('the 43 colors and the shadows, in both themes', () => {
+  test('the 43 colors, the shadows and the web additions, in both themes', () => {
     expect(hien.color.tokens).toHaveLength(43)
-    for (const t of [...hien.color.tokens, ...hien.shadow.tokens]) {
+    for (const t of [
+      ...hien.color.tokens,
+      ...hien.shadow.tokens,
+      ...density.color,
+      ...density.shadow,
+    ]) {
       expect([t.name, light.get(t.name)]).toEqual([t.name, raw('light', t.value.light)])
       expect([t.name, dark.get(t.name)]).toEqual([t.name, raw('dark', t.value.dark)])
     }
@@ -51,15 +57,21 @@ describe('DS-01: tokens.json and tokens.css hold the same values', () => {
     expect([...light.keys()]).toEqual([...dark.keys()])
   })
 
-  test('spacing, radius, size and type', () => {
+  test('spacing, radius, size and type, at the web density of web.json (DR-307)', () => {
+    const over: Record<string, string> = { ...density.radius, ...density.size }
     for (const t of [...hien.spacing.tokens, ...hien.radius.tokens, ...hien.size.tokens])
-      expect([t.name, scales.get(t.name)]).toEqual([t.name, t.value])
-    for (const s of hien.type.groups.flatMap((g) => g.styles)) {
+      expect([t.name, scales.get(t.name)]).toEqual([t.name, over[t.name] ?? t.value])
+    const typeOver: Record<
+      string,
+      Partial<(typeof hien.type.groups)[number]['styles'][number]>
+    > = density.type
+    for (const canvas of hien.type.groups.flatMap((g) => g.styles)) {
+      const s = { ...canvas, letterSpacing: undefined, ...typeOver[canvas.name] }
       expect(scales.get(`text-${s.name}-size`)).toBe(s.fontSize)
       expect(scales.get(`text-${s.name}-line-height`)).toBe(s.lineHeight)
       expect(scales.get(`text-${s.name}-weight`)).toBe(String(s.fontWeight))
       expect(scales.get(`text-${s.name}-tracking`)).toBe(
-        `${Number.parseFloat(('letterSpacing' in s && s.letterSpacing) || '0')}em`,
+        `${Number.parseFloat(s.letterSpacing || '0')}em`,
       )
     }
     expect(scales.get('font-sans')).toBe(hien.type.families.sans)

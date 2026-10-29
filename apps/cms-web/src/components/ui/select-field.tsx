@@ -23,6 +23,7 @@ export function SelectField({
   id,
   className,
   name,
+  required,
 }: {
   label?: ReactNode
   hint?: ReactNode
@@ -35,15 +36,24 @@ export function SelectField({
   id?: string
   className?: string
   name?: string
+  required?: boolean
 }) {
   const ids = useFieldIds(id)
   return (
-    <FieldFrame {...ids} label={label} hint={hint} error={error} className={className}>
+    <FieldFrame
+      {...ids}
+      label={label}
+      hint={hint}
+      error={error}
+      required={required}
+      className={className}
+    >
       <Select.Root
         value={value === '' ? undefined : value}
         onValueChange={onValueChange}
         disabled={disabled}
         name={name}
+        required={required}
       >
         <Select.Trigger
           id={ids.id}
@@ -57,13 +67,13 @@ export function SelectField({
         >
           <Select.Value placeholder={placeholder} />
           <Select.Icon>
-            <Icon name="caret-down" size="sm" />
+            <Icon name="caret-down" size="sm" className="text-ink-muted" />
           </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
           <Select.Content
             position="popper"
-            sideOffset={6}
+            sideOffset={4}
             className="motion-pop z-50 max-h-72 origin-(--radix-select-content-transform-origin) min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-control border border-line bg-surface shadow-float"
           >
             <Select.Viewport className="p-1">
@@ -72,7 +82,7 @@ export function SelectField({
                   key={option.value}
                   value={option.value}
                   disabled={option.disabled}
-                  className="flex min-h-control-md cursor-pointer items-center gap-2 rounded-control px-3 text-body text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill data-[state=checked]:bg-teal-soft data-[state=checked]:text-on-teal-soft"
+                  className="flex min-h-control-sm cursor-pointer items-center gap-2 rounded-plate px-2.5 text-body text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill data-[state=checked]:bg-teal-soft data-[state=checked]:text-on-teal-soft"
                 >
                   <Select.ItemText>{option.label}</Select.ItemText>
                 </Select.Item>
