@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button } from '../../components/ui/button'
+import { Skeleton } from '../../components/ui/skeleton'
 import { Plate } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
@@ -14,7 +15,8 @@ export interface PickedUnit {
 
 /**
  * A typeahead over E-57 (`q`, at least 2 characters, at most 20 results): `W-Resident-Add` picks the unit with it and `W-Residents`
- * filters by it (DOC-65). A chosen unit shows as a plate with a button to clear it.
+ * filters by it (DOC-65). A chosen unit shows as a plate with a button to clear it
+ * (a skeleton while its code is still unknown, as for `?unitId=`).
  */
 export function UnitPicker({
   label,
@@ -54,7 +56,7 @@ export function UnitPicker({
           )}
         </span>
         <div className="flex h-control-md items-center justify-between rounded-control border border-line-control bg-surface pl-3 pr-0.5 shadow-raised">
-          <Plate>{value.code}</Plate>
+          {value.code ? <Plate>{value.code}</Plate> : <Skeleton className="h-6 w-16" />}
           <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>
             {t('common.action.clear-filters')}
           </Button>
