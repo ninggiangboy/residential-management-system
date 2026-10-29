@@ -1232,6 +1232,12 @@ flowchart TB
 - **Consequences:** DOC-68 §2 gains the "Refreshing" state; the axe check of DS-08 waits for finite animations to end before it measures contrast.
 - **Write to:** DOC-68 §2, DOC-54 §12 (A6 covers the new motion), DOC-54 §17 (the quality bar, its acceptance checks Q1…Q8 and the tests DS-09, DS-10).
 
+### DR-308 · The first load of `/login` may weigh 180 KB, and the web CMS loads one language — revises DR-179 — **Decided (Owner, 2026-10-29)**
+- **Problem:** The budget of DOC-53 §8 for the first load of `/login` was 170 KB gzip; the build stood at 169.7 KB on 2026-10-28, and the web density work and the form rules of DOC-54 §17.9 (placeholders and new labels in the catalog) brought it to 170.8 KB on 2026-10-29, so `check:bundle` failed. Both catalogs were in the first load, though a person reads one: English alone was about 12 KB gzip.
+- **Decision:** (1) The budget is 180 KB gzip, checked for a Vietnamese and for an English first load. The other budgets (shell plus landing route 300 KB, a route chunk 120 KB) do not change. (2) The web CMS bundles Vietnamese, the default language (DR-71), and fetches English as a chunk the first time it is asked for (`loadWebLanguage`). The language shown changes only once its catalog is in memory; the first page draws after the catalog of the starting language, behind the frame of `index.html` (DR-306), so no page shows keys or the other language; a chunk that cannot be fetched leaves the page in the language it shows.
+- **Consequences:** `/login` went to 161.0 KB in Vietnamese and 172.7 KB in English (the English chunk 11.7 KB). `scripts/check-bundle.ts` checks both rows. The apps and the API keep both languages.
+- **Write to:** DOC-53 §8, DOC-55 §11, DOC-54 §17.7 (Q7), DOC-71 §4.1 (the `e2e-web` row).
+
 ### DR-52 · Push delivery contract with Expo and the payload privacy rule — **Decided (Owner, 2026-10-19)**
 - **Problem:** SDD §10.4 describes chunks of 100 and a receipt check after 15 minutes. Missing: token registration, a token moving between accounts, Expo's access-token security, retry policy, channels, the payload content (Expo, FCM and APNs are outside Vietnam; Decree 13/2023 on personal data is a stated concern, SDD §19.1), badge counts.
 - **Decision (proposed):**
