@@ -9,7 +9,7 @@ import { listenToOtherTabs } from './auth/refresh'
 import { endSessionLocally, setLoginRedirect } from './auth/session'
 import type { Crumb } from './components/layout/breadcrumb'
 import { RouteErrorBoundary } from './components/route-error-boundary'
-import { I18nProvider } from './lib/i18n'
+import { I18nProvider, i18nReady } from './lib/i18n'
 import { routeTree } from './routeTree.gen'
 
 const queryClient = createQueryClient()
@@ -81,12 +81,15 @@ if (boot) {
   observer.observe(root, { childList: true, subtree: true })
   window.setTimeout(done, 10_000)
 }
-createRoot(root).render(
-  <StrictMode>
-    <I18nProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </I18nProvider>
-  </StrictMode>,
+// The first page draws in its own language: at once in Vietnamese, after the English chunk for a person who reads English (DR-308).
+void i18nReady.then(() =>
+  createRoot(root).render(
+    <StrictMode>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </I18nProvider>
+    </StrictMode>,
+  ),
 )

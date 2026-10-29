@@ -36,7 +36,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-caption whitespace-nowrap',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption whitespace-nowrap',
         TONE_CLASS[tone],
         className,
       )}
@@ -77,7 +77,7 @@ export function Plate({
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }) {
-  const style = { sm: 'text-plate-sm px-2 py-0.5', md: 'text-plate-md px-3 py-1', lg: 'text-plate-lg px-4 py-1.5' }
+  const style = { sm: 'text-plate-sm px-1.5 py-0.5', md: 'text-plate-md px-2 py-1', lg: 'text-plate-lg px-3 py-1.5' }
   return (
     <span
       className={cn(

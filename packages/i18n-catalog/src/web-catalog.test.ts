@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { CATALOGS } from './catalog'
-import { createTranslator, errorText } from './web'
+import { createTranslator, errorText, loadWebLanguage } from './web'
 import { WEB_CATALOGS } from './web-catalog'
 
 const WEB_FAMILIES = ['error', 'status', 'common', 'auth', 'offline', 'upgrade', 'web']
@@ -36,7 +36,19 @@ describe('the web CMS catalog keeps the app and server families out of its bundl
   })
 })
 
+await loadWebLanguage('en')
+
 describe('the web translator', () => {
+  test('English is loaded on demand, Vietnamese is there at once (DR-308)', async () => {
+    expect(createTranslator('vi')('common.action.cancel')).toBe(
+      WEB_CATALOGS.vi['common.action.cancel']!,
+    )
+    await loadWebLanguage('en')
+    expect(createTranslator('en')('common.action.cancel')).toBe(
+      WEB_CATALOGS.en['common.action.cancel']!,
+    )
+  })
+
   const t = createTranslator('en')
   test('translates its keys and knows which it has', () => {
     expect(t('common.error.page.body')).toBeTruthy()

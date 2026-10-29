@@ -25,12 +25,12 @@ export function EmptyState({
   const t = useT()
   return (
     <div className={cn('flex flex-col items-center gap-3 px-6 py-10 text-center', className)}>
-      <span className="flex size-14 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
+      <span className="flex size-12 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
         <Icon name={icon} size="lg" />
       </span>
       <h2 className="text-title-3 text-ink">{title}</h2>
       {body && <p className="max-w-md text-secondary text-ink-muted">{body}</p>}
-      {actions && <div className="mt-2 flex flex-wrap justify-center gap-3">{actions}</div>}
+      {actions && <div className="mt-2 flex flex-wrap justify-center gap-2">{actions}</div>}
       {reference && (
         <p className="text-caption text-ink-muted">{t('common.reference', { requestId: reference })}</p>
       )}

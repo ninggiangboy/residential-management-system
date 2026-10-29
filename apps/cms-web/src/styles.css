@@ -58,6 +58,27 @@
     background-color: var(--line-strong);
   }
 
+  /*
+   * Whatever acts on a click shows the hand (Tailwind 4 gives buttons the arrow): buttons and the Radix parts drawn as buttons
+   * (checkbox, switch, radio card, select trigger, tab), menu and list items, `summary`, a label that toggles a control. A
+   * disabled one shows `not-allowed`. Utilities sit in a later layer, so a `cursor-*` class on an element still wins.
+   */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  summary,
+  select,
+  input:is([type="checkbox"], [type="radio"]) {
+    cursor: pointer;
+  }
+  :is(button, [role], select, input):is(:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: not-allowed;
+  }
+
   /* Numbers line up in tables and amounts (DOC-54 §8.1). */
   table {
     font-variant-numeric: tabular-nums;
@@ -137,6 +158,16 @@
 }
 
 @layer components {
+  /*
+   * The web draws the regular Phosphor weight a step heavier: its line is 16 of 256 units, 1.25 px at the 20 px `icon-md` of the
+   * web density, which reads thin beside 14 px text. A stroke of 6 on the filled paths makes it 22 units (1.7 px), between regular
+   * and bold (24); `fill` and `bold` are left as drawn.
+   */
+  .icon-medium path {
+    stroke: currentColor;
+    stroke-width: 6;
+    stroke-linejoin: round;
+  }
   /* The thin bar of a table loading a new page or filter (`DataTable busy`). */
   .motion-progress {
     animation: rms-progress 1s ease-in-out infinite;

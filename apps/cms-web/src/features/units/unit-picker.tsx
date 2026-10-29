@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button } from '../../components/ui/button'
 import { Plate } from '../../components/ui/tag'
-import { TextField } from '../../components/ui/text-field'
+import { SearchField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
 import { useDebounced } from '../../lib/use-debounced'
 import { type UnitListItem, unitsQuery } from './hooks'
@@ -23,9 +23,11 @@ export function UnitPicker({
   error,
   hint,
   disabled,
+  required,
   onUnits,
 }: {
   label: string
+  required?: boolean
   value: PickedUnit | null
   onChange: (unit: PickedUnit | null) => void
   error?: string
@@ -43,8 +45,15 @@ export function UnitPicker({
   if (value)
     return (
       <div className="flex flex-col gap-1.5">
-        <span className="text-caption text-ink">{label}</span>
-        <div className="flex h-control-lg items-center justify-between rounded-control border border-line-strong bg-surface px-4">
+        <span className="text-caption text-ink">
+          {label}
+          {required && (
+            <span aria-hidden="true" className="ml-0.5 text-danger">
+              *
+            </span>
+          )}
+        </span>
+        <div className="flex h-control-md items-center justify-between rounded-control border border-line-control bg-surface pl-3 pr-0.5 shadow-raised">
           <Plate>{value.code}</Plate>
           <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>
             {t('common.action.clear-filters')}
@@ -60,8 +69,9 @@ export function UnitPicker({
 
   return (
     <div className="relative">
-      <TextField
+      <SearchField
         label={label}
+        required={required}
         placeholder={t('web.units.field.search.placeholder')}
         value={typed}
         disabled={disabled}
@@ -76,7 +86,7 @@ export function UnitPicker({
             <li key={unit.unitId}>
               <button
                 type="button"
-                className="flex min-h-control-md w-full items-center gap-3 rounded-control px-3 text-left hover:bg-fill focus-visible:outline-2 focus-visible:outline-focus"
+                className="flex min-h-control-md w-full items-center gap-3 rounded-plate px-2.5 text-left hover:bg-fill focus-visible:outline-2 focus-visible:outline-focus"
                 onClick={() => {
                   onUnits?.(results.data?.items ?? [])
                   onChange({ unitId: unit.unitId, code: unit.code })

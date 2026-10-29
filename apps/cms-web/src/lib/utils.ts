@@ -19,8 +19,31 @@ const TEXT_STYLES = [
   'plate-sm',
 ]
 
+/**
+ * The size, radius and shadow names of the tokens (DOC-54 §5.2–5.4, `theme.css`). Without them the merge does not see
+ * `h-control-md` and `h-auto` as one property, keeps both, and the stylesheet order picks the winner: a `TextAreaField`
+ * stayed one line high whatever its `rows`.
+ */
+const SIZES = [
+  'tap-min',
+  'control-lg',
+  'control-md',
+  'control-sm',
+  'icon-sm',
+  'icon-md',
+  'icon-lg',
+  'gutter',
+  'topbar-height',
+  'tabbar-height',
+]
+const RADII = ['plate', 'control', 'card', 'sheet']
+const SHADOWS = ['card', 'glow', 'bar', 'float', 'sheet', 'raised']
+
 const merge = extendTailwindMerge({
-  extend: { classGroups: { 'font-size': [{ text: TEXT_STYLES }] } },
+  extend: {
+    theme: { spacing: SIZES, radius: RADII, shadow: SHADOWS },
+    classGroups: { 'font-size': [{ text: TEXT_STYLES }] },
+  },
 })
 
 /** The class merge of the shadcn components: later classes win over earlier ones. */

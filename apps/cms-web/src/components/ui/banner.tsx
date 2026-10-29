@@ -28,11 +28,11 @@ export function Banner({
   return (
     <div
       role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
-      className={cn('flex items-start gap-3 rounded-card px-4 py-3 text-secondary', style.box, className)}
+      className={cn('flex items-start gap-2.5 rounded-control px-3 py-2.5 text-secondary', style.box, className)}
     >
       {/* The icon sits in a box as tall as the first line, so it stays on that line's centre whether the text runs to one
           line or several, with or without a title. */}
-      <span className={cn('flex shrink-0 items-center', title ? 'h-6' : 'h-5')}>
+      <span className={cn('flex shrink-0 items-center', title ? 'h-5' : 'h-4.5')}>
         <Icon name={style.icon} size="sm" weight="fill" />
       </span>
       <div className="min-w-0 flex-1">

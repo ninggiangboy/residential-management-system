@@ -7,6 +7,10 @@ import { Skeleton } from './skeleton'
 
 const OVERLAY = 'motion-overlay fixed inset-0 z-40 bg-scrim'
 
+/** A field a person types into, enabled and writable: what a dialog focuses when it opens (DOC-54 §17.9). */
+const FIRST_FIELD =
+  'input:not([type=hidden],[type=file],[type=checkbox],[type=radio],.sr-only,:disabled,[readonly]), textarea:not(:disabled,[readonly])'
+
 /** The longest exit motion of `styles.css` (the side panel, 200 ms); none when the user asks for reduced motion (DR-304). */
 const exitMs = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200
@@ -51,7 +55,7 @@ export function FieldSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)} aria-hidden="true">
       <Skeleton className="h-4 w-28" />
-      <Skeleton className="h-control-lg" />
+      <Skeleton className="h-control-md" />
     </div>
   )
 }
@@ -83,24 +87,32 @@ export function Dialog({
 }) {
   const t = useT()
   const shown = useHeld({ title, description, children, footer }, open)
+  const body = useRef<HTMLDivElement>(null)
   return (
     <RadixDialog.Root open={open} onOpenChange={(next) => (dismissible || next) && onOpenChange(next)}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={OVERLAY} />
         <RadixDialog.Content
+          // A form opens with the caret in its first field; a dialog without one focuses itself, not the close button,
+          // so no focus ring sits on the close button of a dialog opened with the mouse.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            const field = body.current?.querySelector<HTMLElement>(FIRST_FIELD)
+            ;(field ?? (event.currentTarget as HTMLElement | null))?.focus()
+          }}
           onInteractOutside={(event) => !dismissible && event.preventDefault()}
           onEscapeKeyDown={(event) => !dismissible && event.preventDefault()}
           className={cn(
-            'fixed z-50 flex flex-col bg-surface shadow-float outline-none',
+            'fixed z-50 flex flex-col border-line bg-surface shadow-float outline-none',
             // The side panel runs the full height of the window; the centred dialog stops at 90% of it.
             variant === 'side'
-              ? 'motion-sheet inset-y-0 right-0 w-full max-w-[480px] rounded-l-card'
-              : 'motion-dialog left-1/2 top-1/2 max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-card',
+              ? 'motion-sheet inset-y-0 right-0 w-full max-w-[480px] rounded-l-card border-l'
+              : 'motion-dialog left-1/2 top-1/2 max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-card border',
             variant === 'center' && (width ?? 'max-w-[480px]'),
           )}
         >
           {/* The body keeps its scrollbar's room, and the header and footer the same, so their right edges line up. */}
-          <div className="gutter-stable flex items-start justify-between gap-4 overflow-hidden p-6 pb-2">
+          <div className="gutter-stable flex items-start justify-between gap-4 overflow-hidden px-5 pb-2 pt-4">
             <div>
               <RadixDialog.Title className="text-title-2 text-ink">{shown.title}</RadixDialog.Title>
               {shown.description ? (
@@ -115,9 +127,11 @@ export function Dialog({
               <IconButton icon="x" label={t('common.action.close')} size="sm" disabled={!dismissible} />
             </RadixDialog.Close>
           </div>
-          <div className="gutter-stable min-h-0 flex-1 overflow-y-auto px-6 py-2">{shown.children}</div>
+          <div ref={body} className="gutter-stable min-h-0 flex-1 overflow-y-auto px-5 py-2">
+            {shown.children}
+          </div>
           {shown.footer && (
-            <div className="gutter-stable flex items-center justify-end gap-3 overflow-hidden p-6 pt-4">
+            <div className="gutter-stable flex items-center justify-end gap-2 overflow-hidden border-t border-line px-5 py-3">
               {shown.footer}
             </div>
           )}
@@ -163,13 +177,13 @@ export function ConfirmDialog({
     <AlertDialog.Root open={open} onOpenChange={(next) => (!busy || next) && onOpenChange(next)}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={OVERLAY} />
-        <AlertDialog.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card bg-surface p-6 shadow-float outline-none">
+        <AlertDialog.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card border border-line bg-surface p-5 shadow-float outline-none">
           <AlertDialog.Title className="text-title-2 text-ink">{shown.title}</AlertDialog.Title>
-          <AlertDialog.Description className="mt-2 text-body text-ink-muted">
+          <AlertDialog.Description className="mt-1.5 text-body text-ink-muted">
             {shown.body}
           </AlertDialog.Description>
           {shown.children && <div className="mt-4">{shown.children}</div>}
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-5 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
               <Button variant="ghost" disabled={busy}>
                 {t('common.action.cancel')}

@@ -5,7 +5,7 @@ import { Card } from './card'
 import { Skeleton } from './skeleton'
 
 /**
- * The data table card (DOC-54 §7.5): a scroll box with a minimum width, rows 12 × 24 px, header 13 px muted. Inside a
+ * The data table card (DOC-54 §7.5): a scroll box with a minimum width, rows 10 × 16 px, header 13 px muted. Inside a
  * `ListPage` the card is as tall as its rows but never taller than the window: the rows scroll inside it under a sticky header,
  * and the pager stays in view; another page or filter starts at the first row.
  */
@@ -48,7 +48,7 @@ export function DataTable({
         </table>
       </div>
       {footer && (
-        <div className="gutter-stable flex shrink-0 items-center justify-between gap-4 overflow-hidden border-t border-line px-6 py-3">
+        <div className="gutter-stable flex shrink-0 items-center justify-between gap-4 overflow-hidden border-t border-line px-4 py-2.5">
           {footer}
         </div>
       )}
@@ -64,7 +64,7 @@ export function Th({ className, ...props }: ThHTMLAttributes<HTMLTableCellElemen
     <th
       scope="col"
       className={cn(
-        'sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-surface px-6 py-3 text-caption font-medium text-ink-muted',
+        'sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-surface px-4 py-2.5 text-caption text-ink-muted',
         className,
       )}
       {...props}
@@ -73,7 +73,7 @@ export function Th({ className, ...props }: ThHTMLAttributes<HTMLTableCellElemen
 }
 
 export function Td({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn('border-b border-line px-6 py-3 text-body text-ink align-middle', className)} {...props} />
+  return <td className={cn('border-b border-line px-4 py-2.5 text-body text-ink align-middle', className)} {...props} />
 }
 
 export function Tr({
@@ -81,7 +81,7 @@ export function Tr({
   interactive,
   ...props
 }: HTMLAttributes<HTMLTableRowElement> & { interactive?: boolean }) {
-  return <tr className={cn('last:[&>td]:border-b-0', interactive && 'hover:bg-ground/60', className)} {...props} />
+  return <tr className={cn('last:[&>td]:border-b-0', interactive && 'cursor-pointer hover:bg-ground/60', className)} {...props} />
 }
 
 /*
@@ -111,7 +111,7 @@ export function SkeletonRows({
           {Array.from({ length: columns }, (_, column) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: placeholders
             <Td key={column}>
-              <Skeleton className={cn('h-4 w-full', WIDTHS[(column + row) % WIDTHS.length])} />
+              <Skeleton className={cn('h-3.5 w-full', WIDTHS[(column + row) % WIDTHS.length])} />
             </Td>
           ))}
         </Tr>

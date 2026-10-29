@@ -46,13 +46,15 @@ export const themes = {
     "on-violet-soft": "#4B37A6",
     "focus": "#0F2A2B",
     "scrim": "rgba(15, 42, 43, 0.5)",
+    "line-control": "#7E8D89",
     "paper": "#FFFFFF",
     "paper-ink": "#000000",
     "shadow-card": "0 1px 2px rgba(15, 42, 43, 0.05), 0 8px 24px rgba(15, 42, 43, 0.07)",
     "shadow-glow": "0 10px 24px rgba(10, 107, 102, 0.34)",
     "shadow-bar": "0 -2px 20px rgba(15, 42, 43, 0.09)",
     "shadow-float": "0 8px 24px rgba(15, 42, 43, 0.14), 0 1px 2px rgba(15, 42, 43, 0.08)",
-    "shadow-sheet": "0 -6px 32px rgba(15, 42, 43, 0.16)"
+    "shadow-sheet": "0 -6px 32px rgba(15, 42, 43, 0.16)",
+    "shadow-raised": "0 1px 2px rgba(15, 42, 43, 0.05)"
   },
   "dark": {
     "ground": "#0C1413",
@@ -98,13 +100,15 @@ export const themes = {
     "on-violet-soft": "#C9BEFF",
     "focus": "#FFC53D",
     "scrim": "rgba(0, 0, 0, 0.62)",
+    "line-control": "#667773",
     "paper": "#FFFFFF",
     "paper-ink": "#000000",
     "shadow-card": "0 0 0 1px rgba(234, 241, 239, 0.07)",
     "shadow-glow": "0 10px 28px rgba(90, 212, 198, 0.22)",
     "shadow-bar": "0 -1px 0 rgba(234, 241, 239, 0.08)",
     "shadow-float": "0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(234, 241, 239, 0.08)",
-    "shadow-sheet": "0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08)"
+    "shadow-sheet": "0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08)",
+    "shadow-raised": "none"
   }
 } as const
 

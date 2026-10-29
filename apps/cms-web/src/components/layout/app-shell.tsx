@@ -62,10 +62,10 @@ function Sidebar({ role }: { role: StaffRole }) {
   const me = useQuery(staffMeQuery()).data
   return (
     <aside className="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col border-r border-line bg-surface lg:w-[248px]">
-      <div className="px-4 py-5 lg:px-6">
+      <div className="px-4 py-4 lg:px-5">
         {/* The name arrives with E-03; its line keeps its height meanwhile, so the navigation below does not move. */}
         {brand.loading ? (
-          <div className="hidden h-6 items-center lg:flex">
+          <div className="hidden h-5.5 items-center lg:flex">
             <Skeleton className="h-4 w-40" />
           </div>
         ) : (
@@ -83,20 +83,21 @@ function Sidebar({ role }: { role: StaffRole }) {
           const items = group.items.filter((item) => item.roles.includes(role))
           if (items.length === 0) return null
           return (
-            <div key={group.label} className="mb-4">
-              <p className="mb-1 hidden px-3 text-caption text-ink-muted lg:block">
+            <div key={group.label} className="mb-3">
+              <p className="mb-1 hidden px-2.5 text-caption text-ink-muted lg:block">
                 {t(group.label)}
               </p>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-0.5">
                 {items.map((item) => (
                   <li key={item.to}>
                     <Tooltip text={t(item.label)}>
                       <Link
                         to={item.to}
                         search={{}}
-                        className="flex h-control-sm items-center justify-center gap-3 rounded-control px-3 text-label text-ink outline-offset-2 hover:bg-fill focus-visible:outline-2 focus-visible:outline-focus lg:justify-start"
+                        className="flex h-control-sm items-center justify-center gap-2.5 rounded-control px-2.5 text-label text-ink-muted outline-offset-2 transition-colors hover:text-ink hover:bg-fill focus-visible:outline-2 focus-visible:outline-focus lg:justify-start"
                         activeProps={{
-                          className: 'bg-teal-soft !text-on-teal-soft hover:!bg-teal-soft',
+                          className:
+                            'bg-teal-soft !text-on-teal-soft font-semibold hover:!bg-teal-soft',
                           'aria-current': 'page',
                         }}
                       >
@@ -117,16 +118,16 @@ function Sidebar({ role }: { role: StaffRole }) {
         })}
       </nav>
       {me && (
-        <div className="m-3 flex items-center gap-2 rounded-card bg-fill p-2">
+        <div className="m-3 flex items-center gap-2 rounded-control border border-line p-1.5">
           <Link
             to="/profile"
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-control p-1 outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-plate p-0.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus"
           >
             <Avatar name={me.fullName} src={me.avatarUrl} size="sm" />
             <span className="sr-only lg:hidden">{t('web.shell.user.open-profile')}</span>
             <span className="hidden min-w-0 lg:block">
               <span className="block truncate text-label text-ink">{me.fullName}</span>
-              <span className="block truncate text-caption text-ink-muted">
+              <span className="block truncate text-secondary text-ink-muted">
                 {t(`common.staff-role.${me.role}`)}
               </span>
             </span>
@@ -162,7 +163,7 @@ function TopBar() {
   const me = useQuery(staffMeQuery()).data
   const language = useChangeLanguage(() => toast.error(t('web.shell.language.failed')))
   return (
-    <header className="gutter-stable flex h-16 shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-line bg-surface px-8">
+    <header className="gutter-stable flex h-14 shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-line bg-surface px-8">
       <nav aria-label={t('web.shell.breadcrumb.label')}>
         <ol className="flex items-center gap-2 text-secondary text-ink-muted">
           {crumbs?.map((crumb, index) => {
@@ -196,9 +197,9 @@ function TopBar() {
           )}
         </ol>
       </nav>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {env.appEnv !== 'production' && (
-          <span className="rounded-full bg-lamp-soft px-3 py-1 text-caption text-on-lamp-soft">
+          <span className="rounded-full bg-lamp-soft px-2 py-0.5 text-caption text-on-lamp-soft">
             {env.appEnv}
           </span>
         )}
@@ -213,7 +214,7 @@ function TopBar() {
 }
 
 /**
- * Every `W-` screen after sign-in sits in this shell (DOC-64 shell): sidebar 248 px, top bar 64 px, page area 28 × 32 px. Between
+ * Every `W-` screen after sign-in sits in this shell (DOC-64 shell): sidebar 248 px, top bar 56 px, page area 24 × 32 px. Between
  * 768 and 1023 px the sidebar is a 72 px icon rail; below 768 px there is only the notice (DR-178, DR-186).
  */
 export function AppShell({ role, children }: { role: StaffRole; children: ReactNode }) {
@@ -254,7 +255,7 @@ export function AppShell({ role, children }: { role: StaffRole; children: ReactN
             key={pageKey}
             id="main"
             data-scroll-restoration-id="main"
-            className="motion-page gutter-stable min-h-0 min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-7"
+            className="motion-page gutter-stable min-h-0 min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-6"
           >
             {children}
           </main>

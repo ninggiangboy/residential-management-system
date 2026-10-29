@@ -171,7 +171,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
       ) : !data ? (
         <DataTable label={t('web.units.title')} minWidth="min-w-[960px]" busy>
           {head}
-          <SkeletonRows columns={8} rowClassName="h-[69px]" />
+          <SkeletonRows columns={8} rowClassName="h-[59px]" />
         </DataTable>
       ) : data.items.length === 0 ? (
         filtered ? (
@@ -261,7 +261,6 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
               <Tr
                 key={unit.unitId}
                 interactive
-                className="cursor-pointer"
                 onClick={() =>
                   void navigate({
                     to: '/units/$unitId',

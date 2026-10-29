@@ -3,7 +3,8 @@
  * JavaScript against the planned budgets. Fails when a budget is exceeded.
  *
  *   shell      the entry chunk and everything it imports statically: what every page loads
- *   /login     the shell plus the chunks of `src/routes/login.tsx`       ≤ 170 KB
+ *   /login     the shell plus the chunks of `src/routes/login.tsx`       ≤ 180 KB
+ *              and again with the English catalog, the chunk a person who reads English also loads (DR-308)
  *   landing    the shell plus the chunks of `src/routes/index.tsx`       ≤ 300 KB
  *   any other chunk                                                       ≤ 120 KB
  */
@@ -14,7 +15,7 @@ import { gzipSync } from 'node:zlib'
 import { annotate, markdownTable, writeSummary } from './lib/ci'
 
 const KB = 1024
-const budget = { login: 170 * KB, landing: 300 * KB, chunk: 120 * KB }
+const budget = { login: 180 * KB, landing: 300 * KB, chunk: 120 * KB }
 
 type Chunk = { file: string; src?: string; isEntry?: boolean; imports?: string[] }
 const web = resolve(import.meta.dir, '../apps/cms-web')
@@ -81,7 +82,14 @@ try {
       rows.push([label, '-', limit / KB, `no src/routes/${route}.tsx yet`])
       continue
     }
-    check(label, total(new Set([...shell, ...closure(keys)])), limit)
+    const files = new Set([...shell, ...closure(keys)])
+    check(label, total(files), limit)
+    // Vietnamese is in the shell; an English reader fetches the English catalog before the first page draws (DR-308).
+    const english = Object.keys(manifest).filter((key) =>
+      key.endsWith('i18n-catalog/src/web-en.ts'),
+    )
+    if (route === 'login' && english.length > 0)
+      check(`${label} in English`, total(new Set([...files, ...closure(english)])), limit)
   }
   for (const chunk of Object.values(manifest)) {
     if (!chunk.file.endsWith('.js') || shell.has(chunk.file)) continue

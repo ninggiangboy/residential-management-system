@@ -191,7 +191,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
       ) : !data ? (
         <DataTable label={t('web.residents.title')} busy>
           {head}
-          <SkeletonRows columns={5} rowClassName="h-[61px]" />
+          <SkeletonRows columns={5} rowClassName="h-[53px]" />
         </DataTable>
       ) : data.items.length === 0 ? (
         <EmptyState

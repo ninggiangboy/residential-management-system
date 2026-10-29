@@ -188,7 +188,6 @@ function LoginPage(): ReactElement {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               error={fieldError}
-              required
             />
             <TextField
               ref={passwordRef}
@@ -198,7 +197,6 @@ function LoginPage(): ReactElement {
               label={t('web.login.field.password.label')}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              required
             />
             <div>
               <Button

@@ -10,6 +10,7 @@ import {
   spacing,
   type Theme,
   textStyles,
+  web,
 } from './model'
 
 /**
@@ -33,9 +34,12 @@ const block = (selector: string, entries: readonly (readonly [string, string])[]
 
 const scaleEntries = (scale: readonly Scale[]) => scale.map((s) => [s.name, `${s.px}px`] as const)
 
-/** The canvas variable names (`--ground`, `--space-4`, `--radius-card`…), light and dark (DOC-54 §2.1). */
+/**
+ * The canvas variable names (`--ground`, `--space-4`, `--radius-card`…), light and dark (DOC-54 §2.1); type, radius and
+ * sizes at the web density (DR-307).
+ */
 function tokensCss(): string {
-  const text = textStyles.flatMap((s) => [
+  const text = web.textStyles.flatMap((s) => [
     [`text-${s.name}-size`, `${s.fontSize}px`] as const,
     [`text-${s.name}-line-height`, `${s.lineHeight}px`] as const,
     [`text-${s.name}-weight`, String(s.fontWeight)] as const,
@@ -56,8 +60,8 @@ function tokensCss(): string {
     '',
     block(':root', [
       ...scaleEntries(spacing),
-      ...scaleEntries(radius),
-      ...scaleEntries(sizes),
+      ...scaleEntries(web.radius),
+      ...scaleEntries(web.sizes),
       ['font-sans', families.sans],
       ['font-plate', families.plate],
       ...text,
@@ -66,7 +70,10 @@ function tokensCss(): string {
   ].join('\n')
 }
 
-/** Tailwind 4 theme for the web: colors read the variables, so a theme switch changes no class (DOC-54 §2.1). */
+/**
+ * Tailwind 4 theme for the web: colors read the variables, so a theme switch changes no class (DOC-54 §2.1). Type, radius
+ * and sizes are the web density (DR-307).
+ */
 function themeCss(): string {
   const lines = [
     `/* ${HEADER} */`,
@@ -82,18 +89,18 @@ function themeCss(): string {
     '  --inset-shadow-*: initial;',
     '  --drop-shadow-*: initial;',
     '  --radius-*: initial;',
-    ...radius.map((r) => `  --radius-${r.name.replace(/^radius-/, '')}: ${r.px}px;`),
+    ...web.radius.map((r) => `  --radius-${r.name.replace(/^radius-/, '')}: ${r.px}px;`),
     '  --font-*: initial;',
     `  --font-sans: ${families.sans};`,
     `  --font-plate: ${families.plate};`,
     '  --text-*: initial;',
-    ...textStyles.flatMap((s) => [
+    ...web.textStyles.flatMap((s) => [
       `  --text-${s.name}: ${s.fontSize}px;`,
       `  --text-${s.name}--line-height: ${s.lineHeight}px;`,
       `  --text-${s.name}--font-weight: ${s.fontWeight};`,
       `  --text-${s.name}--letter-spacing: ${s.letterSpacing}em;`,
     ]),
-    ...sizes.map((s) => `  --spacing-${s.name}: ${s.px}px;`),
+    ...web.sizes.map((s) => `  --spacing-${s.name}: ${s.px}px;`),
     '}',
     '',
     '/* Shadows change with the theme, so they read the variables of tokens.css directly. */',

@@ -48,7 +48,7 @@ export function OtpInput({
               key={index}
               className={cn(
                 'flex h-control-lg flex-1 items-center justify-center rounded-control border bg-surface text-title-2 text-ink tabular-nums peer-focus-visible:border-teal',
-                error ? 'border-danger' : 'border-line-strong',
+                error ? 'border-danger' : 'border-line-control',
                 value.length === index && 'border-teal',
               )}
             >

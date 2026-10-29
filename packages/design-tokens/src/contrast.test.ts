@@ -42,6 +42,8 @@ const pairs: [fg: string, bg: string, need: number, light: number, dark: number]
   ['line-strong', 'surface', MARK, 4.03, 4.14],
   ['line-strong', 'ground', MARK, 3.54, 4.67],
   ['line-strong', 'fill', MARK, 3.22, 3.63],
+  ['line-control', 'surface', MARK, 3.47, 3.5],
+  ['line-control', 'ground', MARK, 3.05, 3.96],
   ['focus', 'ground', MARK, 13.32, 11.83],
   ['focus', 'surface', MARK, 15.15, 10.47],
   ['focus', 'fill', MARK, 12.08, 9.18],

@@ -100,6 +100,7 @@ export function ChangePhoneDialog({
           type="tel"
           autoComplete="off"
           label={t('web.unit-detail.dialog.phone.field.phone.label')}
+          placeholder={t('common.field.phone.placeholder')}
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
           error={error}

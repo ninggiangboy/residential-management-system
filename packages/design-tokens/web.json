@@ -1,0 +1,93 @@
+{
+  "name": "Hiên web density",
+  "version": 1,
+  "usage": "The web CMS is used with a mouse on a wide screen, for long sessions of tables and forms: the touch sizes of tokens.json made it large and heavy. These values replace the type, radius and size scales of tokens.json in the web outputs only (tokens.css, theme.css); the apps keep the canvas values. The added colors and shadows go to every output (DOC-54 §5.5, DR-307).",
+  "type": {
+    "display": {
+      "fontSize": "28px",
+      "lineHeight": "36px",
+      "fontWeight": 700,
+      "letterSpacing": "-0.02em"
+    },
+    "title-1": {
+      "fontSize": "22px",
+      "lineHeight": "28px",
+      "fontWeight": 600,
+      "letterSpacing": "-0.015em"
+    },
+    "title-2": {
+      "fontSize": "17px",
+      "lineHeight": "24px",
+      "fontWeight": 600,
+      "letterSpacing": "-0.01em"
+    },
+    "title-3": {
+      "fontSize": "15px",
+      "lineHeight": "22px",
+      "fontWeight": 600,
+      "letterSpacing": "-0.005em"
+    },
+    "body": { "fontSize": "14px", "lineHeight": "20px", "fontWeight": 400 },
+    "body-strong": { "fontSize": "14px", "lineHeight": "20px", "fontWeight": 500 },
+    "label": { "fontSize": "14px", "lineHeight": "20px", "fontWeight": 500 },
+    "secondary": { "fontSize": "13px", "lineHeight": "18px", "fontWeight": 400 },
+    "caption": { "fontSize": "13px", "lineHeight": "18px", "fontWeight": 500 },
+    "micro": { "fontSize": "12px", "lineHeight": "16px", "fontWeight": 500 },
+    "plate-xl": {
+      "fontSize": "36px",
+      "lineHeight": "36px",
+      "fontWeight": 800,
+      "letterSpacing": "0.01em"
+    },
+    "plate-lg": {
+      "fontSize": "24px",
+      "lineHeight": "24px",
+      "fontWeight": 700,
+      "letterSpacing": "0.02em"
+    },
+    "plate-md": {
+      "fontSize": "17px",
+      "lineHeight": "18px",
+      "fontWeight": 700,
+      "letterSpacing": "0.03em"
+    },
+    "plate-sm": {
+      "fontSize": "14px",
+      "lineHeight": "16px",
+      "fontWeight": 700,
+      "letterSpacing": "0.04em"
+    }
+  },
+  "radius": {
+    "radius-plate": "4px",
+    "radius-control": "8px",
+    "radius-card": "12px",
+    "radius-sheet": "16px"
+  },
+  "size": {
+    "tap-min": "32px",
+    "control-lg": "40px",
+    "control-md": "36px",
+    "control-sm": "32px",
+    "icon-sm": "16px",
+    "icon-md": "20px",
+    "icon-lg": "28px"
+  },
+  "color": [
+    {
+      "name": "line-control",
+      "value": { "light": "#7E8D89", "dark": "#667773" },
+      "usage": "Border of a text input, select and checkbox on the web: the lightest border that keeps 3:1 on `surface` and `ground`. Hover and focus take `line-strong`. A button or chip, which its text names, takes `line`."
+    }
+  ],
+  "shadow": [
+    {
+      "name": "shadow-raised",
+      "value": {
+        "light": "0 1px 2px rgba(15, 42, 43, 0.05)",
+        "dark": "none"
+      },
+      "usage": "A card, an outline button or a chosen segment on the web: a hairline lift under a 1 px `line` border, in place of the wide blur of `shadow-card`."
+    }
+  ]
+}

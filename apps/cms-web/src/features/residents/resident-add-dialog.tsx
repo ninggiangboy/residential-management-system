@@ -153,7 +153,9 @@ export function ResidentAddDialog({
         <TextField
           type="tel"
           autoComplete="off"
-          label={`${t('web.resident-add.field.phone.label')} *`}
+          label={t('web.resident-add.field.phone.label')}
+          required
+          placeholder={t('common.field.phone.placeholder')}
           value={phone}
           onChange={(event) => {
             setPhone(event.target.value)
@@ -190,7 +192,8 @@ export function ResidentAddDialog({
           </Banner>
         )}
         <UnitPicker
-          label={`${t('web.resident-add.field.unit.label')} *`}
+          label={t('web.resident-add.field.unit.label')}
+          required
           value={unit}
           error={errors.unit}
           onChange={(next) => {
@@ -251,7 +254,9 @@ export function ResidentAddDialog({
           <>
             <TextField
               autoComplete="off"
-              label={`${t('web.resident-add.field.name.label')} *`}
+              label={t('web.resident-add.field.name.label')}
+              required
+              placeholder={t('common.field.name.placeholder')}
               value={name}
               error={errors.name}
               onChange={(event) => setName(event.target.value)}
@@ -260,6 +265,7 @@ export function ResidentAddDialog({
               type="email"
               autoComplete="off"
               label={t('web.resident-add.field.email.label')}
+              placeholder={t('common.field.email.placeholder')}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />

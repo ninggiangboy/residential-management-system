@@ -1,8 +1,10 @@
 import hien from '../tokens.json' with { type: 'json' }
+import density from '../web.json' with { type: 'json' }
 
 /**
- * `tokens.json` (Hiên v1, copied unchanged from the design canvas) read into plain lists, aliases resolved. The
- * generator (`bun run tokens:build`) and the DS- tests read the tokens only through this file.
+ * `tokens.json` (Hiên v1, copied unchanged from the design canvas) read into plain lists, aliases resolved, plus
+ * `web.json`, the web density (DOC-54 §5.5, DR-307). The generator (`bun run tokens:build`) and the DS- tests read the
+ * tokens only through this file.
  */
 export type Theme = 'light' | 'dark'
 
@@ -57,10 +59,14 @@ function resolveAliases(tokens: readonly Themed[]): Themed[] {
   }))
 }
 
-/** The 43 colors of the canvas, then the fixed ones; `success*` resolved to the `teal*` values they alias. */
-export const colors: readonly Themed[] = [...resolveAliases(hien.color.tokens), ...FIXED_COLORS]
+/** The 43 colors of the canvas, the web additions, then the fixed ones; `success*` resolved to the `teal*` values they alias. */
+export const colors: readonly Themed[] = [
+  ...resolveAliases(hien.color.tokens),
+  ...density.color,
+  ...FIXED_COLORS,
+]
 
-export const shadows: readonly Themed[] = hien.shadow.tokens
+export const shadows: readonly Themed[] = [...hien.shadow.tokens, ...density.shadow]
 
 export const spacing: readonly Scale[] = hien.spacing.tokens.map((t) => ({
   name: t.name,
@@ -85,6 +91,34 @@ export const textStyles: readonly TextStyle[] = hien.type.groups.flatMap((group)
     letterSpacing: 'letterSpacing' in s && s.letterSpacing ? Number.parseFloat(s.letterSpacing) : 0,
   })),
 )
+
+/**
+ * The scales of the web outputs (`tokens.css`, `theme.css`): the canvas values with `web.json` written over them, by name.
+ * The apps keep the canvas values (DR-307).
+ */
+const overScale = (scale: readonly Scale[], over: Readonly<Record<string, string>>): Scale[] =>
+  scale.map((s) => {
+    const value = over[s.name]
+    return value ? { name: s.name, px: px(value) } : s
+  })
+const typeOver: Readonly<Record<string, (typeof density.type)[keyof typeof density.type]>> =
+  density.type
+
+export const web = {
+  radius: overScale(radius, density.radius),
+  sizes: overScale(sizes, density.size),
+  textStyles: textStyles.map((s): TextStyle => {
+    const over = typeOver[s.name]
+    if (!over) return s
+    return {
+      ...s,
+      fontSize: px(over.fontSize),
+      lineHeight: px(over.lineHeight),
+      fontWeight: over.fontWeight,
+      letterSpacing: 'letterSpacing' in over ? Number.parseFloat(over.letterSpacing) : 0,
+    }
+  }),
+} as const
 
 export const families: Readonly<Record<'sans' | 'plate', string>> = hien.type.families
 
