@@ -7,7 +7,7 @@ import { Banner } from '../../components/ui/banner'
 import { Button, buttonStyles, IconButton } from '../../components/ui/button'
 import { Chip, ChipGroup } from '../../components/ui/controls'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
-import { PageHeader } from '../../components/ui/page'
+import { ListPage, PageHeader } from '../../components/ui/page'
 import { SelectField } from '../../components/ui/select-field'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
@@ -107,7 +107,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
         <Th className="w-[18%]">{t('web.residents.col.phone')}</Th>
         <Th>{t('web.residents.col.units')}</Th>
         <Th className="w-44">{t('web.residents.col.status')}</Th>
-        <Th className="w-14">
+        <Th className="w-21">
           <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
         </Th>
       </Tr>
@@ -115,7 +115,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
   )
 
   return (
-    <>
+    <ListPage>
       <PageHeader
         title={t('web.residents.title')}
         subtitleLoading={!data}
@@ -325,6 +325,6 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
           }
         />
       )}
-    </>
+    </ListPage>
   )
 }

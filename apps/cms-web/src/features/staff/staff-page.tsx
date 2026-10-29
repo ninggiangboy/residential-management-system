@@ -11,7 +11,7 @@ import { Chip, ChipGroup } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/dialog'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { Icon } from '../../components/ui/icon'
-import { PageHeader } from '../../components/ui/page'
+import { ListPage, PageHeader } from '../../components/ui/page'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
@@ -106,6 +106,10 @@ export function StaffPage({ search }: { search: StaffSearch }) {
       (thrown) => toast.error(errorText(t, apiErrorOf(thrown))),
     )
 
+  /** A row action without a dialog shows its call on its own button, the one of this account only (UX-01). */
+  const inFlight = (mutation: { isPending: boolean; variables?: unknown }, id: string) =>
+    mutation.isPending && mutation.variables === id
+
   const lockOrDisable = (
     kind: 'lock' | 'disable',
     account: StaffAccount,
@@ -152,6 +156,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
             size="sm"
             variant="tonal"
             disabled={!canWrite}
+            loading={inFlight(mutations.resendInvite, account.id)}
             onClick={() =>
               void act(
                 mutations.resendInvite.mutateAsync(account.id),
@@ -177,6 +182,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
             size="sm"
             variant="outline"
             disabled={!canWrite}
+            loading={inFlight(mutations.unlock, account.id)}
             onClick={() =>
               void act(
                 mutations.unlock.mutateAsync(account.id),
@@ -192,6 +198,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
             size="sm"
             variant="outline"
             disabled={!canWrite}
+            loading={inFlight(mutations.enable, account.id)}
             onClick={() =>
               void act(
                 mutations.enable.mutateAsync(account.id),
@@ -222,7 +229,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
     search.role !== undefined || search.status !== undefined || (search.q ?? '') !== ''
 
   return (
-    <>
+    <ListPage>
       <PageHeader
         title={t('web.staff.title')}
         subtitleLoading={!summary.data}
@@ -406,6 +413,6 @@ export function StaffPage({ search }: { search: StaffSearch }) {
           pending?.kind === 'tickets' && lockOrDisable(pending.action, pending.account, reassign)
         }
       />
-    </>
+    </ListPage>
   )
 }

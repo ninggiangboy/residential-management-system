@@ -23,6 +23,10 @@ const router = createRouter({
   defaultPreload: 'intent',
   defaultErrorComponent: ({ error }) => <RouteErrorBoundary error={error} />,
   scrollRestoration: true,
+  // The page area and the rows of a list scroll, not the window (DOC-54 §17.5). A new navigation (another page of the list, a
+  // filter, another screen) starts them at the top; without this the router carries their place over to the new address.
+  // Back and forward still return to the place left.
+  scrollToTopSelectors: ['#main', '[data-table-scroll]'],
 })
 
 declare module '@tanstack/react-router' {
