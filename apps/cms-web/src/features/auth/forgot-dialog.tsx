@@ -32,7 +32,7 @@ export function ForgotDialog({
     try {
       unwrap(await api.auth.staff['password-reset'].post({ email: email.trim() }))
       // The email travels in router state only, never in the URL (DOC-64 `W-Forgot-Sent` §2).
-      await navigate({ to: '/forgot/sent', state: { email: email.trim() } })
+      await navigate({ to: '/forgot/sent', state: { email: email.trim() }, replace: true })
     } catch (thrown) {
       const failure = apiErrorOf(thrown)
       if (classify(failure).kind === 'validation') setError({ field: errorText(t, failure) })

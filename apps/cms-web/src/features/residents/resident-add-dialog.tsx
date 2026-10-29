@@ -11,6 +11,7 @@ import { SelectField } from '../../components/ui/select-field'
 import { Plate } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { useCloseOverlay } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { trackTap } from '../../lib/usage'
 import { useIntent } from '../../lib/use-intent'
@@ -63,7 +64,10 @@ export function ResidentAddDialog({
   const code = detail.data?.code ?? unit?.code ?? ''
 
   // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
-  const { open, close } = useExit(() => void navigate({ to: '/residents', search }))
+  const closeOverlay = useCloseOverlay()
+  const { open, close } = useExit(() =>
+    closeOverlay(() => void navigate({ to: '/residents', search, replace: true })),
+  )
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -95,7 +99,12 @@ export function ResidentAddDialog({
               { code },
             ),
           )
-          void navigate({ to: '/units/$unitId', params: { unitId: unit.unitId }, search: {} })
+          void navigate({
+            to: '/units/$unitId',
+            params: { unitId: unit.unitId },
+            search: {},
+            replace: true,
+          })
         },
         onError: (thrown) => {
           const failure = apiErrorOf(thrown)

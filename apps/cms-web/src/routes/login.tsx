@@ -14,6 +14,7 @@ import { Icon } from '../components/ui/icon'
 import { Skeleton } from '../components/ui/skeleton'
 import { TextField } from '../components/ui/text-field'
 import { landingFor } from '../features/auth/landing'
+import { OPENED_HERE, useCloseOverlay } from '../lib/history'
 import { errorText, useI18n } from '../lib/i18n'
 import { f, safeRedirect, searchParser } from '../lib/search'
 import type { RouterContext } from './__root'
@@ -54,6 +55,7 @@ function LoginPage(): ReactElement {
   const { t, lang } = useI18n()
   const search = Route.useSearch()
   const navigate = useNavigate()
+  const closeOverlay = useCloseOverlay()
   const router = useRouter()
   const queryClient = useQueryClient()
   const brand = useBrand()
@@ -203,7 +205,11 @@ function LoginPage(): ReactElement {
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  void navigate({ to: '/login', search: { ...search, dialog: 'forgot' } })
+                  void navigate({
+                    to: '/login',
+                    search: { ...search, dialog: 'forgot' },
+                    state: OPENED_HERE,
+                  })
                 }
               >
                 {t('web.login.action.forgot')}
@@ -229,7 +235,14 @@ function LoginPage(): ReactElement {
             open={search.dialog === 'forgot'}
             email={email}
             onClose={() =>
-              void navigate({ to: '/login', search: { ...search, dialog: undefined } })
+              closeOverlay(
+                () =>
+                  void navigate({
+                    to: '/login',
+                    search: { ...search, dialog: undefined },
+                    replace: true,
+                  }),
+              )
             }
           />
         </Suspense>

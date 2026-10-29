@@ -15,6 +15,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Tag } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { uploadFile } from '../../lib/uploads'
@@ -44,6 +45,7 @@ interface Detail {
 export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKind }) {
   const { t, lang } = useI18n()
   const navigate = useNavigate()
+  const closeOverlay = useCloseOverlay()
   const queryClient = useQueryClient()
   const canWrite = useCanWrite()
   const settings = useQuery(settingsQuery())
@@ -504,7 +506,11 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
               kind={which}
               lang={lang}
               onPublish={() =>
-                void navigate({ to: '/building', search: { dialog: 'terms', kind: which } })
+                void navigate({
+                  to: '/building',
+                  search: { dialog: 'terms', kind: which },
+                  state: OPENED_HERE,
+                })
               }
               onVersions={() => setVersionsOf(which)}
             />
@@ -512,7 +518,12 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
         </div>
       </div>
       {dialog === 'terms' && (
-        <TermsPanel kind={kind} onClose={() => void navigate({ to: '/building', search: {} })} />
+        <TermsPanel
+          kind={kind}
+          onClose={() =>
+            closeOverlay(() => void navigate({ to: '/building', search: {}, replace: true }))
+          }
+        />
       )}
       <VersionsDialog kind={versionsOf} onClose={() => setVersionsOf(null)} />
       <ConfirmDialog

@@ -12,6 +12,7 @@ import { SelectField } from '../../components/ui/select-field'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
+import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { useI18n } from '../../lib/i18n'
 import { digitsOf } from '../../lib/phone'
 import { useDebounced } from '../../lib/use-debounced'
@@ -63,6 +64,7 @@ const searchable = (text: string) =>
 export function ResidentsPage({ search }: { search: ResidentsSearch }) {
   const { t, formatPhone } = useI18n()
   const navigate = useNavigate()
+  const closeOverlay = useCloseOverlay()
   const [typed, setTyped] = useState(search.q ?? '')
   const debounced = useDebounced(typed.trim())
   const effectiveQ = debounced !== '' && searchable(debounced) ? debounced : undefined
@@ -86,7 +88,11 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
   const rowsKey = useIdentityKey(query.data)
   const filter = (patch: Partial<ResidentsSearch>) => {
     visited.current = []
-    void navigate({ to: '/residents', search: { ...search, ...patch, cursor: undefined } })
+    void navigate({
+      to: '/residents',
+      search: { ...search, ...patch, cursor: undefined },
+      replace: true,
+    })
   }
   const setAccountFilter = (value: AccountFilter) =>
     filter({
@@ -125,7 +131,12 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
             <Link to="/import" search={{}} className={buttonStyles({ variant: 'outline' })}>
               {t('web.residents.cta.import')}
             </Link>
-            <Link to="/residents/new" search={{}} className={buttonStyles({ variant: 'primary' })}>
+            <Link
+              to="/residents/new"
+              search={{}}
+              state={OPENED_HERE}
+              className={buttonStyles({ variant: 'primary' })}
+            >
               {t('web.residents.cta')}
             </Link>
           </>
@@ -205,7 +216,11 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                 onClick={() => {
                   setTyped('')
                   visited.current = []
-                  void navigate({ to: '/residents', search: { limit: search.limit } })
+                  void navigate({
+                    to: '/residents',
+                    search: { limit: search.limit },
+                    replace: true,
+                  })
                 }}
               >
                 {t('common.action.clear-filters')}
@@ -214,6 +229,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
               <Link
                 to="/residents/new"
                 search={{}}
+                state={OPENED_HERE}
                 className={buttonStyles({ variant: 'primary' })}
               >
                 {t('web.residents.cta')}
@@ -239,7 +255,11 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                     disabled={search.cursor === undefined}
                     onClick={() => {
                       const previous = visited.current.pop()
-                      void navigate({ to: '/residents', search: { ...search, cursor: previous } })
+                      void navigate({
+                        to: '/residents',
+                        search: { ...search, cursor: previous },
+                        replace: true,
+                      })
                     }}
                   />
                   <IconButton
@@ -252,6 +272,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                       void navigate({
                         to: '/residents',
                         search: { ...search, cursor: data.nextCursor ?? undefined },
+                        replace: true,
                       })
                     }}
                   />
@@ -304,6 +325,7 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
                       void navigate({
                         to: '/residents',
                         search: { ...search, dialog: 'profile', accountId: resident.accountId },
+                        state: OPENED_HERE,
                       })
                     }
                   />
@@ -318,10 +340,14 @@ export function ResidentsPage({ search }: { search: ResidentsSearch }) {
         <ResidentProfileDialog
           accountId={accountId}
           onClose={() =>
-            void navigate({
-              to: '/residents',
-              search: { ...search, dialog: undefined, accountId: undefined },
-            })
+            closeOverlay(
+              () =>
+                void navigate({
+                  to: '/residents',
+                  search: { ...search, dialog: undefined, accountId: undefined },
+                  replace: true,
+                }),
+            )
           }
         />
       )}

@@ -205,8 +205,9 @@ test.describe('W-Staff and W-Staff-New (UIWS-01…16)', () => {
     await expect(page).toHaveURL(/role=technician/)
     await expect(page.getByRole('row', { name: new RegExp(STAFF.technician.name) })).toBeVisible()
     await expect(page.getByRole('row', { name: new RegExp(STAFF.admin.name) })).toHaveCount(0)
+    // A filter refines the page: it replaces the entry, so Back leaves the list (lib/history.ts).
     await page.goBack()
-    await expect(page).not.toHaveURL(/role=technician/)
+    await expect(page).not.toHaveURL(/\/staff/)
   })
 
   test('a Technician cannot open the staff page', async ({ page }) => {

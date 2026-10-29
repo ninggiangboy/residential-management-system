@@ -16,6 +16,7 @@ import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../compone
 import { StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { OPENED_HERE } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
@@ -98,7 +99,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
   const lockedCount = summary.data?.items.filter((item) => isLocked(item, now)).length ?? 0
 
   const setFilter = (role: StaffRole | undefined) =>
-    void navigate({ to: '/staff', search: { ...search, role, page: 1 } })
+    void navigate({ to: '/staff', search: { ...search, role, page: 1 }, replace: true })
 
   const act = (promise: Promise<unknown>, success: string) =>
     promise.then(
@@ -213,6 +214,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
           to="/staff/$staffId/edit"
           params={{ staffId: account.id }}
           search={search}
+          state={OPENED_HERE}
           aria-label={t('web.staff.action.edit.label', { name: account.fullName })}
           className={buttonStyles({ variant: 'ghost', size: 'sm' }) + ' w-control-sm px-0'}
         >
@@ -242,6 +244,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
           <Link
             to="/staff/new"
             search={search}
+            state={OPENED_HERE}
             className={buttonStyles({ variant: 'primary' })}
             aria-disabled={!canWrite}
           >
@@ -294,7 +297,11 @@ export function StaffPage({ search }: { search: StaffSearch }) {
                 variant="outline"
                 onClick={() => {
                   setTyped('')
-                  void navigate({ to: '/staff', search: { page: 1, pageSize: search.pageSize } })
+                  void navigate({
+                    to: '/staff',
+                    search: { page: 1, pageSize: search.pageSize },
+                    replace: true,
+                  })
                 }}
               >
                 {t('common.action.clear-filters')}
@@ -318,7 +325,11 @@ export function StaffPage({ search }: { search: StaffSearch }) {
                   variant="outline"
                   disabled={search.page <= 1}
                   onClick={() =>
-                    void navigate({ to: '/staff', search: { ...search, page: search.page - 1 } })
+                    void navigate({
+                      to: '/staff',
+                      search: { ...search, page: search.page - 1 },
+                      replace: true,
+                    })
                   }
                 />
                 <IconButton
@@ -327,7 +338,11 @@ export function StaffPage({ search }: { search: StaffSearch }) {
                   variant="outline"
                   disabled={to >= total}
                   onClick={() =>
-                    void navigate({ to: '/staff', search: { ...search, page: search.page + 1 } })
+                    void navigate({
+                      to: '/staff',
+                      search: { ...search, page: search.page + 1 },
+                      replace: true,
+                    })
                   }
                 />
               </div>

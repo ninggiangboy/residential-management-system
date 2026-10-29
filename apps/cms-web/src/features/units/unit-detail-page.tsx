@@ -18,6 +18,7 @@ import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../compone
 import { TabList, TabPanel, Tabs } from '../../components/ui/tabs'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { toast } from '../../components/ui/toaster'
+import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { ChangePhoneDialog } from './change-phone-dialog'
@@ -60,8 +61,24 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
     ),
   )
 
+  const closeOverlay = useCloseOverlay()
+  // A tab refines the page and replaces its entry; a dialog is an entry of its own, so Back closes it (`lib/history.ts`).
   const go = (patch: Partial<UnitDetailSearch>) =>
-    void navigate({ to: '/units/$unitId', params: { unitId }, search: { ...search, ...patch } })
+    void navigate({
+      to: '/units/$unitId',
+      params: { unitId },
+      search: { ...search, ...patch },
+      replace: true,
+    })
+  const openDialog = (patch: Partial<UnitDetailSearch>) =>
+    void navigate({
+      to: '/units/$unitId',
+      params: { unitId },
+      search: { ...search, ...patch },
+      state: OPENED_HERE,
+    })
+  const closeDialog = (patch: Partial<UnitDetailSearch> = {}) =>
+    closeOverlay(() => go({ dialog: undefined, ...patch }))
 
   if (unit.isPending) return <DetailSkeleton />
   if (unit.isError || !unit.data) {
@@ -161,14 +178,18 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" disabled={!canWrite} onClick={() => go({ dialog: 'edit' })}>
+          <Button
+            variant="outline"
+            disabled={!canWrite}
+            onClick={() => openDialog({ dialog: 'edit' })}
+          >
             {t('web.unit-detail.cta.edit')}
           </Button>
           {detail.owner ? (
             <Button
               variant="outline"
               disabled={!canWrite}
-              onClick={() => go({ dialog: 'transfer' })}
+              onClick={() => openDialog({ dialog: 'transfer' })}
             >
               {t('web.unit-detail.cta.transfer')}
             </Button>
@@ -176,6 +197,7 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
             <Link
               to="/residents/new"
               search={{ unitId }}
+              state={OPENED_HERE}
               className={buttonStyles({ variant: 'primary' })}
             >
               {t('web.unit-detail.cta.assign')}
@@ -276,7 +298,7 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
                             variant="ghost"
                             disabled={!canWrite}
                             onClick={() =>
-                              go({ dialog: 'phone', membershipId: member.membershipId })
+                              openDialog({ dialog: 'phone', membershipId: member.membershipId })
                             }
                           >
                             {t('web.unit-detail.action.change-phone')}
@@ -337,15 +359,11 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
         </TabPanel>
       </Tabs>
 
-      <UnitEditDialog
-        unit={detail}
-        open={search.dialog === 'edit'}
-        onClose={() => go({ dialog: undefined })}
-      />
+      <UnitEditDialog unit={detail} open={search.dialog === 'edit'} onClose={() => closeDialog()} />
       <TransferDialog
         unit={detail}
         open={search.dialog === 'transfer'}
-        onClose={() => go({ dialog: undefined })}
+        onClose={() => closeDialog()}
       />
       {phoneMember && (
         <ChangePhoneDialog
@@ -354,7 +372,7 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
           name={phoneMember.fullName ?? phoneMember.phone}
           currentPhone={phoneMember.phone}
           unitId={unitId}
-          onClose={() => go({ dialog: undefined, membershipId: undefined })}
+          onClose={() => closeDialog({ membershipId: undefined })}
         />
       )}
       <ConfirmDialog
