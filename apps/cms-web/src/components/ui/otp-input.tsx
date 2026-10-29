@@ -47,9 +47,9 @@ export function OtpInput({
               // biome-ignore lint/suspicious/noArrayIndexKey: the cells are positions, they never reorder
               key={index}
               className={cn(
-                'flex h-control-lg flex-1 items-center justify-center rounded-control border bg-surface text-title-2 text-ink tabular-nums peer-focus-visible:border-teal',
-                error ? 'border-danger' : 'border-line-control',
-                value.length === index && 'border-teal',
+                'flex h-control-lg flex-1 items-center justify-center rounded-control border bg-surface text-title-2 text-ink tabular-nums shadow-field transition-[border-color,box-shadow] peer-focus-visible:border-teal',
+                error ? 'border-danger shadow-invalid' : 'border-line-input',
+                value.length === index && 'border-teal peer-focus-visible:shadow-focus',
               )}
             >
               {value[index] ?? ''}

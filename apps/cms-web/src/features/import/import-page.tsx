@@ -532,7 +532,7 @@ function Preview({
         </section>
       )}
       {warnings.length > 0 && (
-        <details className="rounded-card border border-line bg-surface p-4 shadow-raised">
+        <details className="rounded-card border border-line bg-surface p-4 shadow-panel">
           <summary className="text-body-strong">
             {t('web.import.warnings.title', { count: warnings.length })}
           </summary>
@@ -547,7 +547,7 @@ function Preview({
         </details>
       )}
       {validRows.length > 0 && (
-        <details className="rounded-card border border-line bg-surface p-4 shadow-raised">
+        <details className="rounded-card border border-line bg-surface p-4 shadow-panel">
           <summary className="text-body-strong">
             {t('web.import.valid.title', { count: validRows.length })}
           </summary>

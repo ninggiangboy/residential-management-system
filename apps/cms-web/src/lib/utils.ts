@@ -20,7 +20,7 @@ const TEXT_STYLES = [
 ]
 
 /**
- * The size, radius and shadow names of the tokens (DOC-54 §5.2–5.4, `theme.css`). Without them the merge does not see
+ * The size, radius and shadow names of the tokens (DOC-54 §5.2–5.5, `theme.css`). Without them the merge does not see
  * `h-control-md` and `h-auto` as one property, keeps both, and the stylesheet order picks the winner: a `TextAreaField`
  * stayed one line high whatever its `rows`.
  */
@@ -37,7 +37,19 @@ const SIZES = [
   'tabbar-height',
 ]
 const RADII = ['plate', 'control', 'card', 'sheet']
-const SHADOWS = ['card', 'glow', 'bar', 'float', 'sheet', 'raised']
+const SHADOWS = [
+  'card',
+  'glow',
+  'bar',
+  'float',
+  'sheet',
+  'raised',
+  'panel',
+  'primary',
+  'field',
+  'focus',
+  'invalid',
+]
 
 const merge = extendTailwindMerge({
   extend: {

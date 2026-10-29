@@ -5,6 +5,7 @@ import { apiErrorOf } from '../../api/errors'
 import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { ConfirmDialog, Dialog, FieldSkeleton, useExit } from '../../components/ui/dialog'
+import { labelStyles } from '../../components/ui/field'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Plate } from '../../components/ui/tag'
 import { TextAreaField, TextField } from '../../components/ui/text-field'
@@ -320,8 +321,8 @@ export function ResidentProfileDialog({
               onChange={set('note')}
             />
             <div>
-              <p className="text-caption text-ink">{t('web.residents.dialog.profile.units')}</p>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-2">
+              <p className={labelStyles}>{t('web.residents.dialog.profile.units')}</p>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {detail.data.memberships.map((membership) => (
                   <Link
                     key={membership.membershipId}

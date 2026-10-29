@@ -1,7 +1,7 @@
 {
   "name": "Hiên web density",
   "version": 1,
-  "usage": "The web CMS is used with a mouse on a wide screen, for long sessions of tables and forms: the touch sizes of tokens.json made it large and heavy. These values replace the type, radius and size scales of tokens.json in the web outputs only (tokens.css, theme.css); the apps keep the canvas values. The added colors and shadows go to every output (DOC-54 §5.5, DR-307).",
+  "usage": "The web CMS is used with a mouse on a wide screen, for long sessions of tables and forms: the touch sizes of tokens.json made it large and heavy. These values replace the type, radius and size scales of tokens.json in the web outputs only (tokens.css, theme.css); the apps keep the canvas values. The added colors and shadows go to every output (DOC-54 §5.5, DR-307); `theme` recolors canvas tokens on the web only (DR-311).",
   "type": {
     "display": {
       "fontSize": "28px",
@@ -73,21 +73,89 @@
     "icon-md": "20px",
     "icon-lg": "28px"
   },
+  "theme": {
+    "usage": "Canvas colors and shadows the web draws differently (DR-311): a light neutral grey ground, without the canvas's green tint, that the sidebar and top bar share, so the white cards stand out from it; neutral fills and dividers to match; a slightly brighter teal, the one color of the brand. A token not named keeps its canvas value; `success*` follow the `teal*` they alias. Only `tokens.css` reads them; the apps keep the canvas.",
+    "color": {
+      "ground": { "light": "#F5F6F7" },
+      "fill": { "light": "#ECEEF0" },
+      "line": { "light": "#E3E5E8" },
+      "teal": { "light": "#0B736D" },
+      "teal-pressed": { "light": "#085F5A" },
+      "teal-soft": { "light": "#D9F0EB" },
+      "scrim": { "light": "rgba(15, 42, 43, 0.38)", "dark": "rgba(0, 0, 0, 0.55)" }
+    },
+    "shadow": {
+      "shadow-float": {
+        "light": "0 0 0 1px rgba(15, 42, 43, 0.04), 0 2px 6px rgba(15, 42, 43, 0.06), 0 16px 40px -8px rgba(15, 42, 43, 0.2)",
+        "dark": "0 0 0 1px rgba(234, 241, 239, 0.08), 0 16px 40px -8px rgba(0, 0, 0, 0.6)"
+      }
+    }
+  },
   "color": [
     {
       "name": "line-control",
-      "value": { "light": "#7E8D89", "dark": "#667773" },
+      "value": { "light": "#80868D", "dark": "#667773" },
       "usage": "Border of a text input, select and checkbox on the web: the lightest border that keeps 3:1 on `surface` and `ground`. Hover and focus take `line-strong`. A button or chip, which its text names, takes `line`."
+    },
+    {
+      "name": "line-input",
+      "value": { "light": "#D9DCE0", "dark": "#344440" },
+      "usage": "Border of a text input, select, text area, checkbox and radio on the web, and the track of an unchecked switch, after shadcn's `border-input`: a light edge, since the field is told by its label, its white fill and `shadow-field`; focus turns it `teal` with the `shadow-focus` ring (DR-311, revises DR-307's 3:1 field border)."
+    },
+    {
+      "name": "surface-muted",
+      "value": { "light": "#F9FAFA", "dark": "#192624" },
+      "usage": "A band inside a `surface` card on the web: the table header, the hovered row, the footer of a dialog. A step from `surface` toward `ground`, so the band reads as part of the card (DR-311)."
     }
   ],
   "shadow": [
     {
       "name": "shadow-raised",
       "value": {
-        "light": "0 1px 2px rgba(15, 42, 43, 0.05)",
-        "dark": "none"
+        "light": "0 1px 2px rgba(15, 42, 43, 0.06)",
+        "dark": "0 1px 2px rgba(0, 0, 0, 0.32)"
       },
-      "usage": "A card, an outline button or a chosen segment on the web: a hairline lift under a 1 px `line` border, in place of the wide blur of `shadow-card`."
+      "usage": "An outline button, a text input, a chip or a chosen segment on the web: a hairline lift under a 1 px border."
+    },
+    {
+      "name": "shadow-panel",
+      "value": {
+        "light": "0 0 0 1px rgba(15, 42, 43, 0.02), 0 1px 2px rgba(15, 42, 43, 0.05), 0 4px 12px -2px rgba(15, 42, 43, 0.07), 0 16px 32px -16px rgba(15, 42, 43, 0.14)",
+        "dark": "0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.5)"
+      },
+      "usage": "A card, a table card or the active entry of the sidebar on `ground` (web): layered blur under a 1 px `line` border, so a card rises from the ground (DR-311)."
+    },
+    {
+      "name": "shadow-primary",
+      "value": {
+        "light": "inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(7, 83, 79, 0.3), 0 4px 12px -4px rgba(11, 115, 109, 0.5)",
+        "dark": "inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 14px -4px rgba(90, 212, 198, 0.35)"
+      },
+      "usage": "A `primary` button and the brand mark on the web: a light top edge and a teal glow beneath (DR-311)."
+    },
+    {
+      "name": "shadow-field",
+      "value": {
+        "light": "0 1px 2px rgba(15, 42, 43, 0.05)",
+        "dark": "0 1px 2px rgba(0, 0, 0, 0.3)"
+      },
+      "usage": "A text input, select, text area, OTP cell, checkbox or radio on the web: shadcn's `shadow-xs` under its 1 px `line-input` border, the same for every field (DR-311)."
+    },
+    {
+      "name": "shadow-focus",
+      "value": {
+        "light": "0 0 0 3px rgba(11, 115, 109, 0.22)",
+        "dark": "0 0 0 3px rgba(90, 212, 198, 0.3)"
+      },
+      "usage": "The focus of a field on the web (a focused text input, text area, checkbox, radio, OTP input, an open select): a 3 px `teal` ring outside its border, which turns `teal`, after shadcn's `ring-[3px]` (DR-311)."
+    },
+    {
+      "name": "shadow-invalid",
+      "value": {
+        "light": "0 0 0 3px rgba(179, 38, 30, 0.14)",
+        "dark": "0 0 0 3px rgba(255, 156, 145, 0.24)"
+      },
+      "usage": "A field in error on the web, at rest and focused: a 3 px `danger` ring outside its `danger` border, after shadcn's `aria-invalid` ring; the error is also written under the field (DR-311)."
     }
   ]
 }

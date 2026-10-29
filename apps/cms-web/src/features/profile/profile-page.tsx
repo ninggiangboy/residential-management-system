@@ -15,6 +15,7 @@ import { CardSection } from '../../components/ui/card'
 import { Switch } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/dialog'
 import { ErrorState } from '../../components/ui/empty-state'
+import { labelStyles } from '../../components/ui/field'
 import { PageHeader } from '../../components/ui/page'
 import { SegmentedControl } from '../../components/ui/segmented-control'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -243,8 +244,8 @@ export function ProfilePage() {
                 hint={t('web.profile.field.email.hint')}
               />
               <div>
-                <p className="text-caption text-ink">{t('web.profile.field.role.label')}</p>
-                <div className="mt-1.5">
+                <p className={labelStyles}>{t('web.profile.field.role.label')}</p>
+                <div className="mt-2">
                   <Tag tone="info">{t(`common.staff-role.${current.role}`)}</Tag>
                 </div>
                 <p className="mt-1.5 text-secondary text-ink-muted">

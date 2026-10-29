@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { contrast } from './contrast'
-import { colors, type Theme } from './model'
+import { colors, type Theme, type Themed, web } from './model'
 
 /**
  * DS-02 (DOC-54 §3.2): the pairs the components use, with the ratios the document prints. A token edit that drops a
@@ -15,6 +15,8 @@ const pairs: [fg: string, bg: string, need: number, light: number, dark: number]
   ['ink-muted', 'ground', TEXT, 5.94, 8.93],
   ['ink-muted', 'surface', TEXT, 6.76, 7.91],
   ['ink-muted', 'fill', TEXT, 5.39, 6.93],
+  ['ink', 'surface-muted', TEXT, 14.49, 13.64],
+  ['ink-muted', 'surface-muted', TEXT, 6.46, 7.47],
   ['teal', 'ground', TEXT, 5.58, 10.37],
   ['teal', 'surface', TEXT, 6.35, 9.18],
   ['on-teal', 'teal', TEXT, 6.35, 9.37],
@@ -42,8 +44,9 @@ const pairs: [fg: string, bg: string, need: number, light: number, dark: number]
   ['line-strong', 'surface', MARK, 4.03, 4.14],
   ['line-strong', 'ground', MARK, 3.54, 4.67],
   ['line-strong', 'fill', MARK, 3.22, 3.63],
-  ['line-control', 'surface', MARK, 3.47, 3.5],
-  ['line-control', 'ground', MARK, 3.05, 3.96],
+  ['line-control', 'surface', MARK, 3.68, 3.5],
+  ['line-control', 'ground', MARK, 3.23, 3.96],
+  ['line-input', 'surface', MARK, 1.38, 1.61],
   ['focus', 'ground', MARK, 13.32, 11.83],
   ['focus', 'surface', MARK, 15.15, 10.47],
   ['focus', 'fill', MARK, 12.08, 9.18],
@@ -52,16 +55,45 @@ const pairs: [fg: string, bg: string, need: number, light: number, dark: number]
   ['paper-ink', 'paper', TEXT, 21, 21],
 ]
 
-/** DOC-54 §3.3: deliberate failures (a disabled control; `lamp` never carries meaning alone on a light surface). */
+/**
+ * DOC-54 §3.3: deliberate failures (a disabled control; `lamp` never carries meaning alone on a light surface; the shadcn field
+ * border of the web, DR-311).
+ */
 const ALLOWED_FAILURES = new Set([
   'ink-disabled/surface/light',
   'ink-disabled/surface/dark',
   'lamp/surface/light',
   'lamp/ground/light',
+  'line-input/surface/light',
+  'line-input/surface/dark',
 ])
 
-const hex = (name: string, theme: Theme) => {
-  const token = colors.find((c) => c.name === name)
+/**
+ * The same pairs where the web theme (`web.json` `theme`, DR-311) changes a color: the ratios of the second table of DOC-54
+ * §3.2, by `fg/bg/theme`. Every other pair has its canvas ratio on the web too.
+ */
+const WEB: Readonly<Record<string, number>> = {
+  'ink/ground/light': 14.0,
+  'ink/fill/light': 13.02,
+  'ink-muted/ground/light': 6.25,
+  'ink-muted/fill/light': 5.81,
+  'teal/ground/light': 5.26,
+  'teal/surface/light': 5.7,
+  'on-teal/teal/light': 5.7,
+  'on-teal/teal-pressed/light': 7.51,
+  'on-teal-soft/teal-soft/light': 7.47,
+  'danger/ground/light': 6.04,
+  'info/ground/light': 6.29,
+  'line-strong/ground/light': 3.73,
+  'line-strong/fill/light': 3.47,
+  'line-control/ground/light': 3.4,
+  'focus/ground/light': 14.0,
+  'focus/fill/light': 13.02,
+  'lamp/ground/light': 1.46,
+}
+
+const hex = (list: readonly Themed[], name: string, theme: Theme) => {
+  const token = list.find((c) => c.name === name)
   if (!token) throw new Error(`No color token ${name}`)
   return token.value[theme]
 }
@@ -69,9 +101,21 @@ const hex = (name: string, theme: Theme) => {
 describe('DS-02: contrast of the pairs of DOC-54 §3.2', () => {
   for (const theme of ['light', 'dark'] as const) {
     test.each(pairs)(`%s on %s (${theme})`, (fg, bg, need, ...documented) => {
-      const ratio = contrast(hex(fg, theme), hex(bg, theme))
+      const ratio = contrast(hex(colors, fg, theme), hex(colors, bg, theme))
       expect(Math.round(ratio * 100) / 100).toBe(documented[theme === 'light' ? 0 : 1]!)
       if (!ALLOWED_FAILURES.has(`${fg}/${bg}/${theme}`)) expect(ratio).toBeGreaterThanOrEqual(need)
+    })
+
+    test.each(pairs)(`%s on %s (${theme}, web theme)`, (fg, bg, need, ...documented) => {
+      const key = `${fg}/${bg}/${theme}`
+      const changed =
+        hex(colors, fg, theme) !== hex(web.colors, fg, theme) ||
+        hex(colors, bg, theme) !== hex(web.colors, bg, theme)
+      // A pair the web theme changes has its row in WEB; one it leaves alone has none.
+      expect([key, key in WEB]).toEqual([key, changed])
+      const ratio = contrast(hex(web.colors, fg, theme), hex(web.colors, bg, theme))
+      expect(Math.round(ratio * 100) / 100).toBe(WEB[key] ?? documented[theme === 'light' ? 0 : 1]!)
+      if (!ALLOWED_FAILURES.has(key)) expect(ratio).toBeGreaterThanOrEqual(need)
     })
   }
 
@@ -79,7 +123,8 @@ describe('DS-02: contrast of the pairs of DOC-54 §3.2', () => {
     for (const entry of ALLOWED_FAILURES) {
       const [fg, bg, theme] = entry.split('/') as [string, string, Theme]
       const need = pairs.find((p) => p[0] === fg && p[1] === bg)![2]
-      expect(contrast(hex(fg, theme), hex(bg, theme))).toBeLessThan(need)
+      expect(contrast(hex(colors, fg, theme), hex(colors, bg, theme))).toBeLessThan(need)
+      expect(contrast(hex(web.colors, fg, theme), hex(web.colors, bg, theme))).toBeLessThan(need)
     }
   })
 })

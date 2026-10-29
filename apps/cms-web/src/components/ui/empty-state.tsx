@@ -25,7 +25,7 @@ export function EmptyState({
   const t = useT()
   return (
     <div className={cn('flex flex-col items-center gap-3 px-6 py-10 text-center', className)}>
-      <span className="flex size-12 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">
+      <span className="flex size-14 items-center justify-center rounded-card bg-teal-soft text-on-teal-soft ring-1 ring-inset ring-current/10">
         <Icon name={icon} size="lg" />
       </span>
       <h2 className="text-title-3 text-ink">{title}</h2>

@@ -11,6 +11,7 @@ import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { RadioCards } from '../../components/ui/controls'
 import { ConfirmDialog, Dialog, FieldSkeleton, useExit } from '../../components/ui/dialog'
+import { labelStyles } from '../../components/ui/field'
 import { SegmentedControl } from '../../components/ui/segmented-control'
 import { Skeleton } from '../../components/ui/skeleton'
 import { TextField } from '../../components/ui/text-field'
@@ -317,10 +318,8 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
                 control={form.control}
                 name="language"
                 render={({ field }) => (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-caption text-ink">
-                      {t('web.staff-new.field.language.label')}
-                    </span>
+                  <div className="flex flex-col gap-2">
+                    <span className={labelStyles}>{t('web.staff-new.field.language.label')}</span>
                     <SegmentedControl<'vi' | 'en'>
                       label={t('web.staff-new.field.language.label')}
                       value={field.value}
@@ -341,9 +340,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
                 name="role"
                 render={({ field }) => (
                   <div className="flex flex-col gap-2">
-                    <span className="text-caption text-ink">
-                      {t('web.staff-new.field.role.label')}
-                    </span>
+                    <span className={labelStyles}>{t('web.staff-new.field.role.label')}</span>
                     <RadioCards<StaffRole>
                       label={t('web.staff-new.field.role.label')}
                       value={field.value}

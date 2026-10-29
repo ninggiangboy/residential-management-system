@@ -6,16 +6,20 @@ import { cn } from '../../lib/utils'
 import { Icon } from './icon'
 
 export const buttonStyles = cva(
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-control text-label outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-disabled disabled:border-transparent',
+  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-control text-label outline-offset-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:translate-y-px focus-visible:outline-2 focus-visible:outline-focus disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-disabled disabled:border-transparent disabled:shadow-none',
   {
     variants: {
       variant: {
-        primary: 'bg-teal text-on-teal hover:bg-teal-pressed',
+        // A light top edge and a teal glow lift the one primary action of the screen (DR-311).
+        primary: 'bg-teal text-on-teal shadow-primary hover:bg-teal-pressed',
         // A button is named by its text, so its border is the light `line` (DR-307); the control border is for inputs.
-        outline: 'border border-line bg-surface text-ink shadow-raised hover:bg-ground',
+        outline:
+          'border border-line bg-surface text-ink shadow-raised hover:border-line-control/50 hover:bg-surface-muted',
         ghost: 'text-ink hover:bg-fill',
-        tonal: 'bg-teal-soft text-on-teal-soft hover:bg-fill',
-        danger: 'bg-danger text-on-danger hover:opacity-90',
+        // Hover deepens the tint toward `teal` rather than turning it grey.
+        tonal:
+          'bg-teal-soft text-on-teal-soft hover:bg-[color-mix(in_oklab,var(--teal-soft),var(--teal)_12%)]',
+        danger: 'bg-danger text-on-danger shadow-raised hover:opacity-90',
         'danger-ghost': 'text-danger hover:bg-danger-soft',
       },
       size: {

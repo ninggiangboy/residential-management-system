@@ -31,9 +31,9 @@ export function FieldFrame({
   required?: boolean
 }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex flex-col gap-2', className)}>
       {label && (
-        <label htmlFor={id} className="text-caption text-ink">
+        <label htmlFor={id} className={labelStyles}>
           {label}
           {required && (
             <span aria-hidden="true" className="ml-0.5 text-danger">
@@ -58,9 +58,15 @@ export function FieldFrame({
   )
 }
 
-/** A text field, text area or select: the focus is a 2 px `teal` inner ring, `danger` on a field in error (DOC-54 §12 A4, A8). */
+/** The label of a field (14 px, weight 500, after shadcn's `Label`), 8 px above it; a group drawn by hand uses it too. */
+export const labelStyles = 'text-label text-ink'
+
+/**
+ * A text field, text area or select, after shadcn's `Input` (DR-311): white, a 1 px `line-input` border and `shadow-field`;
+ * focus turns the border `teal` with the 3 px `shadow-focus` ring; a field in error has the `danger` border and ring, at
+ * rest too, and its error written under it (DOC-54 §12 A4, A8).
+ */
 export const controlStyles =
-  'h-control-md w-full rounded-control border bg-surface px-3 text-body text-ink shadow-raised placeholder:text-ink-disabled transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal aria-invalid:focus-visible:outline-danger disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-muted [&:is(input,textarea):read-only]:bg-fill'
-/** `line-control`, the lightest border that keeps 3:1, darkening under the pointer (DOC-54 §5.5, DR-307). */
-export const borderFor = (error: boolean) =>
-  error ? 'border-danger' : 'border-line-control hover:border-line-strong'
+  'h-control-md w-full min-w-0 rounded-control border bg-surface px-3 text-body text-ink shadow-field outline-none placeholder:text-ink-muted transition-[color,border-color,box-shadow] duration-150 focus-visible:border-teal focus-visible:shadow-focus aria-invalid:shadow-invalid aria-invalid:focus-visible:border-danger aria-invalid:focus-visible:shadow-invalid disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-muted disabled:shadow-none [&:is(input,textarea):read-only]:bg-fill [&:is(input,textarea):read-only]:shadow-none'
+/** `line-input`, or `danger` on a field in error. */
+export const borderFor = (error: boolean) => (error ? 'border-danger' : 'border-line-input')

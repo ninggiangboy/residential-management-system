@@ -20,9 +20,10 @@ import {
  */
 const HEADER = 'Generated from tokens.json (Hiên v1) by `bun run tokens:build`. Do not edit.'
 
-const themed = (theme: Theme) => [
-  ...colors.map((c) => [c.name, c.value[theme]] as const),
-  ...shadows.map((s) => [s.name, s.value[theme]] as const),
+/** The colors and shadows of a theme: the canvas values for the apps, the web's (`web.json` `theme`, DR-311) for `tokens.css`. */
+const themed = (theme: Theme, target: 'canvas' | 'web' = 'canvas') => [
+  ...(target === 'web' ? web.colors : colors).map((c) => [c.name, c.value[theme]] as const),
+  ...(target === 'web' ? web.shadows : shadows).map((s) => [s.name, s.value[theme]] as const),
 ]
 
 const block = (selector: string, entries: readonly (readonly [string, string])[], indent = '') =>
@@ -36,7 +37,7 @@ const scaleEntries = (scale: readonly Scale[]) => scale.map((s) => [s.name, `${s
 
 /**
  * The canvas variable names (`--ground`, `--space-4`, `--radius-card`…), light and dark (DOC-54 §2.1); type, radius and
- * sizes at the web density (DR-307).
+ * sizes at the web density (DR-307), colors and shadows in the web theme (DR-311).
  */
 function tokensCss(): string {
   const text = web.textStyles.flatMap((s) => [
@@ -49,13 +50,13 @@ function tokensCss(): string {
     `/* ${HEADER} */`,
     '',
     '/* The light theme is the default; `data-theme` on the root picks one explicitly. */',
-    block(':root,\n[data-theme="light"]', themed('light')),
+    block(':root,\n[data-theme="light"]', themed('light', 'web')),
     '',
-    block('[data-theme="dark"]', themed('dark')),
+    block('[data-theme="dark"]', themed('dark', 'web')),
     '',
     '/* Follows the operating system until a script sets `data-theme` (DR-182). */',
     '@media (prefers-color-scheme: dark) {',
-    block(':root:not([data-theme="light"])', themed('dark'), '  '),
+    block(':root:not([data-theme="light"])', themed('dark', 'web'), '  '),
     '}',
     '',
     block(':root', [

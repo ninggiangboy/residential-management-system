@@ -73,7 +73,8 @@ export function TextField({
         {suffix && (
           <span
             ref={suffixRef}
-            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-secondary text-ink-muted">
+            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-body text-ink-muted"
+          >
             {suffix}
           </span>
         )}

@@ -458,7 +458,7 @@ function HistoryPage({
   if (page.isPending)
     return (
       <ul
-        className="divide-y divide-line rounded-card border border-line bg-surface shadow-raised"
+        className="divide-y divide-line rounded-card border border-line bg-surface shadow-panel"
         aria-hidden="true"
       >
         {[0, 1, 2].map((row) => (
@@ -485,7 +485,7 @@ function HistoryPage({
     return <EmptyState icon="clock" title={t('web.unit-detail.history.empty')} />
   return (
     <>
-      <ul className="motion-fade divide-y divide-line rounded-card border border-line bg-surface shadow-raised">
+      <ul className="motion-fade divide-y divide-line rounded-card border border-line bg-surface shadow-panel">
         {items.map((item) => (
           <li key={item.id} className="flex items-start gap-3 px-4 py-3">
             <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-control bg-teal-soft text-on-teal-soft">

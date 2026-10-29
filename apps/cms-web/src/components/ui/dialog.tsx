@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils'
 import { Button, IconButton } from './button'
 import { Skeleton } from './skeleton'
 
-const OVERLAY = 'motion-overlay fixed inset-0 bg-scrim'
+const OVERLAY = 'motion-overlay fixed inset-0 bg-scrim backdrop-blur-[2px]'
 
 /** The dialogs that are open now, oldest first: a dialog opened over another takes the next layer. */
 const openDialogs: string[] = []
@@ -76,8 +76,10 @@ export function useExit(onClose: () => void) {
 /** A label and a field in the size of `TextField`: the shape a loading form shows in its place. */
 export function FieldSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)} aria-hidden="true">
-      <Skeleton className="h-4 w-28" />
+    <div className={cn('flex flex-col gap-2', className)} aria-hidden="true">
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-3.5 w-28" />
+      </div>
       <Skeleton className="h-control-md" />
     </div>
   )
@@ -128,7 +130,7 @@ export function Dialog({
           onInteractOutside={(event) => !dismissible && event.preventDefault()}
           onEscapeKeyDown={(event) => !dismissible && event.preventDefault()}
           className={cn(
-            'fixed flex flex-col border-line bg-surface shadow-float outline-none',
+            'fixed flex flex-col overflow-hidden border-line bg-surface shadow-float outline-none',
             // The side panel runs the full height of the window; the centred dialog stops at 90% of it.
             variant === 'side'
               ? 'motion-sheet inset-y-0 right-0 w-full max-w-[480px] rounded-l-card border-l'
@@ -156,7 +158,7 @@ export function Dialog({
             {shown.children}
           </div>
           {shown.footer && (
-            <div className="gutter-stable flex items-center justify-end gap-2 overflow-hidden border-t border-line px-5 py-3">
+            <div className="gutter-stable flex items-center justify-end gap-2 overflow-hidden border-t border-line bg-surface-muted px-5 py-3">
               {shown.footer}
             </div>
           )}

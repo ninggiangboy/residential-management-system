@@ -131,10 +131,19 @@ function LoginPage(): ReactElement {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-      <aside className="hidden flex-col justify-between bg-gradient-to-br from-hero-from to-hero-to p-12 text-on-hero lg:flex">
+      {/* Two soft lights give the hero gradient depth: a wide one from the top corner, a faint one at the bottom (DR-311). */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-hero-from to-hero-to p-12 text-on-hero lg:flex">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-48 -top-48 size-[640px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--on-hero)_14%,transparent),transparent)]"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-56 -left-32 size-[560px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--hero-from)_70%,transparent),transparent)]"
+        />
         {/* As tall as the name and the hotline line while E-03 loads, so the text below does not move when they arrive
             (DR-306); `#boot` of `index.html` draws the same two bars before the scripts run. */}
-        <div className="min-h-[60px]">
+        <div className="relative min-h-[60px]">
           {brand.loading ? (
             <>
               <Skeleton immediate className="h-8 w-64 bg-on-hero/20" />
@@ -152,12 +161,12 @@ function LoginPage(): ReactElement {
             </p>
           )}
         </div>
-        <div className="motion-fade max-w-md">
+        <div className="motion-fade relative max-w-md">
           <h2 className="text-display">{t('web.login.hero.subtitle')}</h2>
           <ul className="mt-8 flex flex-col gap-4">
             {(['point1', 'point2', 'point3'] as const).map((point, index) => (
               <li key={point} className="flex items-center gap-3 text-body">
-                <span className="flex size-10 items-center justify-center rounded-control bg-on-hero/15">
+                <span className="flex size-10 items-center justify-center rounded-control bg-on-hero/12 ring-1 ring-inset ring-on-hero/15">
                   <Icon name={(['note-pencil', 'buildings', 'wallet'] as const)[index] ?? 'info'} />
                 </span>
                 {t(`web.login.hero.${point}`)}
@@ -173,60 +182,63 @@ function LoginPage(): ReactElement {
           <ThemeSwitch />
           <LanguageSwitch />
         </div>
-        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center gap-6">
-          <div>
-            <h1 className="text-title-1 text-ink">{t('web.login.title')}</h1>
-            <p className="mt-1 text-secondary text-ink-muted">{t('web.login.subtitle')}</p>
-          </div>
-          {failure && <Banner tone={failure.tone}>{failure.text}</Banner>}
-          {!failure && reasonBanner && <Banner tone="info">{reasonBanner}</Banner>}
-          <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-            <TextField
-              type="email"
-              name="email"
-              autoComplete="username"
-              label={t('web.login.field.email.label')}
-              placeholder={t('web.login.field.email.placeholder')}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              error={fieldError}
-            />
-            <TextField
-              ref={passwordRef}
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              label={t('web.login.field.password.label')}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center gap-5">
+          {/* The form rises on a card from the ground, like every other surface (DR-311). */}
+          <div className="flex flex-col gap-6 rounded-card border border-line bg-surface p-8 shadow-panel">
             <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  void navigate({
-                    to: '/login',
-                    search: { ...search, dialog: 'forgot' },
-                    state: OPENED_HERE,
-                  })
-                }
-              >
-                {t('web.login.action.forgot')}
-              </Button>
+              <h1 className="text-title-1 text-ink">{t('web.login.title')}</h1>
+              <p className="mt-1 text-secondary text-ink-muted">{t('web.login.subtitle')}</p>
             </div>
-            <Button
-              type="submit"
-              size="lg"
-              block
-              loading={pending}
-              disabled={locked || email.trim() === '' || password === ''}
-            >
-              {t('web.login.cta')}
-            </Button>
-          </form>
-          <p className="text-secondary text-ink-muted">{t('web.login.hint.apps')}</p>
-          <p className="text-caption text-ink-muted">{t('web.login.footer')}</p>
+            {failure && <Banner tone={failure.tone}>{failure.text}</Banner>}
+            {!failure && reasonBanner && <Banner tone="info">{reasonBanner}</Banner>}
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <TextField
+                type="email"
+                name="email"
+                autoComplete="username"
+                label={t('web.login.field.email.label')}
+                placeholder={t('web.login.field.email.placeholder')}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                error={fieldError}
+              />
+              <TextField
+                ref={passwordRef}
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                label={t('web.login.field.password.label')}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    void navigate({
+                      to: '/login',
+                      search: { ...search, dialog: 'forgot' },
+                      state: OPENED_HERE,
+                    })
+                  }
+                >
+                  {t('web.login.action.forgot')}
+                </Button>
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                block
+                loading={pending}
+                disabled={locked || email.trim() === '' || password === ''}
+              >
+                {t('web.login.cta')}
+              </Button>
+            </form>
+          </div>
+          <p className="px-1 text-secondary text-ink-muted">{t('web.login.hint.apps')}</p>
+          <p className="px-1 text-caption text-ink-muted">{t('web.login.footer')}</p>
         </div>
       </main>
       {search.dialog === 'forgot' && (
