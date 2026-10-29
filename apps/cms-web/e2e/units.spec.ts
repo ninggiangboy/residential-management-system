@@ -63,6 +63,17 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     await expect(page.getByText('Không có căn nào khớp bộ lọc')).toBeVisible()
   })
 
+  test('the floor select lists every floor of the building, whatever floor is picked (DR-309)', async ({
+    page,
+  }) => {
+    await signInAndWait(page, 'manager')
+    await addUnit(page, unique('F').toUpperCase().slice(0, 7), '12')
+    await addUnit(page, unique('F').toUpperCase().slice(0, 7), '13')
+    await page.goto('/units?floor=12')
+    await page.getByRole('combobox', { name: 'Tầng' }).click()
+    await expect(page.getByRole('option', { name: '13', exact: true })).toBeVisible()
+  })
+
   test('give a person to a unit, transfer the ownership, and manage a member (UIWR-07…14, 24…28)', async ({
     page,
   }) => {
