@@ -36,6 +36,8 @@ bun run test               # unit tests of every workspace (bun test, no databas
 bun run test:coverage      # the same with lcov (CI `unit` job)
 bun run dev [api web rapp sapp]   # restarts the named dev servers (all when none is named): API :3000, Vite :5173, Metro :8081/:8082; `bun run stop` stops them
 bun run dev:web            # Vite for apps/cms-web on :5173
+bun run tunnel:setup       # once: Cloudflare named tunnel `rms-dev`, DNS for local-web-admin-rms.nigb.dev and local-api-rms.nigb.dev (browser login)
+bun run tunnel             # restarts api + web for the tunnel and runs it (public, local only); Ctrl-C stops all
 bun run test:e2e            # Playwright flows of the web CMS: a cloned seeded database, the API on :3100 and Vite on :5173 (stop dev:web first); needs infra:up
 bun run --filter @app/api dev      # API on :3000, ops port :3001 (/health/ready, /metrics); --watch, reads .env.local
 bun run tokens:build       # regenerate packages/design-tokens/generated/ from tokens.json
