@@ -196,7 +196,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 (flows "transfer ownership" and "chang
 
 ### 3. Prototype
 
-Artboard `W-Unit-Detail` (canvas title "BQL: Chi tiết căn hộ", 1440 × 900). Regions: shell with breadcrumb "Cư dân / Căn hộ / A-1508"; header row (`Plate` large with the code, h1 "Tầng 15, 3 phòng ngủ, 85 m²", status `Tag`, subtitle "Chủ hộ Trần Minh Anh, 0912 345 678", button "Sửa thông tin căn"); `Tabs` (Thành viên 3, Phương tiện 2, Phí và công nợ, Phiếu hỗ trợ); left column: members table (Thành viên with `Avatar` and role, SĐT đăng nhập, Quyền, Trạng thái `Tag`, Thao tác with two ghost buttons) and an info line; right column: card "Công nợ hiện tại" (amount, two batches with `Plate` codes) and card "Phương tiện" (two plates with status tags).
+Artboard `W-Unit-Detail` (canvas title "BQL: Chi tiết căn hộ", 1440 × 900). Regions: shell with breadcrumb "Cư dân / Căn hộ / A-1508"; header row (`Plate` large with the code, h1 "Tầng 15, 3 phòng ngủ, 85 m²", status `Tag`, subtitle "Chủ hộ Trần Minh Anh, 0912 345 678", button "Sửa thông tin căn"); `Tabs` (Thành viên 3, Phương tiện 2, Phí và công nợ, Phiếu hỗ trợ); left column: members table (Thành viên with `Avatar` and role, SĐT đăng nhập, Quyền, Trạng thái `Tag`, Thao tác with ghost buttons; a tenant's Quyền cell holds the labelled switch "Được phép thanh toán") and an info line; right column: card "Công nợ hiện tại" (amount, two batches with `Plate` codes) and card "Phương tiện" (two plates with status tags).
 
 Do not copy:
 
@@ -212,7 +212,8 @@ Do not copy:
 | Header | `Plate` lg, `Tag` (unit status), `Button` outline "Sửa thông tin căn", `Button` outline "Chuyển chủ hộ" (hidden when the unit has no owner; then `Button` primary "Gán chủ hộ" to `/residents/new?unitId=`) | always |
 | Tabs | `Tabs` with `members` and `history` | P1 |
 | Members table | `Avatar`, text, `Tag` (membership status), `Button` ghost (row actions), `IconButton` `dots-three` for the overflow menu | one row per non-removed membership, owner first |
-| Row actions | owner: "Đổi SĐT", "Khóa" / "Mở khóa"; others: "Đổi SĐT", "Khóa" / "Mở khóa", "Xóa"; overflow menu on a family member or a tenant: "Đổi thành Người thuê" / "Đổi thành Thành viên gia đình"; on a tenant also a switch "Được phép thanh toán" | per row |
+| Row actions | owner: "Đổi SĐT", "Khóa" / "Mở khóa"; others: "Đổi SĐT", "Khóa" / "Mở khóa", "Xóa"; overflow menu on a family member or a tenant: "Đổi thành Người thuê" / "Đổi thành Thành viên gia đình" | per row |
+| Permission cell | text of the role; on a tenant also a labelled switch "Được phép thanh toán" under the text (a permission, not a row action) | per row |
 | History list | `ListItem`-style rows: kind, actor, details, time | tab `history` |
 | Dialogs | `Dialog` (edit unit, transfer, change phone, confirm lock, confirm unlock, confirm remove) | by `dialog` |
 
@@ -235,7 +236,7 @@ Do not copy:
 | "Mở khóa" → confirm | E-69 `{status:"active"}` | row becomes "Đang dùng" | 409 `invalid_transition` → refetch |
 | "Xóa" → confirm | E-69 `{status:"removed"}` | row disappears; history gets `member_removed` | 409 `owner_must_transfer` (the owner's row has no "Xóa"; shown if raced) → message with a link to the transfer dialog |
 | "Đổi thành …" | E-69 `{memberType}` | row role changes | 409 `invalid_transition` → refetch |
-| Switch "Được phép thanh toán" | E-69 `{canPay}` (tenant only) | switch settles; no optimistic update, the switch is disabled while the call runs | 422 `can_pay_tenant_only` (not reachable from the UI); 409 → refetch |
+| Switch "Được phép thanh toán" | E-69 `{canPay}` (tenant only) | the thumb moves to the value being saved at once, then the switch is disabled while the call runs (no spinner); the cache is not updated before the answer, and the thumb returns if the call fails | 422 `can_pay_tenant_only` (not reachable from the UI); 409 → refetch |
 | Open the member's name | none | navigate to `/residents?dialog=profile&accountId=…` (the profile dialog of `W-Residents`) | |
 
 Every successful write above refetches E-59 and, for E-61, E-60 and E-69 removals, E-62. A member's own sessions end by `credential_version` (the person's next request is 403 `membership_inactive`, DOC-27 §6); this page does not show sessions.
@@ -288,8 +289,8 @@ Loading: header and table skeleton. Not found: E-59 404 → `NotFound` with a li
 | `web.unit-detail.col.actions` | Thao tác | Actions |
 | `web.unit-detail.permission.owner` | Toàn quyền, quản lý thành viên | Full access, manages members |
 | `web.unit-detail.permission.family` | Như chủ hộ, trừ quản lý thành viên | Same as the owner, except managing members |
-| `web.unit-detail.permission.tenant-pay` | Như chủ hộ, trừ quản lý thành viên; được thanh toán | Same as the owner, except managing members; may pay |
-| `web.unit-detail.permission.tenant-nopay` | Như chủ hộ, trừ quản lý thành viên; không thanh toán | Same as the owner, except managing members; may not pay |
+| `web.unit-detail.permission.tenant` | Như chủ hộ, trừ quản lý thành viên | Same as the owner, except managing members |
+| `web.unit-detail.permission.can-pay` | Được phép thanh toán | May pay |
 | `web.unit-detail.permission.helper` | Bản tin chung và mã QR | General notices and QR code |
 | `web.unit-detail.action.change-phone` | Đổi SĐT | Change phone |
 | `web.unit-detail.action.lock` | Khóa | Lock |
@@ -297,7 +298,6 @@ Loading: header and table skeleton. Not found: E-59 404 → `NotFound` with a li
 | `web.unit-detail.action.remove` | Xóa | Remove |
 | `web.unit-detail.action.retype-tenant` | Đổi thành Người thuê | Change to Tenant |
 | `web.unit-detail.action.retype-family` | Đổi thành Thành viên gia đình | Change to Family member |
-| `web.unit-detail.action.can-pay` | Được phép thanh toán | May pay |
 | `web.unit-detail.locked-by.manager` | Khóa bởi BQL | Locked by the office |
 | `web.unit-detail.locked-by.owner` | Khóa bởi chủ hộ | Locked by the owner |
 | `web.unit-detail.banner.members` | Thành viên do chủ hộ tạo trên App cư dân; BQL xem và khóa, xóa khi cần. | Members are added by the owner in the resident app; the office can view, lock and remove them. |
@@ -348,7 +348,7 @@ Errors use `error.version_conflict`, `error.unit_code_in_use`, `error.member_exi
 | UIWR-09 | **Given** a second Manager edited the unit after this page loaded **When** the first confirms a transfer **Then** the 409 `version_conflict` message shows, the page refetches, the typed phone and reason stay in the form, and nothing was transferred | web-e2e |
 | UIWR-10 | **Given** the change-phone dialog **When** the new number already has an account **Then** the field shows "This number already belongs to another account." (`phone_in_use`), the dialog stays open and the sessions of the person are not revoked | web-e2e |
 | UIWR-11 | **Given** a family member **When** the Manager locks, unlocks and removes them **Then** the tag reads "Đã khóa", then "Đang dùng", then the row disappears and the history tab shows `member_removed` without a name or phone | web-e2e |
-| UIWR-12 | **Given** a tenant **When** the Manager switches "Được phép thanh toán" **Then** E-69 `{canPay:true}` is sent, the switch is disabled during the call, and the permission text becomes "…; được thanh toán" | web-e2e |
+| UIWR-12 | **Given** a tenant **When** the Manager switches "Được phép thanh toán" **Then** E-69 `{canPay:true}` is sent, the thumb moves at once and the switch is disabled during the call, and the switch stays labelled "Được phép thanh toán" in the Quyền cell | web-e2e |
 | UIWR-13 | **Given** the owner row **Then** it offers no "Xóa" and no retype; a raced removal answering `owner_must_transfer` shows the message with a link that opens the transfer dialog | web-e2e |
 | UIWR-14 | **Given** a vacant unit with no owner **Then** the subtitle says "Chưa có chủ hộ" and the primary button opens `/residents/new?unitId=<id>` | web-e2e |
 | UIWR-15 | **Given** a unit of another building **When** its id is opened **Then** E-59 answers 404 and the page is `NotFound` | api |

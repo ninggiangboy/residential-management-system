@@ -41,12 +41,7 @@ type Row = UnitMember
 
 type Confirm = { kind: 'lock' | 'unlock' | 'remove'; member: Row }
 
-const permissionKey = (member: Row) =>
-  member.memberType === 'tenant'
-    ? member.canPay
-      ? 'web.unit-detail.permission.tenant-pay'
-      : 'web.unit-detail.permission.tenant-nopay'
-    : (`web.unit-detail.permission.${member.memberType}` as const)
+const permissionKey = (member: Row) => `web.unit-detail.permission.${member.memberType}` as const
 
 /** `W-Unit-Detail` (DOC-65): the members of one unit and the actions on them, the owner transfer, and the unit's history. */
 export function UnitDetailPage({ unitId, search }: { unitId: string; search: UnitDetailSearch }) {
@@ -101,6 +96,13 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
       : []),
     ...detail.members,
   ]
+  /** The value of the switch while its call runs: the one being saved, so the thumb moves at once and returns if the call fails. */
+  const savingCanPay = (member: Row) => {
+    const sent = membership.variables
+    return membership.isPending && sent?.id === member.membershipId && 'canPay' in sent.change
+      ? sent.change.canPay
+      : member.canPay
+  }
   const dialogMember = rows.find((row) => row.membershipId === search.membershipId)
 
   const change = (
@@ -233,8 +235,25 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
                         </div>
                       </Td>
                       <Td>{formatPhone(member.phone)}</Td>
-                      <Td className="max-w-64 text-secondary text-ink-muted">
-                        {t(permissionKey(member))}
+                      <Td className="max-w-72">
+                        <p className="text-secondary text-ink-muted">{t(permissionKey(member))}</p>
+                        {member.memberType === 'tenant' && (
+                          <div className="mt-2 flex w-fit items-center gap-2">
+                            <Switch
+                              id={`can-pay-${member.membershipId}`}
+                              checked={savingCanPay(member)}
+                              disabled={!canWrite || working}
+                              label={t('web.unit-detail.permission.can-pay')}
+                              onCheckedChange={(canPay) => change(member, { canPay })}
+                            />
+                            <label
+                              htmlFor={`can-pay-${member.membershipId}`}
+                              className="cursor-pointer text-secondary text-ink"
+                            >
+                              {t('web.unit-detail.permission.can-pay')}
+                            </label>
+                          </div>
+                        )}
                       </Td>
                       <Td>
                         <div className="flex flex-col items-start gap-1">
@@ -252,14 +271,6 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
                       </Td>
                       <Td>
                         <div className="flex items-center gap-2">
-                          {member.memberType === 'tenant' && (
-                            <Switch
-                              checked={member.canPay}
-                              disabled={!canWrite || working}
-                              label={t('web.unit-detail.action.can-pay')}
-                              onCheckedChange={(canPay) => change(member, { canPay })}
-                            />
-                          )}
                           <Button
                             size="sm"
                             variant="ghost"
