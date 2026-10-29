@@ -24,6 +24,13 @@ export interface UnitsSearch extends UnitFilters {
 
 const ALL = '__all__'
 
+/** The values the building has, plus the one in the URL when no unit has it any more, ascending. */
+const withPicked = (values: number[] | undefined, picked: number | undefined) => {
+  const seen = new Set(values ?? [])
+  if (picked !== undefined) seen.add(picked)
+  return [...seen].sort((a, b) => a - b)
+}
+
 /** `W-Units` (DOC-65): the unit list with filters in the URL, a cursor pager that remembers the pages it has seen, and "Thêm căn". */
 export function UnitsPage({ search }: { search: UnitsSearch }) {
   const { t, lang, formatPhone } = useI18n()
@@ -57,12 +64,12 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
 
   const data = query.data
   const rowsKey = useIdentityKey(query.data)
-  const floors = useMemo(() => {
-    const seen = new Set<number>()
-    for (const item of data?.items ?? []) if (item.floor !== null) seen.add(item.floor)
-    if (search.floor !== undefined) seen.add(search.floor)
-    return [...seen].sort((a, b) => a - b)
-  }, [data, search.floor])
+  // The building's floors and bedroom counts from the summary, which ignores the filters: picking one keeps the others (DR-309).
+  const floors = useMemo(() => withPicked(data?.summary.floors, search.floor), [data, search.floor])
+  const bedrooms = useMemo(
+    () => withPicked(data?.summary.bedrooms, search.bedrooms),
+    [data, search.bedrooms],
+  )
 
   const filter = (patch: Partial<UnitsSearch>) => {
     visited.current = []
@@ -143,7 +150,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
           onValueChange={(value) => filter({ bedrooms: value === ALL ? undefined : Number(value) })}
           options={[
             { value: ALL, label: t('web.units.field.bedrooms.all') },
-            ...[0, 1, 2, 3, 4, 5].map((count) => ({
+            ...bedrooms.map((count) => ({
               value: String(count),
               label: t('web.units.field.bedrooms.option', { count }),
             })),
