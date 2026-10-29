@@ -162,7 +162,7 @@ function TopBar() {
   const me = useQuery(staffMeQuery()).data
   const language = useChangeLanguage(() => toast.error(t('web.shell.language.failed')))
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-8">
+    <header className="gutter-stable flex h-16 shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-line bg-surface px-8">
       <nav aria-label={t('web.shell.breadcrumb.label')}>
         <ol className="flex items-center gap-2 text-secondary text-ink-muted">
           {crumbs?.map((crumb, index) => {
@@ -225,7 +225,11 @@ export function AppShell({ role, children }: { role: StaffRole; children: ReactN
       <div className="flex min-h-screen items-center justify-center p-8 text-center md:hidden">
         <p className="max-w-sm text-body text-ink-muted">{t('web.shell.unsupported')}</p>
       </div>
-      <div className="hidden min-h-screen md:flex">
+      {/*
+        Clipped: the page area rises 4 px as it arrives (`motion-page`), and without the clip those 4 px overflow the window and
+        flash a window scrollbar that narrows the whole shell for the length of the animation (DOC-54 §17.5).
+      */}
+      <div className="hidden h-screen overflow-clip md:flex">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-surface focus:px-4 focus:py-2"
@@ -240,8 +244,18 @@ export function AppShell({ role, children }: { role: StaffRole; children: ReactN
               {t('web.shell.offline')}
             </div>
           )}
-          {/* Keyed by the page route (not its dialogs, not its search), so a new page fades in and a filter does not. */}
-          <main key={pageKey} id="main" className="motion-page min-w-0 flex-1 px-8 pb-10 pt-7">
+          {/*
+            Keyed by the page route (not its dialogs, not its search), so a new page fades in and a filter does not. The page
+            area scrolls, not the window: the top bar stays, and a `ListPage` can end its table at the bottom of the window.
+            It keeps its scrollbar's room (`gutter-stable`, like the top bar and the loading frames), so a page growing past
+            the window does not shift sideways.
+          */}
+          <main
+            key={pageKey}
+            id="main"
+            data-scroll-restoration-id="main"
+            className="motion-page gutter-stable min-h-0 min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-7"
+          >
             {children}
           </main>
         </div>

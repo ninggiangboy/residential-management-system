@@ -99,7 +99,8 @@ export function Dialog({
             variant === 'center' && (width ?? 'max-w-[480px]'),
           )}
         >
-          <div className="flex items-start justify-between gap-4 p-6 pb-2">
+          {/* The body keeps its scrollbar's room, and the header and footer the same, so their right edges line up. */}
+          <div className="gutter-stable flex items-start justify-between gap-4 overflow-hidden p-6 pb-2">
             <div>
               <RadixDialog.Title className="text-title-2 text-ink">{shown.title}</RadixDialog.Title>
               {shown.description ? (
@@ -114,9 +115,9 @@ export function Dialog({
               <IconButton icon="x" label={t('common.action.close')} size="sm" disabled={!dismissible} />
             </RadixDialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2">{shown.children}</div>
+          <div className="gutter-stable min-h-0 flex-1 overflow-y-auto px-6 py-2">{shown.children}</div>
           {shown.footer && (
-            <div className="flex items-center justify-end gap-3 p-6 pt-4">
+            <div className="gutter-stable flex items-center justify-end gap-3 overflow-hidden p-6 pt-4">
               {shown.footer}
             </div>
           )}
@@ -155,8 +156,11 @@ export function ConfirmDialog({
 }) {
   const t = useT()
   const shown = useHeld({ title, body, confirmLabel, tone, children }, open)
+  // The call that closes the dialog answers in the same render: the button keeps its spinner while the dialog leaves, rather
+  // than turning back to its colour first (DR-306).
+  const busy = useHeld(loading, open)
   return (
-    <AlertDialog.Root open={open} onOpenChange={(next) => (!loading || next) && onOpenChange(next)}>
+    <AlertDialog.Root open={open} onOpenChange={(next) => (!busy || next) && onOpenChange(next)}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={OVERLAY} />
         <AlertDialog.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card bg-surface p-6 shadow-float outline-none">
@@ -167,13 +171,13 @@ export function ConfirmDialog({
           {shown.children && <div className="mt-4">{shown.children}</div>}
           <div className="mt-6 flex justify-end gap-3">
             <AlertDialog.Cancel asChild>
-              <Button variant="ghost" disabled={loading}>
+              <Button variant="ghost" disabled={busy}>
                 {t('common.action.cancel')}
               </Button>
             </AlertDialog.Cancel>
             <Button
               variant={shown.tone === 'danger' ? 'danger' : 'primary'}
-              loading={loading}
+              loading={busy}
               disabled={confirmDisabled}
               onClick={(event) => {
                 // The dialog stays open until the call answers; the caller closes it.

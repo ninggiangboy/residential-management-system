@@ -51,31 +51,35 @@ export function Button({
   ...props
 }: ButtonProps) {
   // The button is disabled at once; the spinner shows only for a call that lasts over 150 ms, then for at least 400 ms, so a
-  // fast answer does not flash it (DR-306).
+  // fast answer does not flash it (DR-306). The spinner sits over the centre and the label turns transparent beneath it, so the
+  // button keeps its width and the row around it does not move (DOC-54 §17).
   const spinning = useDelayedFlag(Boolean(loading))
   return (
     <button
       ref={ref}
       type={type}
-      className={cn(buttonStyles({ variant, size, block }), className)}
+      className={cn(
+        buttonStyles({ variant, size, block }),
+        'relative',
+        spinning && 'disabled:text-transparent',
+        className,
+      )}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}
     >
-      {spinning ? <Spinner /> : icon ? <Icon name={icon} size={size === 'lg' ? 'md' : 'sm'} /> : null}
+      {icon && <Icon name={icon} size={size === 'lg' ? 'md' : 'sm'} />}
       {children}
+      {spinning && <Spinner />}
     </button>
   )
 }
 
-function Spinner({ className }: { className?: string }) {
+function Spinner() {
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        'inline-block size-icon-sm animate-spin rounded-full border-2 border-current border-t-transparent',
-        className,
-      )}
+      className="absolute inset-0 m-auto size-icon-sm animate-spin rounded-full border-2 border-ink-disabled border-t-transparent"
     />
   )
 }

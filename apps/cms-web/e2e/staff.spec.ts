@@ -110,10 +110,43 @@ test.describe('W-Staff and W-Staff-New (UIWS-01…16)', () => {
     await signInAndWait(page, 'manager')
     await page.goto('/staff')
     const row = page.getByRole('row', { name: new RegExp(STAFF.technician.name) })
+    // Each call answers after 600 ms, so the busy state is on screen long enough to look at (DOC-54 §17).
+    await page.route(/\/staff\/accounts\/[^/]+\/(lock|unlock)$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      await route.continue()
+    })
     await row.getByRole('button', { name: 'Khóa' }).click()
+    // Frame by frame: while the dialog leaves, its confirm button is still busy; it does not turn back to red first.
+    await page.evaluate(() => {
+      const w = window as unknown as { __exit: { busy: number; idle: number } }
+      w.__exit = { busy: 0, idle: 0 }
+      const start = performance.now()
+      const tick = () => {
+        const closing = document.querySelector('[role=alertdialog][data-state=closed]')
+        if (closing) {
+          if (closing.querySelector('button[aria-busy=true]')) w.__exit.busy++
+          else w.__exit.idle++
+        }
+        if (performance.now() - start < 3000) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
     await page.getByRole('alertdialog').getByRole('button', { name: 'Khóa tài khoản' }).click()
     await expect(row).toContainText('Đã khóa')
-    await row.getByRole('button', { name: 'Mở khóa' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    const exit = await page.evaluate(
+      () => (window as unknown as { __exit: { busy: number; idle: number } }).__exit,
+    )
+    expect(exit.busy).toBeGreaterThan(0)
+    expect(exit.idle).toBe(0)
+    // Unlock has no dialog: its own button shows the call.
+    const unlock = row.getByRole('button', { name: 'Mở khóa' })
+    const before = await unlock.boundingBox()
+    await unlock.click()
+    await expect(unlock).toHaveAttribute('aria-busy', 'true')
+    await expect(unlock.locator('.animate-spin')).toBeVisible()
+    // The spinner sits over the label, so the button and the row around it keep their size.
+    expect((await unlock.boundingBox())?.width).toBe(before?.width)
     await expect(row).toContainText('Đang hoạt động')
   })
 

@@ -6,7 +6,7 @@ import { apiErrorOf } from '../../api/errors'
 import { Button, buttonStyles, IconButton } from '../../components/ui/button'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { Icon } from '../../components/ui/icon'
-import { PageHeader } from '../../components/ui/page'
+import { ListPage, PageHeader } from '../../components/ui/page'
 import { SelectField } from '../../components/ui/select-field'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
@@ -75,10 +75,10 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
         <Th className="w-20">{t('web.units.col.floor')}</Th>
         <Th className="w-24">{t('web.units.col.type')}</Th>
         <Th className="w-28">{t('web.units.col.area')}</Th>
-        <Th className="w-36">{t('web.units.col.status')}</Th>
+        <Th className="w-40">{t('web.units.col.status')}</Th>
         <Th>{t('web.units.col.owner')}</Th>
         <Th className="w-28">{t('web.units.col.members')}</Th>
-        <Th className="w-10">
+        <Th className="w-17">
           <span className="sr-only">{t('web.unit-detail.col.actions')}</span>
         </Th>
       </Tr>
@@ -91,7 +91,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
     search.bedrooms !== undefined
 
   return (
-    <>
+    <ListPage>
       <PageHeader
         title={t('web.units.title')}
         subtitleLoading={!data}
@@ -326,6 +326,6 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
         open={dialog === 'add'}
         onClose={() => void navigate({ to: '/units', search: { ...search, dialog: undefined } })}
       />
-    </>
+    </ListPage>
   )
 }

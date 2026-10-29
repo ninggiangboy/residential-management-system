@@ -2,6 +2,14 @@ import type { ReactNode } from 'react'
 import { Skeleton } from './skeleton'
 
 /**
+ * A list screen (`W-Units`, `W-Residents`, `W-Staff`): as tall as the page area, so its `DataTable` stops at the bottom of the
+ * window and scrolls its rows inside; the header, the filters and the pager stay in view.
+ */
+export function ListPage({ children }: { children: ReactNode }) {
+  return <div className="flex h-full min-h-0 flex-col">{children}</div>
+}
+
+/**
  * The page header of every `W-` screen: `h1` (title-1), one line of subtitle, actions at the right (DOC-54 §8.1). A subtitle
  * that comes from data passes `subtitleLoading` while it loads: the line keeps its height, so the filters below do not jump.
  */
