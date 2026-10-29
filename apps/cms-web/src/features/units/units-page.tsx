@@ -11,6 +11,7 @@ import { SelectField } from '../../components/ui/select-field'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
+import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
@@ -35,6 +36,7 @@ const withPicked = (values: number[] | undefined, picked: number | undefined) =>
 export function UnitsPage({ search }: { search: UnitsSearch }) {
   const { t, lang, formatPhone } = useI18n()
   const navigate = useNavigate()
+  const closeOverlay = useCloseOverlay()
   const canWrite = useCanWrite()
   const [typed, setTyped] = useState(search.q ?? '')
   const debounced = useDebounced(typed.trim())
@@ -73,7 +75,11 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
 
   const filter = (patch: Partial<UnitsSearch>) => {
     visited.current = []
-    void navigate({ to: '/units', search: { ...search, ...patch, cursor: undefined } })
+    void navigate({
+      to: '/units',
+      search: { ...search, ...patch, cursor: undefined },
+      replace: true,
+    })
   }
   const head = (
     <THead>
@@ -120,7 +126,13 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
             <Button
               icon="plus"
               disabled={!canWrite}
-              onClick={() => void navigate({ to: '/units', search: { ...search, dialog: 'add' } })}
+              onClick={() =>
+                void navigate({
+                  to: '/units',
+                  search: { ...search, dialog: 'add' },
+                  state: OPENED_HERE,
+                })
+              }
             >
               {t('web.units.cta')}
             </Button>
@@ -192,7 +204,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                 onClick={() => {
                   setTyped('')
                   visited.current = []
-                  void navigate({ to: '/units', search: { limit: search.limit } })
+                  void navigate({ to: '/units', search: { limit: search.limit }, replace: true })
                 }}
               >
                 {t('web.units.action.clear-filters')}
@@ -212,7 +224,11 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                 <Button
                   icon="plus"
                   onClick={() =>
-                    void navigate({ to: '/units', search: { ...search, dialog: 'add' } })
+                    void navigate({
+                      to: '/units',
+                      search: { ...search, dialog: 'add' },
+                      state: OPENED_HERE,
+                    })
                   }
                 >
                   {t('web.units.cta')}
@@ -240,7 +256,11 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                     disabled={search.cursor === undefined}
                     onClick={() => {
                       const previous = visited.current.pop()
-                      void navigate({ to: '/units', search: { ...search, cursor: previous } })
+                      void navigate({
+                        to: '/units',
+                        search: { ...search, cursor: previous },
+                        replace: true,
+                      })
                     }}
                   />
                   <IconButton
@@ -253,6 +273,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                       void navigate({
                         to: '/units',
                         search: { ...search, cursor: data.nextCursor ?? undefined },
+                        replace: true,
                       })
                     }}
                   />
@@ -311,6 +332,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                       <Link
                         to="/residents/new"
                         search={{ unitId: unit.unitId }}
+                        state={OPENED_HERE}
                         onClick={(event) => event.stopPropagation()}
                         className="text-secondary text-teal underline"
                       >
@@ -330,7 +352,16 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
       )}
       <UnitAddDialog
         open={dialog === 'add'}
-        onClose={() => void navigate({ to: '/units', search: { ...search, dialog: undefined } })}
+        onClose={() =>
+          closeOverlay(
+            () =>
+              void navigate({
+                to: '/units',
+                search: { ...search, dialog: undefined },
+                replace: true,
+              }),
+          )
+        }
       />
     </ListPage>
   )

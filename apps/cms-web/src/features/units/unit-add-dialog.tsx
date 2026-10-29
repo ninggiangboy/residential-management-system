@@ -60,7 +60,12 @@ export function UnitAddDialog({ open, onClose }: { open: boolean; onClose: () =>
           toast.success(t('web.units.toast.created', { code: unit.code }))
           form.reset(EMPTY)
           intent.reset()
-          void navigate({ to: '/units/$unitId', params: { unitId: unit.unitId }, search: {} })
+          void navigate({
+            to: '/units/$unitId',
+            params: { unitId: unit.unitId },
+            search: {},
+            replace: true,
+          })
         },
         onError: (thrown) => {
           const failure = apiErrorOf(thrown)

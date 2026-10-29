@@ -44,6 +44,33 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     ).toBeVisible()
   })
 
+  test('a dialog is one history entry: the X and Back both close it and neither reopens it', async ({
+    page,
+  }) => {
+    await signInAndWait(page, 'manager')
+    await page.goto('/building')
+    await page.goto('/units')
+    await page.getByRole('button', { name: 'Thêm căn' }).first().click()
+    await expect(page).toHaveURL(/dialog=add/)
+    await page
+      .getByRole('dialog', { name: 'Thêm căn hộ' })
+      .getByRole('button', { name: /Đóng|Hủy/ })
+      .first()
+      .click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page).not.toHaveURL(/dialog=add/)
+    // The X went back one entry, so the next Back leaves the list instead of reopening the dialog.
+    await page.goBack()
+    await expect(page).toHaveURL(/\/building/)
+
+    await page.goForward()
+    await page.getByRole('button', { name: 'Thêm căn' }).first().click()
+    await expect(page.getByRole('dialog', { name: 'Thêm căn hộ' })).toBeVisible()
+    await page.goBack()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/units(\?(?!.*dialog))?$/)
+  })
+
   test('search needs two characters and the filters live in the URL (UIWR-02, 03)', async ({
     page,
   }) => {

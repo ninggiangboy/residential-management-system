@@ -16,6 +16,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { applyServerErrors, formResolver } from '../../lib/forms'
+import { useCloseOverlay } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { trackTap } from '../../lib/usage'
@@ -88,7 +89,10 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
   }, [account.data, form])
 
   // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
-  const { open, close } = useExit(() => void navigate({ to: '/staff', search }))
+  const closeOverlay = useCloseOverlay()
+  const { open, close } = useExit(() =>
+    closeOverlay(() => void navigate({ to: '/staff', search, replace: true })),
+  )
   const requestClose = () => (form.formState.isDirty ? setDiscard(true) : close())
 
   const changed = (values: Values, original: StaffAccount) => ({

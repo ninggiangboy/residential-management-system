@@ -36,6 +36,8 @@ declare module '@tanstack/react-router' {
   interface HistoryState {
     /** The address a reset link was asked for: it travels in router state only, never in the URL (DR-209). */
     email?: string
+    /** This entry was pushed by opening a dialog in this session, so closing it goes back (`lib/history.ts`). */
+    overlay?: true
   }
   interface StaticDataRouteOption {
     /** The breadcrumb "Group / Page" (DOC-64 shell): a catalog key and the page a click opens (a group opens its first page). */
