@@ -26,7 +26,7 @@ export function Checkbox({
         checked={checked}
         onCheckedChange={(value) => onCheckedChange(value === true)}
         disabled={disabled}
-        className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-plate border border-line-control bg-surface hover:border-line-strong outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:border-teal data-[state=checked]:bg-teal data-[disabled]:opacity-50"
+        className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-plate border border-line-input bg-surface shadow-field outline-none transition-[background-color,border-color,box-shadow] focus-visible:border-teal focus-visible:shadow-focus data-[state=checked]:border-teal data-[state=checked]:bg-teal data-[disabled]:opacity-50"
       >
         <RadixCheckbox.Indicator className="text-on-teal">
           <Icon name="check" weight="bold" className="size-3.5" />
@@ -67,7 +67,7 @@ export function Switch({
       onCheckedChange={onCheckedChange}
       disabled={disabled}
       aria-label={label}
-      className="relative h-5 w-9 shrink-0 rounded-full bg-line-control outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:bg-teal data-[disabled]:opacity-50"
+      className="relative h-5 w-9 shrink-0 rounded-full bg-line-input shadow-field outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus data-[state=checked]:bg-teal data-[disabled]:opacity-50"
     >
       <RadixSwitch.Thumb className="block size-4 translate-x-0.5 rounded-full bg-surface shadow-raised transition-transform data-[state=checked]:translate-x-[18px]" />
     </RadixSwitch.Root>
@@ -107,9 +107,9 @@ export function RadioCards<V extends string>({
           key={option.value}
           value={option.value}
           disabled={option.disabled}
-          className="flex items-start gap-2.5 rounded-control border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-line-control outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[disabled]:opacity-50 data-[state=checked]:border-teal data-[state=checked]:bg-teal-soft"
+          className="group flex items-start gap-2.5 rounded-control border border-line bg-surface px-3 py-2.5 text-left shadow-field transition-colors hover:bg-surface-muted outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus data-[disabled]:opacity-50 data-[state=checked]:border-teal data-[state=checked]:bg-teal-soft/40 data-[state=checked]:shadow-focus"
         >
-          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-line-control bg-surface">
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-line-input bg-surface shadow-field group-data-[state=checked]:border-teal">
             <RadioGroup.Indicator className="size-2 rounded-full bg-teal" />
           </span>
           <span>
@@ -143,7 +143,7 @@ export function Chip({
         'h-control-sm rounded-full border px-3 text-label outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-focus',
         selected
           ? 'border-teal bg-teal-soft text-on-teal-soft'
-          : 'border-line bg-surface text-ink hover:bg-ground',
+          : 'border-line bg-surface text-ink shadow-raised hover:bg-surface-muted',
       )}
     >
       {children}

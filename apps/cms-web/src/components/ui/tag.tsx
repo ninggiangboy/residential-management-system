@@ -36,7 +36,8 @@ export function Tag({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption whitespace-nowrap',
+        // A hairline ring of the text's own color keeps the soft fill crisp on white (DR-311).
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption whitespace-nowrap ring-1 ring-inset ring-current/15',
         TONE_CLASS[tone],
         className,
       )}

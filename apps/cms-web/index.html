@@ -17,21 +17,24 @@
     -->
     <div id="boot" class="fixed inset-0 z-[60] hidden bg-ground" aria-hidden="true">
       <div class="boot-shell hidden h-screen overflow-clip md:flex">
-        <aside class="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col border-r border-line bg-surface lg:w-[248px]">
-          <div class="flex flex-col gap-1.5 px-4 py-4 lg:px-5">
-            <div class="h-4.5 w-10 rounded-control bg-fill lg:w-40"></div>
-            <div class="hidden h-3 w-24 rounded-control bg-fill lg:block"></div>
+        <aside class="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col lg:w-[248px]">
+          <div class="flex items-center justify-center gap-3 px-4 py-4 lg:justify-start lg:px-5">
+            <div class="size-9 shrink-0 rounded-control bg-gradient-to-br from-hero-from to-hero-to shadow-primary"></div>
+            <div class="hidden flex-col gap-1.5 lg:flex">
+              <div class="h-4 w-32 rounded-control bg-fill"></div>
+              <div class="h-3 w-20 rounded-control bg-fill"></div>
+            </div>
           </div>
-          <div class="flex flex-1 flex-col gap-1.5 px-3">
-            <div class="h-control-sm rounded-control bg-fill"></div>
-            <div class="h-control-sm rounded-control bg-fill"></div>
-            <div class="h-control-sm rounded-control bg-fill"></div>
-            <div class="h-control-sm rounded-control bg-fill"></div>
+          <div class="flex flex-1 flex-col gap-1.5 px-3 pt-2">
+            <div class="h-control-md rounded-control bg-fill"></div>
+            <div class="h-control-md rounded-control bg-fill"></div>
+            <div class="h-control-md rounded-control bg-fill"></div>
+            <div class="h-control-md rounded-control bg-fill"></div>
           </div>
-          <div class="m-3 h-12 rounded-control bg-fill"></div>
+          <div class="m-3 h-13 rounded-card bg-fill"></div>
         </aside>
         <div class="flex min-w-0 flex-1 flex-col">
-          <div class="gutter-stable flex h-14 shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-line bg-surface px-8">
+          <div class="gutter-stable flex h-14 shrink-0 items-center justify-between gap-4 overflow-hidden px-8">
             <div class="h-4 w-40 rounded-control bg-fill"></div>
             <div class="h-8 w-56 rounded-control bg-fill"></div>
           </div>

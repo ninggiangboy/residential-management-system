@@ -25,7 +25,8 @@ export function Avatar({
   return (
     <RadixAvatar.Root
       className={cn(
-        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-teal-soft text-on-teal-soft',
+                // The avatar is drawn on the hero gradient, as on the canvas (`hero-from` usage).
+        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-hero-from to-hero-to font-semibold text-on-hero',
         SIZES[size],
         className,
       )}

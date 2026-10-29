@@ -44,6 +44,19 @@ const px = (value: string) => {
   return Number.parseFloat(value)
 }
 
+/**
+ * `web.json` `theme`: the canvas values the web draws differently (DR-311), by token and theme. Applied before the aliases
+ * resolve, so `success*` follow the `teal*` of the web.
+ */
+const recolor = (
+  tokens: readonly Themed[],
+  over: Readonly<Record<string, Partial<Record<Theme, string>>>>,
+) =>
+  tokens.map((t) => {
+    const value = over[t.name]
+    return value ? { name: t.name, value: { ...t.value, ...value } } : t
+  })
+
 function resolveAliases(tokens: readonly Themed[]): Themed[] {
   const byName = new Map(tokens.map((t) => [t.name, t]))
   const resolve = (value: string, theme: Theme, seen: string[] = []): string => {
@@ -67,6 +80,14 @@ export const colors: readonly Themed[] = [
 ]
 
 export const shadows: readonly Themed[] = [...hien.shadow.tokens, ...density.shadow]
+
+/** The tokens of each theme on the web (`tokens.css`): the lists above with `web.json` `theme` written over them. */
+const webColors: readonly Themed[] = [
+  ...resolveAliases(recolor(hien.color.tokens, density.theme.color)),
+  ...density.color,
+  ...FIXED_COLORS,
+]
+const webShadows: readonly Themed[] = recolor(shadows, density.theme.shadow)
 
 export const spacing: readonly Scale[] = hien.spacing.tokens.map((t) => ({
   name: t.name,
@@ -93,8 +114,8 @@ export const textStyles: readonly TextStyle[] = hien.type.groups.flatMap((group)
 )
 
 /**
- * The scales of the web outputs (`tokens.css`, `theme.css`): the canvas values with `web.json` written over them, by name.
- * The apps keep the canvas values (DR-307).
+ * The web outputs (`tokens.css`, `theme.css`): the scales with `web.json` written over them, by name (DR-307), and the
+ * colors and shadows of its `theme` (DR-311). The apps keep the canvas values.
  */
 const overScale = (scale: readonly Scale[], over: Readonly<Record<string, string>>): Scale[] =>
   scale.map((s) => {
@@ -105,6 +126,8 @@ const typeOver: Readonly<Record<string, (typeof density.type)[keyof typeof densi
   density.type
 
 export const web = {
+  colors: webColors,
+  shadows: webShadows,
   radius: overScale(radius, density.radius),
   sizes: overScale(sizes, density.size),
   textStyles: textStyles.map((s): TextStyle => {

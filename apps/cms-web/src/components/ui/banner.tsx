@@ -28,7 +28,11 @@ export function Banner({
   return (
     <div
       role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
-      className={cn('flex items-start gap-2.5 rounded-control px-3 py-2.5 text-secondary', style.box, className)}
+      className={cn(
+        'flex items-start gap-2.5 rounded-control px-3.5 py-3 text-secondary ring-1 ring-inset ring-current/10',
+        style.box,
+        className,
+      )}
     >
       {/* The icon sits in a box as tall as the first line, so it stays on that line's centre whether the text runs to one
           line or several, with or without a title. */}

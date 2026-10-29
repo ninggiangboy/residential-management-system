@@ -157,6 +157,40 @@
   scrollbar-gutter: stable;
 }
 
+/*
+ * The top bar shares `ground` with the page, so its bottom edge would only cut the page in two at rest: the edge fades in over
+ * the first 16 px the page scrolls under it (DR-311). The page area names a scroll timeline (`scroll-main`), the column that
+ * holds both shares its name (`timeline-main`), and the bar's border follows it. A browser without scroll timelines keeps
+ * the edge drawn; an inactive timeline (a page shorter than the window) leaves it clear.
+ */
+@keyframes rms-edge {
+  from {
+    border-bottom-color: transparent;
+  }
+  to {
+    border-bottom-color: var(--line);
+  }
+}
+@layer components {
+  .timeline-main {
+    timeline-scope: --main;
+  }
+  .scroll-main {
+    scroll-timeline: --main block;
+  }
+  .edge-on-scroll {
+    border-bottom-color: var(--line);
+  }
+  @supports (animation-timeline: scroll()) {
+    .edge-on-scroll {
+      border-bottom-color: transparent;
+      animation: rms-edge linear both;
+      animation-timeline: --main;
+      animation-range: 0 16px;
+    }
+  }
+}
+
 @layer components {
   /*
    * The web draws the regular Phosphor weight a step heavier: its line is 16 of 256 units, 1.25 px at the 20 px `icon-md` of the

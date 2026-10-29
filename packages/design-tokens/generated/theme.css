@@ -47,6 +47,8 @@
   --color-focus: var(--focus);
   --color-scrim: var(--scrim);
   --color-line-control: var(--line-control);
+  --color-line-input: var(--line-input);
+  --color-surface-muted: var(--surface-muted);
   --color-paper: var(--paper);
   --color-paper-ink: var(--paper-ink);
 }
@@ -151,4 +153,19 @@
 }
 @utility shadow-raised {
   box-shadow: var(--shadow-raised);
+}
+@utility shadow-panel {
+  box-shadow: var(--shadow-panel);
+}
+@utility shadow-primary {
+  box-shadow: var(--shadow-primary);
+}
+@utility shadow-field {
+  box-shadow: var(--shadow-field);
+}
+@utility shadow-focus {
+  box-shadow: var(--shadow-focus);
+}
+@utility shadow-invalid {
+  box-shadow: var(--shadow-invalid);
 }

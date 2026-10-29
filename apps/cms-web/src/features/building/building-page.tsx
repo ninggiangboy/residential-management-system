@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button'
 import { Card, CardSection } from '../../components/ui/card'
 import { ConfirmDialog, Dialog, FieldSkeleton } from '../../components/ui/dialog'
 import { ErrorState } from '../../components/ui/empty-state'
+import { labelStyles } from '../../components/ui/field'
 import { PageHeader } from '../../components/ui/page'
 import { SegmentedControl } from '../../components/ui/segmented-control'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -409,8 +410,8 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
                 control={form.control}
                 name="defaultLanguage"
                 render={({ field: language }) => (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-caption text-ink">
+                  <div className="flex flex-col gap-2">
+                    <span className={labelStyles}>
                       {label(t('web.building.field.language.label'), 'defaultLanguage')}
                     </span>
                     <SegmentedControl<Language>
@@ -469,8 +470,8 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
                 control={form.control}
                 name="feeNoticeLanguage"
                 render={({ field: language }) => (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-caption text-ink">
+                  <div className="flex flex-col gap-2">
+                    <span className={labelStyles}>
                       {label(t('web.building.field.fee-lang.label'), 'feeNoticeLanguage')}
                     </span>
                     <SegmentedControl<'vi' | 'en' | 'both'>
@@ -495,7 +496,7 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
             description={t('web.building.card.logo.hint')}
           >
             <div className="flex flex-col items-start gap-3">
-              <div className="flex h-24 w-full items-center justify-center rounded-control bg-fill">
+              <div className="flex h-24 w-full items-center justify-center rounded-control border border-dashed border-line-control/60 bg-surface-muted">
                 {logoSrc ? (
                   <img src={logoSrc} alt="" className="max-h-20 max-w-full object-contain" />
                 ) : (

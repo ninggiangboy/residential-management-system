@@ -48,6 +48,8 @@ const preset = {
       "focus": "var(--focus)",
       "scrim": "var(--scrim)",
       "line-control": "var(--line-control)",
+      "line-input": "var(--line-input)",
+      "surface-muted": "var(--surface-muted)",
       "paper": "var(--paper)",
       "paper-ink": "var(--paper-ink)"
     },
@@ -293,7 +295,9 @@ const light = {
   "--on-violet-soft": "#4B37A6",
   "--focus": "#0F2A2B",
   "--scrim": "rgba(15, 42, 43, 0.5)",
-  "--line-control": "#7E8D89",
+  "--line-control": "#80868D",
+  "--line-input": "#D9DCE0",
+  "--surface-muted": "#F9FAFA",
   "--paper": "#FFFFFF",
   "--paper-ink": "#000000"
 }
@@ -343,6 +347,8 @@ const dark = {
   "--focus": "#FFC53D",
   "--scrim": "rgba(0, 0, 0, 0.62)",
   "--line-control": "#667773",
+  "--line-input": "#344440",
+  "--surface-muted": "#192624",
   "--paper": "#FFFFFF",
   "--paper-ink": "#000000"
 }

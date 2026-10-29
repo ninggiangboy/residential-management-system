@@ -5,12 +5,17 @@ import { signInAndWait } from './support/app'
 /** DS-07, UIWO-10: no serious or critical violation on the main pages, in both themes (DOC-54 §12). */
 async function check(page: Page, label: string): Promise<void> {
   // A page and its rows fade in (DR-304): measured mid-fade, text has less contrast than it ends with. Wait for every finite
-  // animation to end; an infinite one (a spinner) is not waited for.
+  // animation to end; an infinite one (a spinner) is not waited for, nor one driven by scrolling (the top bar's edge, DR-311),
+  // which never finishes on its own.
   await page.evaluate(() =>
     Promise.all(
       document
         .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .filter(
+          (animation) =>
+            animation.timeline === document.timeline &&
+            animation.effect?.getComputedTiming().iterations !== Infinity,
+        )
         .map((animation) => animation.finished.catch(() => undefined)),
     ),
   )

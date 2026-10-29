@@ -68,7 +68,8 @@ export function SelectField({
             className={cn(
               controlStyles,
               borderFor(Boolean(error)),
-              'flex items-center justify-between gap-2 text-left data-[placeholder]:text-ink-disabled',
+              // Drawn like a text field (shadcn `SelectTrigger`); open, it takes the focus look (DR-311).
+              'flex items-center justify-between gap-2 text-left data-[placeholder]:text-ink-muted data-[state=open]:border-teal data-[state=open]:shadow-focus',
             )}
           >
             {/* Radix drops a `className` on `Select.Value`, so the wrapper hides it. */}
@@ -107,9 +108,13 @@ export function SelectField({
                   key={option.value}
                   value={option.value}
                   disabled={option.disabled}
-                  className="flex min-h-control-sm cursor-pointer items-center gap-2 rounded-plate px-2 text-body text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill data-[state=checked]:bg-teal-soft data-[state=checked]:text-on-teal-soft"
+                  // The chosen option carries a check at the right, not a fill (shadcn `SelectItem`, DR-311).
+                  className="relative flex min-h-control-sm cursor-pointer items-center gap-2 rounded-plate py-1.5 pl-2 pr-8 text-body text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-ink-disabled data-[highlighted]:bg-fill"
                 >
                   <Select.ItemText>{option.label}</Select.ItemText>
+                  <Select.ItemIndicator className="absolute right-2 flex items-center text-teal">
+                    <Icon name="check" size="sm" weight="bold" />
+                  </Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.Viewport>

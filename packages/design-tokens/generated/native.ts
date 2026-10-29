@@ -46,7 +46,9 @@ export const themes = {
     "on-violet-soft": "#4B37A6",
     "focus": "#0F2A2B",
     "scrim": "rgba(15, 42, 43, 0.5)",
-    "line-control": "#7E8D89",
+    "line-control": "#80868D",
+    "line-input": "#D9DCE0",
+    "surface-muted": "#F9FAFA",
     "paper": "#FFFFFF",
     "paper-ink": "#000000",
     "shadow-card": "0 1px 2px rgba(15, 42, 43, 0.05), 0 8px 24px rgba(15, 42, 43, 0.07)",
@@ -54,7 +56,12 @@ export const themes = {
     "shadow-bar": "0 -2px 20px rgba(15, 42, 43, 0.09)",
     "shadow-float": "0 8px 24px rgba(15, 42, 43, 0.14), 0 1px 2px rgba(15, 42, 43, 0.08)",
     "shadow-sheet": "0 -6px 32px rgba(15, 42, 43, 0.16)",
-    "shadow-raised": "0 1px 2px rgba(15, 42, 43, 0.05)"
+    "shadow-raised": "0 1px 2px rgba(15, 42, 43, 0.06)",
+    "shadow-panel": "0 0 0 1px rgba(15, 42, 43, 0.02), 0 1px 2px rgba(15, 42, 43, 0.05), 0 4px 12px -2px rgba(15, 42, 43, 0.07), 0 16px 32px -16px rgba(15, 42, 43, 0.14)",
+    "shadow-primary": "inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(7, 83, 79, 0.3), 0 4px 12px -4px rgba(11, 115, 109, 0.5)",
+    "shadow-field": "0 1px 2px rgba(15, 42, 43, 0.05)",
+    "shadow-focus": "0 0 0 3px rgba(11, 115, 109, 0.22)",
+    "shadow-invalid": "0 0 0 3px rgba(179, 38, 30, 0.14)"
   },
   "dark": {
     "ground": "#0C1413",
@@ -101,6 +108,8 @@ export const themes = {
     "focus": "#FFC53D",
     "scrim": "rgba(0, 0, 0, 0.62)",
     "line-control": "#667773",
+    "line-input": "#344440",
+    "surface-muted": "#192624",
     "paper": "#FFFFFF",
     "paper-ink": "#000000",
     "shadow-card": "0 0 0 1px rgba(234, 241, 239, 0.07)",
@@ -108,7 +117,12 @@ export const themes = {
     "shadow-bar": "0 -1px 0 rgba(234, 241, 239, 0.08)",
     "shadow-float": "0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(234, 241, 239, 0.08)",
     "shadow-sheet": "0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08)",
-    "shadow-raised": "none"
+    "shadow-raised": "0 1px 2px rgba(0, 0, 0, 0.32)",
+    "shadow-panel": "0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.5)",
+    "shadow-primary": "inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 14px -4px rgba(90, 212, 198, 0.35)",
+    "shadow-field": "0 1px 2px rgba(0, 0, 0, 0.3)",
+    "shadow-focus": "0 0 0 3px rgba(90, 212, 198, 0.3)",
+    "shadow-invalid": "0 0 0 3px rgba(255, 156, 145, 0.24)"
   }
 } as const
 

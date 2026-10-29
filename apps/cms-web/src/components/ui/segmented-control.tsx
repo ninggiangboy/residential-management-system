@@ -46,8 +46,13 @@ export function SegmentedControl<V extends string>({
     buttons.current[options.indexOf(next)]?.focus()
   }
 
+  // A hairline `line` border keeps the track apart from whatever it sits on: `ground` in the top bar, `surface` in a card.
   return (
-    <div role="radiogroup" aria-label={label} className={cn('inline-flex rounded-control bg-fill p-0.5', className)}>
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn('inline-flex rounded-control border border-line bg-fill p-0.5', className)}
+    >
       {options.map((option, index) => {
         const selected = option.value === value
         return (

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button } from '../../components/ui/button'
+import { labelStyles } from '../../components/ui/field'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Plate } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
@@ -54,8 +55,8 @@ export function UnitPicker({
 
   if (value)
     return (
-      <div className="flex flex-col gap-1.5">
-        <span className="text-caption text-ink">
+      <div className="flex flex-col gap-2">
+        <span className={labelStyles}>
           {label}
           {required && (
             <span aria-hidden="true" className="ml-0.5 text-danger">
@@ -63,7 +64,7 @@ export function UnitPicker({
             </span>
           )}
         </span>
-        <div className="flex h-control-md items-center justify-between rounded-control border border-line-control bg-surface pl-3 pr-0.5 shadow-raised">
+        <div className="flex h-control-md items-center justify-between rounded-control border border-line-input bg-surface pl-3 pr-0.5 shadow-field">
           {value.code ? <Plate>{value.code}</Plate> : <Skeleton className="h-6 w-16" />}
           <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>
             {t('common.action.clear-filters')}

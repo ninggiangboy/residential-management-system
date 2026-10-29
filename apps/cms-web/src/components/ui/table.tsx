@@ -64,7 +64,7 @@ export function Th({ className, ...props }: ThHTMLAttributes<HTMLTableCellElemen
     <th
       scope="col"
       className={cn(
-        'sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-surface px-4 py-2.5 text-caption text-ink-muted',
+        'sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-surface-muted px-4 py-2.5 text-caption text-ink-muted',
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ export function Tr({
   interactive,
   ...props
 }: HTMLAttributes<HTMLTableRowElement> & { interactive?: boolean }) {
-  return <tr className={cn('last:[&>td]:border-b-0', interactive && 'cursor-pointer hover:bg-ground/60', className)} {...props} />
+  return <tr className={cn('last:[&>td]:border-b-0', interactive && 'cursor-pointer transition-colors hover:bg-surface-muted', className)} {...props} />
 }
 
 /*
