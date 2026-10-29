@@ -50,7 +50,10 @@ export function Switch({
   onCheckedChange,
   label,
   disabled,
+  id,
 }: {
+  /** Lets a visible `<label htmlFor>` toggle the switch. */
+  id?: string
   checked: boolean
   onCheckedChange: (checked: boolean) => void
   /** Required: a switch without a name cannot be used with a screen reader. */
@@ -59,6 +62,7 @@ export function Switch({
 }) {
   return (
     <RadixSwitch.Root
+      id={id}
       checked={checked}
       onCheckedChange={onCheckedChange}
       disabled={disabled}
