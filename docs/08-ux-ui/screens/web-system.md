@@ -1,6 +1,6 @@
 # Web: system
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-10-20 · DOC-67
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-33, 38, 39, 41…47, 59, 72, 74, 128, 133, 147, 148), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-38, FR-41, FR-50), [DOC-04](../../01-product/use-cases.md) (UC-17), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-36](../../06-design/building-configuration-and-demo.md) §4…8, [DOC-37](../../06-design/files-and-uploads.md), [DOC-51](../../07-api/api-endpoints.md) (E-08, E-38…E-56), [DOC-42](../../06-design/error-handling.md) §5, [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md), DOC-54
 > Main readers: P1-16 (web CMS shell: `W-Staff`, `W-Staff-New`, `W-Building`), P1-14, P1-15, the writers of DOC-64…66 (they cite the step-up rule below), P3 and P6 (the later table), EXP-10
 
@@ -90,7 +90,7 @@ Do not copy:
 | "Kích hoạt lại" | E-46 | toast `toast.enabled`; the row shows "Đang hoạt động", or "Chờ đặt mật khẩu" when the person never set one (then "Gửi lại email") | 409 `invalid_transition`: refetch |
 | Chip, search, pager | none | the URL changes, E-39 refetches | |
 
-Every write is a plain mutation: never retried by the screen, a 409 refetches and shows the server message and keeps the dialog open (UX-02). E-08, E-43…E-46 take no `Idempotency-Key`.
+Every write is a plain mutation: never retried by the screen, a 409 refetches and shows the server message and keeps the dialog open (UX-02; `W-Building` also offers the choice of DR-310). E-08, E-43…E-46 take no `Idempotency-Key`.
 
 ### 7. States
 
@@ -301,8 +301,10 @@ Field map (the prototype label → the E-47 field and its rule, DOC-36 §4.2 and
 
 | Action | Endpoint | Success | Failure |
 | --- | --- | --- | --- |
-| "Lưu thay đổi" | E-48 `{ building?, settings? }` with only the changed fields (`null` removes a setting), `If-Match` | 200: the form resets to the returned document, toast `toast.saved` | 422 `validation_failed` rule `setting_invalid` → the message under each field named by `details[].path`, nothing saved. 400 `validation_failed` (pattern, length) likewise. 409 `version_conflict` → refetch E-47, re-apply the fields the Admin changed on top of the fresh document, banner `banner.conflict`, wait for a new press (UX-02). 428 cannot happen (the client always sends `If-Match`) |
+| "Lưu thay đổi" | E-48 `{ building?, settings? }` with only the changed fields (`null` removes a setting), `If-Match` | 200: the form resets to the returned document, toast `toast.saved` | 422 `validation_failed` rule `setting_invalid` → the message under each field named by `details[].path`, nothing saved. 400 `validation_failed` (pattern, length) likewise. 409 `version_conflict` → refetch E-47, re-apply the fields the Admin changed on top of the fresh document, banner `banner.conflict` with the two buttons below and, when both Admins changed a field to different values, the line `banner.conflict-fields`; nothing is sent until the Admin chooses (UX-02, DR-310). While the banner shows, a new `ETag` does not reset the form. When the fresh document already holds every value the Admin typed, the form resets, the toast `toast.saved` shows and there is no banner. 428 cannot happen (the client always sends `If-Match`) |
 | "Hoàn tác" | none | the form returns to the last fetched document | |
+| "Dùng bản mới" (in the conflict banner) | none | the Admin's edits and a new logo are dropped; the form shows the document the other Admin saved; the banner goes | |
+| "Giữ của tôi và lưu" (in the conflict banner) | E-48 with only the fields that differ from the fresh document, `If-Match` the fresh `ETag` | as "Lưu thay đổi": the form resets to the answer, toast `toast.saved`, the banner goes | as "Lưu thay đổi"; a second 409 shows the banner again |
 | "Đổi logo" (PNG or JPEG ≤ 1 MB) | E-36 `{ purpose: 'logo', mime, size }` → `PUT` to the presigned URL → E-37 verify → `logoFileId` joins the next E-48 | the preview shows the new image at once; it becomes the logo on save | 413 `quota_exceeded`, 422 `file_not_verified` → toast with the message; a wrong type is refused on the device first |
 | "Xóa logo" | E-48 `building.logoFileId = null` on save | | |
 | "Xem và xuất bản phiên bản mới" (per kind) | opens `dialog=terms&kind=…` | panel with the current text, two `textarea`s (vi, en) and a live preview | |
@@ -348,7 +350,9 @@ Loading: skeleton cards. Error: the DOC-68 pattern. Stale: the form keeps edits;
 | `web.building.terms.publish` / `.versions` | Xuất bản phiên bản mới / Xem các phiên bản | Publish a new version / See versions |
 | `web.building.dialog.publish.body` | Mọi cư dân phải đồng ý lại ở lần mở app tiếp theo. | Every resident must accept again the next time they open the app. |
 | `web.building.dialog.publish.confirm` | Xuất bản | Publish |
-| `web.building.banner.conflict` | Có người vừa thay đổi cấu hình. Đã tải bản mới, hãy xem lại thay đổi của bạn rồi lưu lại. | Someone just changed the settings. The new version is loaded; review your changes and save again. |
+| `web.building.banner.conflict` | Có người vừa lưu cấu hình trước bạn. Đã tải bản mới; thay đổi của bạn vẫn nằm trên form, chưa được lưu. Hãy chọn bản nào được giữ. | Someone saved the settings before you. The new version is loaded and your changes are still on the form, not saved. Choose which to keep. |
+| `web.building.banner.conflict-fields` | Hai bên cùng sửa: {fields}. | You both changed: {fields}. |
+| `web.building.action.use-theirs` / `.keep-mine` | Dùng bản mới / Giữ của tôi và lưu | Use the new version / Keep mine and save |
 | `web.building.dialog.discard.title` / `.confirm` | Bỏ thay đổi chưa lưu? / Bỏ thay đổi | Discard unsaved changes? / Discard |
 | `web.building.toast.saved` / `.terms-published` | Đã lưu cấu hình / Đã xuất bản phiên bản {version} | Settings saved / Version {version} published |
 
@@ -360,11 +364,11 @@ Errors: `error.setting_invalid`, `error.terms_text`, `error.version_conflict`, `
 | --- | --- | --- |
 | UIWS-17 | **G** an Admin **W** changing the hotline to "1900 5678" and the default due days to 15 and saving **T** E-48 carries only those two fields, the form resets to the response, and a reload shows both | web-e2e |
 | UIWS-18 | **G** an Admin **W** entering 0 in "Hạn thanh toán mặc định" and 4 in "Khóa đăng nhập trong" **T** both fields show their range message from `setting_invalid`, nothing is saved | web-e2e |
-| UIWS-19 | **G** two Admins with the form open **W** the second saves after the first **T** the second sees `banner.conflict`, the fresh values load, and the fields the second typed stay on top | web-e2e |
+| UIWS-19 | **G** two Admins with the form open, the first saves the hotline and the email **W** the second, who changed the hotline and the payment term, saves **T** the second sees `banner.conflict` naming the hotline, the fresh email loads and both typed fields stay; "Dùng bản mới" drops them; after another conflict "Giữ của tôi và lưu" saves the second Admin's hotline | web-e2e |
 | UIWS-20 | **G** a Manager **W** opening `/building` by URL **T** the Forbidden state shows, the sidebar has no "Tòa nhà và cấu hình" | web-e2e |
 | UIWS-21 | **G** a PNG of 900 KB, an SVG, a JPEG of 2 MB **W** each is chosen as logo **T** the first uploads and previews; the other two are refused with `web.building.logo.format` before any request | web-e2e |
 | UIWS-22 | **G** an Admin in the terms panel **W** the Vietnamese text has `<b>` on line 12 **T** the preview marks line 12 and "Xuất bản" is disabled; with valid Markdown in both languages publishing shows version N+1 with 0 accepted | web-e2e |
-| UIWS-23 | **G** unsaved edits **W** the Admin navigates away **T** the discard dialog asks; "Bỏ thay đổi" leaves, closing it stays | web-e2e |
+| UIWS-23 | **G** unsaved edits **W** the Admin navigates away **T** the discard dialog asks; "Bỏ thay đổi" leaves, closing it stays. Opening or closing a dialog of the page (`?dialog=terms`) does not ask and keeps the edits | web-e2e |
 
 ---
 
