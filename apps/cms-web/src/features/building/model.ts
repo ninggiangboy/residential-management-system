@@ -234,3 +234,55 @@ export function outOfRange(values: BuildingFormValues): (keyof BuildingFormValue
 
 export const isEmptyPatch = (patch: BuildingPatch) =>
   patch.building === undefined && patch.settings === undefined
+
+/** The catalog key of each field's label, for the banner that names the fields two Admins both changed (UX-02, DR-310). */
+export const FIELD_LABEL_KEYS = {
+  nameVi: 'web.building.field.name.label',
+  nameEn: 'web.building.field.name-en.label',
+  companyNameVi: 'web.building.field.company.label',
+  companyNameEn: 'web.building.field.company-en.label',
+  taxCode: 'web.building.field.tax-code.label',
+  companyAddress: 'web.building.field.company-address.label',
+  companyPhone: 'web.building.field.company-phone.label',
+  companyEmail: 'web.building.field.company-email.label',
+  representative: 'web.building.field.representative.label',
+  address: 'web.building.field.address.label',
+  hotline: 'web.building.field.hotline.label',
+  email: 'web.building.field.email.label',
+  hoursVi: 'web.building.field.hours.label',
+  hoursEn: 'web.building.field.hours.label',
+  defaultDueDays: 'web.building.field.due-days.label',
+  defaultLanguage: 'web.building.field.language.label',
+  maxAttempts: 'web.building.field.max-tries.label',
+  lockMinutes: 'web.building.field.lock-minutes.label',
+  accountDeletionDays: 'web.building.field.deletion-days.label',
+  maxCarsPerUnit: 'web.building.field.max-cars.label',
+  quotaGb: 'web.building.field.quota.label',
+  feeNoticeLanguage: 'web.building.field.fee-lang.label',
+} as const satisfies Record<keyof BuildingFormValues, string>
+
+export interface ConflictMerge {
+  /** The Admin's edits that differ from the fresh document: they stay on the form, unsaved. */
+  kept: (keyof BuildingFormValues)[]
+  /** The fields both Admins changed to different values: the ones to look at before choosing. */
+  clashes: (keyof BuildingFormValues)[]
+}
+
+/**
+ * After a 409 (UX-02, DR-310): what the Admin typed against the document they loaded (`base`), set against the document the
+ * other Admin saved (`fresh`). A field only one of them changed needs no decision; a field both changed to different values does.
+ */
+export function mergeConflict(
+  base: BuildingFormValues,
+  mine: BuildingFormValues,
+  fresh: BuildingFormValues,
+): ConflictMerge {
+  const kept: (keyof BuildingFormValues)[] = []
+  const clashes: (keyof BuildingFormValues)[] = []
+  for (const key of FIELD_NAMES) {
+    if (mine[key] === base[key] || mine[key] === fresh[key]) continue
+    kept.push(key)
+    if (fresh[key] !== base[key]) clashes.push(key)
+  }
+  return { kept, clashes }
+}
