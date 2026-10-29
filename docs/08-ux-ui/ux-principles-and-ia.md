@@ -331,7 +331,7 @@ All numbers are **planned** (nothing is measured yet). "Good" for the web vitals
 
 | Client | Measure | Planned target | Checked by |
 | --- | --- | --- | --- |
-| Web | JavaScript on the first load of `/login` (gzip) | ≤ 170 KB | Bundle-size check in CI (P1-19) |
+| Web | JavaScript on the first load of `/login` (gzip), in Vietnamese and, with the English catalog chunk, in English | ≤ 180 KB (DR-308; 170 KB before) | Bundle-size check in CI (P1-19) |
 | Web | JavaScript of the shell plus the landing route (gzip) | ≤ 300 KB | CI |
 | Web | Any other route chunk (gzip) | ≤ 120 KB; the rich-text editor, the charts and drag-and-drop load only on their routes | CI |
 | Web | LCP, `W-Login` and `W-Dashboard`, 4G throttling, mid-range laptop | ≤ 2.5 s (p75 of runs) | Lighthouse or Playwright trace, P6 |

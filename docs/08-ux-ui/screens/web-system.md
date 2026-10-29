@@ -270,7 +270,7 @@ Do not copy:
 
 ### 4. Regions and components
 
-`TextField` (with `suffix` and `helper`), `SegmentedControl`, `Card`, `Tag`, `Button`, `Dialog`, `AttachmentPicker` (logo), `Banner`. A setting that has no stored value shows `web.building.default-tag` ("Mặc định") next to its label (E-47 `saved` lists the stored keys). The form is dirty-tracked: "Hoàn tác" and "Lưu thay đổi" are disabled while clean, and leaving the page with unsaved edits asks `web.building.dialog.discard.*`.
+`TextField` (with `suffix` and `helper`), `SegmentedControl`, `Card`, `Tag`, `Button`, `Dialog`, `AttachmentPicker` (logo), `Banner`. The info card lists the building's fields (name VI/EN, address, hotline, email, working hours VI/EN), then, under the heading `web.building.card.info.company` and a rule, the company's (name VI/EN, tax code, representative, address, phone, email); the required ones (building name, address, company name) carry the asterisk of DOC-54 §17.9, and the loading skeleton has the same two groups. A setting that has no stored value shows `web.building.default-tag` ("Mặc định") next to its label (E-47 `saved` lists the stored keys). The form is dirty-tracked: "Hoàn tác" and "Lưu thay đổi" are disabled while clean, and leaving the page with unsaved edits asks `web.building.dialog.discard.*`.
 
 Field map (the prototype label → the E-47 field and its rule, DOC-36 §4.2 and §5.1):
 
@@ -323,8 +323,11 @@ Loading: skeleton cards. Error: the DOC-68 pattern. Stale: the form keeps edits;
 | `web.building.subtitle` | Thông tin hiện trên thông báo phí, App cư dân và email gửi nhân viên | Shown on fee notices, the resident app and staff emails |
 | `web.building.action.undo` / `.cta` | Hoàn tác / Lưu thay đổi | Undo changes / Save changes |
 | `web.building.card.info.title` | Thông tin tòa nhà và công ty | Building and company |
+| `web.building.card.info.company` | Công ty quản lý | Management company |
 | `web.building.field.name.label` / `.name-en.label` / `.name-en.hint` | Tên tòa nhà / Tên tiếng Anh / Hiện khi người dùng chọn English | Building name / English name / Shown when the user picks English |
 | `web.building.field.company.label` | Tên công ty quản lý | Management company name |
+| `web.building.field.company-en.label` / `.tax-code.label` / `.tax-code.placeholder` / `.representative.label` | Tên công ty (tiếng Anh) / Mã số thuế / VD: 0312345678 / Người đại diện | Company name (English) / Tax code / e.g. 0312345678 / Representative |
+| `web.building.field.company-address.label` / `.company-phone.label` / `.company-email.label` | Địa chỉ công ty / Số điện thoại công ty / Email công ty | Company address / Company phone / Company email |
 | `web.building.field.address.label` / `.hotline.label` / `.email.label` / `.hours.label` | Địa chỉ / Hotline / Email / Giờ làm việc | Address / Hotline / Email / Working hours |
 | `web.building.card.settings.title` | Cấu hình chung | General settings |
 | `web.building.field.due-days.label` / `.suffix` / `.hint` | Hạn thanh toán mặc định / ngày sau ngày tạo đợt / Gợi ý khi tạo đợt phí mới, sửa được ở từng đợt | Default payment term / days after the batch is created / Suggested for a new batch; editable per batch |

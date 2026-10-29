@@ -96,14 +96,19 @@ Dialog "Thêm căn hộ" (not drawn; the form of E-58):
 ```
 +----------------------------------------+
 | Thêm căn hộ                         [x]|
-| Mã căn *      [ A-1509            ]    |
-| Tầng [ 15 ]  Số phòng ngủ [ 3 ]        |
-| Diện tích (m²) [ 82.00 ]               |
-| Tình trạng    [ Trống            v]    |
-| Ghi chú       [                   ]    |
+| Mã căn *              Tình trạng       |
+| [ VD: A-1509     ]   [ Trống        v] |
+| Tầng      Số phòng ngủ   Diện tích     |
+| [ VD: 15 ] [ VD: 3 ]   [ VD: 82,5  m²] |
+| Ghi chú                                |
+| [ Thông tin thêm về căn hộ           ] |
+| [                                    ] |
+|----------------------------------------|
 |                 [ Hủy ] [ Thêm căn ]   |
 +----------------------------------------+
 ```
+
+The dialog opens with the caret in "Mã căn"; the placeholders are examples, never the only hint (DOC-54 §17.9). The edit dialog of `W-Unit-Detail` has the same fields and layout.
 
 ### 7. States
 
@@ -145,12 +150,12 @@ Loading: 8 skeleton rows after 150 ms. Empty with no filter: title and body belo
 | `web.units.empty-filter.body` | Bỏ bớt bộ lọc hoặc tìm theo mã căn khác. | Remove a filter or search for another unit code. |
 | `web.units.action.clear-filters` | Xóa bộ lọc | Clear filters |
 | `web.units.dialog.add.title` | Thêm căn hộ | Add a unit |
-| `web.units.dialog.add.field.code.label` | Mã căn | Unit code |
-| `web.units.dialog.add.field.floor.label` | Tầng | Floor |
-| `web.units.dialog.add.field.bedrooms.label` | Số phòng ngủ | Bedrooms |
-| `web.units.dialog.add.field.area.label` | Diện tích (m²) | Area (m²) |
+| `web.units.dialog.add.field.code.label` / `.placeholder` | Mã căn / VD: A-1509 | Unit code / e.g. A-1509 |
+| `web.units.dialog.add.field.floor.label` / `.placeholder` | Tầng / VD: 15 | Floor / e.g. 15 |
+| `web.units.dialog.add.field.bedrooms.label` / `.placeholder` | Số phòng ngủ / VD: 3 | Bedrooms / e.g. 3 |
+| `web.units.dialog.add.field.area.label` / `.placeholder` / `.suffix` | Diện tích / VD: 82,5 / m² | Area / e.g. 82.5 / m² |
 | `web.units.dialog.add.field.occupancy.label` | Tình trạng | Occupancy |
-| `web.units.dialog.add.field.note.label` | Ghi chú | Note |
+| `web.units.dialog.add.field.note.label` / `.placeholder` | Ghi chú / Thông tin thêm về căn hộ | Note / Anything else about this unit |
 | `web.units.dialog.add.confirm` | Thêm căn | Add unit |
 | `web.units.toast.created` | Đã thêm căn {code} | Unit {code} added |
 
@@ -313,6 +318,7 @@ Loading: header and table skeleton. Not found: E-59 404 → `NotFound` with a li
 | `web.unit-detail.dialog.transfer.field.name.label` | Họ tên | Full name |
 | `web.unit-detail.dialog.transfer.field.keep.label` | Giữ lại các thành viên khác ({count}) | Keep the other members ({count}) |
 | `web.unit-detail.dialog.transfer.field.reason.label` | Lý do (ít nhất 5 ký tự) | Reason (at least 5 characters) |
+| `web.unit-detail.dialog.transfer.field.reason.placeholder` | VD: Đã bán căn, hợp đồng mua bán ngày 20/10 | e.g. Unit sold, sale contract of 20 Oct |
 | `web.unit-detail.dialog.transfer.body` | Chủ hộ hiện tại {name} sẽ bị xóa khỏi căn. Phí, biên lai và yêu cầu vẫn thuộc về căn. | The current owner {name} will be removed from the unit. Fees, receipts and requests stay with the unit. |
 | `web.unit-detail.dialog.transfer.existing` | SĐT này đã có tài khoản: {name}. Tên trong hồ sơ được giữ nguyên. | This phone already has an account: {name}. The name on the profile is kept. |
 | `web.unit-detail.dialog.transfer.confirm` | Chuyển chủ hộ | Transfer ownership |
@@ -460,6 +466,7 @@ Loading: skeleton rows. Empty with no filter: "Chưa có cư dân nào" and the 
 | `web.residents.dialog.profile.field.name.label` | Họ tên | Full name |
 | `web.residents.dialog.profile.field.email.label` | Email | Email |
 | `web.residents.dialog.profile.field.cccd.label` | Số CCCD | ID number |
+| `web.residents.dialog.profile.field.cccd.placeholder` | 12 chữ số | 12 digits |
 | `web.residents.dialog.profile.field.dob.label` | Ngày sinh | Date of birth |
 | `web.residents.dialog.profile.field.note.label` | Ghi chú | Note |
 | `web.residents.dialog.profile.units` | Các căn | Units |

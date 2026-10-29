@@ -303,6 +303,9 @@ Strings used by three screens or more, or by the shell, move here (DOC-56 §6.4)
 | `common.greeting.noon` | Chào buổi trưa | Good midday | 10–13 |
 | `common.greeting.afternoon` | Chào buổi chiều | Good afternoon | 13–18 |
 | `common.greeting.evening` | Chào buổi tối | Good evening | 18–05 |
+| `common.field.phone.placeholder` | VD: 0912 345 678 | e.g. 0912 345 678 | Placeholder of a phone field (DOC-54 §17.9) |
+| `common.field.name.placeholder` | VD: Nguyễn Văn An | e.g. Nguyễn Văn An | Placeholder of a full-name field |
+| `common.field.email.placeholder` | VD: ten@email.com | e.g. name@email.com | Placeholder of a personal email field; a work email uses `web.login.field.email.placeholder` |
 
 ### 4.5 Relative time
 

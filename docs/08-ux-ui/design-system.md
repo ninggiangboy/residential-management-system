@@ -678,6 +678,7 @@ The keyframes and classes live in `apps/cms-web/src/styles.css` (`motion-*`); th
 - A skeleton row does not set its columns: its bars are `w-full` up to a cap (`max-w-*`), so the header's widths hold while loading and the skeleton table is no wider than its card. A column whose content is wider than its header width (a status tag, a row's buttons) gets a header width that fits the content, so the columns do not move when the rows arrive.
 - A placeholder has the height of what replaces it: a brand line keeps the line's height, a skeleton bar the height of its text line.
 - Every page has one `main` (the boot frame is removed when it appears).
+- Whatever acts on a click shows the hand cursor, and a disabled control shows `not-allowed`: a base rule in `styles.css` covers buttons (so the Radix checkbox, switch, radio card, select trigger and tab), menu and list items, `summary` and native checkboxes and radios, since Tailwind 4 gives a button the arrow; a clickable table row is `Tr interactive`, and the label of a `Checkbox` takes the hand too.
 
 ### 17.6 Shell
 
@@ -696,7 +697,7 @@ A pull request that adds or changes a web screen is accepted when the author has
 | Q4 | Rows of controls share a baseline; icons sit on their text's first line; nothing wraps that should not, at 1024, 1280 and 1440 px | Look at the screen at the three widths |
 | Q5 | Light, dark and reduced motion | The theme switch; the OS setting or DevTools "Emulate CSS prefers-reduced-motion" |
 | Q6 | Accessibility | DS-08 (axe in both themes) passes; icon-only controls are named |
-| Q7 | Budget | `bun run check:bundle`: `/login` stays under 170 KB (DOC-53 §8); it stood at 169.7 KB on 2026-10-28, so the sign-in page takes nothing new without a plan |
+| Q7 | Budget | `bun run check:bundle`: `/login` stays under 180 KB in both languages (DOC-53 §8, DR-308); on 2026-10-29 it stood at 161.0 KB in Vietnamese and 172.7 KB in English, once English became a chunk of its own |
 | Q8 | Recording | For a change to loading or motion, a frame-by-frame look (Playwright with the CDP screencast, or DevTools Performance with screenshots) at both speeds, attached to the pull request |
 
 ### 17.8 Lessons from the 2026-10-28 review
@@ -715,3 +716,21 @@ A pull request that adds or changes a web screen is accepted when the author has
 | Icons appeared after the page | `React.lazy` suspends even with its chunk loaded, and React holds a Suspense reveal ~300 ms | Icons render from a store (§17.3) |
 | Skeletons and spinners flashed once the API was fast | Indicators showed the instant a request started | §17.3: 150 ms before any indicator, 300–400 ms minimum once shown |
 | The axe check failed after the motion was added | It measured contrast in the middle of a fade | DS-08 waits for finite animations before measuring |
+| A text area one line high whatever its `rows`; the terms editor too | `cn` (tailwind-merge) did not know the token sizes, so `h-auto` did not replace the `h-control-md` of the field style and the stylesheet order kept the fixed height | `cn` knows the token sizes, radii and shadows (`lib/utils.ts`, tested against `theme.css`); §17.9 |
+| Form dialogs looked empty; a dark ring sat on the close button of a dialog opened with the mouse; every client-side error read "Một số thông tin chưa hợp lệ" | No placeholders or units; Radix focuses the first focusable element; the resolver mapped every rule to `error.validation_failed` | §17.9 |
+
+### 17.9 Forms
+
+Reviewed by the Owner on 2026-10-29 ("the form inputs look empty, the text area is too low"). A form on the web follows these rules; `TextField`, `TextAreaField`, `SelectField`, `SearchField` and `Dialog` carry them, so a screen gets them by passing props.
+
+| Rule | Built with |
+| --- | --- |
+| A field shows what to type: a placeholder of the form "VD: …" / "e.g. …" with a real example (a unit code, a phone, a name), from the catalog; it never replaces the label or the hint. A shared shape uses `common.field.*.placeholder` (DOC-68 §4.4) | `placeholder={t(…)}` |
+| A unit stays in the field, not in the label: "Diện tích" with `m²` at the end of the field. The value stops before the suffix whatever the suffix's length or language | `TextField suffix` (measured width) |
+| In a form that has optional fields, a required field has a `danger` asterisk after its label (hidden from screen readers; the control carries `required`). A form whose fields are all required (sign-in) marks none | `required` on the field |
+| Short fields that belong together share a row: a 480 px dialog puts a code beside its status, and floor, bedrooms and area three to a row | `grid grid-cols-2` / `grid-cols-3` |
+| A text area is `rows` lines high at rest (4 by default), grows with its text up to `maxRows` (12) and then scrolls; the user can drag it taller. Text areas side by side keep one height (`maxRows={rows}`) | `TextAreaField rows maxRows` (`field-sizing: content`) |
+| A field in focus has the 2 px `teal` inner ring of A4, `danger` when it is in error; no ring sits outside the field | `controlStyles` |
+| A form dialog opens with the caret in its first writable field; a dialog without one focuses itself, so no ring shows on its close button | `Dialog` (`onOpenAutoFocus`) |
+| A client-side error is the sentence of its rule code (DOC-68 §3.7): an empty required field reads `error.required`, a length `error.min_length` / `error.max_length` with the limit from the schema, a pattern `error.format`, a choice `error.enum`; the first field in error takes focus (A8) | `formResolver` (`lib/forms.ts`) |
+| A field picked from a list (a unit) is a `SearchField` while typing and, once picked, a plate in a box of the field's height | `UnitPicker` |
