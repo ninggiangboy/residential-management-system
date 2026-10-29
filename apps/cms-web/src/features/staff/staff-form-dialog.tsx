@@ -91,7 +91,7 @@ export function StaffFormDialog({ staffId, search }: { staffId?: string; search:
   // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
   const closeOverlay = useCloseOverlay()
   const { open, close } = useExit(() =>
-    closeOverlay(() => void navigate({ to: '/staff', search, replace: true })),
+    closeOverlay(() => void navigate({ to: '/staff', search, replace: true, resetScroll: false })),
   )
   const requestClose = () => (form.formState.isDirty ? setDiscard(true) : close())
 

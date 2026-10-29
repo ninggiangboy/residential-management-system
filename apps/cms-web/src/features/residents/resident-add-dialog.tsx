@@ -68,7 +68,9 @@ export function ResidentAddDialog({
   // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
   const closeOverlay = useCloseOverlay()
   const { open, close } = useExit(() =>
-    closeOverlay(() => void navigate({ to: '/residents', search, replace: true })),
+    closeOverlay(
+      () => void navigate({ to: '/residents', search, replace: true, resetScroll: false }),
+    ),
   )
 
   const submit = (event: React.FormEvent) => {

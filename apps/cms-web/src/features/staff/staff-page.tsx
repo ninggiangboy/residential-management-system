@@ -215,6 +215,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
           params={{ staffId: account.id }}
           search={search}
           state={OPENED_HERE}
+          resetScroll={false}
           aria-label={t('web.staff.action.edit.label', { name: account.fullName })}
           className={buttonStyles({ variant: 'ghost', size: 'sm' }) + ' w-control-sm px-0'}
         >
@@ -245,6 +246,7 @@ export function StaffPage({ search }: { search: StaffSearch }) {
             to="/staff/new"
             search={search}
             state={OPENED_HERE}
+            resetScroll={false}
             className={buttonStyles({ variant: 'primary' })}
             aria-disabled={!canWrite}
           >

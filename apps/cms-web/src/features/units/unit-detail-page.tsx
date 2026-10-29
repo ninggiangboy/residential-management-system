@@ -63,12 +63,13 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
 
   const closeOverlay = useCloseOverlay()
   // A tab refines the page and replaces its entry; a dialog is an entry of its own, so Back closes it (`lib/history.ts`).
-  const go = (patch: Partial<UnitDetailSearch>) =>
+  const go = (patch: Partial<UnitDetailSearch>, resetScroll = true) =>
     void navigate({
       to: '/units/$unitId',
       params: { unitId },
       search: { ...search, ...patch },
       replace: true,
+      resetScroll,
     })
   const openDialog = (patch: Partial<UnitDetailSearch>) =>
     void navigate({
@@ -76,9 +77,10 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
       params: { unitId },
       search: { ...search, ...patch },
       state: OPENED_HERE,
+      resetScroll: false,
     })
   const closeDialog = (patch: Partial<UnitDetailSearch> = {}) =>
-    closeOverlay(() => go({ dialog: undefined, ...patch }))
+    closeOverlay(() => go({ dialog: undefined, ...patch }, false))
 
   if (unit.isPending) return <DetailSkeleton />
   if (unit.isError || !unit.data) {
@@ -198,6 +200,7 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
               to="/residents/new"
               search={{ unitId }}
               state={OPENED_HERE}
+              resetScroll={false}
               className={buttonStyles({ variant: 'primary' })}
             >
               {t('web.unit-detail.cta.assign')}

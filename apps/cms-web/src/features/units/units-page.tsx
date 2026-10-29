@@ -131,6 +131,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                   to: '/units',
                   search: { ...search, dialog: 'add' },
                   state: OPENED_HERE,
+                  resetScroll: false,
                 })
               }
             >
@@ -228,6 +229,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                       to: '/units',
                       search: { ...search, dialog: 'add' },
                       state: OPENED_HERE,
+                      resetScroll: false,
                     })
                   }
                 >
@@ -333,6 +335,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                         to="/residents/new"
                         search={{ unitId: unit.unitId }}
                         state={OPENED_HERE}
+                        resetScroll={false}
                         onClick={(event) => event.stopPropagation()}
                         className="text-secondary text-teal underline"
                       >
@@ -359,6 +362,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                 to: '/units',
                 search: { ...search, dialog: undefined },
                 replace: true,
+                resetScroll: false,
               }),
           )
         }

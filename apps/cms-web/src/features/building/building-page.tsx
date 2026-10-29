@@ -510,6 +510,7 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
                   to: '/building',
                   search: { dialog: 'terms', kind: which },
                   state: OPENED_HERE,
+                  resetScroll: false,
                 })
               }
               onVersions={() => setVersionsOf(which)}
@@ -521,7 +522,10 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
         <TermsPanel
           kind={kind}
           onClose={() =>
-            closeOverlay(() => void navigate({ to: '/building', search: {}, replace: true }))
+            closeOverlay(
+              () =>
+                void navigate({ to: '/building', search: {}, replace: true, resetScroll: false }),
+            )
           }
         />
       )}
