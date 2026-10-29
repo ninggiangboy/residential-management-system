@@ -28,6 +28,10 @@ export interface UnitSummary {
   occupied: number
   rented: number
   vacant: number
+  /** The distinct floors of the building's units, ascending, for the floor filter (DR-309). */
+  floors: number[]
+  /** The distinct bedroom counts of the building's units, ascending, for the type filter (DR-309). */
+  bedrooms: number[]
 }
 
 export interface HistoryRow {

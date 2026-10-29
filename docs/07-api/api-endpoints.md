@@ -1,6 +1,6 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` on E-57) · 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228, DR-293, DR-300, DR-302), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
@@ -2037,10 +2037,10 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
         "occupancy": "vacant", "note": null, "version": 1, "memberCount": 0, "owner": null }
     ],
     "nextCursor": "eyJjIjoiQS0xNTA5IiwiaSI6IjAxOTJmM2M0LTVhMWUifQ",
-    "summary": { "total": 240, "occupied": 171, "rented": 52, "vacant": 17 }
+    "summary": { "total": 240, "occupied": 171, "rented": 52, "vacant": 17, "floors": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "bedrooms": [1, 2, 3] }
   }
 
-  *Revised 2026-10-20 (DR-212):* `memberCount` counts the non-removed memberships of the unit, the owner included. `summary` covers the whole building, whatever the filters, and is present on every page (one `GROUP BY occupancy` over `residency.unit`).
+  *Revised 2026-10-20 (DR-212):* `memberCount` counts the non-removed memberships of the unit, the owner included. `summary` covers the whole building, whatever the filters, and is present on every page (one `GROUP BY occupancy` over `residency.unit`). *Revised 2026-10-29 (DR-309):* `summary.floors` and `summary.bedrooms` list the distinct non-null floors and bedroom counts of the building's units, ascending, for the two filters (one `GROUP BY` each).
   ```
 
 - **Errors:** 400 `validation_failed`, 400 `invalid_cursor`, 401, 403 `forbidden`.

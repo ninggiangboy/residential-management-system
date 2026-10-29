@@ -1,6 +1,6 @@
 # Web: residents
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
+> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-10-29 (DR-309: the floor and type selects list `summary.floors` and `summary.bedrooms`) · 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
 > Main readers: P1-16 (web CMS shell: sign in, create staff, import units), P1-13, P1-14, DOC-68 (copy), DOC-88 (prefix `UIWR-`)
 
@@ -66,7 +66,7 @@ Do not copy:
 | Region | Components (DOC-54) | Shown state |
 | --- | --- | --- |
 | Header | `Button` outline "Nhập từ Excel" (links to `/import`), `Button` primary with `plus` "Thêm căn" | always |
-| Filters | `SearchField`, `SelectField` (floor list is 1…`maxFloor` read from the loaded rows plus the building setting when E-47 is allowed; for a Manager the floor options are the distinct floors of the first page and a free numeric entry), `SelectField` (Loại = bedrooms), `SelectField` (Trạng thái) | the active filters |
+| Filters | `SearchField`, `SelectField` (the floors are E-57 `summary.floors`, the building's distinct floors whatever the filters, plus the floor of the URL if no unit has it; DR-309), `SelectField` (Loại = bedrooms, the options are E-57 `summary.bedrooms` the same way; DR-309), `SelectField` (Trạng thái) | the active filters |
 | Table | `Plate` (code), `Tag` (status), `Avatar`-less text for the owner, caret icon | rows; the row is a link to `/units/$unitId` |
 | Owner cell | name and phone; for a unit without an owner "Chưa có chủ hộ" (muted) and a ghost link "Gán chủ hộ bằng SĐT" to `/residents/new?unitId=` | per row |
 | Footer | `IconButton` × 2 (previous, next) and the text "Trang {page}" | hidden when `q` is set (no cursor) |
