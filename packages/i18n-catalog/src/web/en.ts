@@ -2,8 +2,11 @@
 export const webEn = {
   'web.building.cta': 'Save changes',
   'web.building.action.undo': 'Undo changes',
+  'web.building.action.keep-mine': 'Keep mine and save',
+  'web.building.action.use-theirs': 'Use the new version',
   'web.building.banner.conflict':
-    'Someone just changed the settings. The new version is loaded; review your changes and save again.',
+    'Someone saved the settings before you. The new version is loaded and your changes are still on the form, not saved. Choose which to keep.',
+  'web.building.banner.conflict-fields': 'You both changed: {fields}.',
   'web.building.card.info.company': 'Management company',
   'web.building.card.info.title': 'Building and company',
   'web.building.card.logo.hint': 'Used on fee notices and receipt PDFs',

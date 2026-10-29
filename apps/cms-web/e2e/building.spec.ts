@@ -61,6 +61,68 @@ test.describe('W-Building (UIWS-17…23)', () => {
     await expect(page).toHaveURL(/\/staff/)
   })
 
+  test('opening a dialog with unsaved edits keeps the edits and asks nothing (UIWS-23)', async ({
+    page,
+  }) => {
+    await signInAndWait(page, 'admin')
+    await page.goto('/building')
+    await page.getByLabel('Hotline').fill('1900 0000')
+    await page.getByRole('button', { name: 'Xuất bản phiên bản mới' }).first().click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click()
+    await expect(page.getByLabel('Hotline')).toHaveValue('1900 0000')
+  })
+
+  test('the second Admin to save sees the conflict and chooses (UIWS-19)', async ({
+    browser,
+    page,
+  }) => {
+    await signInAndWait(page, 'admin')
+    await page.goto('/building')
+    const other = await browser.newContext()
+    const second = await other.newPage()
+    await signInAndWait(second, 'admin')
+    await second.goto('/building')
+    await expect(second.getByLabel('Hotline')).toHaveValue(/\d/)
+
+    // The first Admin saves a hotline and the email.
+    await page.getByLabel('Hotline').fill('1900 1111')
+    await page.getByLabel('Email', { exact: true }).fill('first@example.vn')
+    await page.getByRole('button', { name: 'Lưu thay đổi' }).click()
+    await expect(page.getByText('Đã lưu cấu hình')).toBeVisible()
+
+    // The second Admin changed the hotline and the hours, and saves late: the banner names the hotline, both edits stay.
+    await second.getByLabel('Hotline').fill('1900 2222')
+    await second.getByLabel(/Hạn thanh toán mặc định/).fill('21')
+    await second.getByRole('button', { name: 'Lưu thay đổi' }).click()
+    const banner = second
+      .getByRole('alert')
+      .filter({ hasText: 'Có người vừa lưu cấu hình trước bạn' })
+    await expect(banner).toContainText('Hai bên cùng sửa: Hotline')
+    await expect(second.getByLabel('Hotline')).toHaveValue('1900 2222')
+    await expect(second.getByLabel(/Hạn thanh toán mặc định/)).toHaveValue('21')
+    await expect(second.getByLabel('Email', { exact: true })).toHaveValue('first@example.vn')
+
+    // "Use the new version" drops the second Admin's edits.
+    await banner.getByRole('button', { name: 'Dùng bản mới' }).click()
+    await expect(banner).toHaveCount(0)
+    await expect(second.getByLabel('Hotline')).toHaveValue('1900 1111')
+    await expect(second.getByLabel(/Hạn thanh toán mặc định/)).not.toHaveValue('21')
+
+    // Conflict again, and this time "Keep mine and save" writes the second Admin's fields over the first one's.
+    await page.getByLabel('Hotline').fill('1900 3333')
+    await page.getByRole('button', { name: 'Lưu thay đổi' }).click()
+    await expect(page.getByText('Đã lưu cấu hình').last()).toBeVisible()
+    await second.getByLabel('Hotline').fill('1900 4444')
+    await second.getByRole('button', { name: 'Lưu thay đổi' }).click()
+    await second.getByRole('button', { name: 'Giữ của tôi và lưu' }).click()
+    await expect(second.getByText('Đã lưu cấu hình')).toBeVisible()
+    await second.reload()
+    await expect(second.getByLabel('Hotline')).toHaveValue('1900 4444')
+    await other.close()
+  })
+
   test('a terms text with HTML is refused before any request and a valid one publishes (UIWS-22)', async ({
     page,
   }) => {

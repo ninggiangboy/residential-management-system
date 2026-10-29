@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { type BuildingFormValues, buildPatch, fieldOfPath, isEmptyPatch, outOfRange } from './model'
+import {
+  type BuildingFormValues,
+  buildPatch,
+  fieldOfPath,
+  isEmptyPatch,
+  mergeConflict,
+  outOfRange,
+} from './model'
 
 const original: BuildingFormValues = {
   nameVi: 'Chung cư Sunrise A',
@@ -87,4 +94,30 @@ test('UIWS-18: every field outside its range is named at once', () => {
     outOfRange({ ...original, maxAttempts: '11', quotaGb: '2000', maxCarsPerUnit: '' }),
   ).toEqual(['maxAttempts', 'maxCarsPerUnit', 'quotaGb'])
   expect(outOfRange({ ...original, accountDeletionDays: 'abc' })).toEqual(['accountDeletionDays'])
+})
+
+describe('UIWS-19: what a 409 leaves on the form (DR-310)', () => {
+  test('a field only the second Admin changed is kept and is no clash', () => {
+    const mine = { ...original, hotline: '1900 1111' }
+    expect(mergeConflict(original, mine, original)).toEqual({ kept: ['hotline'], clashes: [] })
+  })
+
+  test('a field only the first Admin changed is not kept: the form shows the fresh value', () => {
+    const fresh = { ...original, hotline: '1900 2222' }
+    expect(mergeConflict(original, original, fresh)).toEqual({ kept: [], clashes: [] })
+  })
+
+  test('a field both changed to different values is kept and named', () => {
+    const mine = { ...original, hotline: '1900 1111', email: 'mine@example.vn' }
+    const fresh = { ...original, hotline: '1900 2222' }
+    expect(mergeConflict(original, mine, fresh)).toEqual({
+      kept: ['hotline', 'email'],
+      clashes: ['hotline'],
+    })
+  })
+
+  test('both changed a field to the same value: nothing is left to decide', () => {
+    const both = { ...original, hotline: '1900 3333' }
+    expect(mergeConflict(original, both, both)).toEqual({ kept: [], clashes: [] })
+  })
 })

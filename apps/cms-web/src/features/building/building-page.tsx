@@ -25,8 +25,10 @@ import {
   type BuildingDocument,
   type BuildingFormValues,
   buildPatch,
+  FIELD_LABEL_KEYS,
   fieldOfPath,
   isEmptyPatch,
+  mergeConflict,
   outOfRange,
   valuesOf,
 } from './model'
@@ -54,7 +56,10 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
   const [logo, setLogo] = useState<{ fileId: string | null; preview: string | null } | null>(null)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [conflict, setConflict] = useState(false)
+  // Set after a 409: the Admin's edits sit on the fresh document, and the choice is theirs (UX-02, DR-310).
+  const [conflict, setConflict] = useState<{ clashes: (keyof BuildingFormValues)[] } | null>(null)
+  // While a choice is pending, the fresh etag must not reset the form over the edits laid on it.
+  const holdReset = useRef(false)
   const [banner, setBanner] = useState<string | null>(null)
   const [versionsOf, setVersionsOf] = useState<TermsKind | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -63,7 +68,7 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
   const original = document ? valuesOf(document) : null
 
   useEffect(() => {
-    if (original) form.reset(original)
+    if (original && !holdReset.current) form.reset(original)
     // The form follows the loaded document; an unsaved edit is laid over a fresh one by the conflict handler below.
     // biome-ignore lint/correctness/useExhaustiveDependencies: `original` is derived from `settings.data`
   }, [settings.data?.etag])
@@ -72,7 +77,8 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
 
   const dirty = form.formState.isDirty || logo !== null
   const blocker = useBlocker({
-    shouldBlockFn: () => dirty,
+    // Opening or closing a dialog of this page changes only its search, so the edits stay where they are (no discard prompt).
+    shouldBlockFn: ({ current, next }) => dirty && next.routeId !== current.routeId,
     withResolver: true,
     enableBeforeUnload: () => dirty,
   })
@@ -153,7 +159,8 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
 
   const submit = form.handleSubmit((values) => {
     setBanner(null)
-    setConflict(false)
+    setConflict(null)
+    holdReset.current = false
     const patch = buildPatch(values, original, logo ? { fileId: logo.fileId } : null)
     if (isEmptyPatch(patch)) return
     const invalid = outOfRange(values)
@@ -178,15 +185,21 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
         onError: async (thrown) => {
           const failure = apiErrorOf(thrown)
           if (failure.code === 'version_conflict') {
-            // The fresh document loads and the Admin's edits are laid over it; nothing is saved by itself (UX-02, UIWS-19).
-            const edits = values
+            // The fresh document loads and the Admin's edits are laid over it; nothing is saved by itself, the Admin picks
+            // "use the new version" or "keep mine and save" (UX-02, UIWS-19, DR-310).
+            holdReset.current = true
             const fresh = await queryClient.fetchQuery({ ...settingsQuery(), staleTime: 0 })
             const freshValues = valuesOf(fresh.document)
+            const { kept, clashes } = mergeConflict(original, values, freshValues)
             form.reset(freshValues)
-            for (const key of Object.keys(edits) as (keyof BuildingFormValues)[])
-              if (edits[key] !== original[key])
-                form.setValue(key, edits[key] as never, { shouldDirty: true })
-            setConflict(true)
+            for (const key of kept) form.setValue(key, values[key] as never, { shouldDirty: true })
+            if (kept.length === 0 && logo === null) {
+              // The other Admin saved what this one typed: nothing is left to decide.
+              holdReset.current = false
+              toast.success(t('web.building.toast.saved'))
+              return
+            }
+            setConflict({ clashes })
             return
           }
           if (Array.isArray(failure.details) && failure.details.length > 0)
@@ -196,6 +209,14 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
       },
     )
   })
+
+  /** "Dùng bản mới": the Admin's edits are dropped and the form shows the document the other Admin saved. */
+  const takeNewVersion = () => {
+    holdReset.current = false
+    form.reset(original)
+    setLogo(null)
+    setConflict(null)
+  }
 
   const pickLogo = (file: File | undefined) => {
     if (!file) return
@@ -229,7 +250,8 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
               onClick={() => {
                 form.reset(original)
                 setLogo(null)
-                setConflict(false)
+                setConflict(null)
+                holdReset.current = false
               }}
             >
               {t('web.building.action.undo')}
@@ -246,8 +268,32 @@ export function BuildingPage({ dialog, kind }: { dialog?: 'terms'; kind: TermsKi
         }
       />
       {conflict && (
-        <Banner tone="warning" className="mb-6">
+        <Banner
+          tone="warning"
+          className="mb-6"
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={save.isPending}
+                onClick={takeNewVersion}
+              >
+                {t('web.building.action.use-theirs')}
+              </Button>
+              <Button size="sm" loading={save.isPending} onClick={() => void submit()}>
+                {t('web.building.action.keep-mine')}
+              </Button>
+            </>
+          }
+        >
           {t('web.building.banner.conflict')}
+          {conflict.clashes.length > 0 &&
+            ` ${t('web.building.banner.conflict-fields', {
+              fields: [...new Set(conflict.clashes.map((key) => t(FIELD_LABEL_KEYS[key])))].join(
+                ', ',
+              ),
+            })}`}
         </Banner>
       )}
       {banner && (

@@ -4,8 +4,11 @@ import type { webEn } from './en'
 export const webVi: Record<keyof typeof webEn, string> = {
   'web.building.cta': 'Lưu thay đổi',
   'web.building.action.undo': 'Hoàn tác',
+  'web.building.action.keep-mine': 'Giữ của tôi và lưu',
+  'web.building.action.use-theirs': 'Dùng bản mới',
   'web.building.banner.conflict':
-    'Có người vừa thay đổi cấu hình. Đã tải bản mới, hãy xem lại thay đổi của bạn rồi lưu lại.',
+    'Có người vừa lưu cấu hình trước bạn. Đã tải bản mới; thay đổi của bạn vẫn nằm trên form, chưa được lưu. Hãy chọn bản nào được giữ.',
+  'web.building.banner.conflict-fields': 'Hai bên cùng sửa: {fields}.',
   'web.building.card.info.company': 'Công ty quản lý',
   'web.building.card.info.title': 'Thông tin tòa nhà và công ty',
   'web.building.card.logo.hint': 'Dùng trên thông báo phí và phiếu thu PDF',
