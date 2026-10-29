@@ -157,8 +157,8 @@ describe('the unit reads', () => {
   test('RM-35 the list is in code order with the owner and the member count; the summary covers the building', async () => {
     const staff = h.staff('admin', LISTED)
     const a = await create('A-20', { occupancy: 'occupied' }, staff)
-    await create('A-100', { occupancy: 'rented', bedrooms: 2 }, staff)
-    await create('A-3', {}, staff)
+    await create('A-100', { occupancy: 'rented', bedrooms: 2, floor: 10 }, staff)
+    await create('A-3', { floor: 3 }, staff)
     const owner = await h.seedAccount('+84901000001', 'An')
     await h.seedProfile(owner, LISTED, 'Nguyễn Văn An')
     await h.seedMembership({
@@ -169,7 +169,14 @@ describe('the unit reads', () => {
     await h.seedMembership({ memberType: 'tenant', unit: { id: a.id, buildingId: LISTED } })
     const page = await h.residency.queries.units.list(staff, { limit: 50 })
     expect(page.items.map((item) => item.code)).toEqual(['A-100', 'A-20', 'A-3'])
-    expect(page.summary).toEqual({ total: 3, occupied: 1, rented: 1, vacant: 1 })
+    expect(page.summary).toEqual({
+      total: 3,
+      occupied: 1,
+      rented: 1,
+      vacant: 1,
+      floors: [3, 10],
+      bedrooms: [2],
+    })
     expect(page.items[1]).toMatchObject({
       memberCount: 2,
       owner: { accountId: owner, fullName: 'Nguyễn Văn An', phone: '+84901000001' },
@@ -177,7 +184,7 @@ describe('the unit reads', () => {
     expect(page.items[0]?.owner).toBeNull()
     const filtered = await h.residency.queries.units.list(staff, { limit: 50, bedrooms: 2 })
     expect(filtered.items.map((item) => item.code)).toEqual(['A-100'])
-    expect(filtered.summary.total).toBe(3)
+    expect(filtered.summary).toMatchObject({ total: 3, floors: [3, 10], bedrooms: [2] })
   })
 
   test('the list pages by keyset on (code, id)', async () => {

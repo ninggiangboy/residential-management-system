@@ -1,6 +1,6 @@
 import type { Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
-import { and, count, desc, eq, type SQL, sql } from 'drizzle-orm'
+import { and, count, desc, eq, isNotNull, type SQL, sql } from 'drizzle-orm'
 import type { Occupancy } from '../../contracts'
 import type {
   HistoryCursor,
@@ -92,7 +92,25 @@ export class DrizzleUnitReader implements UnitReader {
       .groupBy(unit.occupancy)
     const by = (occupancy: Occupancy) => rows.find((row) => row.occupancy === occupancy)?.units ?? 0
     const [occupied, rented, vacant] = [by('occupied'), by('rented'), by('vacant')]
-    return { total: occupied + rented + vacant, occupied, rented, vacant }
+    return {
+      total: occupied + rented + vacant,
+      occupied,
+      rented,
+      vacant,
+      floors: await this.distinct(scope, unit.floor),
+      bedrooms: await this.distinct(scope, unit.bedrooms),
+    }
+  }
+
+  /** The distinct non-null values of one column over the building's units, ascending (DR-309). */
+  private async distinct(scope: BuildingScope, column: typeof unit.floor | typeof unit.bedrooms) {
+    const rows = await this.database.executor
+      .select({ value: column })
+      .from(unit)
+      .where(and(eq(unit.buildingId, scope.buildingId), isNotNull(column)))
+      .groupBy(column)
+      .orderBy(column)
+    return rows.flatMap((row) => (row.value === null ? [] : [row.value]))
   }
 
   async history(
