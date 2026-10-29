@@ -1,6 +1,6 @@
 # Design system
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (§17 the web interaction quality bar, DS-09, DS-10; DR-304, DR-306) · 2026-10-28 (DR-304: the web theme switch, §11, §7.3; overlay motion, §12 A6) · 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-29 (DR-311: the web theme, §2.1, §3.2, §5.4, §5.5, §8.1) · 2026-10-28 (§17 the web interaction quality bar, DS-09, DS-10; DR-304, DR-306) · 2026-10-28 (DR-304: the web theme switch, §11, §7.3; overlay motion, §12 A6) · 2026-10-22 (P1-09: the outputs as built, §2.1; Big Shoulders 800 ships; the icon registry lives in `design-tokens`; DR-236, DR-237) · DOC-54
 > Depends on: original SDD §18.2, [DR](../00-decision-register.md) (DR-10, 17, 20, 44, 45, 47, 49, 56, 70, 71, 72, 82, 84), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-03](../01-product/requirements.md) (NFR-13), [DOC-06](../02-glossary.md), [DOC-11](../03-architecture/tech-stack-and-versions.md) §4–6, [DOC-12](../03-architecture/code-architecture.md) §2, [design screens catalog](../references/design-screens.md), the design canvas (design system `Hien`)
 > Main readers: P1-09 (design tokens), P1-16 (web CMS shell), P1-17 (mobile shells), DOC-53, DOC-55, DOC-56…68 (screen specifications), DOC-34 (PDF look)
 
@@ -46,7 +46,7 @@ flowchart LR
 
 | Output | Consumer | Rule |
 | --- | --- | --- |
-| `tokens.css` | web CMS | `:root` and `[data-theme="light"]` hold the light values, `[data-theme="dark"]` the dark ones, in the same variable names as the canvas (`--ground`, `--surface`, `--teal`, `--space-4`, `--radius-card`…). The web also sets `data-theme` from `prefers-color-scheme` (§11) |
+| `tokens.css` | web CMS | `:root` and `[data-theme="light"]` hold the light values, `[data-theme="dark"]` the dark ones, in the same variable names as the canvas (`--ground`, `--surface`, `--teal`, `--space-4`, `--radius-card`…). The web also sets `data-theme` from `prefers-color-scheme` (§11). Type, radius and sizes are the web density, and the colors and shadows the web theme of `web.json` (§5.5) |
 | `theme.css` | web CMS | Tailwind 4 `@theme`: utilities (`bg-surface`, `text-ink-muted`, `rounded-card`, `shadow-card`, `text-title-1`, `h-control-lg`, `p-gutter`) read the variables, so a theme switch needs no class change. Colors map to the canvas variables; type, radius, fonts and sizes are literal (equal in both themes); shadows are `@utility` rules. Tailwind's default palette, shadows, radii, type sizes and fonts are removed: `bg-red-500` does not exist (DR-236) |
 | `fonts.css` | web CMS | `@font-face` for the `woff2` files in `apps/cms-web/public/fonts`, `font-display: swap` |
 | `tailwind-preset.cjs` | both apps (`tailwind.config.js` after `nativewind/preset`) | Tailwind 3 preset (DR-229): colors are CSS variables the preset declares for light and for `prefers-color-scheme: dark`, which NativeWind compiles to light and dark root variables; type sizes in px with letter spacing in dp; Tailwind's spacing steps in px (`p-4` is 16, as on the web); one family per static font file (`font-sans-semibold`). No shadows: NativeWind 4.2 drops `box-shadow: var(…)` (DR-236) |
@@ -164,12 +164,37 @@ Ratios are WCAG 2.x relative luminance contrasts computed from the hex values ab
 
 Every pair the components use passes in both themes except the three marked rows, which are deliberate.
 
+Two more pairs, on the web token `surface-muted` (§5.5): `ink` 14.49 light, 13.64 dark; `ink-muted` 6.46 light, 7.47 dark.
+
+**On the web.** The web theme of §5.5 changes some light colors; these pairs have other ratios there (dark is unchanged). DS-02 checks both tables.
+
+| Foreground on background (web, light) | Needs | Canvas | Web |
+| --- | --- | --- | --- |
+| `ink` on `ground` | 4.5:1 | 13.32 | 14.00 |
+| `ink` on `fill` | 4.5:1 | 12.08 | 13.02 |
+| `ink-muted` on `ground` | 4.5:1 | 5.94 | 6.25 |
+| `ink-muted` on `fill` | 4.5:1 | 5.39 | 5.81 |
+| `teal` on `ground` | 4.5:1 | 5.58 | 5.26 |
+| `teal` on `surface` | 4.5:1 | 6.35 | 5.70 |
+| `on-teal` on `teal` | 4.5:1 | 6.35 | 5.70 |
+| `on-teal` on `teal-pressed` | 4.5:1 | 8.90 | 7.51 |
+| `on-teal-soft` on `teal-soft` | 4.5:1 | 7.15 | 7.47 |
+| `danger` on `ground` | 4.5:1 | 5.75 | 6.04 |
+| `info` on `ground` | 4.5:1 | 5.99 | 6.29 |
+| `line-strong` on `ground` | 3.0:1 | 3.54 | 3.73 |
+| `line-strong` on `fill` | 3.0:1 | 3.22 | 3.47 |
+| `line-control` on `ground` | 3.0:1 | 3.23 | 3.40 |
+| `focus` on `ground` | 3.0:1 | 13.32 | 14.00 |
+| `focus` on `fill` | 3.0:1 | 12.08 | 13.02 |
+| `lamp` on `ground` | 3.0:1 | 1.39 | 1.46 (fails by design, §3.3) |
+
 ### 3.3 What the failing rows mean
 
 | Row | Why it fails | Rule that contains it |
 | --- | --- | --- |
 | `ink-disabled` on `surface` | A disabled control is exempt from WCAG contrast; the token is the lowest-contrast gray that still reads as disabled | Used only for disabled controls. A disabled control that explains itself ("Hết lượt thử", a limit) puts the explanation in `ink-muted` |
 | `lamp` on `surface` and `ground` (light) | 1.58:1 and 1.39:1: a yellow mark on white does not stand out | `lamp` is never the only carrier of meaning. Count badge: the number is text (`on-lamp` on `lamp`, 10.52:1). Unread dot: the row also has a bold title and the notice `is-unread` style, and the screen-reader label says "chưa đọc". Rating stars: the numeric value is printed next to the stars and the group has an `aria-label`. Current step: the step has its text and `aria-current="step"` |
+| `line-input` on `surface` (web) | 1.38:1 light, 1.61:1 dark: the field border of the web follows shadcn's light `border-input` (DR-311) | A field is told by its visible label, its white fill on `ground` and its `shadow-field`, not by the border alone; focus turns the border `teal` with a 3 px ring, and an error is written under the field with a `danger` border and ring. `line-strong` and `line-control` keep 3:1 for the controls that use them |
 
 ## 4. Typography
 
@@ -270,7 +295,24 @@ Controls: `lg` 52 px, `md` 44 px, `sm` 36 px, with the 20/24 px icon of the size
 | `shadow-float` | `0 8px 24px rgba(15, 42, 43, 0.14), 0 1px 2px rgba(15, 42, 43, 0.08)` | `0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(234, 241, 239, 0.08)` | Floating card, toast, bulk-action bar |
 | `shadow-sheet` | `0 -6px 32px rgba(15, 42, 43, 0.16)` | `0 -6px 32px rgba(0, 0, 0, 0.55), 0 -1px 0 rgba(234, 241, 239, 0.08)` | Bottom sheet |
 
-In dark mode shadows give way to hairlines: a surface is told from the ground by a 1 px `rgba(234, 241, 239, 0.07)` ring, not by blur.
+In dark mode shadows give way to hairlines: a surface is told from the ground by a 1 px `rgba(234, 241, 239, 0.07)` ring, not by blur. The web draws its own shadows under a 1 px `line` border (§5.5).
+
+### 5.5 The web density and the web theme (DR-307, DR-311)
+
+The web CMS is used with a mouse on a wide screen for long sessions; `packages/design-tokens/web.json` adapts the canvas to it, in `tokens.css` and `theme.css` only. The apps keep the canvas values.
+
+- **Density (DR-307).** Smaller type (body 14/20), radii (`plate` 4, `control` 8, `card` 12, `sheet` 16) and sizes (`control-md` 36 px), listed in `web.json`.
+- **Theme (DR-311).** Light colors written over the canvas: `ground` `#F5F6F7`, `fill` `#ECEEF0`, `line` `#E3E5E8` (neutral greys, without the canvas's green tint), `teal` `#0B736D`, `teal-pressed` `#085F5A`, `teal-soft` `#D9F0EB` (`success*` follow); `scrim` `rgba(15, 42, 43, 0.38)` light, `rgba(0, 0, 0, 0.55)` dark; `shadow-float` layered. Their contrast is the second table of §3.2.
+- **Web tokens.** `line-control` (`#80868D` / `#667773`: a dashed drop zone; 3:1), `line-input` (`#D9DCE0` / `#344440`: the border of every field and the track of an unchecked switch, after shadcn; §3.3), `surface-muted` (`#F9FAFA` / `#192624`: the band of a table header, a hovered row, a dialog footer), and six shadows. A field's label is `label` (14/20, weight 500) 8 px above it, as shadcn's `Label`:
+
+| Token | Use on the web |
+| --- | --- |
+| `shadow-raised` | An outline button, a chip, a chosen segment, a radio card: a hairline lift under a 1 px border |
+| `shadow-field` | Every field (text input, select, text area, OTP cell, checkbox, radio), after shadcn's `Input`: white, a 1 px `line-input` border and shadcn's `shadow-xs`; a select is drawn like a text field, its chosen option marked by a check at the right |
+| `shadow-panel` | A card, a table card, the active sidebar entry, the user block: layered blur under a 1 px `line` border |
+| `shadow-primary` | The `primary` button and the brand mark: a light top edge and a teal glow |
+| `shadow-focus` | The focus of a field or an open select: the border turns `teal` with a 3 px `teal` ring outside it (shadcn's `ring-[3px]`; §12 A4) |
+| `shadow-invalid` | A field in error, at rest and focused: the `danger` border with a 3 px `danger` ring (shadcn's `aria-invalid`) |
 
 ## 6. Status presentation
 
@@ -455,10 +497,10 @@ The web artboards are built from plain markup around the Hiên parts. These are 
 
 | Element | Rule (from the canvas) |
 | --- | --- |
-| Shell | Sidebar `surface`, 248 px, right border `line`; content column fills the rest; topbar 64 px (`surface`, bottom border `line`) with breadcrumb on the left, `VI`/`EN` switch and the bell on the right |
-| Sidebar | Product name (`title-3` 17/24 bold) and "Web quản lý"; nav groups with a 13 px `ink-muted` heading; items 36 px high, 12 px gap icon-text, radius `control`, active item `teal-soft` with `on-teal-soft` text, weight 600 and the **fill** icon; a count `Badge` on the right; user card at the bottom (`fill`, avatar, name, role, sign-out icon button) |
+| Shell | Sidebar 248 px and topbar 56 px both on `ground`, without a border (DR-311): the cards of the page are the white that rises from it. The topbar's bottom edge (`line`) fades in over the first 16 px the page scrolls under it. Breadcrumb on the left, theme and `VI`/`EN` switches and the bell on the right |
+| Sidebar | Brand mark (the `buildings` icon on the hero gradient, `shadow-primary`), product name (`title-3`) and "Web quản lý"; nav groups with a 13 px `ink-muted` heading; items 36 px high, 10 px gap icon-text, radius `control`; the active item is `surface` with `shadow-panel`, `ink` text, weight 600 and the **fill** icon in `teal` (DR-311); a count `Badge` on the right; user card at the bottom (`surface`, `shadow-panel`, avatar, name, role, sign-out icon button) |
 | Page | Padding 28 px top, 32 px sides, 40 px bottom; blocks 24 px apart; `h1` is `title-1` |
-| Table card | `surface`, radius `card`, `shadow-card`; header row 13 px `ink-muted` weight 500; row padding 12 × 24 px; columns by CSS grid with a fixed `min-width` (880–960 px) inside `overflow-x: auto`; amounts right-aligned with tabular numerals |
+| Table card | `surface`, radius `card`, `shadow-panel` on the web; header row on `surface-muted`, 13 px `ink-muted` weight 500; row padding 12 × 24 px; columns by CSS grid with a fixed `min-width` (880–960 px) inside `overflow-x: auto`; amounts right-aligned with tabular numerals |
 | Forms | Fields stack 16 px apart; the page's primary button is the right-most of the header actions |
 | Sign-in | Two panels: hero gradient on the left (company, building, three points), form on the right with the language switch above; the panels wrap under 960 px |
 
@@ -519,13 +561,13 @@ The floor, in the order a reviewer checks it (DR-184):
 | # | Rule | How it is met | Test |
 | --- | --- | --- | --- |
 | A1 | Touch and click targets are at least **44 × 44 px** (SDD §18.2). The design target is `tap-min` 48 px | `Button` `md`/`lg`, list rows and the TabBar meet it by size; `sm` controls, `sm` IconButtons, checkboxes and chips extend the hit area with `hitSlop` or padding | DS-07 |
-| A2 | Text contrast at least 4.5:1, borders and focus rings at least 3:1, in both themes | §3.2 | DS-02 |
+| A2 | Text contrast at least 4.5:1, borders and focus rings at least 3:1, in both themes; the web field border `line-input` is the exception of §3.3 | §3.2 | DS-02 |
 | A3 | Color is never the only carrier of meaning | Tags carry text; counts carry numbers; `lamp` marks follow §3.3; charts follow §10 | DS-04, review |
-| A4 | Keyboard focus is visible | 2 px `focus` ring, 2 px offset (`:focus-visible`), inset for list rows; text fields show a 2 px `teal` inner ring | DS-08 |
+| A4 | Keyboard focus is visible | 2 px `focus` ring, 2 px offset (`:focus-visible`), inset for list rows; a field on the web (text input, select, text area, checkbox, radio) turns its border `teal` with a 3 px `teal` ring (`shadow-focus`, DR-311) | DS-08 |
 | A5 | Every icon-only button has an accessible name | `IconButton` requires a `label` prop (type error without it), used as `aria-label` / `accessibilityLabel`, e.g. "Thông báo, 4 mục chưa đọc", "Đăng xuất", "Trang trước" | type check |
 | A6 | Reduced motion | `prefers-reduced-motion: reduce` stops skeleton and sheet animation, the overlay enter and exit motion of DR-304, the page fade and the table loading bar of DR-306 and transitions (as in the canvas CSS); on native `useReducedMotion()` from Reanimated and `AccessibilityInfo`. No information moves in only | DS-08 |
 | A7 | One-time code input | Six cells over one real input: `autocomplete="one-time-code"` (web), `textContentType="oneTimeCode"` and `autoComplete="sms-otp"` (native), numeric keyboard; the group is announced once ("Mã xác thực, 6 chữ số") and a wrong code is announced as an alert | Maestro, DS-08 |
-| A8 | Forms | Every field has a visible label (13 px caption) and help/error text tied by `aria-describedby`; an error is text plus the `danger` ring, never the ring alone; the first invalid field takes focus on submit | DS-08 |
+| A8 | Forms | Every field has a visible label (13 px caption; 14 px `label` on the web, DR-311) and help/error text tied by `aria-describedby`; an error is text plus the `danger` ring, never the ring alone; the first invalid field takes focus on submit | DS-08 |
 | A9 | Dialogs and sheets | `role="dialog"` / `alertdialog`, `aria-modal`, a name, focus trapped and returned, Escape closes (web), the hardware back button closes (Android) | DS-08 |
 | A10 | The QR | The QR image has an `accessibilityLabel` ("Mã QR ra vào của căn A-1508, còn 14 phút"), the countdown is text, and the brightness is raised while visible (`expo-brightness`); the fixed `paper` surface of §11 | QC- tests |
 | A11 | Text size | Respect the system font scale up to 1.5× without clipping; `micro` and plates cap at 1.3× (§4.2) | DS-08 |
