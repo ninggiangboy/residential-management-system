@@ -38,7 +38,7 @@ export function ResidentAddDialog({
   const { create } = useResidentMutations()
   const intent = useIntent()
   const [unit, setUnit] = useState<PickedUnit | null>(
-    initialUnit ? { unitId: initialUnit, code: '…' } : null,
+    initialUnit ? { unitId: initialUnit, code: '' } : null,
   )
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
@@ -61,7 +61,9 @@ export function ResidentAddDialog({
   const hasOwner = detail.data?.owner != null
   const effectiveRole: MemberType =
     role ?? (detail.data ? (hasOwner ? 'family' : 'owner') : 'owner')
-  const code = detail.data?.code ?? unit?.code ?? ''
+  // A unit that came from the URL has no code until its detail answers; the picker shows a skeleton for it.
+  const resolvedCode = detail.data?.code ?? unit?.code ?? ''
+  const code = resolvedCode || '…'
 
   // The route unmounts the panel; `useExit` lets it slide out first (DR-304).
   const closeOverlay = useCloseOverlay()
@@ -203,7 +205,7 @@ export function ResidentAddDialog({
         <UnitPicker
           label={t('web.resident-add.field.unit.label')}
           required
-          value={unit}
+          value={unit ? { unitId: unit.unitId, code: resolvedCode } : null}
           error={errors.unit}
           onChange={(next) => {
             setUnit(next)
