@@ -1,11 +1,34 @@
 import { AlertDialog, Dialog as RadixDialog } from 'radix-ui'
-import { type ReactNode, useCallback, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useT } from '../../lib/i18n'
 import { cn } from '../../lib/utils'
 import { Button, IconButton } from './button'
 import { Skeleton } from './skeleton'
 
-const OVERLAY = 'motion-overlay fixed inset-0 z-40 bg-scrim'
+const OVERLAY = 'motion-overlay fixed inset-0 bg-scrim'
+
+/** The dialogs that are open now, oldest first: a dialog opened over another takes the next layer. */
+const openDialogs: string[] = []
+
+/**
+ * The stacking of a dialog: its scrim and panel sit above the panel of every dialog that was open before it, so the scrim of
+ * a dialog opened over another also dims that one, even where it is larger. The layer is kept while the dialog leaves, so
+ * its exit motion does not drop behind the one below. The popovers of `select-field` and `menu` sit above every layer.
+ */
+function useDialogLayer(open: boolean) {
+  const id = useId()
+  const [layer, setLayer] = useState(1)
+  useLayoutEffect(() => {
+    if (!open) return
+    openDialogs.push(id)
+    setLayer(openDialogs.length)
+    return () => {
+      openDialogs.splice(openDialogs.indexOf(id), 1)
+    }
+  }, [open, id])
+  const scrim = 20 + layer * 20
+  return { scrim: { zIndex: scrim }, panel: { zIndex: scrim + 10 } }
+}
 
 /** A field a person types into, enabled and writable: what a dialog focuses when it opens (DOC-54 §17.9). */
 const FIRST_FIELD =
@@ -88,11 +111,13 @@ export function Dialog({
   const t = useT()
   const shown = useHeld({ title, description, children, footer }, open)
   const body = useRef<HTMLDivElement>(null)
+  const layer = useDialogLayer(open)
   return (
     <RadixDialog.Root open={open} onOpenChange={(next) => (dismissible || next) && onOpenChange(next)}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className={OVERLAY} />
+        <RadixDialog.Overlay className={OVERLAY} style={layer.scrim} />
         <RadixDialog.Content
+          style={layer.panel}
           // A form opens with the caret in its first field; a dialog without one focuses itself, not the close button,
           // so no focus ring sits on the close button of a dialog opened with the mouse.
           onOpenAutoFocus={(event) => {
@@ -103,7 +128,7 @@ export function Dialog({
           onInteractOutside={(event) => !dismissible && event.preventDefault()}
           onEscapeKeyDown={(event) => !dismissible && event.preventDefault()}
           className={cn(
-            'fixed z-50 flex flex-col border-line bg-surface shadow-float outline-none',
+            'fixed flex flex-col border-line bg-surface shadow-float outline-none',
             // The side panel runs the full height of the window; the centred dialog stops at 90% of it.
             variant === 'side'
               ? 'motion-sheet inset-y-0 right-0 w-full max-w-[480px] rounded-l-card border-l'
@@ -173,11 +198,15 @@ export function ConfirmDialog({
   // The call that closes the dialog answers in the same render: the button keeps its spinner while the dialog leaves, rather
   // than turning back to its colour first (DR-306).
   const busy = useHeld(loading, open)
+  const layer = useDialogLayer(open)
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => (!busy || next) && onOpenChange(next)}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className={OVERLAY} />
-        <AlertDialog.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card border border-line bg-surface p-5 shadow-float outline-none">
+        <AlertDialog.Overlay className={OVERLAY} style={layer.scrim} />
+        <AlertDialog.Content
+          style={layer.panel}
+          className="motion-dialog fixed left-1/2 top-1/2 max-h-[90vh] w-[calc(100vw-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-card border border-line bg-surface p-5 shadow-float outline-none"
+        >
           <AlertDialog.Title className="text-title-2 text-ink">{shown.title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-1.5 text-body text-ink-muted">
             {shown.body}

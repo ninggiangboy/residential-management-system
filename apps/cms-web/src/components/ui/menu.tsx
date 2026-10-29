@@ -22,7 +22,7 @@ export function RowMenu({ label, items }: { label: string; items: readonly MenuI
         <DropdownMenu.Content
           align="end"
           sideOffset={4}
-          className="motion-pop z-50 min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) rounded-control border border-line bg-surface p-1 shadow-float"
+          className="motion-pop z-[100] min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) rounded-control border border-line bg-surface p-1 shadow-float"
         >
           {items.map((item) => (
             <DropdownMenu.Item
@@ -48,7 +48,7 @@ export function Tooltip({ text, children }: { text: ReactNode; children: ReactNo
         <RadixTooltip.Portal>
           <RadixTooltip.Content
             sideOffset={6}
-            className="motion-pop z-50 origin-(--radix-tooltip-content-transform-origin) rounded-plate bg-plate px-2 py-1 text-caption text-on-plate shadow-float"
+            className="motion-pop z-[100] origin-(--radix-tooltip-content-transform-origin) rounded-plate bg-plate px-2 py-1 text-caption text-on-plate shadow-float"
           >
             {text}
           </RadixTooltip.Content>

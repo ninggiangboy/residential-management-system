@@ -664,6 +664,7 @@ The keyframes and classes live in `apps/cms-web/src/styles.css` (`motion-*`); th
 
 - Every dialog, panel, menu, select and tooltip uses the `motion-*` class of §17.2; a Radix content without one is a defect.
 - A dialog its parent unmounts to close (a route such as `/staff/new`, a search param such as `?dialog=profile`) closes through `useExit(onClose)`: every close path (Esc, scrim, Cancel, after a save, after a conflict) calls the returned `close`, which plays the exit and then navigates. A parent that renders the dialog only while a value exists keeps that value with `useLastDefined` while it closes.
+- A dialog opened over another takes the next layer (`useDialogLayer` in `dialog.tsx`): its scrim and panel sit above the panel of the one below, so the scrim dims that dialog too, also where it is larger. The layer is kept while the dialog leaves. Popovers (select list, menu, tooltip) sit above every layer.
 - `Dialog` and `ConfirmDialog` keep the content of their last open render while they leave (`useHeld`), so a caller may clear its state on close.
 - The side panel runs the full height of the window; a centred dialog stops at 90%.
 

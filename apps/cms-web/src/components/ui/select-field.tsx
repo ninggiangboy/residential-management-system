@@ -74,7 +74,7 @@ export function SelectField({
           <Select.Content
             position="popper"
             sideOffset={4}
-            className="motion-pop z-50 max-h-72 origin-(--radix-select-content-transform-origin) min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-control border border-line bg-surface shadow-float"
+            className="motion-pop z-[100] max-h-72 origin-(--radix-select-content-transform-origin) min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-control border border-line bg-surface shadow-float"
           >
             <Select.Viewport className="p-1">
               {options.map((option) => (
