@@ -304,6 +304,8 @@ export const webEn = {
   'web.shell.loading': 'Loading…',
   'web.shell.maintenance': 'The system is being updated. Try again in a few minutes.',
   'web.shell.nav.building': 'Building and configuration',
+  'web.shell.nav.collapse': 'Collapse the sidebar',
+  'web.shell.nav.expand': 'Expand the sidebar',
   'web.shell.nav.group.finance': 'Finance',
   'web.shell.nav.group.operations': 'Operations',
   'web.shell.nav.group.overview': 'Overview',

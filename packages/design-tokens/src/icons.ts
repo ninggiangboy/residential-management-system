@@ -67,6 +67,8 @@ export const ICON_NAMES = [
   'desktop',
   'sun',
   'moon',
+  // the sidebar toggle of the web shell (DR-312)
+  'sidebar-simple',
 ] as const
 export type IconName = (typeof ICON_NAMES)[number]
 

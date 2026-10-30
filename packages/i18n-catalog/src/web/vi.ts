@@ -301,6 +301,8 @@ export const webVi: Record<keyof typeof webEn, string> = {
   'web.shell.loading': 'Đang tải…',
   'web.shell.maintenance': 'Hệ thống đang được cập nhật. Thử lại sau ít phút.',
   'web.shell.nav.building': 'Tòa nhà và cấu hình',
+  'web.shell.nav.collapse': 'Thu gọn thanh bên',
+  'web.shell.nav.expand': 'Mở rộng thanh bên',
   'web.shell.nav.group.finance': 'Tài chính',
   'web.shell.nav.group.operations': 'Vận hành',
   'web.shell.nav.group.overview': 'Tổng quan',

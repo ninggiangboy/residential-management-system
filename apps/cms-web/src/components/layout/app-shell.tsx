@@ -10,6 +10,7 @@ import { signOut } from '../../auth/session'
 import { env } from '../../env'
 import { useI18n } from '../../lib/i18n'
 import { useOnline } from '../../lib/online'
+import { useSidebar } from '../../lib/sidebar'
 import { Avatar } from '../ui/avatar'
 import { IconButton } from '../ui/button'
 import { Icon } from '../ui/icon'
@@ -61,13 +62,18 @@ function Sidebar({ role }: { role: StaffRole }) {
   const brand = useBrand()
   const queryClient = useQueryClient()
   const me = useQuery(staffMeQuery()).data
+  const { rail } = useSidebar()
   return (
     // The sidebar is clear over the page's `ground` with the top bar, without a border: the cards of the page are
-    // the only white that rises from it, and the active entry rises the same way (DR-311).
-    <aside className="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col lg:w-[248px]">
-      <div className="flex items-center justify-center gap-3 px-4 py-4 lg:justify-start lg:px-5">
+    // the only white that rises from it, and the active entry rises the same way (DR-311). Its width follows `nav-full:`
+    // (DR-312) and slides; the icons keep their place in both widths, and the labels are clipped while it slides.
+    <aside
+      id="sidebar"
+      className="sticky top-0 flex h-screen w-[72px] shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-out nav-full:w-[248px]"
+    >
+      <div className="flex items-center gap-3 px-[18px] py-4">
         <BrandMark />
-        <div className="hidden min-w-0 lg:block">
+        <div className="hidden min-w-0 nav-full:block">
           {/* The name arrives with E-03; its line keeps its height meanwhile, so the navigation below does not move. */}
           {brand.loading ? (
             <div className="flex h-5.5 items-center">
@@ -76,26 +82,30 @@ function Sidebar({ role }: { role: StaffRole }) {
           ) : (
             <p className="truncate text-title-3 text-ink">{brand.name}</p>
           )}
-          <p className="text-secondary text-ink-muted">{t('web.shell.brand.subtitle')}</p>
+          <p className="truncate text-secondary text-ink-muted">{t('web.shell.brand.subtitle')}</p>
         </div>
       </div>
-      <nav aria-label={t('web.shell.nav.label')} className="flex-1 overflow-y-auto px-3 pt-2">
+      <nav
+        aria-label={t('web.shell.nav.label')}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-2"
+      >
         {NAV.map((group) => {
           const items = group.items.filter((item) => item.roles.includes(role))
           if (items.length === 0) return null
           return (
             <div key={group.label} className="mb-4">
-              <p className="mb-1.5 hidden px-2.5 text-caption text-ink-muted lg:block">
+              <p className="mb-1.5 hidden whitespace-nowrap px-3.5 text-caption text-ink-muted nav-full:block">
                 {t(group.label)}
               </p>
               <ul className="flex flex-col gap-0.5">
                 {items.map((item) => (
                   <li key={item.to}>
-                    <Tooltip text={t(item.label)}>
+                    {/* The rail shows the icons alone, so their names come as tooltips; the full sidebar writes them. */}
+                    <Tooltip text={t(item.label)} side="right" disabled={!rail}>
                       <Link
                         to={item.to}
                         search={{}}
-                        className="flex h-control-md items-center justify-center gap-2.5 rounded-control px-2.5 text-label text-ink-muted outline-offset-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink hover:bg-fill/70 focus-visible:outline-2 focus-visible:outline-focus lg:justify-start"
+                        className="flex h-control-md items-center gap-2.5 whitespace-nowrap rounded-control px-3.5 text-label text-ink-muted outline-offset-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink hover:bg-fill/70 focus-visible:outline-2 focus-visible:outline-focus"
                         activeProps={{
                           className:
                             'bg-surface !text-ink font-semibold shadow-panel hover:!bg-surface',
@@ -109,8 +119,8 @@ function Sidebar({ role }: { role: StaffRole }) {
                               weight={isActive ? 'fill' : 'regular'}
                               className={isActive ? 'text-teal' : undefined}
                             />
-                            <span className="hidden lg:inline">{t(item.label)}</span>
-                            <span className="sr-only lg:hidden">{t(item.label)}</span>
+                            <span className="hidden nav-full:inline">{t(item.label)}</span>
+                            <span className="sr-only nav-full:hidden">{t(item.label)}</span>
                           </>
                         )}
                       </Link>
@@ -124,24 +134,26 @@ function Sidebar({ role }: { role: StaffRole }) {
       </nav>
       {me && (
         <div className="m-3 flex items-center gap-2 rounded-card border border-line bg-surface p-1.5 shadow-panel">
-          <Link
-            to="/profile"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-plate p-0.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus"
-          >
-            <Avatar name={me.fullName} src={me.avatarUrl} size="sm" />
-            <span className="sr-only lg:hidden">{t('web.shell.user.open-profile')}</span>
-            <span className="hidden min-w-0 lg:block">
-              <span className="block truncate text-label text-ink">{me.fullName}</span>
-              <span className="block truncate text-secondary text-ink-muted">
-                {t(`common.staff-role.${me.role}`)}
+          <Tooltip text={me.fullName} side="right" disabled={!rail}>
+            <Link
+              to="/profile"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-plate p-0.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-focus"
+            >
+              <Avatar name={me.fullName} src={me.avatarUrl} size="sm" />
+              <span className="sr-only nav-full:hidden">{t('web.shell.user.open-profile')}</span>
+              <span className="hidden min-w-0 nav-full:block">
+                <span className="block truncate text-label text-ink">{me.fullName}</span>
+                <span className="block truncate text-secondary text-ink-muted">
+                  {t(`common.staff-role.${me.role}`)}
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
+          </Tooltip>
           <IconButton
             icon="sign-out"
             label={t('common.action.sign-out')}
             size="sm"
-            className="hidden lg:inline-flex"
+            className="hidden nav-full:inline-flex"
             onClick={() => void signOut(queryClient, 'user')}
           />
         </div>
@@ -151,11 +163,33 @@ function Sidebar({ role }: { role: StaffRole }) {
           icon="sign-out"
           label={t('common.action.sign-out')}
           size="sm"
-          className="mx-auto mb-3 lg:hidden"
+          className="mx-auto mb-3 nav-full:hidden"
           onClick={() => void signOut(queryClient, 'user')}
         />
       )}
     </aside>
+  )
+}
+
+/**
+ * Collapses the full sidebar to the rail and back (DR-312). Below 1024 px the sidebar is always the rail, so the button is not
+ * drawn there.
+ */
+function SidebarToggle() {
+  const { t } = useI18n()
+  const { collapsed, toggle } = useSidebar()
+  return (
+    <div className="hidden items-center gap-3 lg:flex">
+      <IconButton
+        icon="sidebar-simple"
+        label={t(collapsed ? 'web.shell.nav.expand' : 'web.shell.nav.collapse')}
+        size="sm"
+        aria-controls="sidebar"
+        aria-expanded={!collapsed}
+        onClick={toggle}
+      />
+      <span aria-hidden="true" className="h-4 w-px bg-line" />
+    </div>
   )
 }
 
@@ -171,39 +205,42 @@ function TopBar() {
     // Clear over the page's `ground` like the sidebar; its bottom edge shows only once the page scrolls under it
     // (`edge-on-scroll`, DR-311).
     <header className="edge-on-scroll gutter-stable flex h-14 shrink-0 items-center justify-between gap-4 overflow-hidden border-b px-8">
-      <nav aria-label={t('web.shell.breadcrumb.label')}>
-        <ol className="flex items-center gap-2 text-secondary text-ink-muted">
-          {crumbs?.map((crumb, index) => {
-            const current = index === crumbs.length - 1 && !tail
-            return (
-              <li key={crumb.label} className="flex items-center gap-2">
-                {index > 0 && <span aria-hidden="true">/</span>}
-                {current ? (
-                  <span className="text-ink" aria-current="page">
-                    {t(crumb.label as MessageKey)}
-                  </span>
-                ) : (
-                  <Link
-                    to={crumb.to}
-                    search={{}}
-                    className="rounded-plate outline-offset-2 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-focus"
-                  >
-                    {t(crumb.label as MessageKey)}
-                  </Link>
-                )}
+      <div className="flex min-w-0 items-center gap-3">
+        <SidebarToggle />
+        <nav aria-label={t('web.shell.breadcrumb.label')}>
+          <ol className="flex items-center gap-2 text-secondary text-ink-muted">
+            {crumbs?.map((crumb, index) => {
+              const current = index === crumbs.length - 1 && !tail
+              return (
+                <li key={crumb.label} className="flex items-center gap-2">
+                  {index > 0 && <span aria-hidden="true">/</span>}
+                  {current ? (
+                    <span className="text-ink" aria-current="page">
+                      {t(crumb.label as MessageKey)}
+                    </span>
+                  ) : (
+                    <Link
+                      to={crumb.to}
+                      search={{}}
+                      className="rounded-plate outline-offset-2 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-focus"
+                    >
+                      {t(crumb.label as MessageKey)}
+                    </Link>
+                  )}
+                </li>
+              )
+            })}
+            {tail && (
+              <li className="flex items-center gap-2">
+                <span aria-hidden="true">/</span>
+                <span className="text-ink" aria-current="page">
+                  {tail}
+                </span>
               </li>
-            )
-          })}
-          {tail && (
-            <li className="flex items-center gap-2">
-              <span aria-hidden="true">/</span>
-              <span className="text-ink" aria-current="page">
-                {tail}
-              </span>
-            </li>
-          )}
-        </ol>
-      </nav>
+            )}
+          </ol>
+        </nav>
+      </div>
       <div className="flex items-center gap-2">
         {env.appEnv !== 'production' && (
           <span className="rounded-full bg-lamp-soft px-2 py-0.5 text-caption text-on-lamp-soft">
@@ -222,7 +259,8 @@ function TopBar() {
 
 /**
  * Every `W-` screen after sign-in sits in this shell (DOC-64 shell): sidebar 248 px, top bar 56 px, page area 24 × 32 px. Between
- * 768 and 1023 px the sidebar is a 72 px icon rail; below 768 px there is only the notice (DR-178, DR-186).
+ * 768 and 1023 px the sidebar is a 72 px icon rail, and from 1024 px the user can collapse it to the rail too (DR-312); below
+ * 768 px there is only the notice (DR-178, DR-186).
  */
 export function AppShell({ role, children }: { role: StaffRole; children: ReactNode }) {
   const { t } = useI18n()
