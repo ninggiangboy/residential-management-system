@@ -68,7 +68,9 @@ test.describe('W-Units and W-Unit-Detail (UIWR-01…15)', () => {
     await expect(page.getByRole('dialog', { name: 'Thêm căn hộ' })).toBeVisible()
     await page.goBack()
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/units(\?(?!.*dialog))?$/)
+    // Back on the list (with its own search, `?limit=50`), without the dialog.
+    await expect(page).toHaveURL(/\/units(\?|$)/)
+    await expect(page).not.toHaveURL(/dialog=/)
   })
 
   test('search needs two characters and the filters live in the URL (UIWR-02, 03)', async ({
