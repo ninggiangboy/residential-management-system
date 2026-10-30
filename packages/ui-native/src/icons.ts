@@ -41,6 +41,7 @@ import { Phone } from 'phosphor-react-native/src/icons/Phone'
 import { Plus } from 'phosphor-react-native/src/icons/Plus'
 import { QrCode } from 'phosphor-react-native/src/icons/QrCode'
 import { Receipt } from 'phosphor-react-native/src/icons/Receipt'
+import { SidebarSimple } from 'phosphor-react-native/src/icons/SidebarSimple'
 import { SignOut } from 'phosphor-react-native/src/icons/SignOut'
 import { SquaresFour } from 'phosphor-react-native/src/icons/SquaresFour'
 import { Star } from 'phosphor-react-native/src/icons/Star'
@@ -123,4 +124,5 @@ export const ICONS: Record<IconName, ComponentType<PhosphorProps>> = {
   desktop: Desktop,
   sun: Sun,
   moon: Moon,
+  'sidebar-simple': SidebarSimple,
 }

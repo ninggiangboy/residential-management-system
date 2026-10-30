@@ -43,6 +43,7 @@ import {
   Plus,
   QrCode,
   Receipt,
+  SidebarSimple,
   SignOut,
   SquaresFour,
   Star,
@@ -119,4 +120,5 @@ export const ICONS: Record<IconName, PhosphorIcon> = {
   desktop: Desktop,
   sun: Sun,
   moon: Moon,
+  'sidebar-simple': SidebarSimple,
 }

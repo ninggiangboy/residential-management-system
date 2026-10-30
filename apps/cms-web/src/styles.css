@@ -13,6 +13,16 @@
   display: none;
 }
 
+/* The full sidebar: a window from 1024 px whose user has not collapsed it to the rail (`data-sidebar`, `src/lib/sidebar.ts`,
+   DR-312). The shell, `ShellSkeleton` and `#boot` draw the full layout with it where they used `lg:`. */
+@custom-variant nav-full {
+  @media (width >= 64rem) {
+    :root:not([data-sidebar="collapsed"]) & {
+      @slot;
+    }
+  }
+}
+
 @layer base {
   /* Native controls and scrollbars follow the theme in force (DR-304). */
   :root {

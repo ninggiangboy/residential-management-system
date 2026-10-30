@@ -40,13 +40,27 @@ export function RowMenu({ label, items }: { label: string; items: readonly MenuI
   )
 }
 
-export function Tooltip({ text, children }: { text: ReactNode; children: ReactNode }) {
+export function Tooltip({
+  text,
+  side,
+  disabled,
+  children,
+}: {
+  text: ReactNode
+  /** Above the trigger unless said; the rail of the sidebar puts its names to the right. */
+  side?: 'top' | 'right' | 'bottom' | 'left'
+  /** The trigger already shows the text (the full sidebar's entries, DR-312): no tooltip repeats it. */
+  disabled?: boolean
+  children: ReactNode
+}) {
+  if (disabled) return children
   return (
     <RadixTooltip.Provider delayDuration={200}>
       <RadixTooltip.Root>
         <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
         <RadixTooltip.Portal>
           <RadixTooltip.Content
+            side={side}
             sideOffset={6}
             className="motion-pop z-[100] origin-(--radix-tooltip-content-transform-origin) rounded-plate bg-plate px-2 py-1 text-caption text-on-plate shadow-float"
           >
