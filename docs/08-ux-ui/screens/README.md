@@ -36,7 +36,7 @@ The Owner's prototype has moved on since the catalog was written. The canvas is 
 | DOC-63 | `08-ux-ui/screens/staff-guard.md` | Staff app: Guard | 9 | 9 | 0 | P4, P5 | Not gated by P1 |
 | DOC-64 | `08-ux-ui/screens/web-auth-dashboard-operations.md` | Web CMS: Sign-in, dashboard, operations | 14 | 13 | 1 | P1, P4, P5, P6 | 4 sections: `W-Login`, `W-Forgot-Sent`, `W-Reset`, `W-Profile` |
 | DOC-65 | `08-ux-ui/screens/web-residents.md` | Web CMS: Residents, units, import | 7 | 6 | 1 | P1, P5 | 6 sections: `W-Residents`, `W-Resident-Add`, `W-Units`, `W-Unit-Detail`, `W-Unit-Types`, `W-Import` |
-| DOC-66 | `08-ux-ui/screens/web-finance.md` | Web CMS: Finance | 15 | 8 | 7 | P2, P3, P6 | Not gated by P1 |
+| DOC-66 | [`08-ux-ui/screens/web-finance.md`](web-finance.md) | Web CMS: Finance | 15 | 8 | 7 | P2, P3, P6 | Not gated by P1 |
 | DOC-67 | `08-ux-ui/screens/web-system.md` | Web CMS: System administration | 7 | 6 | 1 | P1, P3, P6 | 4 sections: `W-Staff`, `W-Staff-New`, `W-Building`, `W-Step-Up` |
 
 Paths are under `docs/`. They are written as code until the file exists, then become links (docs README rule). One file per area, one `##` section per screen, the section heading being the artboard name exactly.

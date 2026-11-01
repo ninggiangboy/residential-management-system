@@ -430,7 +430,7 @@ None.
 
 ## The payment screens (P3)
 
-`Pay-Select`, `Pay-VietQR`, `Pay-Done` and `Pay-Mismatch` are specified when P3-00 starts, from E-85…E-88, DOC-23 and DOC-24. Their rows in the screens index (DOC-56 §3) and the notes N1 and N4 stay the contract until then. This document gives them the test IDs `UIRF-27…` and keys `res.pay.*`.
+`Pay-Select`, `Pay-VietQR`, `Pay-Done` and `Pay-Mismatch` are specified when P3-00 starts, from E-85…E-88, DOC-23 and DOC-24. Their rows in the screens index (DOC-56 §3) and the notes N1 and N4 stay the contract until then. Their test IDs continue after `UIRF-26` and their keys are `res.pay.*`.
 
 ## Decisions made while writing
 

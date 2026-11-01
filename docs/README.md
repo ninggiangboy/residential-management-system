@@ -81,7 +81,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-63 | Staff app: Guard (`08-ux-ui/screens/staff-guard.md`) | Not written |
 | DOC-64 | [Web: sign-in, dashboard, operations](08-ux-ui/screens/web-auth-dashboard-operations.md) (§1 P1) | Approved |
 | DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1, `W-Unit-Types` added by DR-314 for P1-30; W-Vehicles owed P5) | Approved |
-| DOC-66 | Web: finance (`08-ux-ui/screens/web-finance.md`) | Not written |
+| DOC-66 | [Web: finance](08-ux-ui/screens/web-finance.md) (the nine P2 screens Draft 2026-11-01; P3 and P6 screens owed) | Draft |
 | DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Approved |
 | DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (108 error codes and the P1 keys; grows per phase) | Approved |
 | DOC-69 | [Local development](09-operations/local-dev.md) (dry run is the acceptance of P1-03, DR-227) | Approved |

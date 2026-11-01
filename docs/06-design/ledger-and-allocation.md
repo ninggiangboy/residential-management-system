@@ -200,7 +200,7 @@ Idempotency-Key: 0192f3c4-b101-7000-8000-000000000a01
 5. `ChargeAllocator.allocate` (§4). `ok: false` → rollback and 409 `charge_changed`.
 6. If `statementLineId`: `UPDATE statement_line SET match_status = 'matched', payment_id = :id WHERE id AND match_status = 'unmatched'`; zero rows rolls everything back (409 `invalid_transition`).
 7. Outbox: `payment_posted`, and per receipt `receipt_issued` and `receipt_render_requested`; the audit row `finance.payment.post`; commit.
-8. After commit the worker renders the PDFs; if the staff ticked "send receipt" the resident also gets the push of `payment_posted` (the handler decides from the unit's recipients, DOC-09 §7.3).
+8. After commit the worker renders the PDFs; the unit's members with `view_fees` always get the notification `payment.received` of `payment_posted` (DOC-31; there is no "send receipt" option on the form, DR-324).
 
 **A warning, not a block** (FR-05.6): when a selected charge is held by an active intent, the **form** (`GET /staff/units/{id}/debt`, §8.2) shows "online payment open since 09:12" from `payment_intent_item` and `payment_intent.created_at`; the entry is still allowed, because the cash is already in the Manager's hands. If that transfer then arrives, `settle()` finds the charge `paid` and writes `charge_already_paid`; the Manager refunds it outside the system (§9, DR-84 item 5).
 

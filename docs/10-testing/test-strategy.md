@@ -559,7 +559,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UISG-` | Screens: staff app Guard | DOC-63 | not written | planned (P4, P5) | P4, P5 |
 | `UIWO-` | Screens: web sign-in, dashboard, operations | [DOC-64](../08-ux-ui/screens/web-auth-dashboard-operations.md) | `UIWO-01…26` (sign-in, profile; the rest P4…P6) | Review | P1-16 |
 | `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…53` | Review | P1-16, P1-30 |
-| `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
+| `UIWF-` | Screens: web finance | [DOC-66](../08-ux-ui/screens/web-finance.md) | `UIWF-01…65` (the nine P2 screens; P3 and P6 continue from 66) | Draft | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
 | `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |
 | `XP-` | Experiment protocol (the harness library: percentiles, seeds, result files) | [DOC-89](experiments/README.md) | `XP-01…09` | Draft | P2-14 |
