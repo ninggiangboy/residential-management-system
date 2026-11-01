@@ -106,6 +106,10 @@ test.describe('the type of a unit (UIWR-43…45)', () => {
 
     // A second dialog: the bedrooms are typed first, so the type leaves them alone.
     await dialog.getByRole('button', { name: 'Hủy' }).click()
+    // Closing goes back one history entry (`useCloseOverlay`), which the browser does after the click returns: a dialog opened
+    // before that lands is closed by it. Wait for the first one to be gone before opening the next.
+    await expect(dialog).toBeHidden()
+    await expect(page).not.toHaveURL(/dialog=add/)
     await page.getByRole('button', { name: 'Thêm căn' }).first().click()
     const second = page.getByRole('dialog', { name: 'Thêm căn hộ' })
     await second.getByLabel('Số phòng ngủ').fill('2')
