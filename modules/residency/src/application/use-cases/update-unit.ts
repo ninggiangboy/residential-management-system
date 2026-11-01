@@ -10,9 +10,11 @@ import {
 } from '@core/kernel'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
+import { UnitTypeArchivedError, UnitTypeUnknownError } from '../../domain/errors'
 import { Unit, type UnitEdit, type UnitRecord } from '../../domain/unit'
 import type { UnitHistoryRepository } from '../../domain/unit-history-repository'
 import type { UnitRepository } from '../../domain/unit-repository'
+import type { UnitTypeRepository } from '../../domain/unit-type-repository'
 import { unitBody } from '../unit-body'
 
 /** The Manager's and the Admin's alone (DOC-27 §3.3). */
@@ -26,7 +28,7 @@ export interface UpdateUnitInput {
 
 /**
  * `PATCH /staff/units/{id}` (E-60, DOC-27 §4.1): the Manager edits the code (the typo case), floor, bedrooms, area, occupancy or
- * note. One guarded statement on `version` applies the change; of two edits with the same `If-Match` one wins and the other is
+ * note, or gives it another type (which changes nothing else: no default is applied, DR-315). One guarded statement on `version` applies the change; of two edits with the same `If-Match` one wins and the other is
  * 409 `version_conflict` with the fresh unit. An occupancy change across the vacancy boundary writes its `unit_history` row in the
  * same transaction (DR-141); `occupied` and `rented` swap without one, and the audit row is their record.
  */
@@ -36,6 +38,7 @@ export class UpdateUnit {
   constructor(
     private readonly uow: UnitOfWork,
     private readonly units: UnitRepository,
+    private readonly unitTypes: UnitTypeRepository,
     private readonly history: UnitHistoryRepository,
     audited: Audited,
     private readonly clock: Clock,
@@ -64,11 +67,17 @@ export class UpdateUnit {
         masks: { note: 'personal' },
       },
       async (staff: StaffContext, unitId: string, edit: UnitEdit, version: number) => {
-        const { units, history, clock, ids } = this
+        const { units, unitTypes, history, clock, ids } = this
         const stored = await units.find(staff.scope, unitId)
         if (!stored) throw new NotFoundError()
         if (stored.version !== version) throw new VersionConflictError(unitBody(stored))
         const change = new Unit(stored).edit(edit)
+        // A type is checked when the unit is given one it does not have: keeping an archived type of its own is allowed.
+        if (edit.unitTypeId && edit.unitTypeId !== stored.unitTypeId) {
+          const type = await unitTypes.findShared(staff.scope, edit.unitTypeId)
+          if (!type) throw new UnitTypeUnknownError()
+          if (type.status === 'archived') throw new UnitTypeArchivedError()
+        }
         if (!change) return { result: stored, changes: [] }
         const now = clock.now()
         // A second edit with the same `If-Match` finds the version moved: 409, nothing written.

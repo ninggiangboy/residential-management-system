@@ -43,6 +43,9 @@ export const en = {
   'error.member_exists': 'This person is already a member of this home.',
   'error.unit_has_owner': 'This unit already has an owner. Transfer ownership instead.',
   'error.unit_code_in_use': 'This unit code is already used.',
+  'error.unit_type_code_in_use': 'This unit type code is already used.',
+  'error.unit_type_name_in_use': 'This unit type name is already used.',
+  'error.unit_type_limit': 'A building can have at most {max} unit types.',
   'error.invalid_transition': 'This can no longer be done in its current state.',
   'error.charge_changed': 'This charge has just changed. Check the list and try again.',
   'error.payment_in_progress': 'A payment for this is already open, started by {holder}.',
@@ -108,6 +111,8 @@ export const en = {
   'error.one_change_only': 'Change one thing at a time.',
   'error.min_properties': 'There is nothing to save.',
   'error.can_pay_tenant_only': 'Only a tenant can be allowed to pay fees.',
+  'error.unit_type_unknown': 'This unit type no longer exists. Choose another.',
+  'error.unit_type_archived': 'This unit type is no longer in use. Choose another.',
   'error.driver_not_allowed': 'This payment mode is only for demo buildings.',
 
   'common.action.cancel': 'Cancel',

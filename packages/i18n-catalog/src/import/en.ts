@@ -40,6 +40,11 @@ export const importEn = {
   'common.import.account_linked':
     'This phone already has an account; the owner is linked to it and the name in the file is not used.',
   'common.import.account_will_be_created': 'A new resident account will be created for this phone.',
+  'common.import.unit_type_unknown':
+    'There is no unit type “{value}”. Use a code or a name from the Unit types screen.',
+  'common.import.unit_type_archived': 'The unit type “{value}” is no longer in use.',
+  'common.import.unit_type_defaults_applied':
+    'Unit {code} will take the default {fields, select, bedrooms {bedrooms} area {area} other {bedrooms and area}} of the type “{type}”.',
   'common.import.profile_field_differs':
     '{field} differs from the stored profile and is not changed.',
 } as const

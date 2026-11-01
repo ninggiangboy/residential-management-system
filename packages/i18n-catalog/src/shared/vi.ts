@@ -42,6 +42,9 @@ export const vi: Record<keyof typeof en, string> = {
   'error.member_exists': 'Người này đã là thành viên của căn.',
   'error.unit_has_owner': 'Căn này đã có chủ hộ. Hãy chuyển quyền chủ hộ.',
   'error.unit_code_in_use': 'Mã căn này đã được dùng.',
+  'error.unit_type_code_in_use': 'Mã loại này đã được dùng.',
+  'error.unit_type_name_in_use': 'Tên loại này đã được dùng.',
+  'error.unit_type_limit': 'Mỗi tòa nhà có tối đa {max} loại căn hộ.',
   'error.invalid_transition': 'Không thể làm việc này ở trạng thái hiện tại.',
   'error.charge_changed': 'Khoản phí này vừa thay đổi. Hãy xem lại danh sách rồi thử lại.',
   'error.payment_in_progress': 'Đã có một thanh toán đang mở cho khoản này, do {holder} tạo.',
@@ -106,6 +109,8 @@ export const vi: Record<keyof typeof en, string> = {
   'error.one_change_only': 'Mỗi lần chỉ đổi một thông tin.',
   'error.min_properties': 'Chưa có thay đổi nào để lưu.',
   'error.can_pay_tenant_only': 'Chỉ người thuê mới được cấp quyền thanh toán phí.',
+  'error.unit_type_unknown': 'Loại căn hộ này không còn. Hãy chọn loại khác.',
+  'error.unit_type_archived': 'Loại căn hộ này đã ngừng dùng. Hãy chọn loại khác.',
   'error.driver_not_allowed': 'Chế độ thanh toán này chỉ dành cho tòa nhà demo.',
 
   'common.action.cancel': 'Hủy',

@@ -20,11 +20,48 @@ import {
 } from 'drizzle-orm/pg-core'
 
 /**
- * DOC-16 §5.1 to §5.5: the tables of `residency` and the outbox and inbox of the module. An account of `identity` and a building are referenced by id, with no foreign key (ADR-0014).
+ * DOC-16 §5.1 to §5.6: the tables of `residency` and the outbox and inbox of the module. An account of `identity` and a building are referenced by id, with no foreign key (ADR-0014).
  */
 export const residency = pgSchema('residency')
 
 const citext = customType<{ data: string }>({ dataType: () => 'citext' })
+
+/** One kind of unit of one building, never deleted, only archived (DOC-16 §5.6, DR-314, DR-315). */
+export const unitType = residency.table(
+  'unit_type',
+  {
+    id: uuid('id').notNull(),
+    buildingId: uuid('building_id').notNull(),
+    code: text('code').notNull(),
+    name: jsonb('name').notNull().$type<{ vi: string; en?: string }>(),
+    defaultBedrooms: smallint('default_bedrooms'),
+    defaultAreaM2: numeric('default_area_m2', { precision: 8, scale: 2 }),
+    status: text('status').notNull().default('active'),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    version: integer('version').notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_unit_type', columns: [t.id] }),
+    uniqueIndex('unit_type_code_key').on(t.buildingId, t.code),
+    uniqueIndex('unit_type_name_key').on(t.buildingId, sql`lower(${t.name} ->> 'vi')`),
+    // The target of the composite foreign key of `unit`: a unit can never take another building's type.
+    uniqueIndex('unit_type_building_id_key').on(t.buildingId, t.id),
+    check('unit_type_code_format', sql`${t.code} ~ '^[a-z][a-z0-9_]{1,29}$'`),
+    check('unit_type_name_bilingual', sql`platform.is_bilingual(${t.name})`),
+    check('unit_type_default_bedrooms_range', sql`${t.defaultBedrooms} BETWEEN 0 AND 20`),
+    check(
+      'unit_type_default_area_range',
+      sql`${t.defaultAreaM2} > 0 AND ${t.defaultAreaM2} <= 2000`,
+    ),
+    check('unit_type_status_check', sql`${t.status} IN ('active', 'archived')`),
+    check(
+      'unit_type_archived_check',
+      sql`(${t.status} = 'archived') = (${t.archivedAt} IS NOT NULL)`,
+    ),
+  ],
+)
 
 export const unit = residency.table(
   'unit',
@@ -37,12 +74,19 @@ export const unit = residency.table(
     areaM2: numeric('area_m2', { precision: 8, scale: 2 }),
     occupancy: text('occupancy').notNull().default('vacant'),
     note: text('note'),
+    unitTypeId: uuid('unit_type_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     version: integer('version').notNull().default(1),
   },
   (t) => [
     primaryKey({ name: 'pk_unit', columns: [t.id] }),
+    foreignKey({
+      name: 'unit_unit_type_fk',
+      columns: [t.buildingId, t.unitTypeId],
+      foreignColumns: [unitType.buildingId, unitType.id],
+    }),
+    index('unit_type_idx').on(t.buildingId, t.unitTypeId),
     uniqueIndex('unit_code_key').on(t.buildingId, t.code),
     index('unit_code_prefix_idx').using(
       'btree',

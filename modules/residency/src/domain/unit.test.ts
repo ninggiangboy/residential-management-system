@@ -10,6 +10,8 @@ const stored: UnitRecord = {
   areaM2: '68.50',
   occupancy: 'occupied',
   note: null,
+  unitTypeId: null,
+  unitType: null,
   version: 3,
 }
 
@@ -33,9 +35,14 @@ describe('Unit.create', () => {
       floor: null,
       bedrooms: null,
       areaM2: '82.00',
+      unitTypeId: null,
       occupancy: 'vacant',
       note: null,
     })
+  })
+
+  test('keeps the type it is given', () => {
+    expect(Unit.create('id', { code: 'c-1', unitTypeId: 't1' }).unitTypeId).toBe('t1')
   })
 })
 
@@ -79,5 +86,22 @@ describe('Unit.edit', () => {
 describe('Unit.bump', () => {
   test('moves nothing but the version, from the one the caller saw', () => {
     expect(Unit.bump('u1', 3)).toEqual({ id: 'u1', expect: { version: 3 }, set: { version: 4 } })
+  })
+})
+
+describe('Unit.edit of the type (DR-315)', () => {
+  test('changes the type and nothing else: no default is applied', () => {
+    const change = new Unit(stored).edit({ unitTypeId: 't1' })
+    expect(change?.transition.set).toEqual({ unitTypeId: 't1', version: 4 })
+    expect(change?.fields).toEqual([{ field: 'unitTypeId', before: null, after: 't1' }])
+  })
+
+  test('null clears the type, and the same type is no change', () => {
+    const typed = { ...stored, unitTypeId: 't1' }
+    expect(new Unit(typed).edit({ unitTypeId: 't1' })).toBeNull()
+    expect(new Unit(typed).edit({ unitTypeId: null })?.transition.set).toEqual({
+      unitTypeId: null,
+      version: 4,
+    })
   })
 })

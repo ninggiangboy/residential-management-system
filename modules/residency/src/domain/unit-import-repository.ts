@@ -1,10 +1,12 @@
 import type { BuildingScope } from '@rms/shared-types'
 import type { Occupancy } from '../contracts'
-import type { StoredProfile, StoredUnit } from './import/plan'
+import type { StoredProfile, StoredUnit, StoredUnitType } from './import/plan'
 
 /** What the commit writes to a unit; `null` is a blank cell and keeps the stored value (DOC-18 §1.2). */
 export interface UnitFields {
   floor: number | null
+  /** `null` is a blank cell: it keeps the stored type, and a new unit has none (DR-315). */
+  unitTypeId: string | null
   bedrooms: number | null
   areaM2: string | null
   occupancy: Occupancy | null
@@ -26,6 +28,8 @@ export interface ProfileFill {
 export interface UnitImportRepository {
   /** Q-U: the units whose lower-case code is in `codesLower`, with the account of their non-removed owner. */
   findUnits(scope: BuildingScope, codesLower: readonly string[]): Promise<StoredUnit[]>
+  /** Q-T: the building's unit types, at most 50 (DR-314); matched in code by code, then by Vietnamese name. */
+  findUnitTypes(scope: BuildingScope): Promise<StoredUnitType[]>
   /** Q-M: `<unitId>|<accountId>` of the non-removed, non-owner memberships of the accounts in the units. */
   findMembers(
     scope: BuildingScope,

@@ -1,6 +1,6 @@
 # Error handling
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: five codes for unit types reserved in §5.8) · 2026-10-28 (P1-26: the SSE row of §6, DR-288; DR-282: `intentId` in `payment_in_progress`, `amount_above_maximum` reserved in §5.8; DR-279: §10 points to the usage endpoint) · 2026-10-26 (DR-268: the upload target is the S3 store, not R2; DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: five codes for unit types, §5.2 and §5.4 (built in P1-30)) · 2026-10-28 (P1-26: the SSE row of §6, DR-288; DR-282: `intentId` in `payment_in_progress`, `amount_above_maximum` reserved in §5.8; DR-279: §10 points to the usage endpoint) · 2026-10-26 (DR-268: the upload target is the S3 store, not R2; DR-267: `too_many_units`; earlier: P1-04: the handler and the request line are built, §3 has no `requestId` in the body, DR-247; earlier: DR-220: rule-code keys; DR-143, DR-149: `request_in_progress`, `one_change_only`, `min_properties`; DR-133, DR-134, DR-137, DR-139: `last_admin`, `sms_unavailable`, `member_exists`, `unit_code_in_use`, `can_pay_tenant_only`) · DOC-42
 > Depends on: original SDD §17.3, §19.2, §19.3, [DR](../00-decision-register.md) (DR-57, 58, 62, 63, 71, 74, 84, 103, 117, 118, 127, 288), [ADR-0023](../04-adr/0023-api-conventions.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-03](../01-product/requirements.md), [DOC-04](../01-product/use-cases.md), [DOC-09](../03-architecture/messaging-contracts.md) §4, [DOC-10](../03-architecture/quality-attributes.md) §8, [DOC-12](../03-architecture/code-architecture.md) §8, §12, [DOC-19](../05-data/db-roles-and-grants.md) §2, [DOC-35](audit-privacy-and-terms.md), [DOC-36](building-configuration-and-demo.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-03, P1-04 (`apps/api` error handler, request context, logger), P1-05, every task that adds an endpoint or a handler, DOC-24, DOC-26, DOC-28…DOC-33, DOC-40, DOC-50, DOC-51, DOC-68
 
@@ -173,6 +173,8 @@ The message key of a rule code is `error.<rule code>`, in the same namespace as 
 | `one_change_only` | 400 | A membership `PATCH` body with two keys or none (DOC-27 §6, DR-139) | FR-17.3 |
 | `min_properties` | 400 | An empty `PATCH` body (the schema rule `minProperties`) | DR-74 |
 | `can_pay_tenant_only` | 422 | `can_pay` set on a member who is not a tenant (DOC-27 §6, DR-139) | FR-17.3 |
+| `unit_type_unknown` | 422 | A `unitTypeId` that does not exist or belongs to another building; the same answer for both (DOC-27 §4.3, DR-314) | FR-18.7 |
+| `unit_type_archived` | 422 | A unit given an archived type that is not its own (DOC-27 §4.3, DR-314) | FR-18.7 |
 | `driver_not_allowed` | 422 | The `fake` driver for a building that is not a demo building | DR-26 |
 
 A new rule code is added to this table in the change that throws it, with its status.
@@ -209,6 +211,9 @@ A new rule code is added to this table in the change that throws it, with its st
 | `member_exists` | 409 | `ConflictError` | The same account added to a unit twice, or the transfer target is already the owner (DOC-27 §6, DR-137) | `{membershipId, memberType?}` | This person is already a member of this home. |
 | `unit_has_owner` | 409 | `ConflictError` | A Manager adds an owner to a unit that already has one (DOC-27 §5) | `{ownerMembershipId}` | This unit already has an owner. Transfer ownership instead. |
 | `unit_code_in_use` | 409 | `ConflictError` | The unit code exists; mapped from the constraint `unit_code_key` (DOC-27 §4) | — | This unit code is already used. |
+| `unit_type_code_in_use` | 409 | `ConflictError` | The unit type code exists in the building; mapped from `unit_type_code_key` (DOC-27 §4.3, DR-314) | — | This unit type code is already used. |
+| `unit_type_name_in_use` | 409 | `ConflictError` | Another type of the building has this Vietnamese name in any case; mapped from `unit_type_name_key` (DR-314) | — | This unit type name is already used. |
+| `unit_type_limit` | 409 | `ConflictError` | The building already has 50 unit types, archived ones counted (DOC-27 §4.3, DR-314) | `{max}` | A building can have at most 50 unit types. |
 | `invalid_transition` | 409 | `ConflictError` | A generic refusal: the object's state does not allow the action (see below) | `{entity, status, action}` | This can no longer be done in its current state. |
 
 ### 5.5 Finance
@@ -251,8 +256,6 @@ A new rule code is added to this table in the change that throws it, with its st
 ### 5.8 Codes owed by documents not yet written
 
 A document that adds a code adds its row here in the same change (§2, principle 1). Known now: DOC-23 (written 2026-10-28; it reuses the codes above and reserves the rule code `amount_above_maximum`, 400, a selection whose total is above the gateway maximum, FR-07.6, DR-282; DOC-21, DOC-22 and DOC-23 also use `reason_too_long`, 422, a reason over 500 characters, which has no row yet; P2 and P3-02 add their rows here, to the code lists and to the catalog (with DOC-68's copy) together, because UICP-03 compares this table with the code), DOC-25 (statement lines: `statement_line_not_assignable`), DOC-30 (vehicle review), DOC-33 (`too_many_rows` for an export over 50,000 rows, as a rule code), DOC-31 (notice send). The names above are reserved.
-
-*Added 2026-11-01 (DR-314), reserved for task P1-30:* five codes of the unit types. The rows join the tables above in the change that builds them, together with `ERROR_CODES` and `RULE_CODES` of `@rms/shared-types` and the catalog keys, because UICP-03 parses §5.1–§5.7 and fails on a code without its key. 409 `unit_type_code_in_use` (the code exists in the building; constraint `unit_type_code_key`), 409 `unit_type_name_in_use` (another type has this Vietnamese name in any case; `unit_type_name_key`), 409 `unit_type_limit` (the building has 50 types, archived ones counted; `details {max}`), and the rule codes 422 `unit_type_unknown` (a `unitTypeId` that does not exist or belongs to another building, the same answer for both) and 422 `unit_type_archived` (a unit given an archived type that is not its own). Class `ConflictError` for the three 409s, `RuleViolationError` for the two rules; the copy is already in DOC-68 §3.3 and §3.7 (DOC-27 §4.3, §16).
 
 ## 6. Routes that answer differently
 

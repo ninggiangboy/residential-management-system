@@ -8,7 +8,7 @@ import type { LocalDate } from './time'
  */
 
 /** Bumped when the content of the seed changes (DOC-36 §9.1). */
-export const DEMO_SEED_VERSION = 1
+export const DEMO_SEED_VERSION = 2
 
 export interface DemoBuildingSeed {
   id: string
@@ -35,11 +35,23 @@ export interface DemoTermsSeed {
   text: { vi: string }
 }
 
+/** A unit type of the demo building (DOC-36 §9, DR-314). */
+export interface DemoUnitTypeSeed {
+  id: string
+  code: string
+  name: { vi: string; en: string }
+  defaultBedrooms: number | null
+  defaultAreaM2: number | null
+}
+
 export interface DemoUnitSeed {
   id: string
   code: string
   floor: number
-  bedrooms: number
+  /** The code of the unit's type, the plan's key as for the memberships (DR-314). */
+  unitTypeCode: string
+  /** `null` for a shophouse, which has no bedroom default (DOC-36 §9). */
+  bedrooms: number | null
   areaM2: number
   occupancy: 'occupied' | 'rented' | 'vacant'
 }
@@ -73,6 +85,7 @@ export interface DemoPlan {
   terms: readonly DemoTermsSeed[]
   /** The staff member who "published" the terms: the demo Admin, a fixed id. */
   termsPublisherId: string
+  unitTypes: readonly DemoUnitTypeSeed[]
   units: readonly DemoUnitSeed[]
   staff: readonly DemoStaffSeed[]
   residents: readonly DemoResidentSeed[]

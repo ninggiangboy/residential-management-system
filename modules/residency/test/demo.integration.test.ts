@@ -19,16 +19,58 @@ const UNIT_2 = '018f0d06-0000-7000-8000-000000000002'
 const UNIT_3 = '018f0d06-0000-7000-8000-000000000003'
 const OWNER = '018f0d05-0000-7000-8000-000000000001'
 const FAMILY = '018f0d05-0000-7000-8000-000000000002'
+const TYPE_APARTMENT = '018f0d08-0000-7000-8000-000000000001'
+const TYPE_STUDIO = '018f0d08-0000-7000-8000-000000000002'
 
 const plan: DemoPlan = {
   building: {} as DemoPlan['building'],
   gateway: {} as DemoPlan['gateway'],
   terms: [],
   termsPublisherId: ADMIN,
+  unitTypes: [
+    {
+      id: TYPE_APARTMENT,
+      code: 'apartment',
+      name: { vi: 'Căn hộ', en: 'Apartment' },
+      defaultBedrooms: 2,
+      defaultAreaM2: 68,
+    },
+    {
+      id: TYPE_STUDIO,
+      code: 'studio',
+      name: { vi: 'Studio', en: 'Studio' },
+      defaultBedrooms: 0,
+      defaultAreaM2: 32,
+    },
+  ],
   units: [
-    { id: UNIT_1, code: 'A-0101', floor: 1, bedrooms: 2, areaM2: 60.5, occupancy: 'occupied' },
-    { id: UNIT_2, code: 'A-0102', floor: 1, bedrooms: 1, areaM2: 45, occupancy: 'rented' },
-    { id: UNIT_3, code: 'A-0103', floor: 1, bedrooms: 3, areaM2: 80, occupancy: 'vacant' },
+    {
+      id: UNIT_1,
+      code: 'A-0101',
+      floor: 1,
+      unitTypeCode: 'apartment',
+      bedrooms: 2,
+      areaM2: 60.5,
+      occupancy: 'occupied',
+    },
+    {
+      id: UNIT_2,
+      code: 'A-0102',
+      floor: 1,
+      unitTypeCode: 'apartment',
+      bedrooms: 1,
+      areaM2: 45,
+      occupancy: 'rented',
+    },
+    {
+      id: UNIT_3,
+      code: 'A-0103',
+      floor: 1,
+      unitTypeCode: 'studio',
+      bedrooms: 0,
+      areaM2: 32,
+      occupancy: 'vacant',
+    },
   ],
   staff: [{ id: ADMIN, email: 'admin@demo.rms.invalid', fullName: 'Quản trị Demo', role: 'admin' }],
   residents: [
@@ -85,16 +127,25 @@ describe('residency in the demo reset (DOC-36 §9.1, §10.2)', () => {
   test('the seed creates the units, the profiles and the memberships of the plan, added by the demo Admin', async () => {
     h.demoBuildings.add(DEMO)
     expect(await h.residency.demo.seedDemo(DEMO, ctx)).toEqual({
+      'residency.unit_type': 2,
       'residency.unit': 3,
       'residency.resident_profile': 2,
       'residency.membership': 3,
     })
+    // BD-49: each unit holds the type its code names, the types seeded first.
+    const typed =
+      await h.admin`SELECT u.code, t.code AS type FROM residency.unit u JOIN residency.unit_type t ON t.id = u.unit_type_id WHERE u.building_id = ${DEMO} ORDER BY u.code`
+    expect(typed.map((row) => [row.code, row.type])).toEqual([
+      ['A-0101', 'apartment'],
+      ['A-0102', 'apartment'],
+      ['A-0103', 'studio'],
+    ])
     const units =
       await h.admin`SELECT code, occupancy, floor, bedrooms, area_m2 FROM residency.unit WHERE building_id = ${DEMO} ORDER BY code`
     expect(units.map((unit) => [unit.code, unit.occupancy, Number(unit.area_m2)])).toEqual([
       ['A-0101', 'occupied', 60.5],
       ['A-0102', 'rented', 45],
-      ['A-0103', 'vacant', 80],
+      ['A-0103', 'vacant', 32],
     ])
     const members =
       await h.admin`SELECT member_type, status, added_by_kind, added_by FROM residency.membership WHERE building_id = ${DEMO} ORDER BY id`
@@ -133,12 +184,20 @@ describe('residency in the demo reset (DOC-36 §9.1, §10.2)', () => {
       'residency.resident_profile': 2,
       'residency.import_job': 0,
       'residency.unit': 3,
+      'residency.unit_type': 2,
     })
     expect(await count('residency.unit', `building_id = '${DEMO}'`)).toBe(0)
     expect(await count('residency.unit', `id = '${real.id}'`)).toBe(1)
 
     await h.residency.demo.seedDemo(DEMO, ctx)
     expect(await count('residency.unit', `id IN ('${UNIT_1}', '${UNIT_2}', '${UNIT_3}')`)).toBe(3)
+    // BD-50: the same two type ids come back, and a second reset deletes the units before the types it holds.
+    expect(
+      await count('residency.unit_type', `id IN ('${TYPE_APARTMENT}', '${TYPE_STUDIO}')`),
+    ).toBe(2)
+    await h.residency.demo.resetDemo(DEMO)
+    await h.residency.demo.seedDemo(DEMO, ctx)
+    expect(await count('residency.unit_type', `building_id = '${DEMO}'`)).toBe(2)
     expect(await count('residency.membership', `id = '018f0d07-0000-7000-8000-000000000003'`)).toBe(
       1,
     )

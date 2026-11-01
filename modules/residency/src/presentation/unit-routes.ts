@@ -67,6 +67,15 @@ const AreaM2 = Type.Optional(
     }),
   ),
 )
+const UnitTypeId = Type.Optional(
+  Nullable(
+    Type.String({
+      format: 'uuid',
+      description:
+        'The unit type, from `GET /staff/unit-types`. `null` clears it. An unknown or archived one is 422 `unit_type_unknown` or `unit_type_archived`',
+    }),
+  ),
+)
 const UnitNote = Type.Optional(
   Nullable(
     Type.String({
@@ -87,6 +96,7 @@ const CreateBody = strictObject({
   floor: Floor,
   bedrooms: Bedrooms,
   areaM2: AreaM2,
+  unitTypeId: UnitTypeId,
   occupancy: Type.Optional(Occupancy),
   note: UnitNote,
 })
@@ -95,6 +105,7 @@ const UpdateBody = strictObject({
   floor: Floor,
   bedrooms: Bedrooms,
   areaM2: AreaM2,
+  unitTypeId: UnitTypeId,
   occupancy: Type.Optional(Occupancy),
   note: UnitNote,
 })
@@ -134,6 +145,9 @@ const ListQuery = strictObject({
   bedrooms: Type.Optional(
     Type.String({ maxLength: 8, description: 'Only units with this number of bedrooms, 0…20' }),
   ),
+  unitTypeId: Type.Optional(
+    Type.String({ format: 'uuid', description: 'Only units of this type (DR-314)' }),
+  ),
   cursor: CursorParam,
   limit: Type.Optional(
     Type.String({ maxLength: 8, description: 'Rows per page, 1…200 (default 50)' }),
@@ -164,6 +178,7 @@ export function unitRoutes(d: UnitRouteDeps) {
       occupancy,
       floor: wholeParam('floor', context.query.floor, -5, 150),
       bedrooms: wholeParam('bedrooms', context.query.bedrooms, 0, 20),
+      unitTypeId: context.query.unitTypeId,
       after: key && { code: key.c, id: key.i },
       limit,
     })
@@ -275,7 +290,7 @@ export function unitRoutes(d: UnitRouteDeps) {
         operationId: 'createUnit',
         summary: 'Create a unit',
         description:
-          'Adds one unit by hand. A unit is never deleted; a unit made by mistake is set `vacant`. Needs an `Idempotency-Key`.',
+          'Adds one unit by hand. A unit is never deleted; a unit made by mistake is set `vacant`. With a `unitTypeId`, an absent `bedrooms` or `areaM2` takes the default of the type. Needs an `Idempotency-Key`.',
         idempotent: true,
       }),
       body: CreateBody,
@@ -296,7 +311,7 @@ export function unitRoutes(d: UnitRouteDeps) {
         operationId: 'updateUnit',
         summary: 'Update a unit',
         description:
-          'Edits the code, floor, bedrooms, area, occupancy or note. `occupancy` is set by the manager and never derived from memberships. Needs `If-Match`.',
+          'Edits the code, floor, bedrooms, area, unit type, occupancy or note. `occupancy` is set by the manager and never derived from memberships; changing the type changes nothing else. Needs `If-Match`.',
       }),
       params: IdParams,
       body: UpdateBody,

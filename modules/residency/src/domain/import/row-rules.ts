@@ -141,6 +141,7 @@ export function parseRow(raw: RawRow, context: RowContext): ParsedRow {
     floor = parseWhole(cells.floor, -5, 150)
     if (floor === null) add('floor', 'error', 'floor_invalid')
   }
+  const unitType = isBlank(cells.unit_type) ? null : textOf(cells.unit_type as Cell)
   let bedrooms: number | null = null
   if (!isBlank(cells.bedrooms)) {
     bedrooms = parseWhole(cells.bedrooms, 0, 20)
@@ -198,5 +199,5 @@ export function parseRow(raw: RawRow, context: RowContext): ParsedRow {
     if (name !== null && phone !== null) owner = { name, phone, email, idNumber, dateOfBirth }
   }
 
-  return { row: raw.row, unitCode, floor, bedrooms, areaM2, occupancy, owner, issues }
+  return { row: raw.row, unitCode, floor, unitType, bedrooms, areaM2, occupancy, owner, issues }
 }

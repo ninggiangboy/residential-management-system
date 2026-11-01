@@ -5,9 +5,10 @@ import type {
   DemoProfileRow,
   DemoRepository,
   DemoUnitRow,
+  DemoUnitTypeRow,
 } from '../../domain/demo-repository'
 import { chunks } from './chunks'
-import { importJob, membership, residentProfile, unit, unitHistory } from './schema'
+import { importJob, membership, residentProfile, unit, unitHistory, unitType } from './schema'
 
 export class DrizzleDemoRepository implements DemoRepository {
   constructor(private readonly database: Database) {}
@@ -34,13 +35,33 @@ export class DrizzleDemoRepository implements DemoRepository {
       .delete(unit)
       .where(inBuilding(unit, scope))
       .returning({ id: unit.id })
+    // The units hold the types (`unit_unit_type_fk`), so the types go after them.
+    const types = await executor
+      .delete(unitType)
+      .where(inBuilding(unitType, scope))
+      .returning({ id: unitType.id })
     return {
       'residency.unit_history': history.length,
       'residency.membership': memberships.length,
       'residency.resident_profile': profiles.length,
       'residency.import_job': imports.length,
       'residency.unit': units.length,
+      'residency.unit_type': types.length,
     }
+  }
+
+  async insertUnitTypes(scope: BuildingScope, rows: readonly DemoUnitTypeRow[]): Promise<void> {
+    if (rows.length === 0) return
+    await this.database.executor.insert(unitType).values(
+      rows.map((row) => ({
+        id: row.id,
+        buildingId: scope.buildingId,
+        code: row.code,
+        name: row.name,
+        defaultBedrooms: row.defaultBedrooms,
+        defaultAreaM2: row.defaultAreaM2 === null ? null : row.defaultAreaM2.toFixed(2),
+      })),
+    )
   }
 
   async insertUnits(scope: BuildingScope, rows: readonly DemoUnitRow[]): Promise<void> {
@@ -51,6 +72,7 @@ export class DrizzleDemoRepository implements DemoRepository {
           buildingId: scope.buildingId,
           code: row.code,
           floor: row.floor,
+          unitTypeId: row.unitTypeId,
           bedrooms: row.bedrooms,
           areaM2: row.areaM2.toFixed(2),
           occupancy: row.occupancy,

@@ -1,9 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import { LibphonenumberPhoneParser } from '../../infrastructure/phone/libphonenumber-phone-parser'
-import { checkSet, classify, type Lookups, type StoredUnit } from './plan'
+import {
+  checkSet,
+  classify,
+  type Lookups,
+  resolveUnitType,
+  type StoredUnit,
+  type StoredUnitType,
+} from './plan'
 import { parseRow } from './row-rules'
 import { readSheet } from './sheet'
-import { HEADER_ROW } from './test-fixtures'
+import { HEADER_ROW, HEADER_ROW_WITH_TYPE } from './test-fixtures'
 
 const context = { today: '2026-10-19', phones: new LibphonenumberPhoneParser() }
 
@@ -19,6 +26,7 @@ function sampleLookups(): Lookups {
     { unitId: `unit-${code}`, code, occupancy: 'occupied', ownerAccountId },
   ]
   return {
+    unitTypes: [],
     units: new Map([
       unit('A-1508', AN),
       unit('A-1509', null),
@@ -189,11 +197,143 @@ describe('IM-32 the preview holds no ID number and no date of birth', () => {
       rowCount: 1,
       survivors: sheet.rows.map((row) => parseRow(row, context)),
       earlierIssues: [],
-      lookups: { units: new Map(), accounts: new Map(), members: new Set(), profiles: new Map() },
+      lookups: {
+        unitTypes: [],
+        units: new Map(),
+        accounts: new Map(),
+        members: new Set(),
+        profiles: new Map(),
+      },
     })
     const stored = JSON.stringify(plan.preview)
     expect(plan.preview.validRows[0]?.ownerIdNumber).toBe('•••• 2345')
     expect(stored).not.toContain('079085012345')
     expect(stored).not.toContain('1985')
+  })
+})
+
+const type = (code: string, name: string, extra: Partial<StoredUnitType> = {}): StoredUnitType => ({
+  unitTypeId: `type-${code}`,
+  code,
+  nameLower: name.toLowerCase(),
+  name,
+  archived: false,
+  defaultBedrooms: null,
+  defaultAreaM2: null,
+  ...extra,
+})
+
+const TYPES = [
+  type('studio', 'Studio', { defaultBedrooms: 0, defaultAreaM2: '32.00' }),
+  type('penthouse', 'Penthouse', { defaultBedrooms: 4 }),
+  type('apartment', 'Căn hộ cao cấp'),
+  type('old', 'Căn cũ', { archived: true }),
+]
+
+/** A file with the column `Loại căn hộ`: unit code, type, bedrooms, area. */
+function planWithTypes(rows: readonly (readonly (string | null)[])[], stored: StoredUnit[] = []) {
+  const sheet = readSheet({
+    headers: HEADER_ROW_WITH_TYPE,
+    rows: rows.map((cells, index) => ({ row: index + 2, cells: [...cells] })),
+  })
+  if (!sheet.ok) throw new Error('unreadable')
+  const parsed = sheet.rows.map((row) => parseRow(row, context))
+  const set = checkSet(parsed)
+  return classify({
+    rowCount: parsed.length,
+    survivors: set.survivors,
+    earlierIssues: [...parsed.flatMap((row) => row.issues), ...set.issues],
+    lookups: {
+      unitTypes: TYPES,
+      units: new Map(stored.map((unit) => [unit.code.toLowerCase(), unit])),
+      accounts: new Map(),
+      members: new Set(),
+      profiles: new Map(),
+    },
+  })
+}
+
+describe('IM-78, IM-79 a type is named by its code or its Vietnamese name', () => {
+  test.each(['studio', 'STUDIO', ' studio '])('the code %p', (cell) => {
+    expect(resolveUnitType(cell, TYPES)?.unitTypeId).toBe('type-studio')
+  })
+
+  test('the Vietnamese name in another case, with its diacritics', () => {
+    expect(resolveUnitType('CĂN HỘ CAO CẤP', TYPES)?.unitTypeId).toBe('type-apartment')
+  })
+
+  test('the code is tried before a name', () => {
+    const types = [type('a', 'penthouse'), type('penthouse', 'Khác')]
+    expect(resolveUnitType('penthouse', types)?.unitTypeId).toBe('type-penthouse')
+  })
+
+  test('the English name and a diacritic-free spelling do not match', () => {
+    expect(resolveUnitType('Can ho cao cap', TYPES)).toBeNull()
+  })
+})
+
+describe('IM-80, IM-81 an unknown or archived type rejects the row', () => {
+  test.each(['loft', '2', '2PN'])('%p is unit_type_unknown', (cell) => {
+    const plan = planWithTypes([['A-1', cell, null, null]])
+    expect(plan.rows).toHaveLength(0)
+    expect(plan.preview.issues).toEqual([
+      expect.objectContaining({
+        row: 2,
+        column: 'unit_type',
+        code: 'unit_type_unknown',
+        params: { value: cell },
+      }),
+    ])
+  })
+
+  test('an archived type is unit_type_archived', () => {
+    const plan = planWithTypes([['A-1', 'old', null, null]])
+    expect(plan.preview.issues[0]).toMatchObject({ code: 'unit_type_archived', row: 2 })
+  })
+})
+
+describe('IM-82, IM-83, IM-84 the defaults of a type fill a new unit only', () => {
+  test('a new unit with blank bedrooms and area takes both, and the preview says so', () => {
+    const plan = planWithTypes([['A-1', 'studio', null, null]])
+    expect(plan.rows[0]).toMatchObject({
+      unitTypeId: 'type-studio',
+      fields: { bedrooms: 0, areaM2: '32.00' },
+    })
+    expect(plan.preview.validRows[0]?.notes).toContainEqual({
+      code: 'unit_type_defaults_applied',
+      params: { code: 'A-1', type: 'Studio', fields: 'both' },
+    })
+  })
+
+  test('a typed cell is kept and only the blank one takes the default', () => {
+    const plan = planWithTypes([['A-1', 'studio', '1', null]])
+    expect(plan.rows[0]?.fields).toEqual({ bedrooms: 1, areaM2: '32.00' })
+    expect(plan.preview.validRows[0]?.notes.at(-1)?.params.fields).toBe('area')
+  })
+
+  test('a type with no default for a blank cell leaves it blank and says nothing', () => {
+    const plan = planWithTypes([['A-1', 'apartment', null, null]])
+    expect(plan.rows[0]?.fields).toEqual({ bedrooms: null, areaM2: null })
+    expect(plan.preview.validRows[0]?.notes.map((n) => n.code)).toEqual(['unit_will_create'])
+  })
+
+  test('an existing unit never takes a default', () => {
+    const stored: StoredUnit = {
+      unitId: 'u1',
+      code: 'A-1',
+      occupancy: 'vacant',
+      ownerAccountId: null,
+    }
+    const plan = planWithTypes([['A-1', 'studio', null, null]], [stored])
+    expect(plan.rows[0]).toMatchObject({
+      unitTypeId: 'type-studio',
+      fields: { bedrooms: null, areaM2: null },
+    })
+    expect(plan.preview.validRows[0]?.notes.map((n) => n.code)).toEqual(['unit_will_update'])
+  })
+
+  test('a blank type cell keeps the stored type: no type id is written', () => {
+    const plan = planWithTypes([['A-1', null, '2', null]])
+    expect(plan.rows[0]?.unitTypeId).toBeNull()
   })
 })

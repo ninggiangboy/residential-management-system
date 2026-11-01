@@ -24,6 +24,8 @@ export const residencyManifest = {
   auditActions: [
     'residency.unit.create',
     'residency.unit.update',
+    'residency.unit_type.create',
+    'residency.unit_type.update',
     'residency.profile.update',
     'residency.membership.add',
     'residency.membership.update',

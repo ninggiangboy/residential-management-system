@@ -70,6 +70,18 @@ export interface StoredUnit {
   ownerAccountId: string | null
 }
 
+/** What the `db` layer needs to know about a unit type of the building (Q-T, DOC-18 §1.5). */
+export interface StoredUnitType {
+  unitTypeId: string
+  code: string
+  /** The Vietnamese name in lower case, as `unit_type_name_key` compares it. */
+  nameLower: string
+  name: string
+  archived: boolean
+  defaultBedrooms: number | null
+  defaultAreaM2: string | null
+}
+
 /** What the `db` layer needs to know about a stored profile (Q-P); the ID number only by its last four digits. */
 export interface StoredProfile {
   accountId: string
@@ -80,6 +92,8 @@ export interface StoredProfile {
 }
 
 export interface Lookups {
+  /** The building's types (Q-T); empty when no row has a type cell. */
+  unitTypes: readonly StoredUnitType[]
   /** By lower-case code. */
   units: ReadonlyMap<string, StoredUnit>
   /** By E.164 number. */
@@ -94,12 +108,27 @@ export interface PlannedRow {
   parsed: ParsedRow
   /** The stored unit; `null` when the row creates it. */
   unit: StoredUnit | null
+  /** The type the row names, `null` for a blank cell (the stored type is kept, a new unit has none). */
+  unitTypeId: string | null
+  /** What the row writes for the two fields a type has defaults for: a new unit takes the type's default for a blank cell (DQ-49). */
+  fields: { bedrooms: number | null; areaM2: string | null }
   owner: (OwnerCells & { accountId: string | null; action: 'add' | 'unchanged' }) | null
 }
 
 export interface ImportPlan {
   preview: ImportPreview
   rows: PlannedRow[]
+}
+
+/** The type a cell names: the code first, then the Vietnamese name, both without case (DQ-47, DOC-18 §1.1). */
+export function resolveUnitType(
+  cell: string,
+  types: readonly StoredUnitType[],
+): StoredUnitType | null {
+  const key = cell.trim().toLowerCase()
+  return (
+    types.find((type) => type.code === key) ?? types.find((type) => type.nameLower === key) ?? null
+  )
 }
 
 /** The profile fields a file value may differ on (DQ-46), as the column the Manager sees. */
@@ -142,18 +171,57 @@ export function classify(input: {
     const code = parsed.unitCode as string
     const rowNotes: PreviewNote[] = []
     const rowIssues: ImportIssue[] = []
-    const reject = (column: UnitOwnerColumn, issueCode: string) =>
+    const reject = (
+      column: UnitOwnerColumn,
+      issueCode: string,
+      params: Record<string, string | number> = { code },
+    ) =>
       issues.push({
         row: parsed.row,
         unitCode: code,
         column,
         severity: 'error',
         code: issueCode,
-        params: { code },
+        params,
       })
 
     const unit = lookups.units.get(code.toLowerCase()) ?? null
     rowNotes.push({ code: unit ? 'unit_will_update' : 'unit_will_create', params: { code } })
+
+    // DQ-47, DQ-48: the type of the row; a new unit takes its defaults for a blank bedrooms or area (DQ-49, DR-315).
+    let type: StoredUnitType | null = null
+    if (parsed.unitType !== null) {
+      type = resolveUnitType(parsed.unitType, lookups.unitTypes)
+      if (!type) {
+        reject('unit_type', 'unit_type_unknown', { value: parsed.unitType })
+        continue
+      }
+      if (type.archived) {
+        reject('unit_type', 'unit_type_archived', { value: parsed.unitType })
+        continue
+      }
+    }
+    const fields = { bedrooms: parsed.bedrooms, areaM2: parsed.areaM2 }
+    if (!unit && type) {
+      const taken: string[] = []
+      if (fields.bedrooms === null && type.defaultBedrooms !== null) {
+        fields.bedrooms = type.defaultBedrooms
+        taken.push('bedrooms')
+      }
+      if (fields.areaM2 === null && type.defaultAreaM2 !== null) {
+        fields.areaM2 = type.defaultAreaM2
+        taken.push('area')
+      }
+      if (taken.length > 0)
+        rowNotes.push({
+          code: 'unit_type_defaults_applied',
+          params: {
+            code,
+            type: type.name,
+            fields: taken.length === 2 ? 'both' : (taken[0] as string),
+          },
+        })
+    }
 
     let owner: PlannedRow['owner'] = null
     if (parsed.owner) {
@@ -194,7 +262,7 @@ export function classify(input: {
     else unitsToCreate++
     issues.push(...rowIssues)
     notes.set(parsed.row, rowNotes)
-    planned.push({ parsed, unit, owner })
+    planned.push({ parsed, unit, unitTypeId: type?.unitTypeId ?? null, fields, owner })
   }
 
   // Warnings of the row layer belong to accepted rows only: a rejected row's warnings are noise.

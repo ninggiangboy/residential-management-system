@@ -89,6 +89,7 @@ export function demoPlanOf(buildingId: string): DemoPlan {
       driver: 'fake',
       receivingAccount: { bankBin: '970436', accountNumber: '0000000000', accountName: 'DEMO' },
     },
+    unitTypes: [],
     terms: [
       { id: '018f0000-0000-7000-8000-0000000000b1', kind: 'terms', text: { vi: 'DEMO' } },
       { id: '018f0000-0000-7000-8000-0000000000b2', kind: 'privacy', text: { vi: 'DEMO' } },

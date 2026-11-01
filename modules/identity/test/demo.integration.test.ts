@@ -20,6 +20,7 @@ const plan: DemoPlan = {
   gateway: {} as DemoPlan['gateway'],
   terms: [],
   termsPublisherId: '018f0d04-0000-7000-8000-000000000001',
+  unitTypes: [],
   units: [],
   staff: [
     {

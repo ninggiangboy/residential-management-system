@@ -44,7 +44,18 @@ export class ResidencyDemo implements DemoResettable {
         }
       }),
     )
-    await this.rows.insertUnits(scope, plan.units)
+    // The units name their type by its code, as the memberships name their unit; the types go in first (DR-314).
+    const typeIds = new Map(plan.unitTypes.map((type) => [type.code, type.id]))
+    await this.rows.insertUnitTypes(scope, plan.unitTypes)
+    await this.rows.insertUnits(
+      scope,
+      plan.units.map((unit) => {
+        const unitTypeId = typeIds.get(unit.unitTypeCode)
+        if (!unitTypeId)
+          throw new InvariantError(`the demo plan has no unit type ${unit.unitTypeCode}`)
+        return { ...unit, unitTypeId }
+      }),
+    )
     await this.rows.insertProfiles(
       scope,
       plan.residents.map((resident) => ({
@@ -54,6 +65,7 @@ export class ResidencyDemo implements DemoResettable {
     )
     await this.rows.insertMemberships(scope, memberships)
     return {
+      'residency.unit_type': plan.unitTypes.length,
       'residency.unit': plan.units.length,
       'residency.resident_profile': plan.residents.length,
       'residency.membership': memberships.length,

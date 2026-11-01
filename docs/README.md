@@ -83,7 +83,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1, `W-Unit-Types` added by DR-314 for P1-30; W-Vehicles owed P5) | Approved |
 | DOC-66 | Web: finance (`08-ux-ui/screens/web-finance.md`) | Not written |
 | DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Approved |
-| DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (102 error codes and the P1 keys; grows per phase) | Approved |
+| DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (108 error codes and the P1 keys; grows per phase) | Approved |
 | DOC-69 | [Local development](09-operations/local-dev.md) (dry run is the acceptance of P1-03, DR-227) | Approved |
 | DOC-70 | [Deploy: staging and production](09-operations/deploy-staging-and-production.md) (first version: Owner inputs are placeholders until the task that needs them, DR-228; run by P1-20; final P6) | Approved |
 | DOC-71 | [CI/CD](09-operations/ci-cd.md) | Approved |

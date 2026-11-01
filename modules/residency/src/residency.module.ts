@@ -18,17 +18,20 @@ import { MembershipQueries } from './application/queries/membership-queries'
 import { PiiKeyQueries } from './application/queries/pii-key-queries'
 import { ResidentQueries } from './application/queries/resident-queries'
 import { UnitQueries } from './application/queries/unit-queries'
+import { UnitTypeQueries } from './application/queries/unit-type-queries'
 import { ApproveAccountDeletion } from './application/use-cases/approve-account-deletion'
 import { ChangeLoginPhone } from './application/use-cases/change-login-phone'
 import { ChangeMembership } from './application/use-cases/change-membership'
 import { CommitUnitOwnerImport } from './application/use-cases/commit-unit-owner-import'
 import { CreateResident } from './application/use-cases/create-resident'
 import { CreateUnit } from './application/use-cases/create-unit'
+import { CreateUnitType } from './application/use-cases/create-unit-type'
 import { ExpireImports } from './application/use-cases/expire-imports'
 import { PurgeImports } from './application/use-cases/purge-imports'
 import { TransferOwnership } from './application/use-cases/transfer-ownership'
 import { UpdateProfile } from './application/use-cases/update-profile'
 import { UpdateUnit } from './application/use-cases/update-unit'
+import { UpdateUnitType } from './application/use-cases/update-unit-type'
 import { ValidateUnitOwnerImport } from './application/use-cases/validate-unit-owner-import'
 import type { ResidencyApi } from './contracts'
 import {
@@ -48,6 +51,8 @@ import { DrizzleUnitHistoryRepository } from './infrastructure/persistence/drizz
 import { DrizzleUnitImportRepository } from './infrastructure/persistence/drizzle-unit-import-repository'
 import { DrizzleUnitReader } from './infrastructure/persistence/drizzle-unit-reader'
 import { DrizzleUnitRepository } from './infrastructure/persistence/drizzle-unit-repository'
+import { DrizzleUnitTypeReader } from './infrastructure/persistence/drizzle-unit-type-reader'
+import { DrizzleUnitTypeRepository } from './infrastructure/persistence/drizzle-unit-type-repository'
 import { residencyInbox, residencyOutbox } from './infrastructure/persistence/schema'
 import { LibphonenumberPhoneParser } from './infrastructure/phone/libphonenumber-phone-parser'
 import { residencyManifest } from './manifest'
@@ -103,6 +108,9 @@ export interface ResidencyUseCases {
   /** `POST /staff/units` (E-58) and `PATCH /staff/units/{id}` (E-60), DOC-27 §4. */
   createUnit: CreateUnit
   updateUnit: UpdateUnit
+  /** `POST /staff/unit-types` (E-181) and `PATCH /staff/unit-types/{id}` (E-182), DOC-27 §4.3. */
+  createUnitType: CreateUnitType
+  updateUnitType: UpdateUnitType
   /** `POST /staff/residents` (E-64, DOC-27 §5.1). */
   createResident: CreateResident
   /** `POST /staff/units/{id}/owner` (E-61, DOC-27 §7). */
@@ -128,6 +136,7 @@ export interface ResidencyModule extends AppModule<'residency'> {
   readonly queries: {
     imports: ImportQueries
     units: UnitQueries
+    unitTypes: UnitTypeQueries
     residents: ResidentQueries
     lookups: LookupQueries
   }
@@ -157,6 +166,9 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
   const queries = new MembershipQueries(membershipReader)
   const units = new DrizzleUnitRepository(database)
   const unitReader = new DrizzleUnitReader(database)
+  const unitTypes = new DrizzleUnitTypeRepository(database)
+  const unitTypeReader = new DrizzleUnitTypeReader(database)
+  const unitTypeQueries = new UnitTypeQueries(unitTypeReader)
   const residentReader = new DrizzleResidentReader(database)
   const phones = new LibphonenumberPhoneParser()
   const lookups = new LookupQueries(unitReader, residentReader, deps.identity)
@@ -228,8 +240,16 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
     deps.audited,
     clock,
   )
-  const createUnit = new CreateUnit(database, units, deps.audited, clock, ids)
-  const updateUnit = new UpdateUnit(database, units, history, deps.audited, clock, ids)
+  const createUnit = new CreateUnit(database, units, unitTypes, deps.audited, clock, ids)
+  const updateUnit = new UpdateUnit(database, units, unitTypes, history, deps.audited, clock, ids)
+  const createUnitType = new CreateUnitType(database, unitTypes, deps.audited, clock, ids)
+  const updateUnitType = new UpdateUnitType(
+    database,
+    unitTypes,
+    unitTypeReader,
+    deps.audited,
+    clock,
+  )
   const createResident = new CreateResident(
     database,
     units,
@@ -291,6 +311,8 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       updateProfile,
       createUnit,
       updateUnit,
+      createUnitType,
+      updateUnitType,
       createResident,
       transferOwnership,
       changeLoginPhone,
@@ -300,7 +322,13 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       expireImports,
       purgeImports,
     },
-    queries: { imports: importQueries, units: unitQueries, residents: residentQueries, lookups },
+    queries: {
+      imports: importQueries,
+      units: unitQueries,
+      unitTypes: unitTypeQueries,
+      residents: residentQueries,
+      lookups,
+    },
     routes: residencyRoutes({
       queries: importQueries,
       validate: validateUnitOwnerImport,
@@ -308,6 +336,9 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       unitQueries,
       createUnit,
       updateUnit,
+      unitTypeQueries,
+      createUnitType,
+      updateUnitType,
       transferOwnership,
       residentQueries,
       createResident,

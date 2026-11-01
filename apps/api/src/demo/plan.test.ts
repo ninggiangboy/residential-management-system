@@ -21,11 +21,36 @@ describe('the demo plan (DOC-36 §9.1)', () => {
     expect(new Set(plan.units.map((unit) => unit.code)).size).toBe(240)
   })
 
+  test('BD-49: five unit types and each of the 240 units has one, by the layout of DOC-36 §9', () => {
+    expect(plan.unitTypes.map((type) => type.code)).toEqual([
+      'apartment',
+      'studio',
+      'duplex',
+      'penthouse',
+      'shophouse',
+    ])
+    const codes = new Set(plan.unitTypes.map((type) => type.code))
+    const by = (code: string) => plan.units.filter((unit) => unit.unitTypeCode === code)
+    for (const unit of plan.units) expect(codes.has(unit.unitTypeCode)).toBe(true)
+    expect(plan.unitTypes.map((type) => by(type.code).length)).toEqual([192, 24, 12, 4, 8])
+    // A type other than the apartment gives its defaults to its units; a shophouse has no bedroom default.
+    for (const type of plan.unitTypes.filter((candidate) => candidate.code !== 'apartment'))
+      for (const unit of by(type.code)) {
+        expect(unit.bedrooms).toBe(type.defaultBedrooms)
+        expect(unit.areaM2).toBe(type.defaultAreaM2 as number)
+      }
+    expect(by('studio')[0]).toMatchObject({ bedrooms: 0, areaM2: 32 })
+    // The store-review owner's unit A-0101 is a shophouse; the demo household A-1508 an apartment.
+    expect(plan.units.find((unit) => unit.code === 'A-0101')?.unitTypeCode).toBe('shophouse')
+    expect(plan.units.find((unit) => unit.code === 'A-1508')?.unitTypeCode).toBe('apartment')
+  })
+
   test('every id is a UUIDv7-shaped constant and none repeats', () => {
     const ids = [
       plan.building.id,
       plan.gateway.id,
       ...plan.terms.map((terms) => terms.id),
+      ...plan.unitTypes.map((type) => type.id),
       ...plan.units.map((unit) => unit.id),
       ...plan.staff.map((person) => person.id),
       ...plan.residents.flatMap((resident) => [
