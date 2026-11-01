@@ -22,7 +22,7 @@ Until now DR-78 and a paragraph in each experiment stood in for this protocol (E
 | EXP-08 | DOC-97 | Bulk PDF fits the time and the memory | NFR-05 | staging | latency, memory | P2-13 | M2 |
 | EXP-09 | DOC-98 | OTP abuse sends few SMS and guesses nothing | NFR-07 | staging | correctness | P1-23 | M1 |
 | EXP-10 | DOC-99 | Every route refuses every actor it should | NFR-08 | CI `integration` (DR-173) | correctness, against mutants | P1-15, P6-08 | M1 (first), M6 (final) |
-| EXP-11 | DOC-100 | The nightly check reports all 20 corruptions | NFR-09 | database only | correctness, against injected corruptions | P2-11 | M2 |
+| EXP-11 | DOC-100 | The nightly check reports all 20 corruptions and nothing on clean data | NFR-09 | staging (of record); the injection part also nightly, database-only | correctness, against injected corruptions; duration (median) | P2-11 | M2 |
 | EXP-12 | DOC-101 | A restore reaches a working system in time | NFR-11 | staging | duration, correctness | P6-05 | M6 |
 
 (The blocked milestone is the one whose exit criteria name the experiment, master plan §4.) An experiment that is not yet written has its row here and its file number reserved; its task writes it.
@@ -32,7 +32,7 @@ Until now DR-78 and a paragraph in each experiment stood in for this protocol (E
 | Rule | Why |
 | --- | --- |
 | **Default: the staging host of DR-06** (2 vCPU, 4 GB, API ×1, worker and PostgreSQL co-located, `api ×1`). The numbers are conservative on purpose (original SDD §3.4) | The targets are set for this machine; a faster laptop would prove nothing about it |
-| **Database-only experiments** (EXP-03, EXP-04, EXP-11) may run on a developer machine, and their cut-down form runs every night in the `nightly` stage (DOC-88 §11). A developer-machine result **describes the machine** in `machine` and is a result of record only for correctness criteria | They measure races and queries, not speed (DR-78) |
+| **Database-only experiments** (EXP-03, EXP-04) may run on a developer machine, and their cut-down form runs every night in the `nightly` stage (DOC-88 §11). A developer-machine result **describes the machine** in `machine` and is a result of record only for correctness criteria. **EXP-11** is of record on the staging host, because it also measures the cost of the nightly job on a 120,000-charge building; its injection part (no timing) runs every night as a regression guard, and is not a result of record | They measure races and queries, not speed (DR-78); DOC-22 §12 plans the staging run |
 | **EXP-10 runs in the CI job `integration`**, with a developer machine as a second source (DR-173) | It is correctness-only and needs `CREATE DATABASE` rights that no application role has |
 | The drivers are the `fake` payment driver, `console` SMS and mail, and a fake Expo endpoint, unless the experiment says otherwise. A real SMS, a real bank or a real payOS call is never part of an experiment | Cost and risk (DR-37); the real adapters are proved by their own tasks (P1-22, P3) |
 | The host is quiet during a run: no deploy, no other experiment, no backup window, and the API restarted before run 1 | Co-location makes everything else a competing load |

@@ -90,7 +90,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-72 | Backup and restore (`09-operations/backup-restore.md`) | Not written |
 | DOC-73 | [Mobile release](09-operations/mobile-release.md) (skeleton: final P6) | Approved |
 | DOC-74 | Runbook index (`09-operations/runbooks/README.md`) | Not written |
-| DOC-75 | RB 01: ledger invariant (`09-operations/runbooks/RB-01-ledger-invariant.md`) | Not written |
+| DOC-75 | [RB 01: ledger invariant](09-operations/runbooks/RB-01-ledger-invariant.md) | Draft |
 | DOC-76 | RB 02: payments stuck (`09-operations/runbooks/RB-02-payments-stuck.md`) | Not written |
 | DOC-77 | RB 03: webhook signatures (`09-operations/runbooks/RB-03-webhook-signatures.md`) | Not written |
 | DOC-78 | RB 04: outbox lag (`09-operations/runbooks/RB-04-outbox-lag.md`) | Not written |
@@ -115,7 +115,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-97 | [EXP 08: bulk pdf](10-testing/experiments/EXP-08-bulk-pdf.md) | Draft |
 | DOC-98 | [EXP 09: otp abuse](10-testing/experiments/EXP-09-otp-abuse.md) (first version; DR-171 decided) | Approved |
 | DOC-99 | [EXP 10: authorization matrix](10-testing/experiments/EXP-10-authorization-matrix.md) (first version; final P6; DR-173 decided) | Approved |
-| DOC-100 | EXP 11: ledger drift detection (`10-testing/experiments/EXP-11-ledger-drift-detection.md`) | Not written |
+| DOC-100 | [EXP 11: ledger drift detection](10-testing/experiments/EXP-11-ledger-drift-detection.md) | Draft |
 | DOC-101 | EXP 12: restore drill (`10-testing/experiments/EXP-12-restore-drill.md`) | Not written |
 | DOC-102 | Demo script (`10-testing/demo-script.md`) | Not written |
 | DOC-103 | Go-live checklist and UAT (`10-testing/go-live-checklist-and-uat.md`) | Not written |
