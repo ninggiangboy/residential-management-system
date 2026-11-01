@@ -28,7 +28,7 @@ The Owner's prototype has moved on since the catalog was written. The canvas is 
 | DOC | File | Area | Sections | Designed | To design | Phases | What the P1 gate (P1-00) requires |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | DOC-57 | `08-ux-ui/screens/resident-signin-home.md` | Resident app: Sign-in and home | 11 | 10 | 1 | P1 | All 11 sections |
-| DOC-58 | `08-ux-ui/screens/resident-fees-payment.md` | Resident app: Fees and payment | 8 | 7 | 1 | P2, P3 | Not gated by P1 |
+| DOC-58 | [`08-ux-ui/screens/resident-fees-payment.md`](resident-fees-payment.md) | Resident app: Fees and payment | 8 | 7 | 1 | P2, P3 | Not gated by P1 |
 | DOC-59 | `08-ux-ui/screens/resident-requests-unit.md` | Resident app: Requests, unit, members, vehicles | 12 | 12 | 0 | P4, P5 | Not gated by P1 |
 | DOC-60 | `08-ux-ui/screens/resident-qr-notices-account.md` | Resident app: QR, notices, docs, account | 15 | 13 | 2 | P1, P4, P5 | 6 sections: `Account`, `Account-Phone`, `Account-Helper`, `Account-Deletion`, `Sessions`, `Contact` |
 | DOC-61 | `08-ux-ui/screens/staff-shared-and-manager.md` | Staff app: Shared screens and Manager | 20 | 20 | 0 | P1, P4, P5 | 5 sections: `S-Login`, `S-Login-Error`, `S-Forgot`, `S-Forgot-Sent`, `S-Account` |

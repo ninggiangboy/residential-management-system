@@ -551,7 +551,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `DS-` | Design system (tokens, contrast, status table, motion and loading) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…10` | Review | P1-09 |
 | `CL-` | Clients (fetcher, refresh, unit context, offline, push) | [DOC-55](../08-ux-ui/client-architecture.md) §18 | `CL-01…30` | Review | P1-16, P1-17 |
 | `UIRA-` | Screens: resident sign-in and home | [DOC-57](../08-ux-ui/screens/resident-signin-home.md) | `UIRA-01…55` | Review | P1-11, P1-17 |
-| `UIRF-` | Screens: resident fees and payment | DOC-58 | not written | planned (P2, P3) | P2, P3 |
+| `UIRF-` | Screens: resident fees and payment | [DOC-58](../08-ux-ui/screens/resident-fees-payment.md) | `UIRF-01…26` (the four P2 screens; the P3 payment screens continue from 27) | Draft | P2, P3 |
 | `UIRU-` | Screens: resident requests, unit, members, vehicles | DOC-59 | not written | planned (P4, P5) | P4, P5 |
 | `UIRQ-` | Screens: resident QR, notices, account | [DOC-60](../08-ux-ui/screens/resident-qr-notices-account.md) | `UIRQ-01…21` (account group; QR, notices P4, P5) | Review | P1-17 |
 | `UISM-` | Screens: staff app shared and Manager | [DOC-61](../08-ux-ui/screens/staff-shared-and-manager.md) | `UISM-01…18` (sign-in, account; Manager P4, P5) | Review | P1-17 |

@@ -367,9 +367,9 @@ The bold cells are the defect of a UTC date (a charge due on the 15th shows over
 
 | Endpoint | Returns | Filter |
 | --- | --- | --- |
-| `GET /me/fees` (E-80) | The `open` charges of the selected unit (header `X-Unit-Id`), with batch code and name, `amount`, `dueDate`, `daysPastDue`, `overdue`, and the total | None: debt follows the unit |
+| `GET /me/fees` (E-80) | The `open` charges of the selected unit (header `X-Unit-Id`), at most 100, with batch code and name, `amount`, `dueDate`, `daysPastDue`, `overdue`, their `lines[]` (DR-323), and the `total` and `count` | None: debt follows the unit |
 | `GET /me/fees/{chargeId}` (E-81) | One charge with its lines (adjustment lines show their note) | An `open` charge always; a `paid` or `void` one only if its payment's `received_at >= startedAt`; otherwise 404 |
-| `GET /me/fees/history` (E-82) | Paid charges with the payment date and the receipt, newest first, keyset `(received_at, id)` | `payment.received_at >= startedAt` (DR-40) |
+| `GET /me/fees/history` (E-82) | Paid charges with the payment date, method and the receipt, newest first, keyset `(received_at, id)`; the first page adds `summary {outstanding, paidThisYear}` (DR-323) | `payment.received_at >= startedAt` (DR-40); `paidThisYear` inside the same window |
 | `GET /me/receipts` (E-83) and `…/{id}/pdf` (E-84) | Receipts of the unit, newest first | The same filter, applied through the payment's `received_at` |
 
 All need the capability `view_fees` (the owner, family members and tenants; a helper gets 403). `startedAt` is `membership.created_at` from the guard (DOC-27 §6.6). It is **one** filter on the payment date, applied in the repository (run: with `startedAt` 2026-10-01 the history of a unit lists the two charges paid on 2026-10-26 and the open charges are listed whatever the date). A staff member is never filtered. The resident never sees the money log (§9); the only trace is `unmatchedTransfer` of the intent status (DOC-23).
