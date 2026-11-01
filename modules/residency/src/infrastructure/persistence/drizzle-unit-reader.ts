@@ -12,7 +12,7 @@ import type {
   UnitSummary,
 } from '../../domain/unit-reader'
 import { toUnitRecord } from './drizzle-unit-repository'
-import { membership, unit, unitHistory } from './schema'
+import { membership, unit, unitHistory, unitType } from './schema'
 
 /** `%` and `_` of the typed text mean themselves (a unit code holds `_`). */
 const escapeLike = (text: string) => text.replace(/[\\%_]/g, (char) => `\\${char}`)
@@ -27,12 +27,17 @@ export class DrizzleUnitReader implements UnitReader {
     return this.database.executor
       .select({
         unit,
+        unitType,
         ownerMembershipId: membership.id,
         ownerAccountId: membership.accountId,
         memberCount: sql<number>`(SELECT count(*)::int FROM residency.membership c
            WHERE c.building_id = ${unit.buildingId} AND c.unit_id = ${unit.id} AND c.status <> 'removed')`,
       })
       .from(unit)
+      .leftJoin(
+        unitType,
+        and(eq(unitType.buildingId, unit.buildingId), eq(unitType.id, unit.unitTypeId)),
+      )
       .leftJoin(
         membership,
         and(
@@ -48,7 +53,7 @@ export class DrizzleUnitReader implements UnitReader {
 
   private static row(found: Awaited<ReturnType<DrizzleUnitReader['rows']>>[number]): UnitRow {
     return {
-      unit: toUnitRecord(found.unit),
+      unit: toUnitRecord(found.unit, found.unitType),
       ownerMembershipId: found.ownerMembershipId,
       ownerAccountId: found.ownerAccountId,
       memberCount: found.memberCount,
@@ -65,6 +70,7 @@ export class DrizzleUnitReader implements UnitReader {
       filter.occupancy === undefined ? undefined : eq(unit.occupancy, filter.occupancy),
       filter.floor === undefined ? undefined : eq(unit.floor, filter.floor),
       filter.bedrooms === undefined ? undefined : eq(unit.bedrooms, filter.bedrooms),
+      filter.unitTypeId === undefined ? undefined : eq(unit.unitTypeId, filter.unitTypeId),
       after === undefined
         ? undefined
         : sql`(${unit.code}, ${unit.id}) > (${after.code}, ${after.id})`,

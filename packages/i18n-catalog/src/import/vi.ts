@@ -35,5 +35,10 @@ export const importVi = {
   'common.import.account_linked':
     'Số này đã có tài khoản; chủ hộ được liên kết với tài khoản đó và không dùng tên trong tệp.',
   'common.import.account_will_be_created': 'Sẽ tạo tài khoản cư dân mới cho số này.',
+  'common.import.unit_type_unknown':
+    'Không có loại căn hộ “{value}”. Hãy dùng mã hoặc tên trong màn Loại căn hộ.',
+  'common.import.unit_type_archived': 'Loại căn hộ “{value}” đã ngừng dùng.',
+  'common.import.unit_type_defaults_applied':
+    'Căn hộ {code} sẽ lấy {fields, select, bedrooms {số phòng ngủ} area {diện tích} other {số phòng ngủ và diện tích}} mặc định của loại “{type}”.',
   'common.import.profile_field_differs': '{field} khác với hồ sơ đã lưu nên không được thay đổi.',
 } as const

@@ -7,6 +7,8 @@ export interface UnitListFilter {
   occupancy?: Occupancy
   floor?: number
   bedrooms?: number
+  /** The "Loại" filter (DR-314); a type of another building matches nothing. */
+  unitTypeId?: string
 }
 
 /** Keyset position in code order (DOC-27 §4.2): `A-100` sorts before `A-20`, as `unit_code_key` orders. */
@@ -30,7 +32,7 @@ export interface UnitSummary {
   vacant: number
   /** The distinct floors of the building's units, ascending, for the floor filter (DR-309). */
   floors: number[]
-  /** The distinct bedroom counts of the building's units, ascending, for the type filter (DR-309). */
+  /** The distinct bedroom counts of the building's units, ascending, for the bedrooms filter (DR-309, relabelled by DR-314). */
   bedrooms: number[]
 }
 

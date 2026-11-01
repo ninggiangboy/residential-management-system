@@ -11,3 +11,6 @@ export const HEADER_ROW = [
   'CCCD chủ hộ',
   'Ngày sinh chủ hộ',
 ]
+
+/** The same header with the optional column `Loại căn hộ` after the floor (DR-315). */
+export const HEADER_ROW_WITH_TYPE = ['Mã căn hộ', 'Loại căn hộ', 'Số phòng ngủ', 'Diện tích (m²)']

@@ -2,14 +2,14 @@ import type { Database } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import type { Occupancy } from '../../contracts'
-import type { StoredProfile, StoredUnit } from '../../domain/import/plan'
+import type { StoredProfile, StoredUnit, StoredUnitType } from '../../domain/import/plan'
 import type {
   ProfileFill,
   UnitFields,
   UnitImportRepository,
 } from '../../domain/unit-import-repository'
 import { chunks } from './chunks'
-import { membership, residentProfile, unit } from './schema'
+import { membership, residentProfile, unit, unitType } from './schema'
 
 export class DrizzleUnitImportRepository implements UnitImportRepository {
   constructor(private readonly database: Database) {}
@@ -41,6 +41,23 @@ export class DrizzleUnitImportRepository implements UnitImportRepository {
         ),
       )
     return rows.map((row) => ({ ...row, occupancy: row.occupancy as Occupancy }))
+  }
+
+  async findUnitTypes(scope: BuildingScope): Promise<StoredUnitType[]> {
+    // Q-T: at most 50 rows (DR-314), read once per file.
+    const rows = await this.database.executor
+      .select()
+      .from(unitType)
+      .where(eq(unitType.buildingId, scope.buildingId))
+    return rows.map((row) => ({
+      unitTypeId: row.id,
+      code: row.code,
+      nameLower: row.name.vi.toLowerCase(),
+      name: row.name.vi,
+      archived: row.status === 'archived',
+      defaultBedrooms: row.defaultBedrooms,
+      defaultAreaM2: row.defaultAreaM2,
+    }))
   }
 
   async findMembers(
@@ -97,6 +114,7 @@ export class DrizzleUnitImportRepository implements UnitImportRepository {
       .update(unit)
       .set({
         floor: sql`COALESCE(${fields.floor}::smallint, ${unit.floor})`,
+        unitTypeId: sql`COALESCE(${fields.unitTypeId}::uuid, ${unit.unitTypeId})`,
         bedrooms: sql`COALESCE(${fields.bedrooms}::smallint, ${unit.bedrooms})`,
         areaM2: sql`COALESCE(${fields.areaM2}::numeric, ${unit.areaM2})`,
         occupancy: sql`COALESCE(${fields.occupancy}::text, ${unit.occupancy})`,
@@ -118,6 +136,7 @@ export class DrizzleUnitImportRepository implements UnitImportRepository {
           buildingId: scope.buildingId,
           code: new_.code,
           floor: new_.floor,
+          unitTypeId: new_.unitTypeId,
           bedrooms: new_.bedrooms,
           areaM2: new_.areaM2,
           occupancy: new_.occupancy ?? 'vacant',

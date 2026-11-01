@@ -66,6 +66,8 @@ export function paramValue(
   if (route.path.startsWith('/staff/accounts/') && name === 'id')
     return own ? IDS.staffTarget : IDS.staffTargetB2
   if (route.path.startsWith('/staff/units/') && name === 'id') return own ? IDS.U1 : IDS.U3
+  if (route.path.startsWith('/staff/unit-types/') && name === 'id')
+    return own ? IDS.unitTypeB1 : IDS.unitTypeB2
   if (route.path.startsWith('/staff/residents/') && name === 'accountId')
     return own ? (world.accounts['res.owner'] as string) : IDS.residentB2
   if (route.path.startsWith('/staff/memberships/') && name === 'id')
@@ -97,6 +99,11 @@ const BODIES: Record<string, (actor: Actor, scope: Scope, world: World) => Json>
   }),
   'E-58': () => ({ code: `Z-${Math.floor(Math.random() * 90000) + 10000}` }),
   'E-60': () => ({ note: 'Edited by the matrix' }),
+  'E-181': () => ({
+    code: `matrix_${Math.floor(Math.random() * 90000) + 10000}`,
+    name: { vi: `Loại ${Math.floor(Math.random() * 90000) + 10000}` },
+  }),
+  'E-182': () => ({ defaultBedrooms: 2 }),
   'E-61': () => ({ phone: '+84903999001', fullName: 'New Owner', reason: 'Matrix transfer' }),
   'E-64': (actor) => ({
     unitId: inB2(actor) ? IDS.U3 : IDS.U1,

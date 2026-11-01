@@ -15,6 +15,13 @@
       "when": 1792739619701,
       "tag": "0001_import_job",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793506096921,
+      "tag": "0002_unit_type",
+      "breakpoints": true
     }
   ]
 }

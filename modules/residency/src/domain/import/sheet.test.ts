@@ -25,6 +25,13 @@ describe('header matching of DOC-18 §1.1', () => {
     ['CMND/CCCD', 'owner_id_number'],
     ['Ngày sinh', 'owner_dob'],
     ['Tình trạng', 'occupancy'],
+    // DR-315: `Loại căn` and `Type` named the bedroom count before; they name the unit type now (IM-85).
+    ['Loại căn hộ', 'unit_type'],
+    ['LOẠI CĂN', 'unit_type'],
+    ['Type', 'unit_type'],
+    ['Unit type', 'unit_type'],
+    ['Số phòng ngủ', 'bedrooms'],
+    ['PN', 'bedrooms'],
     ['Ghi chú', null],
     ['Status', null],
   ] as const)('%j is %j', (header, column) => expect(columnOfHeader(header)).toBe(column))

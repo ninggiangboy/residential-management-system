@@ -162,6 +162,9 @@ describe('the guard of every route', () => {
       ['PATCH', `/staff/units/${id}`],
       ['POST', `/staff/units/${id}/owner`],
       ['GET', `/staff/units/${id}/history`],
+      ['GET', '/staff/unit-types'],
+      ['POST', '/staff/unit-types'],
+      ['PATCH', `/staff/unit-types/${id}`],
       ['GET', '/staff/residents'],
       ['POST', '/staff/residents'],
       ['GET', `/staff/residents/${id}`],
@@ -179,6 +182,7 @@ describe('the guard of every route', () => {
   test('an Admin passes where a Manager does', async () => {
     expect((await call('/staff/units', { token: admin })).status).toBe(200)
     expect((await call('/staff/residents', { token: admin })).status).toBe(200)
+    expect((await call('/staff/unit-types', { token: admin })).status).toBe(200)
   })
 })
 
@@ -381,6 +385,200 @@ describe('units (E-57…E-62)', () => {
     )
     expect(second.items.map((i) => i.kind)).toEqual(['moved_out'])
     expect((await call(`${path}/history`, { token: strangerManager })).status).toBe(404)
+  })
+})
+
+describe('unit types (E-180…E-182, DR-314, DR-315)', () => {
+  const create = (json: unknown, init: { key?: string | null; token?: string } = {}) =>
+    call('/staff/unit-types', { method: 'POST', token: init.token ?? manager, json, key: init.key })
+  const typeBody = (code: string, extra: object = {}) => ({
+    code,
+    name: { vi: `Loại ${code}`, en: `Type ${code}` },
+    ...extra,
+  })
+
+  test('E-181 creates under an Idempotency-Key: 201 with Location and ETag, the same key replays, another body is 422', async () => {
+    const key = crypto.randomUUID()
+    const body = typeBody('http_studio', { defaultBedrooms: 0, defaultAreaM2: '32' })
+    const first = await create(body, { key })
+    expect(first.status).toBe(201)
+    const created = await bodyOf<{ unitTypeId: string }>(first)
+    expect(created).toMatchObject({
+      code: 'http_studio',
+      name: { vi: 'Loại http_studio', en: 'Type http_studio' },
+      defaultBedrooms: 0,
+      defaultAreaM2: '32.00',
+      status: 'active',
+      unitCount: 0,
+      version: 1,
+    })
+    expect(first.headers.get('location')).toBe(`/api/v1/staff/unit-types/${created.unitTypeId}`)
+    expect(first.headers.get('etag')).toBe('"1"')
+    const replay = await create(body, { key })
+    expect(replay.status).toBe(201)
+    expect((await bodyOf<{ unitTypeId: string }>(replay)).unitTypeId).toBe(created.unitTypeId)
+    expect((await create(typeBody('http_other'), { key })).status).toBe(422)
+  })
+
+  test('E-181 refuses a bad code and an unknown key with 400, a duplicate code and name with 409', async () => {
+    await create(typeBody('http_dup'))
+    for (const bad of [
+      typeBody('Http_Dup2'),
+      typeBody('a'),
+      { ...typeBody('http_x'), extra: 1 },
+      { code: 'http_y' },
+    ])
+      expect((await create(bad)).status).toBe(400)
+    expect((await errorOf(await create(typeBody('http_dup')))).code).toBe('unit_type_code_in_use')
+    const sameName = await create({ code: 'http_dup2', name: { vi: 'LOẠI HTTP_DUP' } })
+    expect((await errorOf(sameName)).code).toBe('unit_type_name_in_use')
+  })
+
+  test('E-182 edits under If-Match: 428 without it, 200 with the new ETag, 409 with the fresh type when stale, archive and restore', async () => {
+    const created = await bodyOf<{ unitTypeId: string }>(await create(typeBody('http_edit')))
+    const path = `/staff/unit-types/${created.unitTypeId}`
+    expect(
+      (await call(path, { method: 'PATCH', token: manager, json: { defaultBedrooms: 2 } })).status,
+    ).toBe(428)
+    const ok = await call(path, {
+      method: 'PATCH',
+      token: manager,
+      headers: { 'if-match': '"1"' },
+      json: { defaultBedrooms: 2, name: { en: null } },
+    })
+    expect(ok.status).toBe(200)
+    expect(ok.headers.get('etag')).toBe('"2"')
+    expect(await bodyOf(ok)).toMatchObject({
+      defaultBedrooms: 2,
+      name: { vi: 'Loại http_edit', en: null },
+      version: 2,
+    })
+    const stale = await call(path, {
+      method: 'PATCH',
+      token: manager,
+      headers: { 'if-match': '"1"' },
+      json: { defaultBedrooms: 3 },
+    })
+    expect(stale.status).toBe(409)
+    const error = await errorOf(stale)
+    expect(error.code).toBe('version_conflict')
+    expect(JSON.stringify(error.details)).toContain('"defaultBedrooms":2')
+    const archived = await call(path, {
+      method: 'PATCH',
+      token: manager,
+      headers: { 'if-match': '"2"' },
+      json: { status: 'archived' },
+    })
+    expect(await bodyOf(archived)).toMatchObject({ status: 'archived', version: 3 })
+    // `code` cannot change and an empty body is refused.
+    for (const json of [{ code: 'other_code' }, {}])
+      expect(
+        (
+          await call(path, {
+            method: 'PATCH',
+            token: manager,
+            headers: { 'if-match': '"3"' },
+            json,
+          })
+        ).status,
+      ).toBe(400)
+  })
+
+  test('E-180 lists with unit counts and the summary, filters by status, and shows no type of another building', async () => {
+    const mine = await bodyOf<{ unitTypeId: string }>(await create(typeBody('http_list')))
+    await call('/staff/unit-types', {
+      method: 'POST',
+      token: strangerManager,
+      json: typeBody('http_stranger'),
+    })
+    await call('/staff/units', {
+      method: 'POST',
+      token: manager,
+      json: { code: 'HL-1', unitTypeId: mine.unitTypeId },
+    })
+    const list = await bodyOf<{
+      items: { code: string; unitCount: number; status: string }[]
+      summary: { total: number; active: number; archived: number; withoutType: number }
+    }>(await call('/staff/unit-types', { token: manager }))
+    expect(list.items.find((item) => item.code === 'http_list')?.unitCount).toBe(1)
+    expect(list.items.some((item) => item.code === 'http_stranger')).toBe(false)
+    expect(list.summary.total).toBe(list.summary.active + list.summary.archived)
+    const archivedOnly = await bodyOf<{ items: { status: string }[] }>(
+      await call('/staff/unit-types?status=archived', { token: manager }),
+    )
+    expect(archivedOnly.items.every((item) => item.status === 'archived')).toBe(true)
+    expect((await call('/staff/unit-types?status=deleted', { token: manager })).status).toBe(400)
+  })
+
+  test('the unit routes carry the type: E-58 fills the defaults, E-57 filters, E-59 shows it, 422 for an unknown or archived one', async () => {
+    const studio = await bodyOf<{ unitTypeId: string }>(
+      await create(typeBody('http_unit', { defaultBedrooms: 0, defaultAreaM2: '32' })),
+    )
+    const made = await call('/staff/units', {
+      method: 'POST',
+      token: manager,
+      json: { code: 'HU-1', unitTypeId: studio.unitTypeId },
+    })
+    expect(made.status).toBe(201)
+    const unit = await bodyOf<{
+      unitId: string
+      bedrooms: number
+      areaM2: string
+      unitType: { code: string }
+    }>(made)
+    expect(unit).toMatchObject({ bedrooms: 0, areaM2: '32.00', unitType: { code: 'http_unit' } })
+    const filtered = await bodyOf<{ items: { code: string }[] }>(
+      await call(`/staff/units?unitTypeId=${studio.unitTypeId}`, { token: manager }),
+    )
+    expect(filtered.items.map((item) => item.code)).toEqual(['HU-1'])
+    const detail = await bodyOf<{ unitType: { unitTypeId: string } }>(
+      await call(`/staff/units/${unit.unitId}`, { token: manager }),
+    )
+    expect(detail.unitType.unitTypeId).toBe(studio.unitTypeId)
+
+    const unknown = await call('/staff/units', {
+      method: 'POST',
+      token: manager,
+      json: { code: 'HU-2', unitTypeId: crypto.randomUUID() },
+    })
+    expect(unknown.status).toBe(422)
+    expect(JSON.stringify((await errorOf(unknown)).details)).toContain('unit_type_unknown')
+    await call(`/staff/unit-types/${studio.unitTypeId}`, {
+      method: 'PATCH',
+      token: manager,
+      headers: { 'if-match': '"1"' },
+      json: { status: 'archived' },
+    })
+    const archived = await call('/staff/units', {
+      method: 'POST',
+      token: manager,
+      json: { code: 'HU-3', unitTypeId: studio.unitTypeId },
+    })
+    expect(archived.status).toBe(422)
+    expect(JSON.stringify((await errorOf(archived)).details)).toContain('unit_type_archived')
+  })
+
+  test('a type of another building is 404 on E-182 and 422 as a unit type', async () => {
+    const stranger = await bodyOf<{ unitTypeId: string }>(
+      await call('/staff/unit-types', {
+        method: 'POST',
+        token: strangerManager,
+        json: typeBody('http_foreign'),
+      }),
+    )
+    const edit = await call(`/staff/unit-types/${stranger.unitTypeId}`, {
+      method: 'PATCH',
+      token: manager,
+      headers: { 'if-match': '"1"' },
+      json: { defaultBedrooms: 1 },
+    })
+    expect(edit.status).toBe(404)
+    const unit = await call('/staff/units', {
+      method: 'POST',
+      token: manager,
+      json: { code: 'HF-1', unitTypeId: stranger.unitTypeId },
+    })
+    expect(unit.status).toBe(422)
   })
 })
 

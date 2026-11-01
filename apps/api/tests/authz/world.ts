@@ -33,6 +33,9 @@ export const IDS = {
   /** A resident of U3 (B2) and her membership. */
   residentB2: uuid(41),
   membershipB2: uuid(42),
+  /** A unit type of B1 and one of B2: the objects of the `/staff/unit-types/{id}` routes (DR-314). */
+  unitTypeB1: uuid(61),
+  unitTypeB2: uuid(62),
 } as const
 
 const STAFF: ReadonlyArray<{
@@ -258,6 +261,14 @@ export async function buildWorld(): Promise<World> {
     await sql`
       INSERT INTO residency.unit (id, building_id, code, floor, occupancy)
       VALUES (${id}, ${building}, ${code}, 15, 'occupied')`
+
+  for (const [id, building, code] of [
+    [IDS.unitTypeB1, IDS.B1, 'studio'],
+    [IDS.unitTypeB2, IDS.B2, 'studio'],
+  ] as const)
+    await sql`
+      INSERT INTO residency.unit_type (id, building_id, code, name)
+      VALUES (${id}, ${building}, ${code}, '{"vi":"Studio"}'::jsonb)`
 
   const hash = await Bun.password.hash(PASSWORD, {
     algorithm: 'argon2id',

@@ -5,6 +5,7 @@ import { foldKey } from './folding'
 export const UNIT_OWNER_COLUMNS = [
   'unit_code',
   'floor',
+  'unit_type',
   'bedrooms',
   'area_m2',
   'occupancy',
@@ -33,6 +34,7 @@ export const TEMPLATE_HEADERS: Record<Language, Record<UnitOwnerColumn, string>>
   vi: {
     unit_code: 'Mã căn hộ',
     floor: 'Tầng',
+    unit_type: 'Loại căn hộ',
     bedrooms: 'Số phòng ngủ',
     area_m2: 'Diện tích (m²)',
     occupancy: 'Tình trạng',
@@ -45,6 +47,7 @@ export const TEMPLATE_HEADERS: Record<Language, Record<UnitOwnerColumn, string>>
   en: {
     unit_code: 'Unit code',
     floor: 'Floor',
+    unit_type: 'Unit type',
     bedrooms: 'Bedrooms',
     area_m2: 'Area (m²)',
     occupancy: 'Occupancy',
@@ -61,6 +64,7 @@ export const TEMPLATE_SHEET_NAMES: Record<Language, string> = { vi: 'Căn hộ',
 /** Columns whose cells the template formats as Text, because Excel drops the leading zero of a number (DOC-18 §1.1). */
 export const TEXT_COLUMNS = [
   'unit_code',
+  'unit_type',
   'occupancy',
   'owner_name',
   'owner_phone',
@@ -73,7 +77,9 @@ export const TEXT_COLUMNS = [
 const ALIASES: Record<UnitOwnerColumn, readonly string[]> = {
   unit_code: ['Mã căn hộ', 'Mã căn', 'Căn hộ', 'Unit code', 'Unit', 'Apartment'],
   floor: ['Tầng', 'Floor'],
-  bedrooms: ['Số phòng ngủ', 'Loại căn', 'PN', 'Bedrooms', 'Type'],
+  // `Loại căn` and `Type` named the bedroom count before DR-315; they name the unit type now.
+  unit_type: ['Loại căn hộ', 'Loại hình', 'Loại căn', 'Unit type', 'Type'],
+  bedrooms: ['Số phòng ngủ', 'PN', 'Bedrooms'],
   area_m2: ['Diện tích (m²)', 'Diện tích', 'DT', 'Area (m²)', 'Area'],
   occupancy: ['Tình trạng', 'Hiện trạng', 'Occupancy'],
   owner_name: ['Họ tên chủ hộ', 'Tên chủ hộ', 'Chủ hộ', 'Owner full name', 'Owner name'],

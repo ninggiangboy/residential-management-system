@@ -50,3 +50,40 @@ export class UnitHasOwnerError extends ConflictError {
     super('unit_has_owner', 'The unit already has an owner', { details: { ownerMembershipId } })
   }
 }
+
+/** 409 `unit_type_code_in_use`: the code exists in the building; `unit_type_code_key` decides (DOC-27 §4.3, DR-314). */
+export class UnitTypeCodeInUseError extends ConflictError {
+  constructor() {
+    super('unit_type_code_in_use', 'Another unit type of the building has this code')
+  }
+}
+
+/** 409 `unit_type_name_in_use`: another type has this Vietnamese name in any case; `unit_type_name_key` decides (DR-314). */
+export class UnitTypeNameInUseError extends ConflictError {
+  constructor() {
+    super('unit_type_name_in_use', 'Another unit type of the building has this name')
+  }
+}
+
+/** 409 `unit_type_limit`: a building has at most 50 unit types, archived ones counted (DOC-27 §4.3 rule 5). */
+export class UnitTypeLimitError extends ConflictError {
+  constructor(max: number) {
+    super('unit_type_limit', 'The building has the most unit types it can have', {
+      details: { max },
+    })
+  }
+}
+
+/** 422 `validation_failed`, rule `unit_type_unknown`: no such type, or one of another building, the same answer (DOC-27 §4.3 rule 4). */
+export class UnitTypeUnknownError extends RuleViolationError {
+  constructor() {
+    super('unit_type_unknown', 'There is no such unit type', 'unitTypeId')
+  }
+}
+
+/** 422 `validation_failed`, rule `unit_type_archived`: a unit is given an archived type that is not its own (DOC-27 §4.3 rule 3). */
+export class UnitTypeArchivedError extends RuleViolationError {
+  constructor() {
+    super('unit_type_archived', 'This unit type is no longer in use', 'unitTypeId')
+  }
+}

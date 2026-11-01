@@ -13,7 +13,18 @@ export interface UnitRecord {
   areaM2: string | null
   occupancy: Occupancy
   note: string | null
+  /** The unit's type, or `null` for "Chưa phân loại" (DR-314). */
+  unitTypeId: string | null
+  /** The type's code and names, read with the unit; never written through `UnitTransition` (DR-314). */
+  unitType: UnitTypeRef | null
   version: number
+}
+
+/** What a unit shows of its type (DOC-51 §10 `UnitDto.unitType`). */
+export interface UnitTypeRef {
+  unitTypeId: string
+  code: string
+  name: { vi: string; en: string | null }
 }
 
 export type UnitTransition = Transition<UnitRecord>
@@ -24,6 +35,7 @@ export interface UnitEdit {
   floor?: number | null
   bedrooms?: number | null
   areaM2?: string | null
+  unitTypeId?: string | null
   occupancy?: Occupancy
   note?: string | null
 }
@@ -35,6 +47,7 @@ export interface NewUnit {
   floor: number | null
   bedrooms: number | null
   areaM2: string | null
+  unitTypeId: string | null
   occupancy: Occupancy
   note: string | null
 }
@@ -42,7 +55,7 @@ export interface NewUnit {
 const UNIT_CODE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$/
 const AREA = /^\d{1,4}(?:\.\d{1,2})?$/
 const FLOOR = { min: -5, max: 150 }
-const BEDROOMS = { min: 0, max: 20 }
+export const BEDROOMS = { min: 0, max: 20 }
 const NOTE_MAX = 500
 
 const invalid = (path: string, code: string, message: string): never => {
@@ -55,7 +68,7 @@ export function unitCodeOf(input: string): string {
   return UNIT_CODE.test(code) ? code.toUpperCase() : invalid('code', 'pattern', 'a unit code')
 }
 
-const wholeIn = (
+export const wholeIn = (
   path: string,
   value: number | null,
   { min, max }: { min: number; max: number },
@@ -66,12 +79,12 @@ const wholeIn = (
 }
 
 /** Above 0 and at most 2,000 with at most two decimals; written with two decimals as the column does. */
-function areaOf(value: string | null): string | null {
+export function areaOf(value: string | null, path = 'areaM2'): string | null {
   if (value === null) return null
   const text = value.trim()
   const area = Number(text)
   if (!AREA.test(text) || !(area > 0 && area <= 2000))
-    invalid('areaM2', 'format', 'above 0, at most 2000, two decimals')
+    invalid(path, 'format', 'above 0, at most 2000, two decimals')
   return area.toFixed(2)
 }
 
@@ -108,6 +121,7 @@ export class Unit {
       floor: wholeIn('floor', input.floor ?? null, FLOOR),
       bedrooms: wholeIn('bedrooms', input.bedrooms ?? null, BEDROOMS),
       areaM2: areaOf(input.areaM2 ?? null),
+      unitTypeId: input.unitTypeId ?? null,
       occupancy: input.occupancy ?? 'vacant',
       note: noteOf(input.note ?? null),
     }
@@ -140,6 +154,7 @@ export class Unit {
     if (input.bedrooms !== undefined)
       take('bedrooms', wholeIn('bedrooms', input.bedrooms, BEDROOMS))
     if (input.areaM2 !== undefined) take('areaM2', areaOf(input.areaM2))
+    if (input.unitTypeId !== undefined) take('unitTypeId', input.unitTypeId)
     if (input.occupancy !== undefined) take('occupancy', input.occupancy)
     if (input.note !== undefined) take('note', noteOf(input.note))
     if (fields.length === 0) return null

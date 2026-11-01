@@ -46,6 +46,9 @@ export const ERROR_CODES = [
   'member_exists',
   'unit_has_owner',
   'unit_code_in_use',
+  'unit_type_code_in_use',
+  'unit_type_name_in_use',
+  'unit_type_limit',
   'invalid_transition',
   // §5.5 finance
   'charge_changed',
@@ -116,6 +119,8 @@ export const RULE_CODES = [
   'one_change_only',
   'min_properties',
   'can_pay_tenant_only',
+  'unit_type_unknown',
+  'unit_type_archived',
   'driver_not_allowed',
 ] as const
 export type RuleCode = (typeof RULE_CODES)[number]

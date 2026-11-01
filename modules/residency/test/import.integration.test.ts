@@ -567,3 +567,176 @@ describe('NFR-12 the file of 2,000 rows', () => {
     console.info(`IM-30: preview ${seconds.toFixed(2)} s, commit ${commitSeconds.toFixed(2)} s`)
   }, 60_000)
 })
+
+/** A file with the optional column `Loại căn hộ` after the unit code (DR-315): unit code, type, bedrooms, area. */
+describe('IM-78…IM-86 the unit type column', () => {
+  const HEADER_TYPE = ['Mã căn hộ', 'Loại căn hộ', 'Số phòng ngủ', 'Diện tích (m²)'] as const
+  const staff = () => h.staff()
+
+  const validateTyped = async (
+    s: ReturnType<Harness['staff']>,
+    rows: readonly (readonly unknown[])[],
+  ) => {
+    const fileId = h.files.put(s.staffId, await workbookOf([HEADER_TYPE, ...rows]))
+    return h.residency.useCases.validateUnitOwnerImport.execute(s, { fileId })
+  }
+  const typeCount = async () =>
+    (await h.admin`SELECT count(*)::int AS n FROM residency.unit_type`)[0]?.n
+  const typeId = async (code: string, name: string, extra: Record<string, unknown> = {}) =>
+    (
+      await h.residency.useCases.createUnitType.execute(h.staff(), {
+        code,
+        name: { vi: name },
+        ...extra,
+      })
+    ).id
+  const unitRow = async (code: string) =>
+    (
+      await h.admin`SELECT u.unit_type_id, t.code AS type, u.bedrooms, u.area_m2::text AS area, u.version
+                      FROM residency.unit u LEFT JOIN residency.unit_type t ON t.id = u.unit_type_id
+                     WHERE u.code = ${code}`
+    )[0]
+
+  test('IM-78 IM-79 the code and the Vietnamese name, in any case, resolve; the units get the types', async () => {
+    const t = fresh()
+    const studio = await typeId(`im_studio_${t.n}`, `Studio ${t.n}`)
+    const penthouse = await typeId(`im_pent_${t.n}`, `Căn hộ cao cấp ${t.n}`)
+    const s = staff()
+    const job = await validateTyped(s, [
+      [t.unit(1), `IM_STUDIO_${t.n}`, '', ''],
+      [t.unit(2), ` im_pent_${t.n} `, '', ''],
+      [t.unit(3), `CĂN HỘ CAO CẤP ${t.n}`, '', ''],
+    ])
+    expect(job.result.issues).toEqual([])
+    await commit(s, job.id)
+    expect((await unitRow(t.unit(1)))?.unit_type_id).toBe(studio)
+    expect((await unitRow(t.unit(2)))?.unit_type_id).toBe(penthouse)
+    expect((await unitRow(t.unit(3)))?.unit_type_id).toBe(penthouse)
+  })
+
+  test('IM-80 IM-81 IM-86 an unknown or archived type is a row error, the rest is valid, and no type is created', async () => {
+    const t = fresh()
+    const old = await typeId(`im_old_${t.n}`, `Căn cũ ${t.n}`)
+    await h.residency.useCases.updateUnitType.execute(h.staff(), old, {
+      edit: { status: 'archived' },
+      version: 1,
+    })
+    const before = await typeCount()
+    const s = staff()
+    const job = await validateTyped(s, [
+      [t.unit(1), 'loft', '', ''],
+      [t.unit(2), '2', '', ''],
+      [t.unit(3), `im_old_${t.n}`, '', ''],
+      [t.unit(4), '', 1, ''],
+    ])
+    expect(job.status).toBe('validated')
+    expect(job.result.issues.map((i) => [i.row, i.code, i.params])).toEqual([
+      [2, 'unit_type_unknown', { value: 'loft' }],
+      [3, 'unit_type_unknown', { value: '2' }],
+      [4, 'unit_type_archived', { value: `im_old_${t.n}` }],
+    ])
+    expect(job.result.counts).toMatchObject({ rows: 4, valid: 1, errors: 3 })
+    await commit(s, job.id)
+    expect(await typeCount()).toBe(before)
+    expect(await unitRow(t.unit(1))).toBeUndefined()
+  })
+
+  test('IM-82 a new unit takes the defaults of its type for a blank cell, the preview and the commit agree', async () => {
+    const t = fresh()
+    await typeId(`im_def_${t.n}`, `Mặc định ${t.n}`, { defaultBedrooms: 0, defaultAreaM2: '32' })
+    const s = staff()
+    const job = await validateTyped(s, [
+      [t.unit(1), `im_def_${t.n}`, '', ''],
+      [t.unit(2), `im_def_${t.n}`, 1, ''],
+      [t.unit(3), `im_def_${t.n}`, 3, 50],
+    ])
+    expect(job.result.validRows[0]?.notes.map((n) => n.code)).toEqual([
+      'unit_will_create',
+      'unit_type_defaults_applied',
+    ])
+    expect(job.result.validRows[0]?.notes[1]?.params).toMatchObject({ fields: 'both' })
+    expect(job.result.validRows[1]?.notes[1]?.params).toMatchObject({ fields: 'area' })
+    expect(job.result.validRows[2]?.notes.map((n) => n.code)).toEqual(['unit_will_create'])
+    await commit(s, job.id)
+    expect(await unitRow(t.unit(1))).toMatchObject({ bedrooms: 0, area: '32.00' })
+    expect(await unitRow(t.unit(2))).toMatchObject({ bedrooms: 1, area: '32.00' })
+    expect(await unitRow(t.unit(3))).toMatchObject({ bedrooms: 3, area: '50.00' })
+  })
+
+  test('IM-83 an existing unit takes the type of the file and keeps its bedrooms and area', async () => {
+    const t = fresh()
+    const kind = await typeId(`im_move_${t.n}`, `Chuyển ${t.n}`, {
+      defaultBedrooms: 5,
+      defaultAreaM2: '200',
+    })
+    const created = await h.residency.useCases.createUnit.execute(h.staff(), {
+      code: t.unit(1),
+      bedrooms: 2,
+      areaM2: '68.50',
+    })
+    const s = staff()
+    const job = await validateTyped(s, [[t.unit(1), `im_move_${t.n}`, '', '']])
+    expect(job.result.validRows[0]?.notes.map((n) => n.code)).toEqual(['unit_will_update'])
+    await commit(s, job.id)
+    expect(await unitRow(t.unit(1))).toMatchObject({
+      unit_type_id: kind,
+      bedrooms: 2,
+      area: '68.50',
+      version: created.version + 1,
+    })
+  })
+
+  test('IM-84 a blank type cell keeps the stored type', async () => {
+    const t = fresh()
+    const kind = await typeId(`im_keep_${t.n}`, `Giữ ${t.n}`)
+    await h.residency.useCases.createUnit.execute(h.staff(), { code: t.unit(1), unitTypeId: kind })
+    const s = staff()
+    const job = await validateTyped(s, [[t.unit(1), '', 4, '']])
+    await commit(s, job.id)
+    expect(await unitRow(t.unit(1))).toMatchObject({ unit_type_id: kind, bedrooms: 4 })
+  })
+
+  test('IM-85 the old header `Loại căn` over bedroom counts is the type column: every row is unit_type_unknown and no bedroom is written', async () => {
+    const t = fresh()
+    const s = staff()
+    const fileId = h.files.put(
+      s.staffId,
+      await workbookOf([
+        ['Mã căn hộ', 'Loại căn'],
+        [t.unit(1), 1],
+        [t.unit(2), 2],
+        [t.unit(3), 3],
+      ]),
+    )
+    const job = await h.residency.useCases.validateUnitOwnerImport.execute(s, { fileId })
+    expect(job.result.issues.map((i) => i.code)).toEqual([
+      'unit_type_unknown',
+      'unit_type_unknown',
+      'unit_type_unknown',
+    ])
+    expect(job.result.counts.valid).toBe(0)
+  })
+
+  test('a type of another building does not resolve', async () => {
+    const t = fresh()
+    await h.residency.useCases.createUnitType.execute(h.staff('manager', OTHER_BUILDING), {
+      code: `im_other_${t.n}`,
+      name: { vi: `Khác ${t.n}` },
+    })
+    const job = await validateTyped(staff(), [[t.unit(1), `im_other_${t.n}`, '', '']])
+    expect(job.result.issues.map((i) => i.code)).toEqual(['unit_type_unknown'])
+  })
+
+  test('a type archived between the preview and the commit is import_stale and nothing is written', async () => {
+    const t = fresh()
+    const kind = await typeId(`im_race_${t.n}`, `Đua ${t.n}`)
+    const s = staff()
+    const job = await validateTyped(s, [[t.unit(1), `im_race_${t.n}`, '', '']])
+    await h.residency.useCases.updateUnitType.execute(h.staff(), kind, {
+      edit: { status: 'archived' },
+      version: 1,
+    })
+    expect((await failure(commit(s, job.id))).code).toBe('import_stale')
+    expect(await unitRow(t.unit(1))).toBeUndefined()
+  })
+})

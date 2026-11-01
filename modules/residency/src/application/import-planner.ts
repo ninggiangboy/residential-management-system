@@ -81,9 +81,11 @@ export class ImportPlanner {
     const { survivors } = read
     const codes = [...new Set(survivors.map((row) => (row.unitCode as string).toLowerCase()))]
     const phones = [...new Set(survivors.flatMap((row) => (row.owner ? [row.owner.phone] : [])))]
-    const [units, matches] = await Promise.all([
+    const [units, matches, unitTypes] = await Promise.all([
       this.units.findUnits(scope, codes),
       phones.length > 0 ? this.identity.findResidentAccountsByPhones(phones) : [],
+      // Q-T runs once per file, and only when a row names a type (DOC-18 §1.5).
+      survivors.some((row) => row.unitType !== null) ? this.units.findUnitTypes(scope) : [],
     ])
     const accounts = new Map(matches.map((match) => [match.phone, { accountId: match.accountId }]))
     const accountIds = [...new Set(matches.map((match) => match.accountId))]
@@ -96,6 +98,7 @@ export class ImportPlanner {
       this.units.findProfiles(scope, accountIds),
     ])
     const lookups: Lookups = {
+      unitTypes,
       units: new Map(units.map((unit) => [unit.code.toLowerCase(), unit])),
       accounts,
       members,

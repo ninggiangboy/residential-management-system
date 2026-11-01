@@ -8,6 +8,7 @@ export const unitBody = (unit: UnitRecord) => ({
   bedrooms: unit.bedrooms,
   areaM2: unit.areaM2,
   occupancy: unit.occupancy,
+  unitType: unit.unitType,
   note: unit.note,
   version: unit.version,
 })

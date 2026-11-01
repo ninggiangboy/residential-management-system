@@ -31,6 +31,8 @@ export interface ParsedRow {
   row: number
   unitCode: string | null
   floor: number | null
+  /** The cell as typed, trimmed: a type code or a Vietnamese name, resolved by the `db` layer (DQ-47, DQ-48). */
+  unitType: string | null
   bedrooms: number | null
   /** Two decimals, as the `numeric(8,2)` column takes it. */
   areaM2: string | null

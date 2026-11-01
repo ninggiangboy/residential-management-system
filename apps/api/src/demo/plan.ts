@@ -4,6 +4,7 @@ import {
   type DemoResidentSeed,
   type DemoStaffSeed,
   type DemoUnitSeed,
+  type DemoUnitTypeSeed,
 } from '@rms/shared-types'
 
 export { DEMO_SEED_VERSION }
@@ -28,6 +29,7 @@ const KIND = {
   account: 5,
   unit: 6,
   membership: 7,
+  unitType: 8,
 } as const
 
 export const DEMO_BUILDING_ID = demoId(KIND.building, 1)
@@ -37,6 +39,42 @@ const UNITS_PER_FLOOR = 16
 
 const pad = (value: number) => String(value).padStart(2, '0')
 const unitCode = (floor: number, number: number) => `A-${pad(floor)}${pad(number)}`
+
+/** The five kinds of unit of the demo building and the defaults of each (DOC-36 §9, DR-314, DR-315). */
+const UNIT_TYPES: readonly Omit<DemoUnitTypeSeed, 'id'>[] = [
+  {
+    code: 'apartment',
+    name: { vi: 'Căn hộ', en: 'Apartment' },
+    defaultBedrooms: 2,
+    defaultAreaM2: 68,
+  },
+  { code: 'studio', name: { vi: 'Studio', en: 'Studio' }, defaultBedrooms: 0, defaultAreaM2: 32 },
+  { code: 'duplex', name: { vi: 'Duplex', en: 'Duplex' }, defaultBedrooms: 3, defaultAreaM2: 120 },
+  {
+    code: 'penthouse',
+    name: { vi: 'Penthouse', en: 'Penthouse' },
+    defaultBedrooms: 4,
+    defaultAreaM2: 180,
+  },
+  {
+    code: 'shophouse',
+    name: { vi: 'Shophouse', en: 'Shophouse' },
+    defaultBedrooms: null,
+    defaultAreaM2: 90,
+  },
+]
+
+/**
+ * The type of a unit by its place: floor 1 units 01 to 08 are shophouses, floor 14 units 01 to 12 duplexes, floor 15 units 13 to
+ * 16 penthouses, units 01 and 02 of floors 2 to 13 studios, every other unit an apartment: 192, 24, 12, 8 and 4 of the 240.
+ */
+function unitTypeOf(floor: number, number: number): string {
+  if (floor === 1 && number <= 8) return 'shophouse'
+  if (floor === 14 && number <= 12) return 'duplex'
+  if (floor === 15 && number >= 13) return 'penthouse'
+  if (floor >= 2 && floor <= 13 && number <= 2) return 'studio'
+  return 'apartment'
+}
 
 /**
  * 240 units `A-0101`…`A-1516`: 200 occupied, 25 rented, 15 vacant. The last unit of each floor is vacant; the rented ones are the
@@ -48,7 +86,17 @@ function demoUnits(): DemoUnitSeed[] {
   for (let floor = 1; floor <= FLOORS; floor++)
     for (let number = 1; number <= UNITS_PER_FLOOR; number++) {
       const code = unitCode(floor, number)
-      const bedrooms = 1 + ((floor + number) % 3)
+      const unitTypeCode = unitTypeOf(floor, number)
+      // A type other than the apartment takes its own defaults; an apartment keeps the rotation of 1 to 3 bedrooms.
+      const type = UNIT_TYPES.find(
+        (candidate) => candidate.code === unitTypeCode,
+      ) as (typeof UNIT_TYPES)[number]
+      const rotation = 1 + ((floor + number) % 3)
+      const bedrooms = unitTypeCode === 'apartment' ? rotation : type.defaultBedrooms
+      const areaM2 =
+        unitTypeCode === 'apartment'
+          ? 30 + rotation * 15 + (number % 4) * 2.5
+          : (type.defaultAreaM2 as number)
       const occupancy =
         number === UNITS_PER_FLOOR
           ? 'vacant'
@@ -59,8 +107,9 @@ function demoUnits(): DemoUnitSeed[] {
         id: demoId(KIND.unit, (floor - 1) * UNITS_PER_FLOOR + number),
         code,
         floor,
+        unitTypeCode,
         bedrooms,
-        areaM2: 30 + bedrooms * 15 + (number % 4) * 2.5,
+        areaM2,
         occupancy,
       })
     }
@@ -189,6 +238,7 @@ export function buildDemoPlan(): DemoPlan {
       },
     ],
     termsPublisherId: admin.id,
+    unitTypes: UNIT_TYPES.map((type, at) => ({ ...type, id: demoId(KIND.unitType, at + 1) })),
     units: demoUnits(),
     staff,
     residents,

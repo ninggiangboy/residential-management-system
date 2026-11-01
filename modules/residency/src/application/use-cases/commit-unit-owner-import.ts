@@ -242,8 +242,10 @@ export class CommitUnitOwnerImport {
     const { parsed, unit } = planned
     const fields = {
       floor: parsed.floor,
-      bedrooms: parsed.bedrooms,
-      areaM2: parsed.areaM2,
+      unitTypeId: planned.unitTypeId,
+      // A new unit has taken its type's defaults for a blank cell in the plan, and an existing unit never does (DR-315).
+      bedrooms: planned.fields.bedrooms,
+      areaM2: planned.fields.areaM2,
       occupancy: parsed.occupancy,
     }
     if (!unit) {
