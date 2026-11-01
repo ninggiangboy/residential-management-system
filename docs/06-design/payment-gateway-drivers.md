@@ -174,7 +174,7 @@ One endpoint per gateway configuration: `POST /api/v1/payments/webhooks/stripe/{
 | `checkout.session.async_payment_succeeded` | A delayed method was paid | A `Confirmation` |
 | `checkout.session.async_payment_failed` | A delayed method failed | A `failed` signal; the intent stays `pending` until its window ends |
 | `checkout.session.expired` | The session was not paid in time | An `expired` signal: the intent follows DOC-23 §8 |
-| `charge.refunded`, `charge.dispute.created` | Money returned or contested at Stripe | A money-log row (§4.10, DR-327, proposed) |
+| `charge.refunded`, `charge.dispute.created` | Money returned or contested at Stripe | A money-log row attached to the payment (§4.10, DR-327) |
 | any other | | 200 and ignored (never an error: Stripe adds events) |
 
 A `Confirmation` is built from the session expanded with its `payment_intent`: `reference = payment_intent.id`, `orderCode = client_reference_id`, `amount = amount_total`, `currency = 'VND'`, `paidAt` = the charge's `created`, `source = 'webhook'`. The route resolves the building from `gatewayConfigId` and calls `settle()`; an `orderCode` that belongs to another building is `foreign_building` (DOC-23 §6.1 step 1).
@@ -214,9 +214,9 @@ VND is a zero-decimal currency at Stripe: `unit_amount` is the number of đồng
 
 The session and the Customer carry: the intent id, the building id, the intent code, the order code, the amount and a product line "Phí {n} khoản, căn {unit}". They carry **no** name, phone number, e-mail, ID number or member type. The page may ask the payer for an e-mail for the Stripe receipt; the session turns Stripe's receipt e-mail off (the receipt is ours, `BL-…`). The card data is entered on Stripe's page and never reaches our API, logs or database (PCI scope: the hosted page, SAQ A). Stripe's own data stays at Stripe; DOC-103 lists the cross-border review (DR-83).
 
-### 4.10 Refunds and disputes (DR-327, proposed)
+### 4.10 Refunds and disputes (DR-327)
 
-Refunds and disputes happen in the Stripe Dashboard. The driver reports `charge.refunded` and `charge.dispute.created`; the route writes a `gateway_event` row with outcome `refunded` or `disputed`, keyed `(stripe, re_… / dp_…)`, linked to the payment through the PaymentIntent id, open in the money log. **Nothing else changes**: the charge stays `paid` and the receipt valid until the Manager acts. Until DR-327 is decided, the Manager cannot void an online payment (DR-24) and the row is the only trace. The system never refunds through the API (`capabilities.refunds = 'external'`).
+Refunds and disputes happen in the Stripe Dashboard. The driver reports `charge.refunded` and `charge.dispute.created`; the route writes a `gateway_event` row with outcome `refunded` or `disputed`, keyed `(stripe, re_… / dp_…)`, with `related_payment_id` set to the payment found through the PaymentIntent id, open in the money log. The link lets a Manager go from the row to the payment, its receipts and its charges, and from the payment back to the row, **to cross-check, nothing more**. Nothing else changes: the charge stays `paid`, the receipt valid and the debt as it was, and an online payment is still not voidable (DR-24). A refund whose PaymentIntent matches no payment of ours is a row with no link (outcome as for `unknown_order`). The system never refunds through the API (`capabilities.refunds = 'external'`).
 
 ### 4.11 Timeouts, retries, rate limits
 
@@ -318,7 +318,7 @@ Prefix `PX-` (payment gateway drivers; formerly "payOS adapter", renamed by DR-3
 | PX-08 | `createSession` called twice with one idempotency key after a timeout | One session |
 | PX-09 | The request body of `createSession` for the intent of §4.2 | The parameters of §4.2: no `payment_method_types`, `vnd` whole amount, `client_reference_id`, the metadata, the return URLs, no name, phone or e-mail |
 | PX-10 | A saved-card flow with the fake driver: first payment creates the Customer; `listSavedMethods`; `removeSavedMethod`; a second account | One `payment_customer` per account; the list shows brand and last four only; the other account sees none |
-| PX-11 | `charge.refunded` for a posted payment | A `gateway_event` row `refunded`, open in the money log; the charge stays `paid` (DR-327) |
+| PX-11 | `charge.refunded` and `charge.dispute.created` for a posted payment | Two `gateway_event` rows (`refunded`, `disputed`) with `related_payment_id` = that payment, open in the money log; the charge stays `paid`, the receipt valid, the payment not voidable (DR-327) |
 | PX-12 | A confirmation whose amount differs from the intent's | `settle()` answers `amount_short` or `amount_over`; `payment_amount_mismatch_total` + 1 |
 | PX-13 | A webhook for a configuration of another building; a wrong provider path | `foreign_building` and 400; 404 |
 | PX-14 | The registry with a driver that declares `presentations: ['qr']` | The intent stores `qr_payload` and `receiving`; the status endpoint returns a `qr` presentation |
@@ -327,7 +327,7 @@ Prefix `PX-` (payment gateway drivers; formerly "payOS adapter", renamed by DR-3
 
 ## 10. Decisions made while writing
 
-Recorded as DR-326 and DR-327 (the register has them in full).
+Recorded as DR-326 (delegated) and DR-327 (the Owner; the register has them in full).
 
 ## 11. Not in this document
 
@@ -355,5 +355,4 @@ Recorded as DR-326 and DR-327 (the register has them in full).
 
 ## Open questions
 
-1. **DR-327** (proposed): may the Manager void an online payment that was fully refunded at Stripe? Until decided, a refund is a review row only.
-2. The Stripe facts of §4.12, above all VND support and its minimum. They are verified in the sandbox by P2-21, not by a decision.
+1. The Stripe facts of §4.12, above all VND support and its minimum. They are verified in the sandbox by P2-21, not by a decision.

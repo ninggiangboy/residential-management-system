@@ -630,7 +630,7 @@ The handler's update is `UPDATE … SET status = 'cancelled', cancelled_at = now
 | The window (DR-28) | `display_until` is the session's `expires_at`; Stripe allows 30 minutes to 24 hours (to verify, DOC-24 §4.12), so the 60-minute re-query window of `expires_at` stays |
 | `amount_short`, `amount_over` | Not produced by a card; `duplicate_transfer` still covers two paid sessions for one intent |
 | `unmatchedTransfer` of E-86 | Always null for Stripe; the field stays for bank-transfer drivers |
-| Money after posting | A refund or a dispute at Stripe is a review row (`refunded`, `disputed`), never a change of the ledger (DR-327, proposed) |
+| Money after posting | A refund or a dispute at Stripe is a log row (`refunded`, `disputed`) attached to the payment it concerns (`related_payment_id`), for cross-checking; it never changes the ledger (DR-327) |
 | Saved cards | One Customer per resident account, `finance.payment_customer`; the intent's `created_by` is the account whose Customer is used |
 
 ## 11. Notifications
