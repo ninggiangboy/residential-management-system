@@ -32,6 +32,7 @@ export const STAFF_ACCOUNT_STATUSES = ['invited', 'active', 'locked', 'disabled'
 export const NOTICE_STATUSES = ['draft', 'scheduled', 'sending', 'sent'] as const
 export const UNIT_OCCUPANCIES = ['occupied', 'rented', 'vacant'] as const
 export const IMPORT_JOB_STATUSES = ['validated', 'failed', 'committed', 'expired'] as const
+export const UNIT_TYPE_STATUSES = ['active', 'archived'] as const
 
 export type FeeBatchStatus = (typeof FEE_BATCH_STATUSES)[number]
 export type ChargeStatus = (typeof CHARGE_STATUSES)[number]
@@ -44,6 +45,7 @@ export type StaffAccountStatus = (typeof STAFF_ACCOUNT_STATUSES)[number]
 export type NoticeStatus = (typeof NOTICE_STATUSES)[number]
 export type UnitOccupancy = (typeof UNIT_OCCUPANCIES)[number]
 export type ImportJobStatus = (typeof IMPORT_JOB_STATUSES)[number]
+export type UnitTypeStatus = (typeof UNIT_TYPE_STATUSES)[number]
 
 /** Every enumeration DS-04 checks, by the entity name `status.json` uses (DOC-54 §14). */
 export const STATUS_ENUMS = {
@@ -58,5 +60,6 @@ export const STATUS_ENUMS = {
   notice: NOTICE_STATUSES,
   unit: UNIT_OCCUPANCIES,
   import_job: IMPORT_JOB_STATUSES,
+  unit_type: UNIT_TYPE_STATUSES,
 } as const
 export type StatusEntity = keyof typeof STATUS_ENUMS

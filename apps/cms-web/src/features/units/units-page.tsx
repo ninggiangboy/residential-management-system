@@ -16,6 +16,7 @@ import { useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
 import { useIdentityKey } from '../../lib/use-identity-key'
+import { unitTypeName, unitTypesQuery } from '../unit-types/hooks'
 import { type UnitFilters, unitsQuery } from './hooks'
 import { UnitAddDialog } from './unit-add-dialog'
 
@@ -66,6 +67,15 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
 
   const data = query.data
   const rowsKey = useIdentityKey(query.data)
+  // The "Loại" select lists the types that have units, archived ones too, plus the type of the URL when it has none (DR-314).
+  const typesData = useQuery(unitTypesQuery()).data
+  const unitTypes = useMemo(
+    () =>
+      (typesData?.items ?? []).filter(
+        (type) => type.unitCount > 0 || type.unitTypeId === search.unitTypeId,
+      ),
+    [typesData, search.unitTypeId],
+  )
   // The building's floors and bedroom counts from the summary, which ignores the filters: picking one keeps the others (DR-309).
   const floors = useMemo(() => withPicked(data?.summary.floors, search.floor), [data, search.floor])
   const bedrooms = useMemo(
@@ -86,7 +96,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
       <Tr>
         <Th className="w-[120px]">{t('web.units.col.code')}</Th>
         <Th className="w-20">{t('web.units.col.floor')}</Th>
-        <Th className="w-24">{t('web.units.col.type')}</Th>
+        <Th className="w-44">{t('web.units.col.type')}</Th>
         <Th className="w-28">{t('web.units.col.area')}</Th>
         <Th className="w-40">{t('web.units.col.status')}</Th>
         <Th>{t('web.units.col.owner')}</Th>
@@ -101,7 +111,8 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
     search.q !== undefined ||
     search.occupancy !== undefined ||
     search.floor !== undefined ||
-    search.bedrooms !== undefined
+    search.bedrooms !== undefined ||
+    search.unitTypeId !== undefined
 
   return (
     <ListPage>
@@ -140,7 +151,7 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
           </>
         }
       />
-      <div className="mb-4 grid grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] items-start gap-4">
+      <div className="mb-4 grid grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] items-start gap-4">
         <SearchField
           label={t('web.units.field.search.label')}
           placeholder={t('web.units.field.search.placeholder')}
@@ -155,6 +166,21 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
           options={[
             { value: ALL, label: t('web.units.field.floor.all') },
             ...floors.map((floor) => ({ value: String(floor), label: String(floor) })),
+          ]}
+        />
+        <SelectField
+          label={t('web.units.field.type.label')}
+          value={search.unitTypeId ?? ALL}
+          onValueChange={(value) => filter({ unitTypeId: value === ALL ? undefined : value })}
+          options={[
+            { value: ALL, label: t('web.units.field.type.all') },
+            ...unitTypes.map((type) => ({
+              value: type.unitTypeId,
+              label:
+                type.status === 'archived'
+                  ? t('web.units.field.type.archived', { name: unitTypeName(type.name, lang) })
+                  : unitTypeName(type.name, lang),
+            })),
           ]}
         />
         <SelectField
@@ -312,9 +338,16 @@ export function UnitsPage({ search }: { search: UnitsSearch }) {
                 </Td>
                 <Td>{unit.floor ?? '—'}</Td>
                 <Td>
-                  {unit.bedrooms === null
-                    ? '—'
-                    : t('web.units.field.bedrooms.option', { count: unit.bedrooms })}
+                  {unit.unitType ? (
+                    <p className="text-body-strong">{unitTypeName(unit.unitType.name, lang)}</p>
+                  ) : (
+                    <p className="text-secondary text-ink-muted">{t('web.units.type.none')}</p>
+                  )}
+                  {unit.bedrooms !== null && (
+                    <p className="text-secondary text-ink-muted">
+                      {t('web.units.field.bedrooms.option', { count: unit.bedrooms })}
+                    </p>
+                  )}
                 </Td>
                 <Td>{unit.areaM2 === null ? '—' : formatArea(Number(unit.areaM2), lang)}</Td>
                 <Td>

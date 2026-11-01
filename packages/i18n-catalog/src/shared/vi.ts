@@ -257,6 +257,8 @@ export const vi: Record<keyof typeof en, string> = {
   'status.staff.active': 'Đang hoạt động',
   'status.staff.locked': 'Đã khóa',
   'status.staff.disabled': 'Đã vô hiệu hóa',
+  'status.unit-type.active': 'Đang dùng',
+  'status.unit-type.archived': 'Ngừng dùng',
   'status.vehicle.pending': 'Chờ duyệt',
   'status.vehicle.approved': 'Đã duyệt',
   'status.vehicle.rejected': 'Bị từ chối',

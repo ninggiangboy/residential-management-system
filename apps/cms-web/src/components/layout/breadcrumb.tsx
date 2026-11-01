@@ -3,7 +3,15 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from '
 /** One crumb of a route's `staticData`: a catalog key and the page it opens. Only pages without required search params. */
 export interface Crumb {
   label: string
-  to: '/' | '/units' | '/residents' | '/staff' | '/building' | '/import' | '/profile'
+  to:
+    | '/'
+    | '/units'
+    | '/units/types'
+    | '/residents'
+    | '/staff'
+    | '/building'
+    | '/import'
+    | '/profile'
 }
 
 interface Tail {

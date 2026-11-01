@@ -861,6 +861,17 @@ Built and run on PostgreSQL 18.6: the staff routes `/staff/units` (E-57…E-62),
 
 Differences from the text above: the unit row is held (`SELECT … FOR UPDATE`) before an owner is added by the Manager (§5.1 step 3); `pii.read` is written by the audit wrapper after the read in the same transaction, and not before it (§5.3), with the same effect on a failed insert; `neverSignedIn` and `deletion=requested` restrict the page through `identity` (§5.3); a phone fragment is 4 to 15 digits (§11.1); `GET /staff/lookup` (E-70) waits for `access`, E-68 for the deletion task and `/me/members` for P4-10. Not run: RM-11 (finance), RM-15…RM-18, RM-20 (the owner's add, P4-10), RM-48 as an HTTP flow. The metrics of §15 wait for P1-18.
 
+### 17.6 As built (P1-30, 2026-11-01, DR-314, DR-315)
+
+| Test | Where | Note |
+| --- | --- | --- |
+| RM-52…61 | `modules/residency/test/unit-types.integration.test.ts` | the cases of §17 on PostgreSQL 18.6 through the use cases and `UnitTypeQueries`; RM-54 races two creates at the 50th and RM-55 two edits with one version |
+| RM-57, RM-58, RM-60 over HTTP | `apps/api/tests/integration/residency-staff.integration.test.ts` | E-180…E-182 and the unit routes: the `Idempotency-Key` replay, `ETag` and `If-Match`, 422 `unit_type_unknown` and `unit_type_archived`, the filter `unitTypeId` |
+| RM-62 | `apps/api/tests/authz` | E-180, E-181 and E-182 are rows of the matrix (fixtures `unitTypeB1` and `unitTypeB2`); 0 unexpected 2xx |
+| `UnitType` rules | `modules/residency/src/domain/unit-type.test.ts`, `unit.test.ts` | the code format, the names, the defaults, an archive and a restore in one statement |
+
+Differences from the text above: the audit wrapper writes a row for an edit that changes nothing, as `UpdateUnit` does, so §4.3 rule 6 holds for the version and the fields, not for the row count. The unit list and `getUnit` read the type with a `LEFT JOIN`, and `insert` and `apply` read the unit again after the write so that every answer carries `unitType`. The list of E-180 writes its count as `residency.unit_type.id` in full: a single-table select renders a column without its table, and the inner `unit` would shadow it.
+
 ### 17.2 Where DOC-16 and DOC-27 differed
 
 Two points of DOC-16 were corrected together with this document (DR-141): the import `kind` value (`unit_owner`, as DR-22 and the API) and the sentence "every change of owner or occupancy is a `unit_history` row" (occupancy rows are written only across vacancy, §4.1 rule 6). The statements above run on the corrected DDL.

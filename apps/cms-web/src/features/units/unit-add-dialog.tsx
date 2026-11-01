@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -9,8 +10,10 @@ import { toast } from '../../components/ui/toaster'
 import { applyServerErrors, formResolver } from '../../lib/forms'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useIntent } from '../../lib/use-intent'
+import { unitTypeName, unitTypesQuery } from '../unit-types/hooks'
 import { useUnitMutations } from './hooks'
 import {
+  typeOptionsOf,
   UNIT_FORM_FIELDS,
   UnitFormFields,
   UnitFormSchema,
@@ -20,6 +23,7 @@ import {
 const EMPTY: Values = {
   code: '',
   floor: '',
+  unitTypeId: '',
   bedrooms: '',
   areaM2: '',
   occupancy: 'vacant',
@@ -28,17 +32,34 @@ const EMPTY: Values = {
 
 /** "Thêm căn hộ" (`?dialog=add` of `W-Units`, DOC-65): the form of E-58. */
 export function UnitAddDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const navigate = useNavigate()
   const { create } = useUnitMutations()
   const intent = useIntent()
   const [banner, setBanner] = useState<string | null>(null)
+  const [takenFrom, setTakenFrom] = useState<string | null>(null)
+  const types = useQuery({ ...unitTypesQuery('active'), enabled: open }).data?.items ?? []
   const resolver = useMemo(() => formResolver<Values>(UnitFormSchema, t), [t])
   const form = useForm<Values>({ resolver, defaultValues: EMPTY })
+  // Read in render so that the form tracks which fields the Manager has typed in (DR-315).
+  const dirty = form.formState.dirtyFields
+
+  /** Picking a type fills the bedrooms and the area the Manager has not typed; a typed value is never overwritten (DR-315). */
+  const onTypeChange = (unitTypeId: string) => {
+    const type = types.find((candidate) => candidate.unitTypeId === unitTypeId)
+    const bedrooms = dirty.bedrooms ? null : (type?.defaultBedrooms ?? null)
+    const areaM2 = dirty.areaM2 ? null : (type?.defaultAreaM2 ?? null)
+    if (!dirty.bedrooms) form.setValue('bedrooms', bedrooms === null ? '' : String(bedrooms))
+    if (!dirty.areaM2) form.setValue('areaM2', areaM2 ?? '')
+    setTakenFrom(
+      type && (bedrooms !== null || areaM2 !== null) ? unitTypeName(type.name, lang) : null,
+    )
+  }
 
   const close = () => {
     form.reset(EMPTY)
     setBanner(null)
+    setTakenFrom(null)
     intent.reset()
     onClose()
   }
@@ -48,6 +69,7 @@ export function UnitAddDialog({ open, onClose }: { open: boolean; onClose: () =>
     const body = {
       code: values.code.trim(),
       occupancy: values.occupancy,
+      ...(values.unitTypeId !== '' ? { unitTypeId: values.unitTypeId } : {}),
       ...(values.floor !== '' ? { floor: Number(values.floor) } : {}),
       ...(values.bedrooms !== '' ? { bedrooms: Number(values.bedrooms) } : {}),
       ...(values.areaM2 !== '' ? { areaM2: values.areaM2.replace(',', '.') } : {}),
@@ -106,7 +128,12 @@ export function UnitAddDialog({ open, onClose }: { open: boolean; onClose: () =>
     >
       <form id="unit-add-form" onSubmit={submit} className="flex flex-col gap-4 py-2" noValidate>
         {banner && <Banner tone="danger">{banner}</Banner>}
-        <UnitFormFields form={form} />
+        <UnitFormFields
+          form={form}
+          types={typeOptionsOf(types, lang)}
+          onTypeChange={onTypeChange}
+          takenFrom={takenFrom}
+        />
       </form>
     </Dialog>
   )

@@ -8,6 +8,7 @@ export interface UnitFilters {
   occupancy?: 'occupied' | 'rented' | 'vacant'
   floor?: number
   bedrooms?: number
+  unitTypeId?: string
   cursor?: string
   limit: number
 }
@@ -17,6 +18,7 @@ const toQuery = (f: UnitFilters) => ({
   ...(f.occupancy ? { occupancy: f.occupancy } : {}),
   ...(f.floor !== undefined ? { floor: String(f.floor) } : {}),
   ...(f.bedrooms !== undefined ? { bedrooms: String(f.bedrooms) } : {}),
+  ...(f.unitTypeId ? { unitTypeId: f.unitTypeId } : {}),
   ...(f.cursor ? { cursor: f.cursor } : {}),
   limit: String(f.limit),
 })
@@ -91,6 +93,7 @@ export interface UnitInput {
   floor?: number | null
   bedrooms?: number | null
   areaM2?: string | null
+  unitTypeId?: string | null
   occupancy?: 'occupied' | 'rented' | 'vacant'
   note?: string | null
 }

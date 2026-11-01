@@ -3,11 +3,13 @@ import { Controller, type UseFormReturn } from 'react-hook-form'
 import { SelectField } from '../../components/ui/select-field'
 import { TextAreaField, TextField } from '../../components/ui/text-field'
 import { useI18n } from '../../lib/i18n'
+import { type UnitTypeItem, unitTypeName } from '../unit-types/hooks'
 
 /** The form of a unit, shared by "Thêm căn hộ" (E-58) and the edit dialog of `W-Unit-Detail` (DOC-65). */
 export interface UnitFormValues {
   code: string
   floor: string
+  unitTypeId: string
   bedrooms: string
   areaM2: string
   occupancy: 'occupied' | 'rented' | 'vacant'
@@ -16,6 +18,7 @@ export interface UnitFormValues {
 export const UnitFormSchema = Type.Object({
   code: Type.String({ minLength: 1, maxLength: 64, pattern: '\\S' }),
   floor: Type.String({ pattern: '^-?\\d{0,3}$' }),
+  unitTypeId: Type.String({ maxLength: 64 }),
   bedrooms: Type.String({ pattern: '^\\d{0,2}$' }),
   areaM2: Type.String({ pattern: '^(\\d{1,6}([.,]\\d{1,2})?)?$' }),
   occupancy: Type.Union([Type.Literal('occupied'), Type.Literal('rented'), Type.Literal('vacant')]),
@@ -24,14 +27,56 @@ export const UnitFormSchema = Type.Object({
 export const UNIT_FORM_FIELDS = [
   'code',
   'floor',
+  'unitTypeId',
   'bedrooms',
   'areaM2',
   'occupancy',
   'note',
 ] as const
 
-/** The fields (DOC-65 §6 dialog, DOC-54 §17.9): code beside the status, then floor, bedrooms and area, then the note. */
-export function UnitFormFields({ form }: { form: UseFormReturn<UnitFormValues> }) {
+/** The select cannot hold an empty value: the "no type" option has this one. */
+const NO_TYPE = '__none__'
+
+/** What the form needs to offer a type: the active ones, plus the unit's own when it was archived since (DOC-65 `W-Units` §6). */
+export interface TypeOption {
+  unitTypeId: string
+  name: string
+  archived: boolean
+}
+
+export const typeOptionsOf = (
+  active: readonly UnitTypeItem[],
+  lang: string,
+  own?: { unitTypeId: string; name: { vi: string; en: string | null } } | null,
+): TypeOption[] => {
+  const options = active.map((type) => ({
+    unitTypeId: type.unitTypeId,
+    name: unitTypeName(type.name, lang),
+    archived: false,
+  }))
+  return own && !options.some((option) => option.unitTypeId === own.unitTypeId)
+    ? [
+        ...options,
+        { unitTypeId: own.unitTypeId, name: unitTypeName(own.name, lang), archived: true },
+      ]
+    : options
+}
+
+/**
+ * The fields (DOC-65 §6 dialog, DOC-54 §17.9): code beside the status, the type, then floor, bedrooms and area, then the note.
+ * `onTypeChange` lets the add dialog fill the fields the Manager has not touched (DR-315); `takenFrom` names the type they came from.
+ */
+export function UnitFormFields({
+  form,
+  types,
+  onTypeChange,
+  takenFrom,
+}: {
+  form: UseFormReturn<UnitFormValues>
+  types: readonly TypeOption[]
+  onTypeChange?: (unitTypeId: string) => void
+  takenFrom?: string | null
+}) {
   const { t } = useI18n()
   const errors = form.formState.errors
   return (
@@ -62,6 +107,31 @@ export function UnitFormFields({ form }: { form: UseFormReturn<UnitFormValues> }
           )}
         />
       </div>
+      <Controller
+        control={form.control}
+        name="unitTypeId"
+        render={({ field }) => (
+          <SelectField
+            label={t('web.units.dialog.add.field.type.label')}
+            value={field.value === '' ? NO_TYPE : field.value}
+            error={errors.unitTypeId?.message}
+            onValueChange={(value) => {
+              const id = value === NO_TYPE ? '' : value
+              field.onChange(id)
+              onTypeChange?.(id)
+            }}
+            options={[
+              { value: NO_TYPE, label: t('web.units.dialog.add.field.type.none') },
+              ...types.map((type) => ({
+                value: type.unitTypeId,
+                label: type.archived
+                  ? t('web.units.field.type.archived', { name: type.name })
+                  : type.name,
+              })),
+            ]}
+          />
+        )}
+      />
       <div className="grid grid-cols-3 gap-4">
         <TextField
           label={t('web.units.dialog.add.field.floor.label')}
@@ -86,6 +156,11 @@ export function UnitFormFields({ form }: { form: UseFormReturn<UnitFormValues> }
           {...form.register('areaM2')}
         />
       </div>
+      {takenFrom && (
+        <p className="-mt-2 text-secondary text-ink-muted">
+          {t('web.units.dialog.add.field.type.defaults', { type: takenFrom })}
+        </p>
+      )}
       <TextAreaField
         label={t('web.units.dialog.add.field.note.label')}
         placeholder={t('web.units.dialog.add.field.note.placeholder')}

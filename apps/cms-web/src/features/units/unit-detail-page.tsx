@@ -16,11 +16,12 @@ import { PageHeader } from '../../components/ui/page'
 import { Skeleton } from '../../components/ui/skeleton'
 import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { TabList, TabPanel, Tabs } from '../../components/ui/tabs'
-import { Plate, StatusTag } from '../../components/ui/tag'
+import { Plate, StatusTag, Tag } from '../../components/ui/tag'
 import { toast } from '../../components/ui/toaster'
 import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
+import { unitTypeName } from '../unit-types/hooks'
 import { ChangePhoneDialog } from './change-phone-dialog'
 import {
   type HistoryItem,
@@ -167,6 +168,11 @@ export function UnitDetailPage({ unitId, search }: { unitId: string; search: Uni
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-title-1 text-ink">{title}</h1>
+              <Tag>
+                {detail.unitType
+                  ? unitTypeName(detail.unitType.name, lang)
+                  : t('web.unit-detail.type.none')}
+              </Tag>
               <StatusTag entity="unit" value={detail.occupancy} />
             </div>
             <p className="mt-1 text-secondary text-ink-muted">
