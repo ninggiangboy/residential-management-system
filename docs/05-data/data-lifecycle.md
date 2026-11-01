@@ -1,6 +1,6 @@
 # Data lifecycle
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-10-28 (P1-26: device tokens of a dead session, DR-300; PDF keys, DR-293, DR-295; a replaced logo kept, DR-296) · 2026-10-28 (P1-29: DLC-16…18 re-run as `rms_app` through the job, §10.1; DR-279: `analytics` rows in §2.5, the job `usage_rollup` in §5, DLC-16…18) · 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); final before P6) · Updated: 2026-11-01 (DR-314: `unit_type` is never deleted) · 2026-10-28 (P1-26: device tokens of a dead session, DR-300; PDF keys, DR-293, DR-295; a replaced logo kept, DR-296) · 2026-10-28 (P1-29: DLC-16…18 re-run as `rms_app` through the job, §10.1; DR-279: `analytics` rows in §2.5, the job `usage_rollup` in §5, DLC-16…18) · 2026-10-26 (DR-268: files and backups in SeaweedFS on the VPS in `vn`; the whole-VPS loss is outside RPO/RTO) · 2026-10-22 (DOC-15 written: §2.4 points to it, `fee_notice_job` added, DR-245; earlier DR-154: label `job_name`; DR-120, DR-123) · DOC-20
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-12, 21, 22, 32, 34, 40, 48, 52, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 74, 83, 87, 101, 108, 114, 115, 268), [ADR-0027](../04-adr/0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md), [ADR-0017](../04-adr/0017-backup-with-point-in-time-recovery.md), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-10](../03-architecture/quality-attributes.md) §5, [DOC-14](data-conventions.md) §4.2, [DOC-16](identity-and-residency-model.md) §7, [DOC-17](operations-model.md) §11, [DOC-19](db-roles-and-grants.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08, P1-13, P1-14, P1-20 (the jobs and the VPS), DOC-35, DOC-37, DOC-38, DOC-72, RB-10, the legal dossier (P0-06)
 
@@ -58,6 +58,7 @@ Rules that hold everywhere:
 | Table | What is kept | Removal | Period | Job | Source |
 | --- | --- | --- | --- | --- | --- |
 | `unit` | Every apartment | Never deleted | — | — | DR-12 |
+| `unit_type` | Every kind of unit of a building, `archived` ones included | Never deleted; archived instead (a unit can still point to it) | — | — | DR-314 |
 | `membership` | Every membership, `removed` ones included | Never deleted | — | — | DR-12, DR-40 |
 | `unit_history` | Every change of a unit | Never deleted | — | — | FR-18.6 |
 | `resident_profile` | Name, email, CCCD (encrypted), date of birth of a person in a building | Cleared at deletion execution: all personal fields null, `cleared_at` set | Row kept | `account_deletion` (§8), residency handler | DR-59, DR-108 |

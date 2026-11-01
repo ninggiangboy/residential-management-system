@@ -1,6 +1,6 @@
 # Building configuration and demo
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: a replaced logo is kept, DR-296, §4 and BD-10) · 2026-10-27 (P1-21: the demo seed, the reset, E-56, the nightly job, the mail skip and boot guard checks 2, 3, 5 and 6 as built, §13 run for the P1 modules, DR-270); earlier 2026-10-22 (P1-07: the module as built, §13 run, VietQR fields provisional, DR-252; DR-243: the `rms.demo_reset` setting holds the demo building's id; earlier DR-203: note on the resident contact block; earlier DR-140: boot guard check 1 uses `buildingIdsOfAccounts`) · DOC-36
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: the demo building has five unit types, §9, BD-49, BD-50) · 2026-10-28 (P1-26: a replaced logo is kept, DR-296, §4 and BD-10) · 2026-10-27 (P1-21: the demo seed, the reset, E-56, the nightly job, the mail skip and boot guard checks 2, 3, 5 and 6 as built, §13 run for the P1 modules, DR-270); earlier 2026-10-22 (P1-07: the module as built, §13 run, VietQR fields provisional, DR-252; DR-243: the `rms.demo_reset` setting holds the demo building's id; earlier DR-203: note on the resident contact block; earlier DR-140: boot guard check 1 uses `buildingIdsOfAccounts`) · DOC-36
 > Depends on: original SDD §15, §21, [DR](../00-decision-register.md) (DR-26, 33, 36, 37, 39, 59, 60, 65, 74, 87, 98, 111, 112, 115, 126, 238), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0026](../04-adr/0026-demo-building-and-fake-payment-driver.md), [DOC-03](../01-product/requirements.md) (FR-14, FR-15.6, FR-38, FR-41, FR-50), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §4.4, §8, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §4.4, [DOC-17](../05-data/operations-model.md) §1, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-35](audit-privacy-and-terms.md), [DOC-37](files-and-uploads.md), [DOC-38](jobs-and-outbox-runtime.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-07 (`building` module), P1-11, P1-12, P1-16 (settings screens), P1-21 (demo seed and reset guard), P3-xx (gateway screen), DOC-24, DOC-26, DOC-41, DOC-51, DOC-67, DOC-70, DOC-102, RB-12
 
@@ -370,7 +370,8 @@ The demo building is a row of `building.building` with `is_demo = true`, in `sta
 | Building | Code `DEMO-A`; name "Chung cư Demo A" / "Demo A Apartments"; a fictional company; time zone `Asia/Ho_Chi_Minh`; default settings |
 | Gateway | One `gateway_config` row: provider `payos`, driver `fake`, an empty secret blob, a sample receiving account (`bankBin 970436`, account `0000000000`) |
 | Terms | `terms` v1 and `privacy` v1, `vi` only, titled "DEMO — not a legal text"; published once, kept across resets (terms are write-once) |
-| Units | 240 units `A-0101`…`A-1516` (15 floors of 16); 200 occupied, 25 rented, 15 vacant; the owners' names are fictional |
+| Unit types | *Added 2026-11-01 (DR-314, DR-315).* Five types, all `active`: `apartment` "Căn hộ" (2 bedrooms, 68 m²), `studio` "Studio" (0, 32 m²), `duplex` "Duplex" (3, 120 m²), `penthouse` "Penthouse" (4, 180 m²), `shophouse` "Shophouse" (no bedroom default, 90 m²). Fixed ids from `demoId(KIND.unitType, n)` |
+| Units | 240 units `A-0101`…`A-1516` (15 floors of 16); 200 occupied, 25 rented, 15 vacant; the owners' names are fictional. *Types (DR-314):* floor 1 units `01…08` are `shophouse` (8), floor 15 units `13…16` `penthouse` (4), floor 14 units `01…12` `duplex` (12), units `01` and `02` of floors 2 to 13 `studio` (24), every other unit `apartment` (192). A studio, a duplex, a penthouse and a shophouse take the defaults of their type for bedrooms and area; an apartment keeps the 1 to 3 bedroom rotation of the seed |
 | Staff | `admin`, `manager`, `technician`, `guard`: emails `<role>@demo.rms.invalid` (`.invalid` is reserved, RFC 2606: nothing can be delivered); the password is the secret `DEMO_STAFF_PASSWORD`, required in `production`, `demo-password-1` in `local` and `staging` |
 | Residents | 8 accounts with `is_demo = true` (table below) |
 | Money | A published batch for the previous month with 240 charges, 120 paid by `cash` or `bank_transfer` with receipts; the current month's charges are not seeded (the demo script imports them from the fixture `fees-current.xlsx`, 236 valid rows and 4 errors, written by the seed script) |
@@ -553,6 +554,8 @@ Prefix `BD-` (building and demo; unused before this document; DOC-88 indexes it)
 | BD-46 | Publish with `vi` only for the real building | 400; for the demo building, accepted |
 | BD-47 | An unknown `FEATURE_FOO=1` | The boot fails |
 | BD-48 | `libphonenumber-js` on the eight demo phones `+12025550101`…`0108` | All valid, E.164 unchanged (B, B-BD-2) |
+| BD-49 | The seed of the demo building (DR-314) | 5 `unit_type` rows with the codes and defaults of §9; 240 units, each with a type: 192 `apartment`, 24 `studio`, 12 `duplex`, 8 `shophouse`, 4 `penthouse`; a studio has 0 bedrooms and 32 m² |
+| BD-50 | The reset of the demo building twice in a row (DR-314) | The same five type ids and the same 240 unit ids after each run; the units are deleted before their types (the composite foreign key of DOC-16 §5.6); the reset is still one transaction |
 
 ### 13.1 Statements and helpers run
 
@@ -598,7 +601,7 @@ Prefix `BD-` (building and demo; unused before this document; DOC-88 indexes it)
 | §6 encryption | DR-33, DR-65, DR-117, DR-126 | FR-38.3; BD-14…17 |
 | §7 gateway | DR-33, DR-39, DR-26, DR-126 | FR-38.3, FR-50; BD-18…27 |
 | §8 terms | DR-59, DR-111, DR-126 | FR-41; BD-44…46 |
-| §9 demo | DR-60, DR-37, DR-36, DR-26, ADR-0026 | FR-15.6; BD-31…36, BD-48 |
+| §9 demo | DR-60, DR-37, DR-36, DR-26, DR-314, ADR-0026 | FR-15.6; BD-31…36, BD-48…50 |
 | §10 guard and reset | DR-60, DR-26, DR-126 | FR-15.6; BD-28…30, BD-37…43 |
 
 ## Open questions

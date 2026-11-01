@@ -1,7 +1,7 @@
 # Data quality rules
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2–3 are owed to P2 and P3) · Updated: 2026-10-27 (DR-278: the `exceljs` stream helper is patched, a good workbook was DQ-01 about a third of the time; IM-44) · 2026-10-23 (P1-13 built §1: DR-258, §4 "Run in P1-13"); 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
-> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2–3 are owed to P2 and P3) · Updated: 2026-11-01 (DR-315: the column `unit_type`, DQ-47…49, Q-T, IM-78…86; `Loại căn` and `Type` move from `bedrooms` to `unit_type`) · 2026-10-27 (DR-278: the `exceljs` stream helper is patched, a good workbook was DQ-01 about a third of the time; IM-44) · 2026-10-23 (P1-13 built §1: DR-258, §4 "Run in P1-13"); 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
+> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226, DR-314, DR-315), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
 This document is the catalog of the data-quality rules (`DQ-xx`) of the Excel imports: for each rule the layer where it runs, the check, its severity, what the system does, the threshold, the error code and the text the user reads in Vietnamese and in English. **Section 1 (units and owners, P1) is complete. Sections 2 (fee batches, P2) and 3 (bank statements, P3) are written when their phases start**, so the document stays `Draft` until then. It does not hold the import flow and the job states (DR-21, DOC-16 §5.5, DOC-27), the endpoints (DOC-51) or the error shape of the API (DOC-50, DOC-42).
@@ -40,6 +40,7 @@ Error codes are `snake_case` and are the contract with the client. A message is 
 | --- | --- | --- | --- | --- | --- |
 | `unit_code` | Mã căn hộ | Unit code | Yes | Text | `residency.unit.code` |
 | `floor` | Tầng | Floor | No | Whole number | `unit.floor` |
+| `unit_type` | Loại căn hộ | Unit type | No | Text: a type code or its Vietnamese name | `unit.unit_type_id` |
 | `bedrooms` | Số phòng ngủ | Bedrooms | No | Whole number | `unit.bedrooms` |
 | `area_m2` | Diện tích (m²) | Area (m²) | No | Number | `unit.area_m2` |
 | `occupancy` | Tình trạng | Occupancy | No | Text | `unit.occupancy` |
@@ -67,7 +68,8 @@ Error codes are `snake_case` and are the contract with the client. A message is 
 | --- | --- |
 | `unit_code` | Mã căn hộ, Mã căn, Căn hộ, Unit code, Unit, Apartment |
 | `floor` | Tầng, Floor |
-| `bedrooms` | Số phòng ngủ, Loại căn, PN, Bedrooms, Type |
+| `unit_type` | Loại căn hộ, Loại hình, Loại căn, Unit type, Type |
+| `bedrooms` | Số phòng ngủ, PN, Bedrooms |
 | `area_m2` | Diện tích (m²), Diện tích, DT, Area (m²), Area |
 | `occupancy` | Tình trạng, Hiện trạng, Occupancy |
 | `owner_name` | Họ tên chủ hộ, Tên chủ hộ, Chủ hộ, Owner full name, Owner name |
@@ -121,6 +123,9 @@ Thresholds come from DR-61 (5 MB, checked by `FilesApi.verify` before the job ex
 | DQ-44 | db | The phone has an account | An account with the E.164 number exists | info | The owner membership links to it; the name in the file is not used | — | `account_linked` | "Số này đã có tài khoản; chủ hộ được liên kết với tài khoản đó và không dùng tên trong tệp." / "This phone already has an account; the owner is linked to it and the name in the file is not used." |
 | DQ-45 | db | The phone has no account | No account | info | A resident account is created at commit | — | `account_will_be_created` | "Sẽ tạo tài khoản cư dân mới cho số này." / "A new resident account will be created for this phone." |
 | DQ-46 | db | The stored profile differs | The building already has a profile of the account with a different non-empty value (name, email, date of birth; ID number by its last four digits) | warning | The stored value stays; the file's value is not applied | — | `profile_field_differs` | "{field} khác với hồ sơ đã lưu nên không được thay đổi." / "{field} differs from the stored profile and is not changed." |
+| DQ-47 | db | The unit type exists | The cell is not blank and matches neither the `code` of an active type of the building nor its Vietnamese name, compared in lower case after trimming (the code is tried first); no type is created | error | Row rejected | — | `unit_type_unknown` | "Không có loại căn hộ “{value}”. Hãy dùng mã hoặc tên trong màn Loại căn hộ." / "There is no unit type “{value}”. Use a code or a name from the Unit types screen." |
+| DQ-48 | db | The unit type is in use | The cell matches an **archived** type | error | Row rejected | — | `unit_type_archived` | "Loại căn hộ “{value}” đã ngừng dùng." / "The unit type “{value}” is no longer in use." |
+| DQ-49 | db | A new unit takes the defaults of its type | The row creates a unit (DQ-41), names a type, and its `bedrooms` or `area_m2` cell is blank while the type has a default for it | info | The default is stored at commit; the preview says which | — | `unit_type_defaults_applied` | "Căn hộ {code} sẽ lấy {fields} mặc định của loại “{type}”." / "Unit {code} will take the default {fields} of the type “{type}”." |
 | DQ-50 | commit | The data did not change under the preview | The file is read and checked again; the counts differ from the stored preview | fail | Nothing written; 409; the job stays `validated` | counts equal | `import_stale` | "Dữ liệu đã thay đổi từ lúc xem trước. Hãy tải tệp lên lại." / "The data changed since the preview. Upload the file again." |
 | DQ-51 | commit | The preview is fresh | `expires_at` has passed | fail | Nothing written; 409 | 24 h | `import_expired` | "Bản xem trước đã hết hạn sau 24 giờ. Hãy tải tệp lên lại." / "This preview expired after 24 hours. Upload the file again." |
 | DQ-52 | commit | The job can be committed | The job's status is not `validated` (it is `failed`) | fail | Nothing written; 409 | — | `import_not_ready` | "Tệp này có lỗi chặn việc nhập." / "This file has errors that block the import." |
@@ -131,7 +136,7 @@ A repeated import of the same file is not a rule: the second commit finds the jo
 
 **Occupancy values** (compared by the key of §1.1): `occupied` ← `occupied`, `đang ở`, `chủ ở`; `rented` ← `rented`, `cho thuê`; `vacant` ← `vacant`, `trống`, `bỏ trống`. Anything else, such as `empty` or `ở`, is `occupancy_invalid`.
 
-**What a blank cell does.** A blank cell never erases a stored value. On an existing unit, blank floor, bedrooms, area or occupancy keep the stored value; on a new unit occupancy is `vacant` and the others are null. A row with no owner cell filled changes nothing about owners.
+**What a blank cell does.** A blank cell never erases a stored value. On an existing unit, blank floor, unit type, bedrooms, area or occupancy keep the stored value; on a new unit occupancy is `vacant`, the others are null, **except** that a new unit with a type takes that type's default for a blank bedrooms or area (DQ-49, DR-315). A type in the file never rewrites the bedrooms or area of an existing unit, and an existing unit keeps its stored values whatever the type's defaults are. A row with no owner cell filled changes nothing about owners.
 
 ### 1.3 Results of the row rules
 
@@ -261,7 +266,19 @@ The preview is the `result` of `residency.import_job` (DOC-16 §5.5) and is also
 - A row with an `error` is counted in `errors` once, however many issues it has.
 - *Revised 2026-10-20 (DR-213):* every issue carries `unitCode`, the normalized code of its row (`null` when the row has none), so `W-Import` can show a "Mã căn" column and build the error CSV in the browser. It is stored in the `jsonb` with `{code, params}`, not rendered.
 
+**DQ-47, DQ-48 unit type** (the building has the active types `studio` "Studio" and `penthouse` "Penthouse", and the archived type `old` "Căn cũ")
+
+| Input | Result |
+| --- | --- |
+| `studio`, `Studio`, ` STUDIO ` | ok, the type `studio` (the code is tried first) |
+| `Căn hộ cao cấp` where a type has the Vietnamese name `Căn hộ cao cấp` | ok, that type (compared in lower case, with its diacritics) |
+| blank | ok, the stored type is kept; a new unit has none |
+| `loft`, `2`, `2PN` | `unit_type_unknown` |
+| `old`, `căn cũ` | `unit_type_archived` |
+
 ### 1.5 The database layer: two set queries and one contract
+
+*Revised 2026-11-01 (DR-315):* a fourth lookup, Q-T, runs once per file when any row has a type cell. The three below are unchanged.
 
 The `db` rules need three lookups per file, each with the whole set of values at once (the 2,000-row file of NFR-12 makes three queries, not 2,000). `residency` may not read `identity` tables, so the accounts come through a contract (DOC-07 §5.2, DR-114). The codes are trimmed, lower-cased and de-duplicated in code first.
 
@@ -272,6 +289,10 @@ SELECT u.code, u.occupancy, m.account_id AS owner_account_id
   LEFT JOIN residency.membership m
          ON m.building_id = u.building_id AND m.unit_id = u.id AND m.member_type = 'owner' AND m.status <> 'removed'
  WHERE u.building_id = :building_id AND lower(u.code) = ANY (:codes_lower);
+
+-- Q-T: the building's unit types (at most 50, DR-314); the file's cells are matched in code, by code first, then by lower-case Vietnamese name
+SELECT id, code, lower(name ->> 'vi') AS name_lower, status, default_bedrooms, default_area_m2
+  FROM residency.unit_type WHERE building_id = :building_id;
 
 -- Q-M: non-removed memberships of the file's accounts in the file's units (DQ-43)
 SELECT m.unit_id, m.account_id, m.member_type, m.status
@@ -296,6 +317,7 @@ SELECT phone, id, display_name, status FROM identity.resident_account WHERE phon
 **Classification** of each row that passed the row and set layers:
 
 1. `unit` = the Q-U row for the lower-cased code. If it exists, DQ-40 (`unit_will_update`); otherwise DQ-41 (`unit_will_create`).
+   *Added 2026-11-01 (DR-315):* if the row has a type cell, resolve it with Q-T: no match is DQ-47, an archived match DQ-48, both reject the row. A new unit whose `bedrooms` or `area_m2` cell is blank takes the type's default and the preview says so (DQ-49). The counts of DQ-50 include the defaults, so the preview and the commit agree.
 2. If no owner cell is filled, stop: the row changes the unit only.
 3. `account` = the contract's answer for the E.164 number. If it exists, DQ-44 (`account_linked`); otherwise DQ-45 (`account_will_be_created`).
 4. If the unit has an active owner: when it is `account`, the owner is unchanged (`ownersUnchanged`); otherwise DQ-42 (`owner_conflict`), the row is rejected.
@@ -320,7 +342,7 @@ Plans with `enable_seqscan = off`: Q-U uses `unit_code_prefix_idx` (`lower(code)
 
 1. `UPDATE residency.import_job … WHERE id = :id AND status = 'validated' AND expires_at > now()` (DOC-16 §5.5). Zero rows: DQ-51, DQ-52 or the answer of the earlier commit.
 2. Read the file again and run the file, row, set and db layers on it (DQ-01…DQ-46). If `counts` differ from the stored preview: DQ-50, roll back.
-3. Upsert the units of the valid rows: non-blank cells overwrite, blank cells keep (§1.2).
+3. Upsert the units of the valid rows: non-blank cells overwrite, blank cells keep (§1.2); a new unit takes the defaults of its type for a blank bedrooms or area (DQ-49).
 4. Ask identity for the accounts of the new phones through the creating contract (`IdentityApi.findOrCreateResidentAccount`, DOC-26 §2.2, called once per new phone because there is no batch form; it runs in this transaction) and use the existing ones for linked phones.
 5. For each owner row: insert or fill the building's `resident_profile` (empty fields only; the ID number encrypted with the PII key, `cccd_last4` set), insert the owner membership (`added_by_kind = 'staff'`), and write a `unit_history` row of kind `owner_changed` with `details {"from": null, "to": "<account>", "source": "import"}`.
 6. One audit row `residency.import.commit` with the counts in `details` (DOC-17 §2), and `FilesApi.remove` on the file.
@@ -400,6 +422,15 @@ The prefix `IM-` is shared with DOC-21 and DOC-27 (master plan §0.2). This docu
 | IM-42 | `GET /staff/imports` (E-169) with 3 jobs created at different times, one `validated` past its `expires_at`, and a `limit` of 2 | newest first; the first page has 2 rows and a `nextCursor`, the second has 1 and `nextCursor` null; the stale `validated` job reads `expired`; `status=expired` finds it and `status=validated` does not; each row has `counts`, `createdBy.name` and no preview rows (DR-226) |
 | IM-43 | The same call as a Technician and as a Guard; as a Manager of building B when building A has jobs | 403 `forbidden`; building B sees none of building A's jobs (DOC-39) |
 | IM-44 | 40 workbooks written by `exceljs`, each read right after it is written (DR-278) | Every one is read with its row; none is DQ-01 |
+| IM-78 | A file with the column `Loại căn hộ` and the cells `studio`, `STUDIO`, ` penthouse ` against a building with those active types | all three rows resolve (DQ-47 does not fire); the units get the types |
+| IM-79 | The cell holds the Vietnamese name of a type in another case (`căn hộ cao cấp` for `Căn hộ cao cấp`) | resolves to that type; a type whose code equals another type's name resolves by code first |
+| IM-80 | The cell `loft`, `2` and `2PN` | one row error `unit_type_unknown` each; the other rows are valid; no type is created |
+| IM-81 | The cell holds an archived type's code or name | row error `unit_type_archived` |
+| IM-82 | A new unit with type `studio` (defaults 0 and `32.00`) and blank bedrooms and area cells; another with `bedrooms` 1 and a blank area | the first stores 0 and `32.00` and has the info `unit_type_defaults_applied`; the second stores 1 and `32.00`; the preview and the commit agree (DQ-50 does not fire) |
+| IM-83 | An existing unit with a type, bedrooms 2 and area `68.50`; a row with the same code, type `studio` and blank bedrooms and area | the type changes to `studio`; bedrooms and area stay 2 and `68.50`; `version + 1` |
+| IM-84 | An existing unit; a row with a blank type cell | the stored type is kept |
+| IM-85 | The old header `Loại căn` over a column of bedroom counts (`1`, `2`, `3`) | the column is `unit_type`; every row is `unit_type_unknown`; no bedroom is written |
+| IM-86 | A file whose rows name a type no one created | the job is `validated` with the row errors; `SELECT count(*) FROM residency.unit_type` is the same before and after the commit |
 
 **Run in P1-13 (2026-10-23, PostgreSQL 18.6; `modules/residency` and `apps/api`; DR-258):** IM-01…IM-43 (the second half of IM-39 through the use case `ExpireImports`, which the job `import_expire` loops over; `PurgeImports` likewise for `import_purge`). IM-01 in `exceljs-workbook.test.ts` (the reader) and `import.integration.test.ts` (the failed job); IM-02, 03, 04, 06 in `sheet.test.ts`; IM-05 in the reader test (5,000 read, 5,001 stops) and over HTTP (400 `too_many_rows`, no job stored); IM-07…17 in `row-rules.test.ts` with the tables of §1.3; IM-14 in `libphonenumber-phone-parser.test.ts`; IM-18 in the reader test (a `Date` with `styles: 'cache'`, the serial 31140 without); IM-19…25, 27, 29, 31, 32 in `plan.test.ts` and, against the database, `import.integration.test.ts` (IM-29 with the seeded sample building, IM-27 and IM-28 with a stored profile); IM-30 in both (preview 0.2 s, commit 3.0 s, the budget of NFR-12 is 10 s); IM-33 with two commits at once and a third after; IM-34 to IM-37 (IM-37 is forced by an identity call that links the account the preview said it would create); IM-38, IM-39, IM-40; IM-41 and IM-43 over HTTP and in the use cases; IM-42 in `ImportQueries` and over HTTP with the cursor. Points where the build settled what the text left open: `warnings` counts the warning issues of accepted rows and the file layer; the preview `notes` hold only the `info` codes; `import_stale` carries the number of rows of the file in `details.rows`; DQ-01 looks for the entry `xl/workbook.xml` in the archive; `import_job.file_key` holds the file id.
 
@@ -410,6 +441,7 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | ID | Decision | Where used |
 | --- | --- | --- |
 | DR-114 | Units and owners import: unit codes are upper-case and matched case-insensitively; a blank cell never erases; owner cells are all-or-name-and-phone; phones use the `/max` metadata; ID numbers are 9 or 12 digits and short numeric cells are padded with a warning; "same person" is the same phone and folded name; an existing profile is only filled where empty; the commit reads the file again, re-validates and refuses with `import_stale` when the counts changed; the preview holds no ID number or date of birth; a new read contract `IdentityApi.findResidentAccountsByPhones`; an hourly `import_expire` job removes the file of an expired job | §1 |
+| DR-315 | The import names the unit type (`unit_type` column, code or Vietnamese name, never creates one), a new unit takes the type's defaults for blank bedrooms and area, and the old aliases `Loại căn` and `Type` move from `bedrooms` to `unit_type` | §1.1, §1.2, §1.5 |
 | DR-258 | The import as built: `FilesApi.read`, the job holds the file id, the two identity calls, the file read in two halves, the batched commit, the counts, the texts in the catalog | §1, §4 |
 
 ## 6. Not in this document
@@ -433,6 +465,7 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | DQ-10…23 row | DR-22, DR-36, DR-41, DR-58, DR-114 | FR-18.1; IM-07…18 |
 | DQ-30, DQ-31 set | DR-22, DR-114 | FR-18.1; IM-19…21 |
 | DQ-40…46 db | DR-40, DR-114 | FR-18.1; IM-22…29 |
+| DQ-47…49 db (unit type) | DR-314, DR-315 | FR-18.7; IM-78…86 |
 | DQ-50…52 commit | DR-21, DR-74, DR-114 | FR-18.1; IM-33…36 |
 | DQ-60, DQ-61 post | DR-22, DR-114 | FR-18.2; IM-37…39 |
 | §1.4 preview | DR-21, DR-22, DR-58 | NFR-14; IM-30…32 |

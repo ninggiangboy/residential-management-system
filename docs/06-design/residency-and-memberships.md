@@ -1,7 +1,7 @@
 # Residency and memberships
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` of the unit list) · 2026-10-28 (P1-26: `ResidencyApi.unitOwnerNames` for the fee notice, DR-292 to confirm) · 2026-10-26 (DR-268: `FilesApi` store is SeaweedFS in `vn`, a diagram label only) · 2026-10-23 (P1-14: the staff API as built, §17.5, DR-260; earlier 2026-10-23 P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
-> Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: unit types, §4.3, RM-52…62) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` of the unit list) · 2026-10-28 (P1-26: `ResidencyApi.unitOwnerNames` for the fee notice, DR-292 to confirm) · 2026-10-26 (DR-268: `FilesApi` store is SeaweedFS in `vn`, a diagram label only) · 2026-10-23 (P1-14: the staff API as built, §17.5, DR-260; earlier 2026-10-23 P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226, DR-314, DR-315), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
 This document says how the `residency` module behaves: the request guard and the policy table, units, resident profiles, memberships, household changes by the owner and by the Manager, ownership transfer, the login phone change, the units-and-owners import (its commit transaction, not its validation rules), the unit history, lookup and search, and the handler of an account deletion. It holds the contract `ResidencyApi` in full. It does not hold the tables (DOC-16 §5), the validation rules of the import (DOC-18 §1), sign-in, sessions and the identity side of every call below (DOC-26), the QR credential and the Guard's lookup view (DOC-29), plate search (DOC-30), the deletion workflow around the handler (DOC-35 §10, DOC-20 §8) or the endpoint list with `E-xx` numbers (DOC-51). Endpoints are written as method and path until DOC-51 exists.
@@ -102,7 +102,8 @@ Declared in the manifest (DOC-35 §3.3); the object and changes are DOC-35 §4.2
 
 | Action | Written by | `changes` |
 | --- | --- | --- |
-| `residency.unit.create`, `residency.unit.update` | `CreateUnit`, `UpdateUnit` | edited fields (`code`, `floor`, `bedrooms`, `areaM2`, `occupancy`, `note`) |
+| `residency.unit.create`, `residency.unit.update` | `CreateUnit`, `UpdateUnit` | edited fields (`code`, `floor`, `bedrooms`, `areaM2`, `occupancy`, `note`, and `unitTypeId` since DR-314) |
+| `residency.unit_type.create`, `residency.unit_type.update` | `CreateUnitType`, `UpdateUnitType` (DR-314) | edited fields (`code` on create only, `name`, `defaultBedrooms`, `defaultAreaM2`, `status`); an archive or a restore is an `update` that lists `status` |
 | `residency.profile.update` | `UpdateProfile`, `CreateResident` when it fills a profile | `fullName`, `email`, `cccd`, `dateOfBirth`, `note`: all `[masked]` (DOC-35 §3.4) |
 | `residency.membership.add`, `.update`, `.lock`, `.unlock`, `.remove` | `CreateResident`, `ChangeMembership` (Manager or Admin) | `status`, `memberType`, `canPay` |
 | `residency.owner.transfer` | `TransferOwnership` | `owner` (membership id before and after), `details {removedOthers, keepMembers}`; reason required |
@@ -177,7 +178,7 @@ Every staff query takes the `BuildingScope` of the token's `bid` (DOC-12 §7). A
 
 1. A unit is created by the Manager (`POST /staff/units`) or by an import. **A unit is never deleted** (DR-12); the end of an occupancy is `occupancy = 'vacant'`.
 2. The code is normalised as in DR-114 (1): trimmed, `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$`, **stored upper-case**, matched with `lower(code)`. The same function serves the form, the import and `lookup`. A duplicate is the unique index `unit_code_key`: 409 `unit_code_in_use`.
-3. `floor`, `bedrooms`, `area_m2`, `occupancy` and `note` are edited by the Manager. `occupancy` is **set by the Manager, never derived** from memberships (DR-40).
+3. `floor`, `bedrooms`, `area_m2`, `occupancy`, `note` and (DR-314) `unit_type_id` are edited by the Manager. `occupancy` is **set by the Manager, never derived** from memberships (DR-40).
 4. The code can be edited (the typo case). The change is audited (`residency.unit.update` lists `code`). Other modules read the code through `getUnits` at read time, so a renamed unit shows the new code everywhere; documents that store a snapshot (a receipt) keep the code they had (DR-141).
 5. Edits carry `If-Match: "<version>"` (DR-74, DR-12). A missing header is 428 `precondition_required`; a stale one 409 `version_conflict` with the fresh unit in `details`. The edit is `UPDATE … SET …, version = version + 1 WHERE id = :id AND building_id = :b AND version = :expected`.
 6. A change of `occupancy` across the vacancy boundary writes a `unit_history` row: to `vacant` is `moved_out`, from `vacant` is `moved_in`, both with `details {"from": "occupied", "to": "vacant"}`. A change between `occupied` and `rented` writes none; the audit row is its record (DR-141).
@@ -202,7 +203,21 @@ Every staff query takes the `BuildingScope` of the token's `bid` (DOC-12 §7). A
 
 `areaM2` is a decimal string (DR-11 treatment of `numeric`); `openAmount` is integer đồng. The history list is `GET /staff/units/{id}/history` (§10).
 
-`GET /staff/units?q=&occupancy=&floor=&cursor=&limit=` lists units in `code` order (the order of `unit_code_key`, so `A-100` sorts before `A-20`), keyset on `(code, id)`, 1…200 per page. A `q` makes it the search of §11 with the cap of 20 and no cursor.
+`GET /staff/units?q=&occupancy=&floor=&bedrooms=&unitTypeId=&cursor=&limit=` lists units in `code` order (the order of `unit_code_key`, so `A-100` sorts before `A-20`), keyset on `(code, id)`, 1…200 per page. A `q` makes it the search of §11 with the cap of 20 and no cursor.
+
+### 4.3 Unit types
+
+*Added 2026-11-01 (DR-314, DR-315).* The table is DOC-16 §5.6; the endpoints are E-180…E-182 and the screen is `W-Unit-Types` (DOC-65).
+
+1. **Who and what.** The Manager or Admin creates a type (`CreateUnitType`, E-181) and edits it (`UpdateUnitType`, E-182): name, defaults, status. Each exports `<OPERATION>_ROLES = ['admin', 'manager']` and calls `requireRole` (DOC-12 §4.5). No step-up.
+2. **The code is never edited.** It is the key of the import (DR-315) and is checked as `^[a-z][a-z0-9_]{1,29}$` by the route schema and by `unit_type_code_format`. A duplicate code is 409 `unit_type_code_in_use` (the unique index `unit_type_code_key`); a duplicate Vietnamese name, compared in lower case, is 409 `unit_type_name_in_use` (`unit_type_name_key`). The use case maps the two constraint names.
+3. **Archive, never delete.** `status = 'archived'` sets `archived_at = now()` in the same statement; a restore clears it. An archived type stays on the units that have it, still shows in the unit list and its filter, and is **not offered** by the add and edit dialogs or accepted for a change: `CreateUnit` and `UpdateUnit` answer 422 `validation_failed` rule `unit_type_archived` when the request names an archived type that the unit does not already have. `UpdateUnit` with the type the unit already has is accepted, so a Manager can fix a floor on a unit whose type was archived later.
+4. **A type of another building does not exist.** A `unitTypeId` of another building, or an unknown one, is 422 rule `unit_type_unknown`; the answer never says the id exists elsewhere. The composite foreign key (DOC-16 §5.6) is the net behind the check.
+5. **At most 50 types per building.** `CreateUnitType` takes `pg_advisory_xact_lock(hashtextextended('unit_type:' || :building_id, 0))`, counts the building's types (archived ones count) and inserts in the same transaction; the 51st is 409 `unit_type_limit`. The lock is released at commit and is held by creates of one building only (RM-54 races two creates at the 50th).
+6. **Edits carry `If-Match: "<version>"`** like a unit's (§4.1 rule 5): `UPDATE residency.unit_type SET …, version = version + 1 WHERE id = :id AND building_id = :b AND version = :expected RETURNING …`; zero rows is 409 `version_conflict` with the fresh type in `details.current`. A missing header is 428. Two Managers saving at once: one wins, the other sees the conflict (UX-02, DR-310).
+7. **Defaults fill a new unit's blanks and nothing else** (DR-315). `CreateUnit` with a `unitTypeId` reads the type in the same transaction (`SELECT … FOR SHARE`, so an archive racing the create is seen or waits) and takes `default_bedrooms` for an **absent** `bedrooms` and `default_area_m2` for an absent `areaM2`; an explicit `null` stays `null`; a value in the request wins. `UpdateUnit` never applies a default. Editing a type's defaults, or a unit's type, changes no other row. The import applies them to a **new** unit's blank cells (DOC-18 §1.2).
+8. **Reads.** The unit list and detail join the type for `unitType {unitTypeId, code, name}` (`LEFT JOIN residency.unit_type t ON t.building_id = u.building_id AND t.id = u.unit_type_id`). The type list is one statement with `unitCount` (DOC-16 §9.3 IDM-S15). Both are in the query service of the module (`UnitQueries`, `UnitTypeQueries`), one handler per file (DOC-12 §4.5).
+9. **Nothing else reads the type.** No event, no `ResidencyApi` call and no PDF carries it (DR-314); the first reader that needs it adds a call through the contract.
 
 ## 5. Residents and profiles
 
@@ -489,6 +504,8 @@ sequenceDiagram
 
 *Revised 2026-10-20 (DR-149):* the request body is `{kind, fileId, params?}` where `fileId` is a verified upload of purpose `import` (DOC-37 registers and verifies a file id and keeps the object key private); the use case resolves the key through `FilesApi` and attaches the file as `import:<jobId>`. Wherever this document or the diagram says `fileKey`, read `fileId`. A file of more than 5,000 rows is 400 `validation_failed` rule `too_many_rows` and stores no job (DOC-18 DQ-05).
 
+*Added 2026-11-01 (DR-315):* the template has the optional column `unit_type`. The planner resolves each value to an active type of the building once per file (one `SELECT` of the building's at most 50 types, matched by `code`, then by lower-case Vietnamese `name`), and a new unit's blank `bedrooms` and `area_m2` take the type's defaults in the preview and at the commit alike, so the counts of DQ-50 agree. The import never creates, edits or archives a type.
+
 `POST /staff/imports` with `kind = unit_owner` is served by `residency`; the route is shared with the fee import, which is `finance`'s (DR-21), and DOC-51 fixes where the dispatch by `kind` lives. The database and the API both say `unit_owner` (DR-22); DOC-16 §5.5 said `units_owners` and was corrected with this document (DR-141).
 
 ### 9.2 The commit, in order
@@ -697,6 +714,9 @@ Codes below exist in DOC-42 §5 unless marked **new**. Messages are English keys
 | Removing, retyping or transferring-by-edit an owner row | 409 `owner_must_transfer` |
 | A state that does not allow the action (retyping a helper, an owner unlocking a Manager's lock, an edit after a race) | 409 `invalid_transition` |
 | A unit code that exists | 409 `unit_code_in_use` **new** |
+| A unit type code that exists; a Vietnamese name that exists (any case) | 409 `unit_type_code_in_use`; 409 `unit_type_name_in_use` **new** (DR-314) |
+| The 51st unit type of a building | 409 `unit_type_limit` **new** |
+| A `unitTypeId` that is unknown or of another building; one that is archived and not the unit's own | 422 `validation_failed`, rule `unit_type_unknown`; rule `unit_type_archived` **new rule codes** |
 | Stale `If-Match`; missing header | 409 `version_conflict`; 428 `precondition_required` |
 | New login phone has an account | 409 `phone_in_use` |
 | Number valid in no country | 400 `validation_failed`, rule `phone_invalid` |
@@ -763,6 +783,17 @@ Prefix `RM-` (master plan §0.2, unused elsewhere: `grep -rn "| RM-" docs/` foun
 | RM-49 | `listActiveMemberships` for an account with one active and one locked membership (S) | One row, with the unit code |
 | RM-50 | `buildingIdsOfAccounts` for a demo account with a membership in the real building (S) | The real building's id is returned; the boot guard of DOC-36 refuses to start (BD-30) |
 | RM-51 | Guard lookup plan (S) | One index scan on `membership_one_per_account_unit` |
+| RM-52 | Create a type `studio` with defaults 0 and `"32.00"` (E-181); a code `Studio`, `a`, `has space` | 201, `ETag: "1"`, one `residency.unit_type.create` row; the three codes are 400 `validation_failed` rule `pattern` |
+| RM-53 | A second type with code `studio`; a second with the name `STUDIO` and another code | 409 `unit_type_code_in_use`; 409 `unit_type_name_in_use`; nothing written |
+| RM-54 | A building with 49 types; two creates at once with a barrier; then a third | exactly one 201 and one 409 `unit_type_limit`; 50 rows; the third is 409 too |
+| RM-55 | `PATCH /staff/unit-types/{id}` with a stale `If-Match`; without the header; two PATCHes with the same version and a barrier | 409 `version_conflict` with `details.current`; 428; exactly one 200 and one 409, `version` + 1 once |
+| RM-56 | Archive a type that 3 units use, then restore it | `status` `archived` with `archived_at`, the 3 units keep `unitType`, one `update` row listing `status` each time; restore clears `archived_at`; a `code` in the body is 400 `unknown_key` |
+| RM-57 | `POST /staff/units` and `PATCH` with an archived type, an unknown id, a type of another building; `PATCH` keeping the unit's own archived type | 422 rule `unit_type_archived`; 422 `unit_type_unknown` twice (the same answer for both); 200 |
+| RM-58 | `POST /staff/units` with `unitTypeId` = `studio` and no `bedrooms`, no `areaM2`; with `bedrooms: null`; with `bedrooms: 1` | `0` and `"32.00"`; `null` and `"32.00"`; `1` and `"32.00"` |
+| RM-59 | Change the defaults of a type that 3 units use; `PATCH` a unit to another type | the 3 units keep their `bedrooms`, `area_m2` and `version`; the patched unit changes only `unit_type_id` and `version` |
+| RM-60 | `GET /staff/units?unitTypeId=` (alone, with `bedrooms=2`, with a type of another building) | the units of the type; the intersection; an empty list (never a 404); every item has `unitType` or `null` |
+| RM-61 | `GET /staff/unit-types` for a building with 2 active and 1 archived type, `?status=active` | 3 items ordered by lower-case Vietnamese name, each with `unitCount`; 2 items; the types of another building are never listed |
+| RM-62 | A Technician, a Guard, a resident and no token on E-180, E-181, E-182 | 403 `forbidden`; 403; 403; 401 (rows of the authorization matrix, SC-) |
 
 ### 17.1 Statements run
 
@@ -880,6 +911,14 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 - **Consequences:** A renamed unit's older PDFs show the old code.
 - **Write to:** DOC-27 §4, DOC-16 §5.1, DOC-22 (snapshots).
 
+### DR-314 · Unit types: a table of the building, managed on its own screen (summary)
+
+The decision is in the register: the table, the archive instead of delete, the cap of 50, E-180…E-182, the screen, the audit actions. This document carries the rules in §4.3 and the errors in §16.
+
+### DR-315 · Unit type defaults fill a new unit's blanks, and the import names the type (summary)
+
+The decision is in the register. §4.3 rule 7 is the rule of creation; §9.1 is the import side.
+
 ## 19. Not in this document
 
 | Topic | Lives in |
@@ -894,7 +933,7 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 | Event payloads and the sync contract rules | DOC-09 §6.2, §7 |
 | Error catalog | DOC-42 §5 |
 | Endpoint numbers and role matrix | DOC-51, DOC-39 |
-| Screens (`Members`, `Member-Add`, `W-Unit-Detail`, `W-Residents`, `W-Import`) | DOC-59, DOC-65 |
+| Screens (`Members`, `Member-Add`, `W-Unit-Detail`, `W-Unit-Types`, `W-Residents`, `W-Import`) | DOC-59, DOC-65 |
 | Flows FL-21, FL-22, FL-23 | DOC-46 |
 
 ## 20. Traceability
@@ -904,6 +943,7 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 | FR-16 | §3 | RM-01…08 |
 | FR-17 | §5.1, §6 | RM-09…22 |
 | FR-18 | §4, §5, §7, §8, §9, §10, §11 | RM-23…45 |
+| FR-18.7 (DR-314, DR-315) | §4.3, §9.1 | RM-52…62, IM-78…86 |
 | FR-31.2 | §11 | RM-33…35 |
 | FR-39 | §12 | RM-46…48 |
 | NFR-08 | §3, §13 | RM-03, RM-05, EXP-10 |

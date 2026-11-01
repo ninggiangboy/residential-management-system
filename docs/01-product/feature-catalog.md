@@ -1,6 +1,6 @@
 # Feature catalog
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-91, DR-92 decided) · DOC-05
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: F-UNI-10 unit types and their defaults; 125 features) · 2026-10-21 (DR-91, DR-92 decided) · DOC-05
 > Depends on: original SDD §2.3, §14, §21, [DR](../00-decision-register.md) (DR-17, 19, 20, 38, 39, 44, 47, 49, 55, 60, 72, 76, 79, 81, 84, DR-91, DR-92), [DOC-01](vision-and-scope.md) §5, §8, [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md), master plan §3.4, §4.3, [product proposal](../references/product-proposal.md)
 > Main readers: P0-07, DOC-04, DOC-56 (screens by feature), the phase tasks `Pn-xx` (scope of each milestone), DOC-88 (which feature each test protects)
 
@@ -38,9 +38,9 @@ The master plan, DOC-01, DOC-03 and the original SDD count "139 features". Count
 | | Count |
 | --- | ---: |
 | Proposal rows mapped | 113 |
-| Features added by decisions (no proposal row) | 11 |
-| **Features in the catalog** | **124** |
-| Built in phases 1–6 | 121 |
+| Features added by decisions (no proposal row) | 12 |
+| **Features in the catalog** | **125** |
+| Built in phases 1–6 | 122 |
 | Later (F-TIC-07, ticket deadlines) | 1 |
 | Not built (F-PAY-05 payment links, F-WIK-09 pin favorites) | 2 |
 
@@ -49,7 +49,7 @@ Features by group and the phase in which they are complete (the phase columns co
 | Group | Proposal rows | P1 | P2 | P3 | P4 | P5 | P6 | Later | Not built | Added | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | ACC Accounts, login and settings | 9 | 11 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 3 | 12 |
-| UNI Units, residents and members | 11 | 6 | 0 | 0 | 3 | 1 | 1 | 0 | 0 | 0 | 11 |
+| UNI Units, residents and members | 11 | 7 | 0 | 0 | 3 | 1 | 1 | 0 | 0 | 1 | 12 |
 | VEH Vehicles | 4 | 0 | 0 | 0 | 0 | 5 | 0 | 0 | 0 | 1 | 5 |
 | QRC Resident QR code | 3 | 0 | 0 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 3 |
 | NOT News and notifications | 7 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -59,11 +59,11 @@ Features by group and the phase in which they are complete (the phase columns co
 | WIK Document library | 9 | 0 | 0 | 0 | 0 | 8 | 0 | 0 | 1 | 0 | 9 |
 | DSH Home, dashboard and reports | 12 | 1 | 1 | 0 | 1 | 1 | 9 | 0 | 0 | 1 | 13 |
 | SYS Configuration, language and system operations | 12 | 4 | 3 | 0 | 1 | 0 | 5 | 0 | 0 | 1 | 13 |
-| **Total** | **113** | **22** | **22** | **10** | **33** | **18** | **16** | **1** | **2** | **11** | **124** |
+| **Total** | **113** | **23** | **22** | **10** | **33** | **18** | **16** | **1** | **2** | **12** | **125** |
 
-Of the 121 built features, 104 are must, 15 should and 2 could. Counting every app a feature runs on: web 74, resident 40, staff 31, api-only 8.
+Of the 122 built features, 104 are must, 16 should and 2 could. Counting every app a feature runs on: web 75, resident 40, staff 31, api-only 8.
 
-Milestones: M1 closes with 22 features, M2 with 22 more (the fees ledger, the money-log review and the nightly check), M3 with 10 (online payment), M4 with 33 (tickets, notices, household), M5 with 18 (QR, vehicles, library) and M6 with 16 (reports, hardening, release).
+Milestones: M1 closes with 23 features, M2 with 22 more (the fees ledger, the money-log review and the nightly check), M3 with 10 (online payment), M4 with 33 (tickets, notices, household), M5 with 18 (QR, vehicles, library) and M6 with 16 (reports, hardening, release).
 
 ## 2. ACC · Accounts, login and settings
 
@@ -86,11 +86,11 @@ Proposal §3.1. Roles and sign-in are the base of every other group; this group 
 
 ## 3. UNI · Units, residents and members
 
-Proposal §3.2. The staff-side features (units, import, profiles, linking, member management) are P1 (M1: the sample building is imported). The owner's own household screens are P4 (P4-10) and lookup is P5, with the Guard app. **F-UNI-06** finishes in P6 because the Excel export goes through the export center (DR-90).
+Proposal §3.2. The staff-side features (units, import, profiles, linking, member management) are P1 (M1: the sample building is imported). The owner's own household screens are P4 (P4-10) and lookup is P5, with the Guard app. **F-UNI-06** finishes in P6 because the Excel export goes through the export center (DR-90). **F-UNI-10** is added by DR-314 and has no proposal row; it is task P1-30.
 
 | ID | Feature | Description | FR | UC | Phase | MoSCoW | Flag | Depends on | App | Cut step |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| F-UNI-01 | Unit management | Unit code, floor (attribute), area, type, occupancy (occupied, rented, vacant); units are never deleted | FR-18.1, FR-18.3, FR-18.6 | UC-13 | P1 | M | — | F-SYS-01 | web | — |
+| F-UNI-01 | Unit management | Unit code, floor (attribute), area, bedrooms, unit type (F-UNI-10), occupancy (occupied, rented, vacant); units are never deleted | FR-18.1, FR-18.3, FR-18.6 | UC-13 | P1 | M | — | F-SYS-01 | web | — |
 | F-UNI-02 | Excel import of units and residents | Validate in the API, row errors with row and column, duplicate-phone check, save valid rows only; 5 MB and 5,000 rows | FR-18.1, FR-18.2 | UC-13 | P1 | M | — | F-UNI-01, F-SYS-03 | web | — |
 | F-UNI-03 | Resident profile | Name, phone, email, ID number (CCCD, stored encrypted, shown masked), date of birth, entered by the Manager | FR-18.1, FR-37.5 | UC-13 | P1 | M | — | F-UNI-01 | web | — |
 | F-UNI-04 | Resident–unit linking | One owner per unit; one phone links to several units with different member types; an existing phone gets a membership, not a new account | FR-16.5, FR-17.1, FR-18.1 | UC-13, UC-14 | P1 | M | — | F-UNI-01, F-UNI-03 | web | — |
@@ -99,6 +99,7 @@ Proposal §3.2. The staff-side features (units, import, profiles, linking, membe
 | F-UNI-07 | Unit change history | Owner changes, move-ins and move-outs kept as `unit_history` with kind, actor and time | FR-18.3, FR-18.6 | UC-13 | P1 | S | — | F-UNI-01 | web | — |
 | F-UNI-08 | Unit and resident lookup | Find a unit, resident or plate by any 3 characters; owner and members with a masked phone and a Call button; every view logged | FR-31.2, FR-31.3 | UC-28 | P5 | S | — | F-UNI-01, F-VEH-04 | staff | — |
 | F-UNI-09 | Unit info | The resident sees the unit and its members according to the member-type policy table | FR-16.2 | UC-15 | P4 | M | — | F-ACC-08 | resident | — |
+| F-UNI-10 | Unit types and their defaults | The building's kinds of unit (apartment, studio, duplex, penthouse, shophouse…), each with a bilingual name and optional default bedrooms and area that fill a new unit's blanks; archive instead of delete; filter and column in the unit list; a column in the units import | FR-18.7 | UC-13 | P1 | S | — | F-UNI-01 | web | — |
 | F-UNI-10 | Member management | The owner adds, edits, locks and removes members by phone; no size limit; 10 invitation SMS per day | FR-17.1, FR-17.2, FR-17.3, FR-17.5 | UC-15 | P4 | M | — | F-UNI-04, F-UNI-11 | resident | — |
 | F-UNI-11 | Member types | Family member, tenant (with or without `can_pay`) and helper; the owner sets who may pay; history starts at the membership | FR-07.1, FR-17.3, FR-17.6 | UC-15 | P4 | M | — | F-UNI-04 | resident | — |
 
@@ -358,7 +359,7 @@ Every FR-01…50 is cited by at least one feature (checked with a script on 2026
 | FR-15 | F-ACC-07, F-SYS-04, F-SYS-09, F-SYS-10 |
 | FR-16 | F-ACC-03, F-ACC-08, F-UNI-04, F-UNI-09, F-QRC-01, F-FEE-13, F-DSH-11, F-DSH-12 |
 | FR-17 | F-UNI-04, F-UNI-05, F-UNI-10, F-UNI-11, F-FEE-13, F-FEE-14, F-FEE-15 |
-| FR-18 | F-ACC-09, F-UNI-01, F-UNI-02, F-UNI-03, F-UNI-04, F-UNI-05, F-UNI-06, F-UNI-07 |
+| FR-18 | F-ACC-09, F-UNI-01, F-UNI-02, F-UNI-03, F-UNI-04, F-UNI-05, F-UNI-06, F-UNI-07, F-UNI-10 |
 | FR-19 | F-TIC-06, F-TIC-16, F-TIC-19 |
 | FR-20 | F-TIC-01, F-TIC-02, F-TIC-08, F-TIC-14, F-TIC-15 |
 | FR-21 | F-TIC-08, F-TIC-09, F-TIC-10, F-TIC-14 |
@@ -408,7 +409,7 @@ Every FR-01…50 is cited by at least one feature (checked with a script on 2026
 | UC-10 | F-TIC-03, F-TIC-04, F-TIC-05, F-TIC-17, F-TIC-20 |
 | UC-11 | F-NOT-01, F-NOT-02, F-NOT-03, F-NOT-04, F-NOT-05, F-NOT-06, F-SYS-07 |
 | UC-12 | F-VEH-01, F-VEH-02, F-VEH-03, F-VEH-05 |
-| UC-13 | F-ACC-09, F-UNI-01, F-UNI-02, F-UNI-03, F-UNI-04, F-UNI-05, F-UNI-06, F-UNI-07 |
+| UC-13 | F-ACC-09, F-UNI-01, F-UNI-02, F-UNI-03, F-UNI-04, F-UNI-05, F-UNI-06, F-UNI-07, F-UNI-10 |
 | UC-14 | F-ACC-03, F-ACC-06, F-ACC-07, F-ACC-08, F-UNI-04, F-DSH-11, F-DSH-12, F-SYS-04, F-SYS-09 |
 | UC-15 | F-UNI-05, F-UNI-09, F-UNI-10, F-UNI-11 |
 | UC-16 | F-QRC-01, F-QRC-02, F-QRC-03 |

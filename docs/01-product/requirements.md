@@ -1,6 +1,6 @@
 # Requirements
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: NFR-11 scope) · 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: FR-18.7 unit types) · 2026-10-26 (DR-268: NFR-11 scope) · 2026-10-21 (DR-96: `unmatchedTransfer` in FR-09.1, 09.3, 09.5; earlier: DR-137: invitation SMS only for owner adds) · DOC-03
 > Depends on: original SDD §3.3–§3.4, §5–§15, [DR](../00-decision-register.md) (DR-09…24, 28…32, 34…41, 43…51, 53…59, 62, 64, 66, 71, 74, 79, 80, 84, DR-96, DR-268), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-04, DOC-05, DOC-21…42 (every design document cites an FR), P0-19, every task `Pn-xx` (acceptance), `docs/10-testing` (test cases)
 
@@ -278,6 +278,7 @@ This document lists what the system must do (FR-01…50) and how well (NFR-01…
 | FR-18.4 | Login phone change | **G** a number that already has an account **W** the Manager sets it as a login phone **T** 409 `phone_in_use`; for a free number all the account's sessions are revoked, the person signs in with the new number, and memberships are unchanged | M | `RM-`, `AU-` tests |
 | FR-18.5 | Search | **G** a resident "Nguyễn Văn An" and phone `+84901234567` **W** the Manager searches "nguyen", "van an" and "4567" **T** the resident is found by each; a phone fragment under 4 digits does not search by phone | S | `RM-` tests |
 | FR-18.6 | History | **G** an owner change **W** the unit detail opens **T** `unit_history` shows kind, actor and time | S | `RM-` tests |
+| FR-18.7 | Unit types (added, DR-314, DR-315) | **G** a building with the types `studio` (defaults 0 bedrooms, 32 m²) and `duplex`, one archived **W** the Manager adds a unit with the type `studio` and no bedrooms or area, archives `duplex`, then edits the defaults of `studio` **T** the new unit has 0 bedrooms and 32 m²; the archived type cannot be given to another unit and stays on the units that have it; the edited defaults change no existing unit; a type is never deleted; the import names a type by code or Vietnamese name and never creates one | S | `RM-52…62`, `IM-78…86`, `UIWR-43…53` |
 
 ### FR-19 · Submit and cancel a ticket
 
@@ -673,7 +674,7 @@ Use cases are in DOC-04; the feature IDs `F-<GROUP>-xx` are assigned in DOC-05, 
 | FR-15 | UC-14 | ACC | DOC-26 |
 | FR-16 | UC-14 | ACC | DOC-27 |
 | FR-17 | UC-15 | UNI | DOC-27 |
-| FR-18 | UC-13 | UNI | DOC-27, DOC-18 |
+| FR-18 | UC-13 | UNI | DOC-27, DOC-18, DOC-16 §5.6 (FR-18.7) |
 | FR-19 | UC-07 | TIC | DOC-28 |
 | FR-20 | UC-08 | TIC | DOC-28 |
 | FR-21 | UC-09 | TIC | DOC-28 |

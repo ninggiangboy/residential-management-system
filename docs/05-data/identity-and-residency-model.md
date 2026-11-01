@@ -1,10 +1,10 @@
 # Identity and residency model
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: E-169 reads `import_job_building_idx`; DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
-> Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87, DR-226), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: `residency.unit_type` and `unit.unit_type_id`, §5.6, IDM-69…88) · 2026-10-21 (DR-226: E-169 reads `import_job_building_idx`; DR-225: `refresh_family.client`; DR-129: two more revocation reasons; DR-141: import kind `unit_owner`, history wording) · DOC-16
+> Depends on: original SDD §7, §11, §16, [DR](../00-decision-register.md) (DR-09…12, 21, 36…42, 48, 59, 64, 85, 87, DR-226, DR-314, DR-315), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-13…18, 39, 45, 50), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-06](../02-glossary.md)
 > Main readers: P1-10 (identity), P1-11 (residency), P1-13 (imports), DOC-19 (grants), DOC-26, DOC-27, DOC-35, DOC-46, DOC-51, EXP-09, EXP-10
 
-This document holds the tables of two modules: `identity` (accounts, challenges, tokens, sessions, sign-in buckets) and `residency` (units, resident profiles, memberships, unit history, the units-and-owners import). It gives the grain, keys, writers and readers of every table, runnable DDL with the reason of every index, the state machines of the status columns and sample statements. It does not hold the rules of the flows (lockout, OTP, step-up and sessions are DOC-26; households, transfers and lookups are DOC-27), the endpoints (DOC-51), the grants (DOC-19) or the conventions every table follows (DOC-14). The tables of `building`, `audit`, `platform` and the finance tables are in DOC-15 and DOC-17.
+This document holds the tables of two modules: `identity` (accounts, challenges, tokens, sessions, sign-in buckets) and `residency` (units, unit types, resident profiles, memberships, unit history, the units-and-owners import). It gives the grain, keys, writers and readers of every table, runnable DDL with the reason of every index, the state machines of the status columns and sample statements. It does not hold the rules of the flows (lockout, OTP, step-up and sessions are DOC-26; households, transfers and lookups are DOC-27), the endpoints (DOC-51), the grants (DOC-19) or the conventions every table follows (DOC-14). The tables of `building`, `audit`, `platform` and the finance tables are in DOC-15 and DOC-17.
 
 ## 1. Scope
 
@@ -22,6 +22,7 @@ This document holds the tables of two modules: `identity` (accounts, challenges,
 | `identity` | `refresh_token` | identity | one rotation step | `token_hash` | 3,000 / 60,000 |
 | `identity` | `rate_bucket` | identity | one bucket key | `key` | under 2,000, idle ones purged |
 | `residency` | `unit` | residency | one apartment | `(building_id, code)` | 240 / 5,000 |
+| `residency` | `unit_type` | residency | one kind of unit of one building (apartment, studio, duplex…) | `(building_id, code)` | 5 / 50 (the cap of DR-314) |
 | `residency` | `resident_profile` | residency | one person in one building | `(building_id, account_id)` | 650 / 13,000 |
 | `residency` | `membership` | residency | one person's right in one unit, from its start | `(account_id, unit_id)` while not removed | 700 / 14,000 |
 | `residency` | `unit_history` | residency | one change of a unit | `id` | about 300 per year |
@@ -587,6 +588,7 @@ CREATE INDEX unit_code_prefix_idx ON residency.unit (building_id, lower(code) te
 | --- | --- |
 | `code` | Unique in the building; the import matches on it (FR-01.1 shares the rule). |
 | `floor`, `bedrooms`, `area_m2` | Attributes shown in `W-Units`; floors are not a module. |
+| `unit_type_id` | *Added 2026-11-01 (DR-314).* The unit's type, or `NULL` ("Chưa phân loại"). Added by migration `0002` with the table of §5.6; the `CREATE TABLE` above is the first migration and is not edited. |
 | `occupancy` | `occupied`, `rented`, `vacant`, set by the Manager, never derived from memberships (DR-40). |
 
 | Index | Reason and query |
@@ -832,6 +834,58 @@ RETURNING result;
 
 Indexes: `import_job_building_idx` `(building_id, created_at DESC)` for the import history list (E-169, DR-226); `import_job_purge_idx` `(created_at)` for `import_purge` (weekly, keeps rows and files 30 days, DR-21, DR-62).
 
+### 5.6 `unit_type`
+
+*Added 2026-11-01 (DR-314, DR-315).*
+
+- **Grain:** one kind of unit in one building: `apartment`, `studio`, `duplex`, `penthouse`, `shophouse`. **Business key:** `(building_id, code)`.
+- **Written by:** `residency` (the Manager or Admin creates and edits it on `W-Unit-Types`, E-181 and E-182). **Read by:** `residency` only: the unit list and detail join it, the import resolves it. No other module reads it, so `ResidencyApi` has no call for it. A type is **never deleted**; the end of its use is `status = 'archived'` (DR-314).
+
+```sql
+-- migration 0002, expand only: no data is moved and no existing row changes
+CREATE TABLE residency.unit_type (
+  id               uuid PRIMARY KEY,
+  building_id      uuid NOT NULL,
+  code             text NOT NULL CONSTRAINT unit_type_code_format CHECK (code ~ '^[a-z][a-z0-9_]{1,29}$'),
+  name             jsonb NOT NULL CONSTRAINT unit_type_name_bilingual CHECK (platform.is_bilingual(name)),
+  default_bedrooms smallint CONSTRAINT unit_type_default_bedrooms_range CHECK (default_bedrooms BETWEEN 0 AND 20),
+  default_area_m2  numeric(8,2) CONSTRAINT unit_type_default_area_range CHECK (default_area_m2 > 0 AND default_area_m2 <= 2000),
+  status           text NOT NULL DEFAULT 'active' CONSTRAINT unit_type_status_check CHECK (status IN ('active', 'archived')),
+  archived_at      timestamptz,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  version          integer NOT NULL DEFAULT 1,
+  CONSTRAINT unit_type_archived_check CHECK ((status = 'archived') = (archived_at IS NOT NULL))
+);
+CREATE UNIQUE INDEX unit_type_code_key        ON residency.unit_type (building_id, code);
+CREATE UNIQUE INDEX unit_type_name_key        ON residency.unit_type (building_id, lower(name ->> 'vi'));
+CREATE UNIQUE INDEX unit_type_building_id_key ON residency.unit_type (building_id, id);
+
+ALTER TABLE residency.unit ADD COLUMN unit_type_id uuid;
+ALTER TABLE residency.unit ADD CONSTRAINT unit_unit_type_fk
+  FOREIGN KEY (building_id, unit_type_id) REFERENCES residency.unit_type (building_id, id);
+CREATE INDEX unit_type_idx ON residency.unit (building_id, unit_type_id);
+```
+
+| Column | Meaning |
+| --- | --- |
+| `code` | The stable key: lower-case letters, digits and `_`, 2 to 30 characters, starting with a letter. **Never edited** after the insert. The import and the tests name a type by it (DR-315). |
+| `name` | Bilingual (DOC-14 §8): `{"vi": "Penthouse", "en": "Penthouse"}`. `vi` is required; its lower-case text is unique in the building, because the import also matches on it. |
+| `default_bedrooms`, `default_area_m2` | Optional defaults that fill the blank `bedrooms` and `area_m2` of a **new** unit of this type (DR-315). They never rewrite a unit. The limits are those of the unit's own columns (`area_m2` at most 2,000, the cap of E-58). |
+| `status`, `archived_at` | `active` or `archived`. `archived_at` is set exactly when the status is `archived` (`unit_type_archived_check`). An archived type stays on its units and is offered nowhere new. |
+| `version` | The `If-Match` of E-182 (DR-74). |
+
+The composite key `(building_id, unit_type_id)` makes the foreign key refuse another building's type with `23503`, without a trigger; a unit with `unit_type_id IS NULL` is never checked (the default `MATCH SIMPLE`). The foreign key is inside the schema, so ADR-0014 (no key across modules) is not touched. `ON DELETE` is the default `NO ACTION`: deleting a type that a unit uses fails, and no endpoint deletes one. The cap of 50 types per building is a rule of the use case (`SELECT count(*)` in the creating transaction, 409 `unit_type_limit`), not a constraint.
+
+State machine of `status`:
+
+```mermaid
+stateDiagram-v2
+  [*] --> active: "create (E-181)"
+  active --> archived: "update status (E-182)"
+  archived --> active: "update status (E-182)"
+```
+
 ## 6. Index catalog
 
 Every index with the query it serves, so none is speculative. "Source" is the constraint or decision behind it.
@@ -855,6 +909,10 @@ Every index with the query it serves, so none is speculative. "Source" is the co
 | `rate_bucket_updated_idx` | btree | `token_purge` of idle buckets | DR-62 |
 | `unit_code_key` | UNIQUE | Unit code per building | SDD §16.2 |
 | `unit_code_prefix_idx` | btree on `lower(code)` `text_pattern_ops` | Unit-code prefix search | DR-41 |
+| `unit_type_code_key` | UNIQUE | Type code per building; the import's lookup by code | DR-314, DR-315 |
+| `unit_type_name_key` | UNIQUE on `lower(name ->> 'vi')` | No two types with one Vietnamese name; the import's lookup by name | DR-315 |
+| `unit_type_building_id_key` | UNIQUE | The target of the composite foreign key `unit_unit_type_fk` | DR-314 |
+| `unit_type_idx` | btree `(building_id, unit_type_id)` | The unit list filter `unitTypeId` (E-57) and the `unitCount` of E-180 | DR-314 |
 | `resident_profile_name_trgm_idx` | GIN trigram | Name search without diacritics | DR-41 |
 | `membership_one_owner_per_unit` | partial UNIQUE | One owner per unit; owner of a unit | FR-16.5 |
 | `membership_one_per_account_unit` | partial UNIQUE | One membership per person and unit; request guard; `activeUnitIds` | SDD §7.2 |
@@ -876,7 +934,7 @@ The periods are fixed in DOC-20 and run by the jobs of DOC-38 (DR-62); this tabl
 | `password_token`, `refresh_family`, `refresh_token`, `rate_bucket` | `token_purge` daily 03:45: consumed or expired tokens, expired or revoked families (their tokens cascade), idle buckets | — |
 | `import_job` | `import_purge` weekly Sunday 04:00: rows and files older than 30 days | — |
 | `staff_account`, `resident_account` | none; deletion clears fields and keeps the row (ledger and audit keep ids) | the rows |
-| `unit`, `membership`, `unit_history` | none | units are never deleted; removed memberships and history stay (DR-12) |
+| `unit`, `unit_type`, `membership`, `unit_history` | none | units are never deleted; removed memberships and history stay (DR-12); a unit type is archived, never deleted (DR-314) |
 | `resident_profile` | cleared (not deleted) on account deletion | the row |
 
 ## 8. Decisions made while writing
@@ -889,12 +947,16 @@ Every new decision in this document is a DR (decided, Claude delegated by the Ow
 | DR-107 | Staff status semantics: the temporary lockout is `locked_until` with the status `active`; `locked` is the manual lock; `disabled` is the Admin's deactivation and is reversible by the Admin | §4.1 |
 | DR-108 | `resident_account` carries `deletion_requested_at`, `deletion_approved_at`, `deleted_at`; `resident_profile` carries `cleared_at` (the columns DR-59's workflow needs) | §4.2, §5.2 |
 | DR-109 | `import_job` has `params jsonb` and `expires_at`; the finance variant uses the same columns | §5.5 |
+| DR-314 | `unit_type`: a table per building with a stable code, a bilingual name, archive instead of delete, and a nullable `unit.unit_type_id` on a composite foreign key (decided 2026-11-01) | §5.1, §5.6 |
+| DR-315 | Two optional defaults on `unit_type` (`default_bedrooms`, `default_area_m2`) that fill a new unit's blanks (decided 2026-11-01) | §5.6 |
 
 ## 9. DDL tests
 
 ### 9.1 Method
 
 DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container removed afterwards) on 2026-10-19. The files of §3.1 and §4–§5 were applied in order with `psql -v ON_ERROR_STOP=1` on an empty database, then dropped and applied again after the last change. Each test below inserts or updates rows and checks the SQLSTATE: `23505` unique violation, `23514` check violation, `23503` foreign-key violation, or success. Result: **68 of 68 passed**. The prefix `IDM-` (identity model) is new; DOC-88 indexes it. The business tests of the flows keep their own prefixes (`AU-` in DOC-26, `RM-` in DOC-27).
+
+*Added 2026-11-01 (DR-314, DR-315):* the file of §5.6 was applied after the files above on `postgres:18.6` (container removed afterwards) with `platform.is_bilingual` of DOC-14 §2.2 and a copy of `residency.unit` with two rows, and IDM-69…88 and IDM-S15…S18 were run with `psql`. Result: **20 of 20 constraint tests and 4 of 4 statement tests passed.** The plan of IDM-S17 was read with `enable_seqscan = off`, as §6 says.
 
 ### 9.2 Constraint tests
 
@@ -968,6 +1030,26 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | IDM-66 | Status `committed` without `committed_at` | 23514 |
 | IDM-67 | Commit with `WHERE status = 'validated'` | accepted |
 | IDM-68 | Import kind `fees` in the residency table | 23514 |
+| IDM-69 | First unit type `studio` with defaults 0 bedrooms and 32 m² | accepted |
+| IDM-70 | A second type with the same code in the same building | 23505 |
+| IDM-71 | A second type whose Vietnamese name is the first's in capitals | 23505 |
+| IDM-72 | The same code in another building | accepted |
+| IDM-73 | Code `Penthouse` (a capital) | 23514 |
+| IDM-74 | Code `a` (one character) | 23514 |
+| IDM-75 | A name with no `vi` (`{"en": "Duplex"}`) | 23514 |
+| IDM-76 | `default_bedrooms = 21` | 23514 |
+| IDM-77 | `default_area_m2 = 0` | 23514 |
+| IDM-78 | `default_area_m2 = 2000.01` | 23514 |
+| IDM-79 | A type with no defaults (`shophouse`) | accepted |
+| IDM-80 | Status `archived` without `archived_at` | 23514 |
+| IDM-81 | `archived_at` on an `active` type | 23514 |
+| IDM-82 | Archive: status `archived` with `archived_at`, `version + 1` | accepted |
+| IDM-83 | Status `deleted` | 23514 |
+| IDM-84 | A unit takes a type of its own building | accepted |
+| IDM-85 | A unit takes a type of another building | 23503 |
+| IDM-86 | A unit takes an unknown type id | 23503 |
+| IDM-87 | Delete a type that a unit uses | 23503 |
+| IDM-88 | A unit with no type | accepted |
 
 ### 9.3 Statement tests
 
@@ -987,6 +1069,10 @@ DDL tested on PostgreSQL 18.6 (`postgres:18.6`, the tag of DOC-11 §1, container
 | IDM-S12 | Import commit twice, and after expiry | first call returns `committed`; second and expired 0 rows |
 | IDM-S13 | OTP issue, wrong code, right code | wrong code 0 rows and `attempts = 1`; right code returns the phone |
 | IDM-S14 | Owner of a unit; active units of an account; phone suffix `4567`; name search `tran minh` | 1, 2, 1, 1 rows |
+| IDM-S15 | The list of E-180: types of a building with the count of their units, ordered by lower-case Vietnamese name | one row per type, `unitCount` 1 for the type one unit uses, 0 for the others; a type with no unit appears |
+| IDM-S16 | The archive of E-182 as `UPDATE … SET status = 'archived', archived_at = now(), version = version + 1 WHERE id = :id AND building_id = :b AND version = :expected RETURNING version`, run twice with the same `version` | first call 1 row (`version` 2), second 0 rows (409 `version_conflict`) |
+| IDM-S17 | Plan of `WHERE building_id = :b AND unit_type_id = :t` on `unit`, sequential scans disabled | index only scan on `unit_type_idx` |
+| IDM-S18 | Plan of the import lookup `WHERE building_id = :b AND (code = :x OR lower(name ->> 'vi') = :x)` on `unit_type`, sequential scans disabled | bitmap scan on `unit_type_building_id_key` (a building has at most 50 types, so the filter is cheap) |
 
 ## 10. Not in this document
 
