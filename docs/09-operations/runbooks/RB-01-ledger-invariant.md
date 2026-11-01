@@ -44,7 +44,7 @@ SELECT started_at, finished_at, status, details
 docker compose logs --since 24h worker | grep '"job":"invariant_check"' | grep -v '"violations":0'
 ```
 
-**Step 2: list the offending rows of each query that fired.** Each block below is one query of DOC-22 §12 with the columns an operator needs. They are read-only and can be run again at any time; a row that disappears between two runs means a later action changed it.
+**Step 2: list the offending rows of each query that fired.** Each block below is one query of DOC-22 §12 with the columns an operator needs. *Run on 2026-11-01* on `postgres:18.6` against the DDL of DOC-15: all 19 run without error, return 0 rows on a clean fixture and return rows for the corruption they are named for (EXP-11 K01…K19). They are read-only and can be run again at any time; a row that disappears between two runs means a later action changed it.
 
 ```sql
 -- Q01 a paid charge whose live allocation has another amount (I-1)

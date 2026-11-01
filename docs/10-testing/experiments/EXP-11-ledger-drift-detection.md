@@ -39,7 +39,7 @@ DR-78 lists twenty. Seventeen concern the ledger and are the queries Q01…Q17 o
 | K01 | 1 | A `paid` charge whose allocation differs from `charge.amount` by 1 đ | `UPDATE allocation SET amount = amount - 1 WHERE id = :a` | Q01, Q08 |
 | K02 | 2 | An orphan allocation: its payment is not posted | `UPDATE payment SET status = 'void' WHERE id = :p` (the allocation stays live) | Q02 |
 | K03 | 3 | An allocation on a `void` charge | `UPDATE charge SET status = 'void' WHERE id = :c` | Q03 |
-| K04 | 4 | Two live allocations on one charge | `DROP INDEX uq_allocation_charge_live`, then `INSERT` a second live allocation of the same amount and payment | Q04, Q08, Q10, Q17 |
+| K04 | 4 | Two live allocations on one charge | `DROP INDEX uq_allocation_charge_live`, then `INSERT` a second payment of the same unit and amount and a second live allocation of it on `:c` (the same payment twice is refused by `uq_allocation_payment_charge`) | Q04, Q17 |
 | K05 | 5 | A receipt-number gap | `DELETE FROM receipt WHERE allocation_id = :a` (the counter stays) | Q05, Q17 |
 | K06 | 6 | Two receipts for one allocation | `ALTER TABLE receipt DROP CONSTRAINT uq_receipt_building_allocation`, then insert a second receipt | Q06 |
 | K07 | 7 | A receipt that is `issued` for a `void` allocation | `UPDATE allocation SET status = 'void' WHERE id = :a` (the receipt stays issued) | Q07, Q08, Q14 |
@@ -47,19 +47,19 @@ DR-78 lists twenty. Seventeen concern the ledger and are the queries Q01…Q17 o
 | K09 | 9 | A `posted` log row without a payment | Drop `ck_gateway_event_posted`; `UPDATE gateway_event SET outcome = 'posted', payment_id = NULL` on an unposted row | Q09 |
 | K10 | 10 | An allocation whose charge is of another unit than its payment | `UPDATE payment SET unit_id = :other_unit WHERE id = :p` | Q10 |
 | K11 | 11 | An intent `paid` without a payment | `UPDATE payment_intent SET status = 'paid'` on a `pending` intent | Q11 |
-| K12 | 12 | A payment without an intent, for an online source | Drop `ck_payment_online`; `UPDATE payment SET source = 'online', intent_id = NULL` | Q11, Q12 |
+| K12 | 12 | A payment without an intent, for an online source | Drop `ck_payment_online`; `UPDATE payment SET source = 'online', provider = 'stripe', gateway_reference = 'pi_x', intent_id = NULL, client_key = NULL, recorded_by = NULL` | Q12 |
 | K13 | 13 | Two active intents on one charge | `DROP INDEX uq_payment_intent_item_charge_active`; insert an item of a second intent on the same charge | Q13 |
 | K14 | 14 | A `paid` charge without a live allocation | `UPDATE charge SET status = 'paid' WHERE id = :open_charge` | Q14 |
 | K15 | 15 | A live allocation on an `open` charge | `UPDATE charge SET status = 'open' WHERE id = :c` | Q15 |
 | K16 | 19 | The counter is below the highest issued number | `UPDATE document_counter SET last = last - 2 WHERE series = 'receipt'` | Q05, Q16 |
-| K17 | 20 | A live allocation without a receipt | `DELETE FROM receipt WHERE allocation_id = :a` and `UPDATE document_counter SET last = last - 1` to match | Q17 |
+| K17 | 20 | A live allocation without a receipt | `DELETE` the receipt of the **highest** number of the month and `UPDATE document_counter SET last = last - 1` to match (deleting a lower number leaves the counter below the highest, Q16) | Q17 |
 | K18 | extra | An `open` or `paid` charge that differs from the sum of its lines | `DELETE FROM charge_line WHERE id = :line` of a paid charge | Q18 |
 | K19 | extra | A committed log row still `pending` | `INSERT` a `gateway_event` with `outcome = 'pending'` and commit | Q19 |
 | K20 | 16 | A membership double owner | Insert a second active `owner` membership on a unit (the partial unique index dropped first) | `integrity_weekly`, kind `membership_two_owners` |
 | K21 | 17 | A member of a removed account | `UPDATE resident_account SET status = 'removed'` while its membership stays active | `integrity_weekly`, kind `member_of_removed_account` |
 | K22 | 18 | A notice stuck `sending` | `UPDATE notice SET status = 'sending', sending_started_at = now() - interval '2 hours'` | `integrity_notices`, kind `notice_stuck_sending` |
 
-The "expected to fire" column is DOC-22 §12 (run on 2026-10-26 on a developer machine) and is the oracle for C2. It is written down **before** the first run and changed only by a new version of this document (DOC-89 §9). K01…K19 are DOC-22's corruptions C01…C19.
+The "expected to fire" column is the oracle for C2. **K01…K19 were run on 2026-11-01** on `postgres:18.6` (Docker, a database built from the DDL of DOC-15 with a clean fixture of 4 charges, 2 payments, 2 receipts, 1 intent and 1 log row, triggers off through `session_replication_role = replica`): the 19 queries of RB-01 returned 0 rows on the clean fixture, and each injection fired exactly the set in the column. Three sets differ from DOC-22 §12's table, which describes a different injection (K04, K12, K17); the table here describes the injection above. K20…K22 are not run: their jobs do not exist yet. It is written down **before** the first run and changed only by a new version of this document (DOC-89 §9). K01…K19 are DOC-22's corruptions C01…C19.
 
 ## 4. Baseline and ground truth
 
