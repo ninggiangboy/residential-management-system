@@ -104,7 +104,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-86 | RB 12: rotate secrets and keys (`09-operations/runbooks/RB-12-rotate-secrets-and-keys.md`) | Not written |
 | DOC-87 | RB 13: payos outage or credential change (`09-operations/runbooks/RB-13-payos-outage-or-credential-change.md`) | Not written |
 | DOC-88 | [Test strategy](10-testing/test-strategy.md) | Approved |
-| DOC-89 | Experiments: common protocol (`10-testing/experiments/README.md`) | Not written |
+| DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Draft |
 | DOC-90 | EXP 01: duplicate and late webhooks (`10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md`) | Not written |
 | DOC-91 | EXP 02: webhook vs requery (`10-testing/experiments/EXP-02-webhook-vs-requery.md`) | Not written |
 | DOC-92 | EXP 03: online vs manual baseline (`10-testing/experiments/EXP-03-online-vs-manual-baseline.md`) | Not written |

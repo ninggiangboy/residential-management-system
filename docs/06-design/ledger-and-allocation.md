@@ -157,7 +157,7 @@ The distinction comes from the fresh read after the failure: `paid` → `charge_
 | --- | --- | --- |
 | 8 sessions, 300 pairs of charges (A, B) and (B, A), 2,400 attempts: 300 won, 2,100 refused, 0 deadlocks, 0 charges with two live allocations, 600 receipts, the counter at 600 | DOC-15 §13.3 FNM-S12, 2026-10-22, `postgres:18.6` | **Measured** (statement level) |
 | The same through `RecordManualPayment` and `settle()`: 500 charges, 2…8 racing sessions, 10,000 attempts at READ COMMITTED | LG-14…LG-17 (P2-03) | *Planned* |
-| The naive baseline: read the charge, decide in code, write without the predicate, on a copy without `uq_allocation_charge_live` | EXP-03 (P2-14, `apps/api/test/exp/baseline.ts`, DR-78) | *Planned*: the experiment must show at least one charge with two live allocations in the baseline and none in the real path, 5 runs |
+| The naive baseline: read the charge, decide in code, write without the predicate, on a copy without `uq_allocation_charge_live` | EXP-03 (P2-14, `apps/api/tests/exp/baseline.ts`, DR-78) | *Planned*: the experiment must show at least one charge with two live allocations in the baseline and none in the real path, 5 runs |
 
 The decision (option C, charges with allocations and a guarded status) and the three rejected options are in original SDD §5.9 and ADR-0005; they are not repeated here.
 
