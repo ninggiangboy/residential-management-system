@@ -89,10 +89,10 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-71 | [CI/CD](09-operations/ci-cd.md) | Approved |
 | DOC-72 | Backup and restore (`09-operations/backup-restore.md`) | Not written |
 | DOC-73 | [Mobile release](09-operations/mobile-release.md) (skeleton: final P6) | Approved |
-| DOC-74 | Runbook index (`09-operations/runbooks/README.md`) | Not written |
-| DOC-75 | [RB 01: ledger invariant](09-operations/runbooks/RB-01-ledger-invariant.md) | Draft |
-| DOC-76 | RB 02: payments stuck (`09-operations/runbooks/RB-02-payments-stuck.md`) | Not written |
-| DOC-77 | RB 03: webhook signatures (`09-operations/runbooks/RB-03-webhook-signatures.md`) | Not written |
+| DOC-74 | [Runbook index](09-operations/runbooks/README.md) | Draft |
+| DOC-75 | [RB 01: ledger invariant](09-operations/runbooks/RB-01-ledger-invariant.md) | Approved |
+| DOC-76 | [RB 02: payments stuck](09-operations/runbooks/RB-02-payments-stuck.md) | Draft |
+| DOC-77 | [RB 03: webhook signatures](09-operations/runbooks/RB-03-webhook-signatures.md) | Draft |
 | DOC-78 | RB 04: outbox lag (`09-operations/runbooks/RB-04-outbox-lag.md`) | Not written |
 | DOC-79 | RB 05: dead letters (`09-operations/runbooks/RB-05-dead-letters.md`) | Not written |
 | DOC-80 | RB 06: sms failures (`09-operations/runbooks/RB-06-sms-failures.md`) | Not written |
@@ -100,22 +100,22 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-82 | RB 08: storage quota (`09-operations/runbooks/RB-08-storage-quota.md`) | Not written |
 | DOC-83 | RB 09: api errors (`09-operations/runbooks/RB-09-api-errors.md`) | Not written |
 | DOC-84 | RB 10: restore from backup (`09-operations/runbooks/RB-10-restore-from-backup.md`) | Not written |
-| DOC-85 | RB 11: money to check (`09-operations/runbooks/RB-11-money-to-check.md`) | Not written |
+| DOC-85 | [RB 11: money to check](09-operations/runbooks/RB-11-money-to-check.md) | Draft |
 | DOC-86 | RB 12: rotate secrets and keys (`09-operations/runbooks/RB-12-rotate-secrets-and-keys.md`) | Not written |
-| DOC-87 | RB 13: payos outage or credential change (`09-operations/runbooks/RB-13-payos-outage-or-credential-change.md`) | Not written |
+| DOC-87 | [RB 13: provider outage or credential change](09-operations/runbooks/RB-13-provider-outage-or-credential-change.md) | Draft |
 | DOC-88 | [Test strategy](10-testing/test-strategy.md) | Approved |
-| DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Draft |
-| DOC-90 | [EXP 01: duplicate and late webhooks](10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md) | Draft |
-| DOC-91 | [EXP 02: webhook vs requery](10-testing/experiments/EXP-02-webhook-vs-requery.md) | Draft |
-| DOC-92 | [EXP 03: online vs manual baseline](10-testing/experiments/EXP-03-online-vs-manual-baseline.md) | Draft |
-| DOC-93 | [EXP 04: recall vs payment](10-testing/experiments/EXP-04-recall-vs-payment.md) | Draft |
+| DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Approved |
+| DOC-90 | [EXP 01: duplicate and late webhooks](10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md) | Approved |
+| DOC-91 | [EXP 02: webhook vs requery](10-testing/experiments/EXP-02-webhook-vs-requery.md) | Approved |
+| DOC-92 | [EXP 03: online vs manual baseline](10-testing/experiments/EXP-03-online-vs-manual-baseline.md) | Approved |
+| DOC-93 | [EXP 04: recall vs payment](10-testing/experiments/EXP-04-recall-vs-payment.md) | Approved |
 | DOC-94 | EXP 05: qr revocation (`10-testing/experiments/EXP-05-qr-revocation.md`) | Not written |
 | DOC-95 | EXP 06: notice fan out (`10-testing/experiments/EXP-06-notice-fan-out.md`) | Not written |
 | DOC-96 | EXP 07: api load (`10-testing/experiments/EXP-07-api-load.md`) | Not written |
-| DOC-97 | [EXP 08: bulk pdf](10-testing/experiments/EXP-08-bulk-pdf.md) | Draft |
+| DOC-97 | [EXP 08: bulk pdf](10-testing/experiments/EXP-08-bulk-pdf.md) | Approved |
 | DOC-98 | [EXP 09: otp abuse](10-testing/experiments/EXP-09-otp-abuse.md) (first version; DR-171 decided) | Approved |
 | DOC-99 | [EXP 10: authorization matrix](10-testing/experiments/EXP-10-authorization-matrix.md) (first version; final P6; DR-173 decided) | Approved |
-| DOC-100 | [EXP 11: ledger drift detection](10-testing/experiments/EXP-11-ledger-drift-detection.md) | Draft |
+| DOC-100 | [EXP 11: ledger drift detection](10-testing/experiments/EXP-11-ledger-drift-detection.md) | Approved |
 | DOC-101 | EXP 12: restore drill (`10-testing/experiments/EXP-12-restore-drill.md`) | Not written |
 | DOC-102 | Demo script (`10-testing/demo-script.md`) | Not written |
 | DOC-103 | Go-live checklist and UAT (`10-testing/go-live-checklist-and-uat.md`) | Not written |

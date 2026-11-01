@@ -1,6 +1,6 @@
 # EXP-04: A recall racing payments never leaves a payment on a recalled charge
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, DR-319) · DOC-93 / EXP-04
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, DR-319) · DOC-93 / EXP-04
 > Depends on: [common protocol](README.md) (DOC-89), [EXP-03](EXP-03-online-vs-manual-baseline.md) (the ledger oracle), original SDD §5.8, §20.2, [DR](../../00-decision-register.md) (DR-14, 16, 19, 20, 29, 31, 78, 97, 243, 318, 319), [ADR-0005](../../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0008](../../04-adr/0008-settlement-idempotency.md), [DOC-21](../../06-design/fee-batches-and-import.md) §3.5, §3.9, §5, [DOC-22](../../06-design/ledger-and-allocation.md) §10, §12, [DOC-23](../../06-design/payment-intents-and-settlement.md) §5.4, §6, §7.2, §16.3, [DOC-03](../../01-product/requirements.md) (NFR-01, FR-04.1…04.3), [DOC-88](../test-strategy.md) §10
 > Main readers: P2-14 (the harness and the baseline), P2-07 (the code under test: recall and `cancelHolding`), P2-06 (`settle()`); the evaluation of NFR-01; the review of M2
 

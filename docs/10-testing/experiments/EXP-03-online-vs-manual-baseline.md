@@ -1,6 +1,6 @@
 # EXP-03: Online and manual payment of one charge: exactly one wins, and the naive design does not
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, DR-319) · DOC-92 / EXP-03
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, DR-319) · DOC-92 / EXP-03
 > Depends on: [common protocol](README.md) (DOC-89), original SDD §5.9, §20.2, [DR](../../00-decision-register.md) (DR-14, 16, 19, 23, 29, 78, 84, 243, 318), [ADR-0005](../../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../../04-adr/0006-allocation-write-path-all-or-nothing.md), [DOC-22](../../06-design/ledger-and-allocation.md) §4, §10, §12, §16.2, [DOC-23](../../06-design/payment-intents-and-settlement.md) §6, §7.2, [DOC-03](../../01-product/requirements.md) (NFR-01, FR-05.8), [DOC-10](../../03-architecture/quality-attributes.md) §2, [DOC-88](../test-strategy.md) §10
 > Main readers: P2-14 (the harness and the baseline), P2-03, P2-06 (`settle()`) and P2-08 (manual payment): the code under test, the evaluation of NFR-01; the review of M2
 

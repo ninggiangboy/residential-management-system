@@ -1,6 +1,6 @@
 # EXP-08: Bulk fee notices fit the time and the memory of the staging host
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, DR-320) · DOC-97 / EXP-08
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, DR-320) · DOC-97 / EXP-08
 > Depends on: [common protocol](README.md) (DOC-89), original SDD §20.2, [DR](../../00-decision-register.md) (DR-06, 56, 78, 120, 244, 245, 291, 293, 294, 318, 320), [DOC-34](../../06-design/pdf-rendering.md) §4, §8, §9, §15, §16.3, [DOC-03](../../01-product/requirements.md) (NFR-05, FR-36.4, FR-36.5), [DOC-10](../../03-architecture/quality-attributes.md) §4.2, §6.1, [DOC-41](../../06-design/configuration-reference.md) (`PDF_*`), [DOC-38](../../06-design/jobs-and-outbox-runtime.md) §4.1
 > Main readers: P2-13 (PDF rendering: the experiment is its acceptance), the evaluation of NFR-05; the review of M2
 

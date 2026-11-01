@@ -1,6 +1,6 @@
 # Experiments: the common protocol
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, DR-318) · DOC-89
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, DR-318) · DOC-89
 > Depends on: original SDD §20.2, §3.4, [DR](../../00-decision-register.md) (DR-06, 76, 77, 78, 80, 173, 318), [DOC-10](../../03-architecture/quality-attributes.md) §2, §4, [DOC-88](../test-strategy.md) §6, §7, §11, §12, §15, §16, [DOC-22](../../06-design/ledger-and-allocation.md) (the invariants), [DOC-71](../../09-operations/ci-cd.md) (stages), master plan §3.2, §5, template A.6
 > Main readers: P2-14 (the first harness of this protocol), P2-11, P2-13, P3-08, P4-06, P5-02, P6-05, P6-07, P6-08; every document EXP-01…EXP-12 (DOC-90…101); the reviewer who decides whether a milestone may close
 
