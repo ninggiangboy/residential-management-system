@@ -2,7 +2,7 @@
 
 > Status: **Approved** (Owner, 2026-10-21, as the skeleton (gate P1); alerts final in P3 and P6) · Updated: 2026-10-28 (P1-26: §4.8 notification and PDF metrics, DR-291, DR-301; two SSE counters and the phase of `sse_streams_open`, DR-287…289; the `push` reasons of `delivery_failed_total`) · 2026-10-28 (DR-282: two settlement metrics in §4.5, the alert `GatewayErrors` in §5.3; DR-279: §4.7 the usage metrics, the dashboard Usage, the job `usage_rollup` in §5.4) · 2026-10-27 (P1-20 without a host, DR-271: the host and database alerts live, `BackupMetricMissing`, the jobs `postgres` and `node`, the host panels, the exporters in the local stack; earlier: P1-18 built: the baseline runs, DR-269: `MetricsPort`, `prom-client` on Bun, the metrics re-phased, `service` label, `ReadinessFailing` inhibits; earlier: 2026-10-21 DR-228: alert addresses are placeholders; DR-161, DR-168: staging without Loki, `app_version_requests_total`; skeleton, P0-30; DR-154, DR-155) · DOC-40
 > Depends on: original SDD §19.2, §19.3, [DR](../00-decision-register.md) (DR-62, 63, 83, 88, 101, 103, 154, 155, DR-228, DR-269), [ADR-0021](../04-adr/0021-observability-stack-and-alert-delivery.md), [DOC-06](../02-glossary.md), [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §7, [DOC-38](jobs-and-outbox-runtime.md) §3.5, §4, §8, [DOC-42](error-handling.md) §8, [DOC-50](../07-api/api-guidelines.md) §16, [DOC-41](configuration-reference.md) §13
-> Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P3-09 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
+> Main readers: P1-04 (request id, pino, `/metrics`), P1-18 (the baseline), P2-11 (invariant alert), P2-28 (payment alerts), P6-06 (all alerts), DOC-70, DOC-74…87 (runbooks), DOC-88, every task that adds a metric or a log line
 
 This document says what the system reports about itself and who is told when it goes wrong: the logs and their fields, the metric catalog, the alert rules in PromQL linked to the runbooks, the dashboards, and how an alert reaches a person. It does not hold the install of the stack (DOC-70), the pins (DOC-11 §7), the budgets (DOC-10 §6), the runbook steps (DOC-74…87) or the configuration keys (DOC-41).
 
@@ -195,10 +195,10 @@ The names come from DR-63; the owning document confirms the labels.
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
 | `ledger_invariant_violations` | gauge | none (the count of violating rows over the 19 queries of DOC-22 §12, DR-266; demo excluded) | DOC-22 | P2 |
-| `payment_intents_pending_overdue` | gauge | none (`pending` older than 60 minutes and not moving to `expired`; demo excluded) | DOC-23 | P3 |
-| `payment_intents_creating_stale` | gauge | none (`creating` older than 2 minutes; demo excluded) | DOC-23 | P3 |
-| `money_log_open` | gauge | none (log rows without a review; demo excluded) | DOC-25 | P3 |
-| `webhook_rejections_total` | counter | `reason` (the five of DR-32) | DOC-24 | P3 |
+| `payment_intents_pending_overdue` | gauge | none (`pending` older than 60 minutes and not moving to `expired`; demo excluded) | DOC-23 | P2 (*DR-325*) |
+| `payment_intents_creating_stale` | gauge | none (`creating` older than 2 minutes; demo excluded) | DOC-23 | P2 (*DR-325*) |
+| `money_log_open` | gauge | none (log rows without a review; demo excluded) | DOC-25 | P2 (*DR-325*) |
+| `webhook_rejections_total` | counter | `reason` (the five of DR-32) | DOC-24 | P2 (*DR-325*) |
 | `webhook_unknown_ip_total` | counter | none | DOC-39 §5.4 | P3 |
 | `payment_gateway_requests_total` | counter | `provider` (`stripe`, `fake`, later `payos`), `op` (`create`, `status`, `cancel`, `list_methods`, `remove_method`), `outcome` (`ok`, `timeout`, `http_error`, `rejected`) | DOC-24 §8 | P2 (*DR-325; replaces `payment_gateway_requests_total`*) |
 | `payment_webhook_received_total` | counter | `provider`, `outcome` (`verified`, `rejected`, `ignored`, `duplicate`) | DOC-24 §8 | P2 |
@@ -258,8 +258,8 @@ Linked to the runbooks RB-01…09 (master plan §3.2). `Ready` is the task after
 | Alert | Level | Condition (original SDD §19.2) | Runbook | Ready |
 | --- | --- | --- | --- | --- |
 | `LedgerInvariantViolation` | Critical | The nightly check returns any row | RB-01 | P2-11 |
-| `PaymentsStuck` | Critical | `pending` older than 60 min not moving to `expired`, or more than 5 `creating` older than 2 min | RB-02 | P3-09 |
-| `WebhookSignatures` | Warning | More than 3 rows in `webhook_rejection` in 10 min | RB-03 | P3-09 |
+| `PaymentsStuck` | Critical | `pending` older than 60 min not moving to `expired`, or more than 5 `creating` older than 2 min | RB-02 | P2-28 (was P3-09) |
+| `WebhookSignatures` | Warning | More than 3 rows in `webhook_rejection` in 10 min | RB-03 | P2-28 (was P3-09) |
 | `OutboxLag` | Warning | The oldest unpublished message is older than 2 min | RB-04 | live (P1-18) |
 | `DeadLetters` | Warning | Any message in the dead-letter state | RB-05 | live (P1-18) |
 | `SmsFailures` | Warning | More than 10% failures over 15 min | RB-06 | live (P1-18); the provider adapter is P1-22 |
@@ -361,7 +361,7 @@ groups:
 | `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · live (P1-18) |
 | `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · P2-11 |
 | `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
-| `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P3-09 |
+| `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P2-28 (was P3-09) |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |
 | `GatewayErrors` | Warning | `sum(increase(payment_gateway_requests_total{outcome=~"timeout\|http_error"}[10m])) > 0.5 * sum(increase(payment_gateway_requests_total[10m])) and sum(increase(payment_gateway_requests_total[10m])) >= 10` (DR-30's "more than half of the calls in 10 minutes failed") | 5m | RB-02 | DOC-23 §14, DR-282 · P2-28 (was P3-09) |
 | `ProviderAuthFailed` | Warning | `sum by (provider) (increase(provider_auth_failed_total[10m])) > 0` | none | RB-12 | DOC-42 §8.5 · P1-22 |

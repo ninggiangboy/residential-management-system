@@ -16,7 +16,7 @@ Test prefix: `UIWS-` (DOC-56 §6.3; unused before this document; DOC-88 §15 ind
 | `W-Staff-New` | Create (and edit) a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed (create); edit mode reuses it (DR-218) |
 | `W-Building` | Building and company info, defaults, terms | Admin | P1 | designed |
 | `W-Step-Up` | Dialog: request a code, enter password and code | Admin | P1 | to design |
-| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed (table below) |
+| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed (written 2026-11-01; the table below keeps the canvas deviations) |
 | `W-Audit` | Audit log | Admin | P6 | designed (table below) |
 | `W-System` | Backups, storage, notification channels | Admin | P6 | designed (table below) |
 
@@ -494,6 +494,107 @@ These screens are designed. They get full sections (A.5) before their phase; thi
 | `W-Gateway` | P2 (*DR-325*) | Admin | E-49 read, E-50 write (step-up `gateway_config`), E-51 check | *Revised 2026-11-01 (DR-325, DR-326):* the first driver is **Stripe**, so the form shows the driver's fields from E-49: the restricted key (masked), the webhook signing secret (masked), the **mode** read from the key prefix (`test` or `live`, never a switch) and the limits (min and max amount); **no receiving account** (that block belongs to a QR driver and appears only when `capabilities.presentations` has `qr`); "Check connection" calls the driver's side-effect-free check and also lists whether the webhook endpoint is registered; a `test` key in a non-demo production building shows a danger banner; the screen refuses to save a driver whose presentation the app cannot render (no `Pay-VietQR` yet). N3: one configured provider whose fields come from `drivers` in E-49, not a VNPay/VietQR choice or the banner "Chưa chốt cổng…" (a design note). Secrets are masked (`••••` + last four) and never returned, so the "Hiện" buttons go. Receiving account is bank BIN (a picker), account number (6…20 digits) and name (upper-case ASCII ≤ 50), replacing "Ngân hàng nhận" free text. "URL nhận IPN" becomes a provider-neutral webhook URL. The "Môi trường thử nghiệm" switch has no field in E-50. 409 `gateway_in_use` is a first-class state. "IPN gần nhất" and the health cards need data E-51 does not return (last webhook) — owed by DOC-24 / DOC-52 |
 | `W-Audit` | P6 | Admin (a Manager has no page; E-54 serves history panels) | E-54 | The filters are the E-54 parameters (`actorId`, `action` prefix, `objectType` + `objectId`, `from`, `to`, `requestId`, `cursor`, `limit`); the free-text search "Tìm nội dung, mã căn…" has no endpoint; "Xuất Excel" has no endpoint (the export center, DR-55). Each row is built from `action` and `changes` through catalog keys, not stored sentences. Codes in rows follow DOC-14 (N4). Values show `[masked]` as returned; `ip` and `userAgent` appear for the Admin only |
 | `W-System` | P6 | Admin | E-55 storage; E-56 demo reset (demo building only) | Storage is the live `usedBytes` / `quotaBytes` and `byPurpose` (labels map from purposes, not the sample ones). Backups: the artboard shows "Tự động hằng ngày 02:00, 5 bản" while the system uses pgBackRest with point-in-time recovery (DR-66, DR-83), so the card shows the last full backup and the latest archived WAL time; **no endpoint exists for this** (owed by DOC-40 / DOC-72). The "Môi trường" and "Gửi thông báo" cards (staging/production URLs, SMS count of the day) are not product data and have no endpoint; drop them or source them from DOC-40 metrics |
+
+## W-Gateway
+
+> Status: Draft · Prototype: designed (changed by N3, DR-325, DR-326) · Phase: P2 · DOC-67
+
+### 1. Persona, use cases, permissions
+
+PS-1 Admin only. UC-17 (configure the payment gateway), FR-38.3, FR-50 (a step-up before a sensitive change). A Manager has no access: the sidebar entry is not drawn and E-49…E-51 answer 403 (EXP-10). Written 2026-11-01 (P2-20) for the first driver, Stripe; the table in "Screens still to be specified" keeps the deviations from the canvas.
+
+### 2. URL and search params
+
+`/system/gateway`. Search: `dialog` (`step-up` is opened by `W-Step-Up`, DOC-67 `W-Step-Up`; `confirm-disable`).
+
+### 3. Prototype
+
+Artboard `W-Gateway` (title "BQL: Cổng thanh toán", 1440 wide): a status card with the connection state and the last check; a form with the provider fields (client id, API key, checksum key with "Hiện" buttons), a receiving-account block (bank, number, name), a "Môi trường thử nghiệm" switch, a webhook URL with a copy button, buttons "Kiểm tra kết nối" and "Lưu", health cards ("IPN gần nhất", counts), and a banner "Chưa chốt cổng…".
+
+Do not copy (N3, DR-325, DR-326): the choice between providers and the banner (a design note); "IPN" (the word is "webhook"); the "Hiện" buttons (a secret is masked and never returned); the **receiving-account block for Stripe** (money goes to the Stripe account; the block appears only for a driver with the `qr` presentation); the "Môi trường thử nghiệm" switch (the mode is read from the key prefix, never typed); "IPN gần nhất" and the health cards need the last-webhook data that E-51 does not return and are replaced by two lines from DOC-40 metrics (last verified webhook, rejections in 24 h).
+
+### 4. Regions and components
+
+| Region | Components | State |
+| --- | --- | --- |
+| Status card | `Card`: the driver label, `Tag` (`Đang bật` / `Tạm tắt` / `Chưa cấu hình`), the mode `Tag` (`Thử nghiệm` / `Thật`), last check time and result | `none`, `active`, `disabled` |
+| Form | `Form`: driver `Select` (the drivers of E-49 with `allowed`), `restrictedKey` and `webhookSecret` as `PasswordField`s showing the mask `••••1234` and a "Thay" action that clears the field (never "Hiện"), limits `NumberField`s `min` and `max` with the suffix "đ" | `pristine`, `dirty`, `saving` |
+| Receiving account | shown only when the selected driver's presentations include `qr`: bank `Select` (BIN), account number, account name | |
+| Webhook | read-only URL `…/api/v1/payments/webhooks/stripe/{configId}` with a copy button, the events to enable at the provider (`checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`), and two lines: "Webhook hợp lệ gần nhất" and "Bị từ chối trong 24 giờ" | |
+| Test-key banner | `Banner` danger when `mode = test` and the building is not a demo building | |
+| Actions | `Button` outline "Kiểm tra kết nối" (E-51), primary "Lưu" (opens `W-Step-Up`) | |
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| Configuration | E-49 `GET /staff/gateway` | `['staff','gateway']` | `configs[]`, `drivers` with `fields`, `allowed`, `presentations`, `savedMethods`; `version` for `If-Match`; no polling |
+| Webhook health | the metrics endpoint is not read by the web; E-49 carries `lastWebhookAt` and `rejections24h` for the active config (DR-331) | | |
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| "Kiểm tra kết nối" | E-51 `POST /staff/gateway/check` | the driver's side-effect-free call (Stripe: `balance.retrieve`) and the check that the webhook endpoint is registered; the status card shows the result and time; a failure shows the reason ("Khóa không hợp lệ", "Chưa đăng ký webhook") |
+| "Lưu" | `W-Step-Up` (action `gateway_config`) then E-50 `PUT /staff/gateway` with `If-Match` and `stepUp` | 200: the form shows the new masks and `lastCheckAt = null`; a toast "Đã lưu cấu hình"; 409 `version_conflict` → the fresh configuration with the two choices of DR-310; 409 `gateway_in_use` → "Có thanh toán online đang mở. Thử lại khi không còn lượt thanh toán nào." and nothing changes; 403 `step_up_required` / `step_up_invalid` → `W-Step-Up` states; 400 `validation_failed` on a field; a `restrictedKey` that does not start with `rk_` (or `sk_` for a test) is refused at the field |
+| Change the driver | the same | a driver change resets the secrets block; a driver with a presentation the app cannot render (`qr` before `Pay-VietQR` exists) is refused with "Ứng dụng chưa hỗ trợ cách thanh toán này" (DOC-58) |
+| "Tắt cổng" | confirm dialog, then E-50 with `status: disabled` | residents see the office caption instead of the pay buttons (`payment.enabled` false) |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `none` | "Chưa cấu hình cổng thanh toán" and the form for a first creation |
+| `active`, `disabled` | as §4 |
+| `loading` | skeleton of the status card and the form fields |
+| `checking` | the check button disabled, spinner after 150 ms |
+| `error`, `forbidden` | DOC-68 |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `web.gateway.title` | Cổng thanh toán | Payment gateway |
+| `web.gateway.status.active` / `.disabled` / `.none` | Đang bật / Tạm tắt / Chưa cấu hình | On / Off / Not configured |
+| `web.gateway.mode.test` / `.live` | Thử nghiệm / Thật | Test / Live |
+| `web.gateway.field.restrictedKey` | Khóa API hạn chế | Restricted API key |
+| `web.gateway.field.webhookSecret` | Khóa ký webhook | Webhook signing secret |
+| `web.gateway.field.replace` | Thay | Replace |
+| `web.gateway.field.limits` | Số tiền mỗi lượt thanh toán | Amount per payment |
+| `web.gateway.field.min` / `.max` | Tối thiểu / Tối đa | Minimum / Maximum |
+| `web.gateway.webhook.url` | Địa chỉ webhook | Webhook URL |
+| `web.gateway.webhook.events` | Bật các sự kiện này ở nhà cung cấp | Enable these events at the provider |
+| `web.gateway.webhook.last` | Webhook hợp lệ gần nhất: {time} | Last valid webhook: {time} |
+| `web.gateway.webhook.rejected` | Bị từ chối trong 24 giờ: {count} | Rejected in 24 hours: {count} |
+| `web.gateway.testkey` | Đang dùng khóa thử nghiệm trên tòa nhà thật. Cư dân sẽ không trả được tiền thật. | A test key is in use on a real building. Residents cannot pay real money. |
+| `web.gateway.check` | Kiểm tra kết nối | Check the connection |
+| `web.gateway.check.ok` | Kết nối tốt, lúc {time}. | Connection works, at {time}. |
+| `web.gateway.check.badkey` | Khóa không hợp lệ. | The key is not valid. |
+| `web.gateway.check.nowebhook` | Chưa đăng ký webhook ở nhà cung cấp. | The webhook is not registered at the provider. |
+| `web.gateway.in-use` | Có thanh toán online đang mở. Thử lại khi không còn lượt thanh toán nào. | Online payments are open. Try again when none is open. |
+| `web.gateway.unsupported` | Ứng dụng chưa hỗ trợ cách thanh toán này. | The app does not support this payment method yet. |
+| `web.gateway.disable.confirm` | Tắt cổng thanh toán? Cư dân sẽ không thấy nút thanh toán. | Turn the gateway off? Residents will not see the pay buttons. |
+| `web.gateway.saved` | Đã lưu cấu hình. | Configuration saved. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIWS-33 | **G** an Admin and no configuration **W** `/system/gateway` opens **T** the "Chưa cấu hình" state shows with the driver select, no receiving-account block for `stripe`, and no "Hiện" button anywhere | web-e2e |
+| UIWS-34 | **G** a saved configuration **W** the page opens **T** the secrets show `••••` and four characters, and no response of E-49 or E-50 contains a full secret | api, web-e2e |
+| UIWS-35 | **G** the Admin changes the webhook secret **W** "Lưu" is pressed **T** `W-Step-Up` opens first, E-50 carries `stepUp`, the audit row `gateway_config` exists, and `lastCheckAt` is reset | api, web-e2e |
+| UIWS-36 | **G** an open payment intent **W** the configuration is saved **T** 409 `gateway_in_use` shows its message and nothing changes | api, web-e2e |
+| UIWS-37 | **G** a `test` key in a non-demo building **W** the page opens **T** the danger banner shows | api, web-e2e |
+| UIWS-38 | **G** a Manager **W** the route or E-49 is requested **T** the entry is not drawn and E-49 answers 403 | api, web-e2e |
+| UIWS-39 | **G** the Admin disables the gateway **W** a resident opens `Fees` **T** the pay buttons are gone and the office caption shows | api, maestro |
+
+### 10. E2E cases
+
+Playwright: `gateway.spec.ts` (UIWS-33, 34, 35, 36, 37, 38); UIWS-39 is a Maestro assertion on a seeded building.
+
+### 11. Open questions
+
+None.
 
 ## Decisions made while writing
 
