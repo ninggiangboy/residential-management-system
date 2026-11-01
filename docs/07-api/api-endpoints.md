@@ -158,6 +158,7 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-183 | `GET /me/fees/{chargeId}/pdf` | `downloadMyFeeNotice` | unit: view_fees | | | UC-03 | DOC-34 §6.3, §8.1 (DR-328, P2); query `lang` `vi`, `en`, `both` |
 | E-184 | `GET /me/payment-methods` | `listMySavedMethods` | unit: pay | | | UC-03 | DOC-24 §4.7 (DR-326, P2); `{ methods: [{ id, brand, last4, expMonth, expYear }], supported }` from the provider, nothing stored |
 | E-185 | `DELETE /me/payment-methods/{id}` | `removeMySavedMethod` | unit: pay | | | UC-03 | DOC-24 §4.7 (DR-326, P2); the card must belong to the caller's Customer, else 404 |
+| E-186 | `POST /staff/payments/intents/{id}/check` | `checkPaymentIntentByStaff` | staff: admin, manager | | | UC-18 | DOC-23 §5.2 (DR-329, P2); answers `{status, checkScheduled}`, once per 10 s per intent |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -2892,6 +2893,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-177 | `GET /staff/fee-batches/{id}/pdf` | The state of the latest bulk fee-notice job and its ZIP (DR-293) |
 | E-183 | `GET /me/fees/{chargeId}/pdf` | The resident's download of the fee notice of an open or paid charge (DR-328) |
 | E-184, E-185 | `GET /me/payment-methods`, `DELETE /me/payment-methods/{id}` | The resident's saved cards at the payment provider: list and remove (DR-326); only for a driver with `capabilities.savedMethods` |
+| E-186 | `POST /staff/payments/intents/{id}/check` | A Manager or Admin brings the next re-query of an intent forward (DR-329) |
 | E-178, E-179 | `POST /me/inbox/{id}/read`, `POST /staff/inbox/{id}/read` | Mark one inbox entry read when it is opened (DR-302) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |

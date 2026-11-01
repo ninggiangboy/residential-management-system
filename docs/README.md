@@ -73,7 +73,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |
 | DOC-56 | [Screens index](08-ux-ui/screens/README.md) | Approved |
 | DOC-57 | [Resident: sign-in and home](08-ux-ui/screens/resident-signin-home.md) (complete) | Approved |
-| DOC-58 | [Resident: fees and payment](08-ux-ui/screens/resident-fees-payment.md) (the four P2 screens Draft 2026-11-01; the P3 payment screens owed) | Draft |
+| DOC-58 | [Resident: fees and payment](08-ux-ui/screens/resident-fees-payment.md) (fees and payment screens, Draft 2026-11-01; `Pay-VietQR` and `Pay-Mismatch` wait for a QR driver) | Draft |
 | DOC-59 | Resident: requests, unit, members, vehicles (`08-ux-ui/screens/resident-requests-unit.md`) | Not written |
 | DOC-60 | [Resident: QR, notices, account](08-ux-ui/screens/resident-qr-notices-account.md) (account group P1; QR, notices, library owed) | Approved |
 | DOC-61 | [Staff app: shared and Manager](08-ux-ui/screens/staff-shared-and-manager.md) (§1 P1; B-screens owed) | Approved |
@@ -81,7 +81,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-63 | Staff app: Guard (`08-ux-ui/screens/staff-guard.md`) | Not written |
 | DOC-64 | [Web: sign-in, dashboard, operations](08-ux-ui/screens/web-auth-dashboard-operations.md) (§1 P1) | Approved |
 | DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1, `W-Unit-Types` added by DR-314 for P1-30; W-Vehicles owed P5) | Approved |
-| DOC-66 | [Web: finance](08-ux-ui/screens/web-finance.md) (the nine P2 screens Draft 2026-11-01; P3 and P6 screens owed) | Draft |
+| DOC-66 | [Web: finance](08-ux-ui/screens/web-finance.md) (twelve P2 screens, Draft 2026-11-01; `W-Statement` P3, reports and exports P6) | Draft |
 | DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Approved |
 | DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (108 error codes and the P1 keys; grows per phase) | Approved |
 | DOC-69 | [Local development](09-operations/local-dev.md) (dry run is the acceptance of P1-03, DR-227) | Approved |

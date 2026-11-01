@@ -200,7 +200,10 @@ The names come from DR-63; the owning document confirms the labels.
 | `money_log_open` | gauge | none (log rows without a review; demo excluded) | DOC-25 | P3 |
 | `webhook_rejections_total` | counter | `reason` (the five of DR-32) | DOC-24 | P3 |
 | `webhook_unknown_ip_total` | counter | none | DOC-39 §5.4 | P3 |
-| `payos_requests_total` | counter | `outcome` (`ok`, `timeout`, `http_error`, `rejected`) | DOC-24 | P3 |
+| `payment_gateway_requests_total` | counter | `provider` (`stripe`, `fake`, later `payos`), `op` (`create`, `status`, `cancel`, `list_methods`, `remove_method`), `outcome` (`ok`, `timeout`, `http_error`, `rejected`) | DOC-24 §8 | P2 (*DR-325; replaces `payment_gateway_requests_total`*) |
+| `payment_webhook_received_total` | counter | `provider`, `outcome` (`verified`, `rejected`, `ignored`, `duplicate`) | DOC-24 §8 | P2 |
+| `payment_amount_mismatch_total` | counter | `provider` | DOC-24 §4.8 | P2 |
+| `payment_saved_methods_total` | counter | `op` (`list`, `remove`, `error`) | DOC-24 §4.7 | P2 |
 | `payment_settlements_total` | counter | `source` (`webhook`, `requery`, `statement`), `outcome` (the nine of `SettleOutcome`: the seven `gateway_event` outcomes, `already_processed`, `foreign_building`) | DOC-23 §14 (DR-282) | P2 (`settle()`), P3 |
 | `payment_settle_duration_seconds` | histogram | `source`; buckets 0.05, 0.1, 0.25, 0.5, 1, 2.5 (the server part of NFR-02, DR-80: p95 ≤ 1 s) | DOC-23 §14 (DR-282) | P2, P3 |
 
@@ -360,7 +363,7 @@ groups:
 | `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
 | `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P3-09 |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |
-| `GatewayErrors` | Warning | `sum(increase(payos_requests_total{outcome=~"timeout\|http_error"}[10m])) > 0.5 * sum(increase(payos_requests_total[10m])) and sum(increase(payos_requests_total[10m])) >= 10` (DR-30's "more than half of the calls in 10 minutes failed") | 5m | RB-02 | DOC-23 §14, DR-282 · P3-09 |
+| `GatewayErrors` | Warning | `sum(increase(payment_gateway_requests_total{outcome=~"timeout\|http_error"}[10m])) > 0.5 * sum(increase(payment_gateway_requests_total[10m])) and sum(increase(payment_gateway_requests_total[10m])) >= 10` (DR-30's "more than half of the calls in 10 minutes failed") | 5m | RB-02 | DOC-23 §14, DR-282 · P2-28 (was P3-09) |
 | `ProviderAuthFailed` | Warning | `sum by (provider) (increase(provider_auth_failed_total[10m])) > 0` | none | RB-12 | DOC-42 §8.5 · P1-22 |
 | `OtpDailyCapReached` | Warning | `sum(increase(otp_daily_cap_reached_total[5m])) > 0` | none | RB-06 | DOC-26 §10 · live (P1-18) |
 | `SmsProviderDown` | Warning | `max(sms_provider_down) == 1` | 5m | RB-06 | DOC-26 §10 · live (P1-18) |
