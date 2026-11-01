@@ -1,6 +1,6 @@
 # Web: system
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-11-01 (DR-325, DR-326: `W-Gateway` is P2 and follows Stripe) · 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-33, 38, 39, 41…47, 59, 72, 74, 128, 133, 147, 148), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-38, FR-41, FR-50), [DOC-04](../../01-product/use-cases.md) (UC-17), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-36](../../06-design/building-configuration-and-demo.md) §4…8, [DOC-37](../../06-design/files-and-uploads.md), [DOC-51](../../07-api/api-endpoints.md) (E-08, E-38…E-56), [DOC-42](../../06-design/error-handling.md) §5, [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md), DOC-54
 > Main readers: P1-16 (web CMS shell: `W-Staff`, `W-Staff-New`, `W-Building`), P1-14, P1-15, the writers of DOC-64…66 (they cite the step-up rule below), P3 and P6 (the later table), EXP-10
 
@@ -16,7 +16,7 @@ Test prefix: `UIWS-` (DOC-56 §6.3; unused before this document; DOC-88 §15 ind
 | `W-Staff-New` | Create (and edit) a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed (create); edit mode reuses it (DR-218) |
 | `W-Building` | Building and company info, defaults, terms | Admin | P1 | designed |
 | `W-Step-Up` | Dialog: request a code, enter password and code | Admin | P1 | to design |
-| `W-Gateway` | Payment gateway configuration and checks | Admin | P3 | designed (table below) |
+| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed (table below) |
 | `W-Audit` | Audit log | Admin | P6 | designed (table below) |
 | `W-System` | Backups, storage, notification channels | Admin | P6 | designed (table below) |
 
@@ -386,7 +386,7 @@ PS-1 Admin, journey J-1; UC-17 (main flow "change the receiving account", error 
 | --- | --- | --- |
 | `admin_change` | E-40 with `role = admin`; E-42 with `role = admin` (promotion) | `W-Staff-New` |
 | `staff_email` | E-42 with `email` | `W-Staff-New` (edit mode) |
-| `gateway_config` | every E-50, including an unchanged re-save | `W-Gateway` (P3) |
+| `gateway_config` | every E-50, including an unchanged re-save | `W-Gateway` (P2) |
 
 1. **Proactive and reactive (DR-216).** The screen knows its action from its own form (the table above) and opens the dialog when the user presses the main button, before sending a request that would be refused. The dialog also opens on any `403 step_up_required` (`details.action` names the action), which covers a rule that changed on the server.
 2. **Two steps.** Step 1 "Gửi mã": `POST /staff/step-up { action }` (E-38, 204) mails a 6-digit code to the Admin's own address. Step 2: the Admin enters the password and the code; the screen sends the original request again with `"stepUp": { "password", "code" }`.
@@ -491,7 +491,7 @@ These screens are designed. They get full sections (A.5) before their phase; thi
 
 | Screen | Phase | Role | Endpoints | What the section must fix (prototype deviations from DOC-56 §5 and gaps) |
 | --- | --- | --- | --- | --- |
-| `W-Gateway` | P3 | Admin | E-49 read, E-50 write (step-up `gateway_config`), E-51 check | N3: one configured provider whose fields come from `drivers` in E-49, not a VNPay/VietQR choice or the banner "Chưa chốt cổng…" (a design note). Secrets are masked (`••••` + last four) and never returned, so the "Hiện" buttons go. Receiving account is bank BIN (a picker), account number (6…20 digits) and name (upper-case ASCII ≤ 50), replacing "Ngân hàng nhận" free text. "URL nhận IPN" becomes a provider-neutral webhook URL. The "Môi trường thử nghiệm" switch has no field in E-50. 409 `gateway_in_use` is a first-class state. "IPN gần nhất" and the health cards need data E-51 does not return (last webhook) — owed by DOC-24 / DOC-52 |
+| `W-Gateway` | P2 (*DR-325*) | Admin | E-49 read, E-50 write (step-up `gateway_config`), E-51 check | *Revised 2026-11-01 (DR-325, DR-326):* the first driver is **Stripe**, so the form shows the driver's fields from E-49: the restricted key (masked), the webhook signing secret (masked), the **mode** read from the key prefix (`test` or `live`, never a switch) and the limits (min and max amount); **no receiving account** (that block belongs to a QR driver and appears only when `capabilities.presentations` has `qr`); "Check connection" calls the driver's side-effect-free check and also lists whether the webhook endpoint is registered; a `test` key in a non-demo production building shows a danger banner; the screen refuses to save a driver whose presentation the app cannot render (no `Pay-VietQR` yet). N3: one configured provider whose fields come from `drivers` in E-49, not a VNPay/VietQR choice or the banner "Chưa chốt cổng…" (a design note). Secrets are masked (`••••` + last four) and never returned, so the "Hiện" buttons go. Receiving account is bank BIN (a picker), account number (6…20 digits) and name (upper-case ASCII ≤ 50), replacing "Ngân hàng nhận" free text. "URL nhận IPN" becomes a provider-neutral webhook URL. The "Môi trường thử nghiệm" switch has no field in E-50. 409 `gateway_in_use` is a first-class state. "IPN gần nhất" and the health cards need data E-51 does not return (last webhook) — owed by DOC-24 / DOC-52 |
 | `W-Audit` | P6 | Admin (a Manager has no page; E-54 serves history panels) | E-54 | The filters are the E-54 parameters (`actorId`, `action` prefix, `objectType` + `objectId`, `from`, `to`, `requestId`, `cursor`, `limit`); the free-text search "Tìm nội dung, mã căn…" has no endpoint; "Xuất Excel" has no endpoint (the export center, DR-55). Each row is built from `action` and `changes` through catalog keys, not stored sentences. Codes in rows follow DOC-14 (N4). Values show `[masked]` as returned; `ip` and `userAgent` appear for the Admin only |
 | `W-System` | P6 | Admin | E-55 storage; E-56 demo reset (demo building only) | Storage is the live `usedBytes` / `quotaBytes` and `byPurpose` (labels map from purposes, not the sample ones). Backups: the artboard shows "Tự động hằng ngày 02:00, 5 bản" while the system uses pgBackRest with point-in-time recovery (DR-66, DR-83), so the card shows the last full backup and the latest archived WAL time; **no endpoint exists for this** (owed by DOC-40 / DOC-72). The "Môi trường" and "Gửi thông báo" cards (staging/production URLs, SMS count of the day) are not product data and have no endpoint; drop them or source them from DOC-40 metrics |
 

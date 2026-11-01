@@ -1,10 +1,10 @@
 # Web CMS: finance
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
-> Depends on: original SDD §5, §18, [DR](../../00-decision-register.md) (DR-09, 11, 18, 19, 20, 22, 23, 24, 72, 84, 97, 194, 196, 265, 267, 293, 304, 306, 324), [DOC-56](README.md) (convention, notes N4, N5, N6, N12), [DOC-53](../ux-principles-and-ia.md), [DOC-54](../design-system.md) §17 (the web quality bar), [DOC-55](../client-architecture.md) §12, [DOC-21](../../06-design/fee-batches-and-import.md), [DOC-22](../../06-design/ledger-and-allocation.md), [DOC-18](../../05-data/data-quality-rules.md) §2, [DOC-34](../../06-design/pdf-rendering.md) §6, §9, [DOC-51](../../07-api/api-endpoints.md) (E-71…E-74, E-89…E-106, E-169…E-172, E-176, E-177), [DOC-65](web-residents.md) (`W-Unit-Detail` debt card), [DOC-58](resident-fees-payment.md) (what the resident sees)
+> Status: **Draft** · Updated: 2026-11-01 (DR-325, DR-326, DR-329: online payment is in P2; `W-Transactions`, `W-Money-Log` and `UnitMoneyPanel` written; `W-Fee-Record` and `W-Fee-Notice` follow Stripe) · 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
+> Depends on: original SDD §5, §18, [DR](../../00-decision-register.md) (DR-09, 11, 18, 19, 20, 22, 23, 24, 72, 84, 97, 194, 196, 265, 267, 293, 304, 306, 324, 325, 326, 327, 329), [DOC-56](README.md) (convention, notes N4, N5, N6, N12), [DOC-53](../ux-principles-and-ia.md), [DOC-54](../design-system.md) §17 (the web quality bar), [DOC-55](../client-architecture.md) §12, [DOC-21](../../06-design/fee-batches-and-import.md), [DOC-22](../../06-design/ledger-and-allocation.md), [DOC-18](../../05-data/data-quality-rules.md) §2, [DOC-34](../../06-design/pdf-rendering.md) §6, §9, [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-51](../../07-api/api-endpoints.md) (E-71…E-74, E-89…E-106, E-169…E-172, E-176, E-177), [DOC-65](web-residents.md) (`W-Unit-Detail` debt card), [DOC-58](resident-fees-payment.md) (what the resident sees)
 > Main readers: P2-16 (the fee screens), P2-15 (the finance API), P2-13 (the PDF screens), P2-04 (fee import), P3 and P6 writers of this file, P1-09 (catalog keys), DOC-68, DOC-88 (`UIWF-`)
 
-This document specifies the web screens of the finance group that a Manager or Admin uses to bill and to collect: the list of fee batches, the Excel import, the draft editor and the published batch, the notice preview, the unit's debt with manual payment, the recall, the void of one charge, the re-issue, and the debt list. **Written now (P2): nine screens.** `W-Transactions`, `W-Money-Log`, `UnitMoneyPanel` and `W-Statement` are P3; `W-Reports` and `W-Export-Center` are P6; they are listed at the end and written when their phase starts (master plan §3.2). The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194).
+This document specifies the web screens of the finance group that a Manager or Admin uses to bill and to collect: the list of fee batches, the Excel import, the draft editor and the published batch, the notice preview, the unit's debt with manual payment, the recall, the void of one charge, the re-issue, and the debt list. **Written now (P2): twelve screens** (the nine of fees and debts, and `W-Transactions`, `W-Money-Log`, `UnitMoneyPanel`, which moved from P3 with the online payment, DR-325). `W-Statement` is P3; `W-Reports` and `W-Export-Center` are P6; they are listed at the end and written when their phase starts (master plan §3.2). The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194).
 
 ## Screens in this file
 
@@ -19,13 +19,16 @@ This document specifies the web screens of the finance group that a Manager or A
 | `W-Charge-Void` | Void one open charge | Admin, Manager | P2 | to design | dialog |
 | `W-Fee-Reissue` | Re-issue a recalled batch as a new draft | Admin, Manager | P2 | to design | dialog |
 | `W-Debts` | Debt per unit, aging, push reminders | Admin, Manager | P2 | designed | `/debts` |
-| `W-Transactions`, `W-Money-Log`, `UnitMoneyPanel`, `W-Statement` | Online money | Admin, Manager | P3 | — | owed |
+| `W-Transactions` | Online payments (intents), re-query, cancel | Admin, Manager | P2 | designed | `/transactions` |
+| `W-Money-Log` | Money to check: unposted confirmations, refunds, disputes | Admin, Manager | P2 | to design | tab `/transactions?tab=log` |
+| `UnitMoneyPanel` | The log rows of one unit | Admin, Manager | P2 | to design | component |
+| `W-Statement` | Bank-statement reconciliation | Admin, Manager | P3 | — | owed |
 | `W-Reports`, `W-Export-Center` | Reports and exports | Admin, Manager | P6 | — | owed |
 
 **What every screen here shares.**
 
 - **Roles.** The route guard admits `admin` and `manager` (`staff(...roles)`, DOC-12 §5.3); a Technician or Guard is redirected to the dashboard, and the sidebar group "Tài chính" is not drawn for them. Each use case exports its `<OPERATION>_ROLES` and the screen reads the same constant for its guard (DR-254).
-- **Sidebar.** Group "Tài chính": "Đợt phí" (`/fees`), "Công nợ" (`/debts`), "Giao dịch online" (P3), "Báo cáo" (P6). A draft and the unit pages are reached from inside.
+- **Sidebar.** Group "Tài chính": "Đợt phí" (`/fees`), "Công nợ" (`/debts`), "Giao dịch online" (`/transactions`), "Báo cáo" (P6). A draft and the unit pages are reached from inside.
 - **Quality bar** (DOC-54 §17, DR-304, DR-306). Nothing jumps when data arrives: tables keep their header and their column widths and fill with row-shaped skeletons (`SkeletonRows`), a new filter or page keeps the previous rows (`keepPreviousData`, `DataTable busy`); an indicator waits 150 ms and then stays 300 to 400 ms (`useDelayedFlag`); every overlay animates in and out (`useExit` for a dialog a search param unmounts); a button that sends is disabled at once and shows its spinner after 150 ms. The checks Q1…Q8 run at `DEV_LATENCY_MS` 400 and 0. This file does not restate them per screen; it names the places they matter.
 - **Forms** follow §17.9: example placeholders, `required` asterisks, units as `suffix` ("đ", "m³"), growing text areas, rule-code error sentences from the API under the field.
 - **Money** is `2.838.000 đ` (vi) or `2,838,000 đ` (en), in tabular numerals, right-aligned; a negative adjustment is `−35.175 đ`. Dates `dd/MM/yyyy` in building time (DR-09). Codes in a `Plate`: `PH-2610-01` batch, `BL-2610-0153` receipt (N4).
@@ -448,7 +451,7 @@ Do not copy:
 
 - The preview of a **draft** without the draft mark: DOC-34 §6.1 prints "BẢN NHÁP · DRAFT" diagonally on a draft's notice; the HTML preview shows the same mark.
 - The unit of measure in "Cách tính" ("85 m² × 12.000 đ"): the basis is `quantity × unit price` (DR-13).
-- The two "How to pay" lines as fixed text: the first (the app, QR) appears only when the building's gateway is `active` (P3), the second only when the building has working hours (DOC-34 §6.1).
+- The two "How to pay" lines as fixed text: the first ("pay in the app") appears only when the building's gateway is `active` (the app line no longer says QR: DR-325), the second only when the building has working hours (DOC-34 §6.1).
 - "Xuất PDF 240 căn" as an immediate download: it starts a **job** (E-99) and the panel below shows its progress and the ZIP link.
 
 ### 4. Regions and components
@@ -590,7 +593,7 @@ Do not copy (N4, N6, DR-84):
 | Any change in the dialog | E-104 with `dryRun: true` (debounced 300 ms) | the plan: the sum, the number of receipts, warnings (`active_intent` per charge with its time) | 409 `charge_changed` → the list refetches and the dialog says "Có khoản phí đã được thanh toán hoặc hủy. Danh sách đã được cập nhật." |
 | "Ghi nhận và tạo phiếu thu" | E-104 `POST /staff/payments` `{unitId, chargeIds, method, payerName, receivedOn, bankReference?, note?}` with `Idempotency-Key` (one per dialog open) | 201: a success `Banner` with the receipt numbers (`BL-…`) and links "Xem biên lai"; the debt and the receipts refetch; a replay (200 `Idempotent-Replayed`) shows the same banner | 409 `charge_changed` as above; 400 `received_on_future`, `received_on_too_old`, `too_many_charges`; 422 `allocation_mismatch` (never sent by this form); 422 `idempotency_key_reuse` → the dialog restarts with a new key |
 | "Xem biên lai" | E-106 `GET /staff/receipts/{id}/pdf` | the PDF opens in a new tab; a void receipt is watermarked | 404 |
-| "Hủy phiếu thu" | dialog; E-105 `POST /staff/payments/{id}/void {reason}` | the payment turns `Đã hủy`, its charges are open again in the table above, a toast "Đã hủy phiếu thu. {n} khoản phí được mở lại." | 409 `payment_not_voidable` (an online payment: "Thanh toán online không hủy được trong hệ thống. Hoàn tiền ngoài hệ thống."); 409 `invalid_transition` (already void); 422 `reason_too_short` |
+| "Hủy phiếu thu" | dialog; E-105 `POST /staff/payments/{id}/void {reason}` | the payment turns `Đã hủy`, its charges are open again in the table above, a toast "Đã hủy phiếu thu. {n} khoản phí được mở lại." | 409 `payment_not_voidable` (an online payment: "Thanh toán online không hủy được trong hệ thống. Hoàn tiền ở trang quản trị của cổng thanh toán."; if DR-327 is decided, an online payment with a full `refunded` row is voidable); 409 `invalid_transition` (already void); 422 `reason_too_short` |
 | "Hủy khoản này" | `W-Charge-Void` | | |
 | "Nhắc nợ" | E-103 `POST /staff/debts/reminders {unitIds:[id]}` with `Idempotency-Key` | toast "Đã gửi nhắc nợ" or "Hôm nay đã nhắc căn này rồi" (`alreadyRemindedToday`) | 429 `rate_limited` → "Bạn gửi nhắc nợ quá nhiều lần. Thử lại sau."; `noDebt` → "Căn này không còn nợ." |
 
@@ -647,7 +650,7 @@ Do not copy (N4, N6, DR-84):
 | `web.fee-record.void.body` | {count} khoản phí sẽ được mở lại và cư dân thanh toán được ngay. Biên lai {numbers} chuyển sang đã hủy, số biên lai được giữ nguyên. | {count} fees will be open again and the resident can pay them at once. Receipts {numbers} become void; their numbers are kept. |
 | `web.fee-record.void.reason` | Lý do (ít nhất 5 ký tự) | Reason (at least 5 characters) |
 | `web.fee-record.void.done` | Đã hủy phiếu thu. {count} khoản phí được mở lại. | Receipt voided. {count} fees are open again. |
-| `web.fee-record.void.online` | Thanh toán online không hủy được trong hệ thống. Hoàn tiền ngoài hệ thống. | An online payment cannot be voided here. Refund it outside the system. |
+| `web.fee-record.void.online` | Thanh toán online không hủy được trong hệ thống. Hoàn tiền ở trang quản trị của cổng thanh toán. | An online payment cannot be voided here. Refund it in the payment gateway's dashboard. |
 | `web.fee-record.remind.done` | Đã gửi nhắc nợ. | Reminder sent. |
 | `web.fee-record.remind.today` | Hôm nay đã nhắc căn này rồi. | This unit was already reminded today. |
 
@@ -1106,13 +1109,297 @@ None.
 
 ---
 
+---
+
+## W-Transactions
+
+> Status: Draft · Prototype: designed (N3, N4 apply) · Phase: P2 (DR-325) · DOC-66
+
+### 1. Persona, use cases, permissions
+
+PS-1 Admin, PS-2 Manager. UC-18 (watch online payments), UC-03 (cancel a resident's open payment), FR-08.4, FR-10.1…10.3, FR-47. `admin`, `manager`. The screen is the staff's view of **payment intents**; the money that could not be posted is the tab `W-Money-Log`.
+
+### 2. URL and search params
+
+`/transactions`. Search: `tab` (`intents` default, `log` for `W-Money-Log`), `status` (`all`, `pending`, `paid`, `failed`, `cancelled`), `q` (a code, a unit), `from`, `to` (building days), `cursor` (a stack).
+
+### 3. Prototype
+
+Artboard `W-Transactions` (title "BQL: Giao dịch online", 1440 wide): h1 "Giao dịch online" with "Giao dịch thành công được tự động gạch nợ khi nhận IPN có chữ ký hợp lệ", a button "Xuất Excel", a banner "Đang chờ chốt VNPay hoặc VietQR cho bản đầu. Màn này hiển thị theo VietQR."; a filter row (a `Tag` "Cổng thanh toán: VietQR", a `SearchField` "Mã giao dịch, căn", status and time selects); four stat tiles (37 thành công, 1 đang treo, 1 trùng đã chặn ghi 2 lần, 0 lỗi chữ ký IPN); a table (Mã GD `TT-…`, Căn and batch, Số tiền, Lúc, Trạng thái `Tag`, a "Truy vấn lại" action on a pending row); a footer "1–8 trên 40 giao dịch hôm nay"; and a side card "Giao dịch đang treo" (a pending intent with "Truy vấn lại trạng thái" and the explanation of the 5-minute re-query for an hour).
+
+Do not copy (N3, N4, DR-325):
+
+- The banner "Đang chờ chốt VNPay hoặc VietQR…", the tag "Cổng thanh toán: VietQR" as a fixed word and the word "IPN": a design note is not copy (N3). The tag shows the **active driver's label** (`Stripe` today) from E-49; "IPN" is "webhook" (provider-neutral).
+- "Xuất Excel": exports are P6.
+- The codes `TT-0910-0045` (MMDD): the intent code is `TT-261019-0045` (N4, DR-10).
+- "Trùng, đã chặn ghi 2 lần" as a row status: a duplicate confirmation that was blocked is `already_processed`, which writes nothing (DOC-23 §6.2); the tile counts the **webhook deliveries that were duplicates** from the metric, not intents. A second transfer that was a different payment is a log row (`duplicate_transfer`).
+- "Lỗi chữ ký IPN" as an intent status: it is a count of `webhook_rejection` rows (the tile), not a row of the table.
+- "Hệ thống tự truy vấn lại mỗi 5 phút trong 1 giờ": true for the pending intent and kept, but the numbers come from the settings (`next_check_at`), not from the sentence.
+- "hôm nay": the footer counts the filtered range; the default range is the last 7 days.
+
+### 4. Regions and components
+
+| Region | Components | State |
+| --- | --- | --- |
+| Header | h1, muted line (`web.transactions.subtitle`), the driver `Tag` | |
+| Tiles | four `Card`s for the filtered range: paid, pending, blocked duplicates, webhook rejections | `loading`, `loaded` |
+| Filters | `Tabs` (`Giao dịch` / `Tiền cần kiểm tra` with the open count), `SearchField`, status `SelectField`, date range | |
+| Table | `DataTable`: intent code `Plate`, unit and batch labels, amount, created time, status `Tag`, a re-query `IconButton` on `pending` rows, a caret; a row opens a drawer | `loading`, `loaded`, `empty`, `busy` |
+| Pending card | the oldest `pending` intents (≤ 5) with the last check and "Truy vấn lại trạng thái" | |
+| Drawer | the intent: code, unit, who started it, charges (batch codes and amounts), status history (`creating`, `pending`, …, with times), `paidAt`, the receipts, the check count and last check, the provider session id as a copyable small line, the buttons "Truy vấn lại" and "Hủy lượt thanh toán" | |
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| Intents | E-107 `GET /staff/payments/intents?status&q&from&to&limit=25&cursor` | `['staff','intents',{…},cursor]` | each: `id`, `code`, `unitId`, `unitCode`, `amount`, `status`, `createdAt`, `paidAt`, `lastCheckedAt`, `checkCount`, `createdBy {name}`, `batches[] {code, amount}`; the first page adds `summary {paid, pending, duplicatesBlocked, webhookRejections}` for the range |
+| The active driver | E-49 `GET /staff/gateway` | `['staff','gateway']` | `driver`, `label`, `mode`; cached |
+| The open-money count | E-108 with `open=true&limit=1` | `['staff','money-log','open-count']` | for the tab badge |
+
+Polling: the table refetches every 15 s while a `pending` intent is visible and the tab is focused (FR-08.4), otherwise on focus after 30 s.
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| Filters, tabs | none | search params; busy bar |
+| Open a row | none | the drawer |
+| "Truy vấn lại" | E-186 `POST /staff/payments/intents/{id}/check` | brings the next re-query forward and answers `{status, checkScheduled}`; the drawer shows the new status; once per 10 s per intent (429 `rate_limited`) |
+| "Hủy lượt thanh toán" | confirm dialog with a reason (5 to 500), then E-175 `POST /staff/payments/intents/{id}/cancel` | the intent turns `cancelling`/`cancelled`; the household is told to start again; 409 `intent_not_cancellable` (paid meanwhile) → the drawer shows `paid` |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `loading` | tiles and the table header with row skeletons |
+| `loaded` | as §4 |
+| `empty` | "Chưa có giao dịch online nào" (no intent at all) or "Không có giao dịch khớp bộ lọc" |
+| `no gateway` | the building has no active gateway: a neutral banner "Chưa cấu hình cổng thanh toán" with a link to `W-Gateway` (Admin) or a note to ask the Admin (Manager) |
+| `error`, `forbidden` | DOC-68 |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `web.transactions.title` | Giao dịch online | Online payments |
+| `web.transactions.subtitle` | Thanh toán thành công được tự động gạch nợ khi nhận webhook có chữ ký hợp lệ. | A successful payment is posted automatically when a webhook with a valid signature arrives. |
+| `web.transactions.driver` | Cổng thanh toán: {label} | Payment gateway: {label} |
+| `web.transactions.tab.intents` / `.log` | Giao dịch / Tiền cần kiểm tra | Payments / Money to check |
+| `web.transactions.tile.paid` / `.pending` / `.duplicates` / `.rejections` | Thành công, đã gạch nợ / Đang chờ xác nhận / Webhook trùng, đã chặn / Webhook bị từ chối | Paid and posted / Waiting for confirmation / Duplicate webhooks blocked / Webhooks rejected |
+| `web.transactions.col.code` … | Mã giao dịch, Căn, đợt phí, Số tiền, Lúc, Trạng thái | Code, Unit and batches, Amount, Time, Status |
+| `web.transactions.search` | Mã giao dịch, căn | Code or unit |
+| `status.intent.pending` / `.paid` / `.failed` / `.cancelled` / `.expired` / `.cancelling` / `.creating` | Đang chờ / Thành công / Lỗi / Đã hủy / Hết hạn / Đang hủy / Đang tạo | Waiting / Paid / Failed / Cancelled / Expired / Cancelling / Creating |
+| `web.transactions.recheck` | Truy vấn lại trạng thái | Check the status again |
+| `web.transactions.pending.title` | Giao dịch đang chờ | Payments waiting |
+| `web.transactions.pending.note` | Hệ thống tự truy vấn lại định kỳ cho đến khi hết hạn. Lần gần nhất {time}: {result}. Khoản phí chỉ được gạch nợ khi cổng xác nhận thành công. | The system checks again at intervals until the payment expires. Last check {time}: {result}. A fee is posted only when the gateway confirms the payment. |
+| `web.transactions.cancel` | Hủy lượt thanh toán | Cancel the payment |
+| `web.transactions.cancel.confirm` | Hủy lượt thanh toán {code}? Cư dân phải thanh toán lại. | Cancel payment {code}? The resident must pay again. |
+| `web.transactions.empty` | Chưa có giao dịch online nào. | No online payments yet. |
+| `web.transactions.nogateway` | Chưa cấu hình cổng thanh toán. | No payment gateway is configured. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIWF-66 | **G** 37 paid, 1 pending intents in the range **W** `/transactions` opens **T** the tiles read 37 and 1, the pending row has the re-query action, and the driver tag shows the active driver's label (no "VietQR" or "VNPay" literal) | api, web-e2e |
+| UIWF-67 | **G** a pending intent **W** the Manager presses "Truy vấn lại" **T** E-186 is sent, the status is refreshed, and a second press within 10 s is refused with the rate-limit message | api, web-e2e |
+| UIWF-68 | **G** a pending intent **W** the webhook settles it while the table is open **T** within 15 s the row turns "Thành công" with no layout shift | api, web-e2e |
+| UIWF-69 | **G** a pending intent **W** "Hủy lượt thanh toán" is confirmed with a reason **T** E-175 is sent, the household's app moves to `Pay-Failed`, and the audit row `finance.intent.cancel` exists | api, web-e2e |
+| UIWF-70 | **G** the intent is paid between the press and the answer **W** E-175 answers 409 **T** the drawer shows `paid`, not an error | api, web-e2e |
+| UIWF-71 | **G** no gateway is configured **W** the page opens **T** the banner shows and no table | web-e2e |
+| UIWF-72 | **G** a Technician **W** `/transactions` is opened **T** the app redirects to the dashboard | web-e2e |
+
+### 10. E2E cases
+
+Playwright: `transactions.spec.ts` (UIWF-66, 67, 71, 72), `transactions-live.spec.ts` (UIWF-68, 69, 70).
+
+### 11. Open questions
+
+None.
+
+---
+
+## W-Money-Log
+
+> Status: Draft · Prototype: to design (a wireframe below; a tab of `W-Transactions`) · Phase: P2 (DR-325) · DOC-66
+
+### 1. Persona, use cases, permissions
+
+PS-1, PS-2. UC-21 (money to check), FR-46 (review), FR-47 (the viewer). `admin`, `manager`. Staff only: every other audience gets 403 (EXP-10).
+
+### 2. URL and search params
+
+`/transactions?tab=log`. Search: `outcome` (`all` or one value of §4), `unit`, `from`, `to`, `state` (`open` default, `reviewed`, `all`), `row` (a row opened in the drawer: `<kind>:<id>`).
+
+### 3. Wireframe
+
+```text
+Giao dịch │ Tiền cần kiểm tra (3)
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [Loại ▾] [Căn ▾] [Từ – đến] (•) Chưa kiểm tra ( ) Đã kiểm tra ( ) Tất cả │
+├────────┬───────────────┬──────┬───────────┬──────────────────┬───────────┤
+│ Lúc    │ Loại          │ Căn  │ Số tiền   │ Mã tham chiếu    │ Trạng thái│
+│ 09:12  │ Trùng thanh   │A-0906│  410.000 đ│ pi_3Q…           │ Chưa KT   │
+│        │ toán          │      │           │                  │           │
+│ 08:40  │ Đã hoàn tiền  │A-1102│2.236.000 đ│ re_3Q…           │ Chưa KT   │
+└────────┴───────────────┴──────┴───────────┴──────────────────┴───────────┘
+Drawer: số tiền, thời điểm, mã đơn, lượt thanh toán, trích dẫn payload
+(không có số tài khoản người trả), phiếu thu nếu đã gạch nợ, ghi chú duyệt.
+[ Đánh dấu đã kiểm tra ]
+```
+
+Do not copy: no artboard. The table never offers a button that links a row to a charge, a period or a payment, and never pre-fills a payment, an adjustment or a void from a row (DR-16, DR-19, DOC-22 §9.5).
+
+### 4. Regions and components
+
+| Region | Components |
+| --- | --- |
+| Filters | `SelectField` outcome, unit `SearchField`, date range, a `RadioGroup` state |
+| Table | `DataTable` of the rows of E-108: time, outcome `Tag`, unit, amount, reference (a copyable small line), status (open / reviewed by whom) |
+| Drawer | the facts of the row, the payload excerpt, the posted payment and receipt links when present, the review note, and the review action |
+| Review dialog | `Textarea` note (5 to 1,000, required), button "Đánh dấu đã kiểm tra" |
+
+**Outcomes shown** (`gateway_event.outcome`, DOC-22 §9.1, DR-327): `duplicate_transfer`, `charge_already_paid`, `charge_recalled`, `unknown_order`, and for a bank-transfer driver `amount_short`, `amount_over`; for Stripe also `refunded` and `disputed`. The statement lines (`unmatched`, `statement_only`) join in P3. Each outcome has one plain sentence under its `Tag` that says what the Manager does (below).
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| The log | E-108 `GET /staff/money-log?outcome&unit&from&to&state&limit=25&cursor` | `['staff','money-log',{…},cursor]` | keyset `(at, id)`; each row `{kind, id, at, outcome, amount, unitId, unitCode, reference, intentId, paymentId, reviewedAt, reviewedBy}`; the first page adds `openCount` |
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| Open a row | none | the drawer (`row` in the URL) |
+| "Đánh dấu đã kiểm tra" | E-109 `POST /staff/money-log/{kind}/{id}/review {note}` | the row turns reviewed; `openCount` falls; the ledger is unchanged (FR-46.3); 409 `money_log_already_reviewed {reviewedAt}` → the drawer shows who and when; 409 `invalid_transition` (a posted row) ; 422 `reason_too_short` |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `loading` | table header and row skeletons |
+| `loaded` | as §4 |
+| `empty` (open) | "Không có khoản tiền nào cần kiểm tra" with a success mark |
+| `empty` (filters) | "Không có dòng khớp bộ lọc" |
+| `error`, `forbidden` | DOC-68 |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `web.money-log.title` | Tiền cần kiểm tra | Money to check |
+| `web.money-log.state.open` / `.reviewed` / `.all` | Chưa kiểm tra / Đã kiểm tra / Tất cả | Open / Reviewed / All |
+| `status.money-log.duplicate_transfer` | Trùng thanh toán | Duplicate payment |
+| `status.money-log.charge_already_paid` | Khoản đã được thanh toán | Fee already paid |
+| `status.money-log.charge_recalled` | Khoản đã thu hồi | Fee withdrawn |
+| `status.money-log.unknown_order` | Không rõ lượt thanh toán | Unknown payment |
+| `status.money-log.amount_short` / `.amount_over` | Thiếu tiền / Thừa tiền | Short / Over |
+| `status.money-log.refunded` | Đã hoàn tiền | Refunded |
+| `status.money-log.disputed` | Bị khiếu nại | Disputed |
+| `web.money-log.hint.duplicate_transfer` | Người trả đã thanh toán hai lần. Hoàn khoản thứ hai trong trang quản trị của cổng thanh toán. | The payer paid twice. Refund the second payment in the gateway's own dashboard. |
+| `web.money-log.hint.charge_already_paid` | Khoản phí đã được thanh toán bằng cách khác trước khi tiền về. Hoàn tiền trong trang quản trị của cổng. | The fee was paid another way before this arrived. Refund it in the gateway's dashboard. |
+| `web.money-log.hint.charge_recalled` | Đợt phí đã thu hồi khi người trả đang thanh toán. Hoàn tiền trong trang quản trị của cổng. | The batch was recalled while the payer was paying. Refund it in the gateway's dashboard. |
+| `web.money-log.hint.unknown_order` | Không tìm thấy lượt thanh toán trong hệ thống. Kiểm tra trong trang quản trị của cổng. | No payment of ours matches this. Check in the gateway's dashboard. |
+| `web.money-log.hint.refunded` | Tiền đã được hoàn ở cổng. Phiếu thu và công nợ chưa thay đổi; hãy xử lý theo quy định của tòa nhà. | The money was refunded at the gateway. The receipt and the debt have not changed; handle it as the building's rules say. |
+| `web.money-log.hint.disputed` | Người trả khiếu nại khoản này tại ngân hàng. Làm việc với cổng thanh toán. | The payer disputed this with their bank. Work it out with the gateway. |
+| `web.money-log.review` | Đánh dấu đã kiểm tra | Mark as checked |
+| `web.money-log.review.note` | Ghi chú (ít nhất 5 ký tự) | Note (at least 5 characters) |
+| `web.money-log.reviewed.by` | Đã kiểm tra bởi {name} lúc {time} | Checked by {name} at {time} |
+| `web.money-log.empty` | Không có khoản tiền nào cần kiểm tra. | No money needs checking. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIWF-73 | **G** a confirmation of a charge paid in cash **W** the log opens **T** a row "Khoản đã được thanh toán" is open with the hint, and the charge, the payments and the debt are unchanged | api, web-e2e |
+| UIWF-74 | **G** an open row **W** it is reviewed with a note **T** E-109 is sent once, the row is reviewed with the Manager's name, `openCount` falls by one, and the ledger tables are byte-identical before and after | api, web-e2e |
+| UIWF-75 | **G** two Managers review the same row **W** both press **T** the second gets 409 `money_log_already_reviewed` and the drawer shows the first reviewer | api, web-e2e |
+| UIWF-76 | **G** a `charge.refunded` event for a posted payment **W** it is delivered **T** a row "Đã hoàn tiền" is open and the receipt stays valid (DR-327) | api, web-e2e |
+| UIWF-77 | **G** a row **W** the drawer is inspected **T** it has no control to link the row to a charge or to create a payment, an adjustment or a void | web-e2e |
+| UIWF-78 | **G** a resident token **W** E-108 is called **T** 403 (EXP-10 cell) | api |
+
+### 10. E2E cases
+
+Playwright: `money-log.spec.ts` (UIWF-73, 74, 75, 76, 77). UIWF-78 is the EXP-10 matrix cell.
+
+### 11. Open questions
+
+None.
+
+---
+
+## UnitMoneyPanel
+
+> Status: Draft · Prototype: to design (a component; wireframe below) · Phase: P2 (DR-325) · DOC-66
+
+### 1. Persona, use cases, permissions
+
+PS-1, PS-2. UC-21, FR-46.2. A component, not a page: it sits inside `W-Unit-Detail` (the tab "Phí và công nợ", N12) and `W-Fee-Record`.
+
+### 2. URL and search params
+
+None of its own. "Xem tất cả" goes to `/transactions?tab=log&unit=<unitId>`.
+
+### 3. Wireframe
+
+```text
+Tiền cần kiểm tra của căn A-0906                         Xem tất cả →
+ 09:12  Trùng thanh toán      410.000 đ   pi_3Q…        Chưa kiểm tra
+ ─ hoặc ─
+ Không có khoản tiền nào cần kiểm tra của căn này.
+```
+
+Do not copy: the unit debt block of the canvas has no money log (N12); the component is added to it. Like the viewer, it offers no link from a row to a charge.
+
+### 4. Regions and components
+
+A `Card` titled `web.unit-money.title` with up to 5 rows (time, outcome `Tag`, amount, reference, state) and the link "Xem tất cả"; hidden entirely when the building has no gateway and the unit has no row.
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| The unit's rows | E-110 `GET /staff/units/{id}/money-log?limit=5` | `['staff','unit',unitId,'money-log']` | newest first, open and reviewed; refetched with the hosting screen |
+
+### 6. Interactions
+
+A row opens the drawer of `W-Money-Log` for that row (`/transactions?tab=log&row=…`); "Xem tất cả" opens the filtered log.
+
+### 7. States
+
+`loading` (three skeleton rows), `loaded`, `empty` (the sentence above), `error` (the card shows a retry; the hosting screen stays usable).
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `web.unit-money.title` | Tiền cần kiểm tra của căn {unit} | Money to check for unit {unit} |
+| `web.unit-money.all` | Xem tất cả | View all |
+| `web.unit-money.empty` | Không có khoản tiền nào cần kiểm tra của căn này. | No money needs checking for this unit. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIWF-79 | **G** a unit with two log rows, one reviewed **W** `W-Unit-Detail` opens its fee tab **T** the panel lists both, newest first, with the state of each | api, web-e2e |
+| UIWF-80 | **G** a unit with none **W** the panel renders **T** the empty sentence shows and nothing jumps when the data arrives | web-e2e |
+
+### 10. E2E cases
+
+Playwright: `unit-money-panel.spec.ts` (UIWF-79, 80).
+
+### 11. Open questions
+
+None.
+
 ## The screens of P3 and P6
 
-`W-Transactions`, `W-Money-Log` (a tab of `W-Transactions`, P2 for the data and P3 for the screen), `UnitMoneyPanel` (embedded in `W-Unit-Detail` and `W-Debts`, N12) and `W-Statement` are specified when P3-00 starts, from DOC-23, DOC-24, DOC-25 and DOC-22 §9. `W-Reports` and `W-Export-Center` are specified when P6-00 starts, from DOC-33 and the export design. Their rows in DOC-56 §3 and the notes N3, N4 and N12 stay the contract until then. Test IDs continue after `UIWF-65`; keys are `web.transactions.*`, `web.money-log.*`, `web.statement.*`, `web.reports.*`, `web.export.*`.
+`W-Statement` is specified when P3-00 starts, from DOC-25 and DOC-22 §9 (it matters once a bank-transfer driver exists). `W-Reports` and `W-Export-Center` are specified when P6-00 starts, from DOC-33 and the export design. Their rows in DOC-56 §3 and the notes N3, N4 and N12 stay the contract until then. Test IDs continue after `UIWF-80`; keys are `web.statement.*`, `web.reports.*`, `web.export.*`.
 
 ## Decisions made while writing
 
-Recorded as DR-324 (decided, Claude delegated by the Owner; none changes a money rule).
+Recorded as DR-324 (decided, Claude delegated by the Owner; none changes a money rule), with DR-325, DR-326 and DR-329 for the online-payment screens.
 
 | Part of DR-324 | Decision | Where used |
 | --- | --- | --- |
@@ -1124,7 +1411,9 @@ Recorded as DR-324 (decided, Claude delegated by the Owner; none changes a money
 | No "send receipt" tick | A posted payment always notifies the unit's members with `view_fees` (`payment.received`); the tick of the canvas is dropped and DOC-22 §5.2 step 8 is reworded | `W-Fee-Record` |
 | Debt list order and tiles | E-101 is ordered by outstanding amount; its first page carries the tile `summary` and `asOf`; the "Theo tháng phí" view and the Excel export wait for P6 | `W-Debts` |
 | Early warning | A recall dialog opens already blocked when the batch has a paid charge | `W-Fee-Recall` |
-| Wireframes | `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue` have no artboard: ASCII wireframes are their specification | the three dialogs |
+| Wireframes | `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Money-Log`, `UnitMoneyPanel` have no artboard: ASCII wireframes are their specification | those screens |
+| Staff re-query (DR-329) | `W-Transactions` re-queries an intent through E-186 `POST /staff/payments/intents/{id}/check`, once per 10 s per intent, because the resident's E-88 is for members | `W-Transactions` |
+| Provider-neutral wording (DR-325, N3) | The screens name the active driver by its label from E-49 and say "webhook", never "IPN", VNPay or VietQR as fixed words | `W-Transactions`, `W-Money-Log` |
 
 ## Not in this document
 
@@ -1151,7 +1440,10 @@ Recorded as DR-324 (decided, Claude delegated by the Owner; none changes a money
 | `W-Charge-Void` | FR-49 | DR-19, DR-20 | `UIWF-48…52` |
 | `W-Fee-Reissue` | FR-04.5 | DR-20, DR-265 | `UIWF-53…56` |
 | `W-Debts` | FR-12 | DR-18, DR-324 | `UIWF-57…65` |
+| `W-Transactions` | FR-08.4, FR-10.1…10.3 | DR-28, DR-325, DR-326, DR-329 | `UIWF-66…72` |
+| `W-Money-Log` | FR-46, FR-47 | DR-16, DR-327 | `UIWF-73…78` |
+| `UnitMoneyPanel` | FR-46.2 | DR-16 | `UIWF-79…80` |
 
 ## Open questions
 
-None for the nine P2 screens. The P3 and P6 screens raise theirs when they are written.
+None. DR-327 (proposed) decides whether a Manager may void a refunded online payment; until then `W-Fee-Record` follows DR-24. `W-Statement` and the P6 screens raise theirs when they are written.

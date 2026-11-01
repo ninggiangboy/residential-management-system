@@ -289,7 +289,9 @@ The way the variables reach the bundle (`.env` files, EAS profile `env`, Pages b
 | `S3_ENDPOINT` | local store | local store | SeaweedFS S3 gateway on the staging VPS | SeaweedFS S3 gateway on the production VPS |
 | `S3_PUBLIC_ENDPOINT` | the local store's host | the local store's host | `https://files-staging.<domain>` | `https://files.<domain>` |
 | `S3_FORCE_PATH_STYLE` | `true` | `true` | `true` | `true` |
-| The gateway driver (a row of `gateway_config`, not a key) | `fake` | `fake` | `fake` on the demo building, `payos` on a real one | `payos` |
+| The gateway driver (a row of `gateway_config`, not a key) | `fake` | `fake` | `fake` on the demo building, `stripe` (a sandbox key) on a real one | `stripe` (live key) or the driver that replaces it (DR-325) |
+| `PAYMENTS_RETURN_SCHEME_RESIDENT` | `rms-resident-dev` | `rms-resident-dev` | `rms-resident-staging` | `rms-resident` (the deep-link scheme the payment page returns to; DOC-24 §8) |
+| `PAYMENT_CLIENT_TIMEOUT_MS` | `10000` | `10000` | `10000` | `10000` (a gateway call, DOC-23 §4.5; DOC-24 §4.11) |
 
 ## 17. Boot validation
 
