@@ -18,7 +18,7 @@
     "@rms/mobile-core": "workspace:*",
     "@rms/shared-types": "workspace:*",
     "@rms/ui-native": "workspace:*",
-    "@tanstack/react-query": "5.104.4",
+    "@tanstack/react-query": "5.104.5",
     "expo": "~58.0.16",
     "expo-camera": "~58.0.11",
     "expo-constants": "~58.0.12",

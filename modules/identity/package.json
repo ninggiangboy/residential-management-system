@@ -44,14 +44,14 @@
     "@sinclair/typebox": "0.34.52",
     "drizzle-orm": "0.45.4",
     "elysia": "1.4.30",
-    "jose": "6.2.12",
+    "jose": "6.2.13",
     "libphonenumber-js": "1.13.15"
   },
   "devDependencies": {
     "@core/testing": "workspace:*",
     "@mod/audit": "workspace:*",
     "@rms/test-support": "workspace:*",
-    "@types/bun": "1.4.3",
+    "@types/bun": "1.4.4",
     "drizzle-kit": "0.31.11"
   }
 }

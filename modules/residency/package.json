@@ -50,7 +50,7 @@
   "devDependencies": {
     "@core/testing": "workspace:*",
     "@rms/test-support": "workspace:*",
-    "@types/bun": "1.4.3",
+    "@types/bun": "1.4.4",
     "drizzle-kit": "0.31.11"
   }
 }
