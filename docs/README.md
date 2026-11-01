@@ -112,7 +112,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-94 | EXP 05: qr revocation (`10-testing/experiments/EXP-05-qr-revocation.md`) | Not written |
 | DOC-95 | EXP 06: notice fan out (`10-testing/experiments/EXP-06-notice-fan-out.md`) | Not written |
 | DOC-96 | EXP 07: api load (`10-testing/experiments/EXP-07-api-load.md`) | Not written |
-| DOC-97 | EXP 08: bulk pdf (`10-testing/experiments/EXP-08-bulk-pdf.md`) | Not written |
+| DOC-97 | [EXP 08: bulk pdf](10-testing/experiments/EXP-08-bulk-pdf.md) | Draft |
 | DOC-98 | [EXP 09: otp abuse](10-testing/experiments/EXP-09-otp-abuse.md) (first version; DR-171 decided) | Approved |
 | DOC-99 | [EXP 10: authorization matrix](10-testing/experiments/EXP-10-authorization-matrix.md) (first version; final P6; DR-173 decided) | Approved |
 | DOC-100 | EXP 11: ledger drift detection (`10-testing/experiments/EXP-11-ledger-drift-detection.md`) | Not written |
