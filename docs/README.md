@@ -73,7 +73,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |
 | DOC-56 | [Screens index](08-ux-ui/screens/README.md) | Approved |
 | DOC-57 | [Resident: sign-in and home](08-ux-ui/screens/resident-signin-home.md) (complete) | Approved |
-| DOC-58 | Resident: fees and payment (`08-ux-ui/screens/resident-fees-payment.md`) | Not written |
+| DOC-58 | [Resident: fees and payment](08-ux-ui/screens/resident-fees-payment.md) (the four P2 screens Draft 2026-11-01; the P3 payment screens owed) | Draft |
 | DOC-59 | Resident: requests, unit, members, vehicles (`08-ux-ui/screens/resident-requests-unit.md`) | Not written |
 | DOC-60 | [Resident: QR, notices, account](08-ux-ui/screens/resident-qr-notices-account.md) (account group P1; QR, notices, library owed) | Approved |
 | DOC-61 | [Staff app: shared and Manager](08-ux-ui/screens/staff-shared-and-manager.md) (§1 P1; B-screens owed) | Approved |
