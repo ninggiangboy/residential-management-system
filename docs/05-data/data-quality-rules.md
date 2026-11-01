@@ -1,10 +1,10 @@
 # Data quality rules
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2–3 are owed to P2 and P3) · Updated: 2026-11-01 (DR-315: the column `unit_type`, DQ-47…49, Q-T, IM-78…86; `Loại căn` and `Type` move from `bedrooms` to `unit_type`) · 2026-10-27 (DR-278: the `exceljs` stream helper is patched, a good workbook was DQ-01 about a third of the time; IM-44) · 2026-10-23 (P1-13 built §1: DR-258, §4 "Run in P1-13"); 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
-> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226, DR-314, DR-315), [DOC-03](../01-product/requirements.md) (FR-18, NFR-12), [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); §2 is written as Draft, §3 is owed to P3) · Updated: 2026-11-01 (P1-27: §2 fee import, DQ-62…81, IM-87…94, DR-317) · 2026-11-01 (DR-315: the column `unit_type`, DQ-47…49, Q-T, IM-78…86; `Loại căn` and `Type` move from `bedrooms` to `unit_type`) · 2026-10-27 (DR-278: the `exceljs` stream helper is patched, a good workbook was DQ-01 about a third of the time; IM-44) · 2026-10-23 (P1-13 built §1: DR-258, §4 "Run in P1-13"); 2026-10-21 (DR-226: IM-42, IM-43; earlier: DR-213: `unitCode` on an issue; DR-149: DQ-05 is a 400; DR-135: the creating contract is named) · DOC-18
+> Depends on: original SDD §5.3, §11, [DR](../00-decision-register.md) (DR-21, 22, 36, 40, 41, 58, 61, 62, 74, 109, 114, DR-226, DR-314, DR-315, DR-317), [DOC-03](../01-product/requirements.md) (FR-01, FR-02, FR-18, NFR-12), [DOC-15](finance-model.md) §10.1, [DOC-21](../06-design/fee-batches-and-import.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, [DOC-14](data-conventions.md) §8, §13, [DOC-16](identity-and-residency-model.md) §4.2, §5.1–§5.5, [DOC-17](operations-model.md) §3.1, [DOC-06](../02-glossary.md)
 > Main readers: P1-13 (units and owners import), P1-14, DOC-27, DOC-21, DOC-42, DOC-51, the Excel templates, the P1 test fixture
 
-This document is the catalog of the data-quality rules (`DQ-xx`) of the Excel imports: for each rule the layer where it runs, the check, its severity, what the system does, the threshold, the error code and the text the user reads in Vietnamese and in English. **Section 1 (units and owners, P1) is complete. Sections 2 (fee batches, P2) and 3 (bank statements, P3) are written when their phases start**, so the document stays `Draft` until then. It does not hold the import flow and the job states (DR-21, DOC-16 §5.5, DOC-27), the endpoints (DOC-51) or the error shape of the API (DOC-50, DOC-42).
+This document is the catalog of the data-quality rules (`DQ-xx`) of the Excel imports: for each rule the layer where it runs, the check, its severity, what the system does, the threshold, the error code and the text the user reads in Vietnamese and in English. **Section 1 (units and owners, P1) is complete and Approved. Section 2 (fee batches, P2) is written (Draft, P1-27). Section 3 (bank statements, P3) is written when its phase starts**, so the document is not wholly Approved until then. It does not hold the import flow and the job states (DR-21, DOC-16 §5.5, DOC-27), the endpoints (DOC-51) or the error shape of the API (DOC-50, DOC-42).
 
 **Rules and queries tested on 2026-10-19.** The row rules were run as a TypeScript prototype on Bun 1.4.3 with `libphonenumber-js` 1.13.15 (`/max` metadata) and `exceljs` 4.4.0; every input and result in §1.3 is its output. The set queries of §1.5 were run on PostgreSQL 18.6 with the tables of DOC-16. The prototype is a scratch file, not part of the repository: P1-13 writes the real validator from this catalog.
 
@@ -366,7 +366,126 @@ Counts: 7 rows, 3 valid, 4 errors, 1 unit to create, 2 to update, 1 account to c
 
 ## 2. Fee import (P2)
 
-Not written; P1-27 (DR-22, DOC-21, DOC-15). The rules continue the numbering of this catalog after the last rule of section 1; the layers, severities and error shape above apply.
+The rules of the fee file (`kind = 'fee_batch'`, DOC-15 §10.1, template name `fee_batch` of DR-22). They continue the numbering after DQ-61 (DQ-62…81); the layers, severities, error shape and the preview of §1.4 apply unchanged. The import flow, the commit transaction and the batch lifecycle are DOC-21 §3 and §4; this section gives each rule its number, threshold, code and text (DR-317).
+
+**What is shared with §1, and what is not.**
+
+| Rule of §1 | In a fee file |
+| --- | --- |
+| DQ-01 file type, DQ-03 duplicate column, DQ-04 empty, DQ-05 too many rows, DQ-06 unknown column | Run unchanged (5 MB by `FilesApi.verify`, 5,000 rows, first sheet only, a blank row skipped) |
+| DQ-02 unit-code column | **Does not run**: DQ-62 checks the three required columns together |
+| DQ-50 stale, DQ-51 expired, DQ-52 not ready | Run unchanged at the commit (24 h, counts equal) |
+| DQ-60 write matches preview, DQ-61 file removed at commit | Replaced by DQ-80 and DQ-81 |
+
+### 2.1 The template and the headers
+
+`GET /staff/imports/templates/fee_batch` (E-71) returns an `.xlsx` whose first sheet is named `Phí` (or `Fees`) and whose row 1 is the header, in the language of the requesting user, with one example row per kind. The cells of `unit_code`, `fee_month` and `note` are formatted as Text, because Excel turns the text `10/2026` into the date 1 October 2026 (the rule DQ-65 accepts that date, so a file that lost its format still reads).
+
+| Canonical column | Header (vi) | Header (en) | Required | Cell | Stored in |
+| --- | --- | --- | --- | --- | --- |
+| `unit_code` | Mã căn hộ | Unit code | Yes | Text | `charge.unit_code` (the unit's own code) |
+| `fee_month` | Tháng phí | Fee month | Yes | Text `MM/YYYY`, or a date | checked against `fee_batch.fee_month`; not stored |
+| `item_name` | Tên khoản | Item name | Yes | Text | `charge_line.item_name` (vi) |
+| `item_name_en` | Tên khoản (EN) | Item name (EN) | No | Text | `charge_line.item_name` (en) |
+| `quantity` | Số lượng | Quantity | No (default 1) | Number | `charge_line.quantity` |
+| `unit_price` | Đơn giá | Unit price | One of price or amount | Whole number | `charge_line.unit_price` |
+| `amount` | Thành tiền | Amount | One of price or amount | Whole number | `charge_line.amount` |
+| `kind` | Loại | Kind | No (default `fee`) | Text | `charge_line.kind` |
+| `note` | Ghi chú | Note | For `adjustment` | Text | `charge_line.note` |
+
+Headers are matched by the key of §1.1 (NFKD, marks removed, `đ` → `d`, lower case, only letters and digits). The aliases are the contract; DOC-21 §4.2 repeats them and must match this table.
+
+| Canonical column | Aliases (compared by key) |
+| --- | --- |
+| `unit_code` | Mã căn hộ, Mã căn, Căn hộ, Unit code, Unit, Apartment |
+| `fee_month` | Tháng phí, Kỳ phí, Fee month, Month |
+| `item_name` | Tên khoản, Khoản phí, Item name, Item |
+| `item_name_en` | Tên khoản (EN), Item name (EN) |
+| `quantity` | Số lượng, SL, Quantity, Qty |
+| `unit_price` | Đơn giá, Unit price, Price |
+| `amount` | Thành tiền, Số tiền, Amount, Total |
+| `kind` | Loại, Kind, Type |
+| `note` | Ghi chú, Note, Reason |
+
+`Tên khoản (EN)` has the key `tenkhoanen` and `Item name (EN)` the key `itemnameen`, so neither collides with `item_name` (`tenkhoan`, `itemname`). `Ghi chú` is an alias here, while in §1 it is an unknown column (DQ-06): the alias set belongs to the file kind. **Kind values** (compared by key): `fee` ← `fee`, `phí`; `adjustment` ← `adjustment`, `điều chỉnh`; blank is `fee`; anything else is `kind_invalid`.
+
+### 2.2 The catalog
+
+Thresholds: DR-21 (5,000 rows, 500 listed issues), DR-61 (5 MB), DR-11 (half-up rounding), FR-01. "Text vi / en" are the catalog entries.
+
+| ID | Layer | Rule | Check | Severity | Action | Threshold | Code | Text (vi / en) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| DQ-62 | file | The three required columns are found | Row 1 has a header for each of `unit_code`, `fee_month`, `item_name` | fail | Job `failed`; `params.columns` lists the missing ones | — | `import_missing_column` | "Thiếu cột bắt buộc: {columns}. Hãy dùng tệp mẫu." / "Required columns are missing: {columns}. Use the template." |
+| DQ-63 | file | A price or an amount column exists | Row 1 has a header for `unit_price` or for `amount` | fail | Job `failed` | — | `import_no_price` | "Cần có cột “Đơn giá” hoặc cột “Thành tiền”." / "The file needs a “Unit price” or an “Amount” column." |
+| DQ-64 | row | Unit code | As DQ-10: trimmed, `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$` | error | Row rejected | 1–20 characters | `unit_code_invalid` | the text of DQ-10 |
+| DQ-65 | row | Fee month reads | `MM/YYYY` (month 1–12, zero optional), `YYYY-MM`, a date cell or an Excel serial; the day is ignored | error | Row rejected | — | `fee_month_invalid` | "Tháng phí phải theo dạng MM/YYYY hoặc YYYY-MM." / "Fee month must be MM/YYYY or YYYY-MM." |
+| DQ-66 | row | Fee month is the batch's | The month of DQ-65 equals `fee_batch.fee_month` | error | Row rejected | — | `fee_month_mismatch` | "Tháng phí {got} khác với tháng phí của đợt thu ({expected})." / "Fee month {got} differs from the batch's fee month ({expected})." |
+| DQ-67 | row | Item name | `item_name` 1–120 characters after trimming and collapsing spaces; `item_name_en` blank or at most 120; no control character | error | Row rejected | 120 | `item_name_invalid` | "Tên khoản phải dài từ {min, number} đến {max, number} ký tự." / "The item name must be {min, number} to {max, number} characters." |
+| DQ-68 | row | Kind | `fee` or `adjustment` (aliases of §2.1); blank is `fee` | error | Row rejected | — | `kind_invalid` | "Loại dòng phải là “phí” hoặc “điều chỉnh”." / "Kind must be “fee” or “adjustment”." |
+| DQ-69 | row | Quantity | Blank (1), or a number ≥ 0 with at most 3 decimals (`.` or `,`), at most 999,999,999.999; held as integer thousandths | error | Row rejected | 0…999,999,999.999 | `quantity_invalid` | "Số lượng phải từ 0, tối đa 3 chữ số thập phân và không quá {max, number}." / "Quantity must be 0 or more, with at most 3 decimals and no more than {max, number}." |
+| DQ-70 | row | Unit price | Blank, or a whole number from 0 to 9,999,999,999 | error | Row rejected | 9,999,999,999 đ | `unit_price_invalid` | "Đơn giá phải là số nguyên từ 0 đến {max, number} đ." / "Unit price must be a whole number from 0 to {max, number} đ." |
+| DQ-71 | row | Amount | Fee row: a whole number above 0. Adjustment row: a whole number other than 0. In both cases at most 99,999,999,999 đ in absolute value, which also bounds a computed product | error | Row rejected | ±99,999,999,999 đ | `amount_invalid` | "{kind, select, adjustment {Số tiền điều chỉnh phải là số nguyên khác 0, tối đa {max, number} đ.} other {Thành tiền phải là số nguyên lớn hơn 0, tối đa {max, number} đ.}}" / "{kind, select, adjustment {An adjustment must be a whole number other than 0, at most {max, number} đ.} other {The amount must be a whole number above 0, at most {max, number} đ.}}" |
+| DQ-72 | row | Amount equals the product | Both price and amount given: `amount = (quantity_milli × unit_price + 500) / 1000`, integer division (DR-11). **Never recomputed silently** (FR-01.5). A fee row with only a price takes the product; with only an amount, quantity 1 and `unit_price` = amount; an adjustment takes quantity 1 and `unit_price` 0 | error | Row rejected | exact | `amount_mismatch` | "Thành tiền {got, number} đ không bằng số lượng × đơn giá ({expected, number} đ). Hãy sửa hoặc để trống cột thành tiền." / "The amount {got, number} đ does not equal quantity × unit price ({expected, number} đ). Fix it or leave the amount blank." |
+| DQ-73 | row | An adjustment has a reason | `kind = adjustment` and `note` blank | error | Row rejected | — | `adjustment_note_required` | "Dòng điều chỉnh phải có ghi chú nêu lý do." / "An adjustment row needs a note giving the reason." |
+| DQ-74 | row | Note length | `note` at most 500 characters | error | Row rejected | 500 | `note_too_long` | "Ghi chú tối đa {max, number} ký tự." / "The note has at most {max, number} characters." |
+| DQ-75 | set | An item once per unit | The same unit code and the same item name (folded key: case, diacritics, spaces) appear in an earlier row | error | The first row stands; later rows rejected | — | `charge_item_duplicate` | "Khoản “{item}” của căn hộ này đã có ở dòng {firstRow}." / "The item “{item}” of this unit already appears in row {firstRow}." |
+| DQ-76 | set | A charge is above zero | The sum of the valid lines of one unit is ≤ 0 | error | Every row of that unit is rejected; no charge | > 0 | `charge_total_zero` | "Tổng các dòng của căn hộ {code} là {total, number} đ, không lớn hơn 0 nên không tạo khoản thu." / "The lines of unit {code} total {total, number} đ, which is not above 0, so no charge is created." |
+| DQ-77 | db | The unit exists | `ResidencyApi.findUnitsByCodes` has no entry for the lower-cased code | error | Row rejected | — | `unit_not_found` | "Không có căn hộ {code} trong tòa nhà." / "There is no unit {code} in this building." |
+| DQ-78 | db | The unit has an owner | The entry has `hasActiveOwner = false` (a vacant unit **with** an owner is charged) | error | Row rejected | — | `unit_without_owner` | "Căn hộ {code} chưa có chủ hộ nên không có ai để báo phí." / "Unit {code} has no owner, so nobody could be notified of the fee." |
+| DQ-79 | commit | The batch is still a draft | The conditional update of the batch (`status = 'draft'`) changes no row | fail | Rollback; 409 | — | `invalid_transition` | "Đợt thu không còn là bản nháp." / "The batch is no longer a draft." |
+| DQ-80 | post | The write matches the preview | Charges and lines written equal the previewed `charges` and `lines`; for each charge `amount` = Σ its lines; positions run 1… without a gap | fail | Rollback; 500; alert | counts equal | `import_integrity` | the text of DQ-60 |
+| DQ-81 | post | A fee file is kept 30 days | The `file_object` is not removed at commit (a fee file holds no personal data); `finance_purge` removes it after 30 days (DR-22) | — | — | 30 days | — (no message) | — |
+
+An issue names the row, the unit code (`unitCode`) and the `column` of the cell at fault: DQ-66 `fee_month`, DQ-67 `item_name`, DQ-70 `unit_price`, DQ-71 and DQ-72 `amount`, DQ-73 and DQ-74 `note`, DQ-75 `item_name`, DQ-76 `amount` (on every row of the unit), DQ-77 and DQ-78 `unit_code`.
+
+**One wrong row does not drop its unit.** A unit with two rows, one valid and one wrong, gets a charge of the valid row only; the preview lists the wrong row as an error (DOC-21 §4.5). DQ-76 is the exception: the total of the **valid** lines is the test, and a unit that fails it loses all its rows.
+
+### 2.3 Results of the row rules
+
+Output of a TypeScript prototype on Bun 1.4.3 on 2026-11-01 (a scratch file, not part of the repository; P2-04 writes the validator from this catalog). `ok` shows the normalised value.
+
+**DQ-65 fee month**
+
+| Input | Result |
+| --- | --- |
+| `10/2026`, `1/2026`, `2026-10` | ok `10/2026`, `01/2026`, `10/2026` |
+| the date 2026-10-01 (a date cell), the serial 46296 | ok `10/2026` |
+| `13/2026`, `10/26`, `Oct 2026`, blank | `fee_month_invalid` |
+
+**DQ-69 quantity** (thousandths)
+
+| Input | Result |
+| --- | --- |
+| `12.345`, `12,345` | ok 12345 |
+| blank | ok 1000 (quantity 1) |
+| `0` | ok 0 (then DQ-71 refuses a fee row, whose amount would be 0) |
+| `999999999.999` | ok 999999999999 |
+| `12.3456`, `-1`, `1e3`, `abc`, `1000000000` | `quantity_invalid` |
+
+**DQ-71, DQ-72 amount.** The half-up table is DOC-21 §4.2 and was run on PostgreSQL 18.6 on 2026-10-26 against the formula and `ck_charge_line_amount`; the prototype gives the same line amounts for quantity (thousandths) × price: 1,000 × 2,488,000 = 2,488,000; 12,345 × 15,000 = 185,175; 1 × 500 = 1; 1 × 499 = 0; 3,333 × 1,000 = 3,333; 2,500 × 1 = 3; 1,000 × 0 = 0. The cap:
+
+| Quantity | Unit price | Product | Result |
+| --- | --- | --- | --- |
+| 10 | 9,999,999,999 | 99,999,999,990 | accepted (≤ 99,999,999,999) |
+| 100 | 9,999,999,999 | 999,999,999,900 | `amount_invalid` |
+| a fee row | amount 100,000,000,000 | — | `amount_invalid` |
+
+### 2.4 Required tests (fee import)
+
+The scenarios are DOC-21 §9 (IM-50…77 and LG-61…81); this section adds the checks that tie each code to its rule.
+
+| ID | Scenario | Expected |
+| --- | --- | --- |
+| IM-87 | The headers of §2.1 in vi, in en and mixed; `Tên khoản (EN)` beside `Tên khoản`; `Ghi chú` | Every column resolves to its canonical name; the two item columns do not collide; `Ghi chú` is `note`, not an unknown column |
+| IM-88 | A file without `Tháng phí` and `Tên khoản`; a file with only `Mã căn hộ` | `import_missing_column` with `columns` = `fee_month, item_name`; the job is `failed`; DQ-02 is not raised |
+| IM-89 | The fee months of §2.3 as text, as a `Date` and as a serial | The table of DQ-65, the same result for the three kinds of cell |
+| IM-90 | The quantities of §2.3 | The table of DQ-69 |
+| IM-91 | The amount cap of §2.3 | The table of DQ-71 |
+| IM-92 | A unit with a valid fee row and a wrong second row; a unit with a fee 1,000,000 and an adjustment −1,000,000 | The first gets a charge of the valid row and one error; the second `charge_total_zero` on both rows, no charge |
+| IM-93 | A fee row and a unit-import row with the same text `Ghi chú` in the header, on two jobs | The first has the column `note`; the second one warning `import_unknown_column` |
+| IM-94 | The write of a commit with a forced mismatch (a test double that drops one line) | `import_integrity`, rollback, nothing written, 500 |
+
+IM-76 (one error of each code) uses the row, set and database codes of §2.2 as its expected set (the two file codes `import_missing_column` and `import_no_price` fail the job, so IM-88 and IM-54 cover them): `unit_code_invalid`, `fee_month_invalid`, `fee_month_mismatch`, `item_name_invalid`, `kind_invalid`, `quantity_invalid`, `unit_price_invalid`, `amount_invalid`, `amount_mismatch`, `adjustment_note_required`, `note_too_long`, `charge_item_duplicate`, `charge_total_zero`, `unit_not_found`, `unit_without_owner`.
 
 ## 3. Statement import (P3)
 
@@ -444,6 +563,7 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | --- | --- | --- |
 | DR-114 | Units and owners import: unit codes are upper-case and matched case-insensitively; a blank cell never erases; owner cells are all-or-name-and-phone; phones use the `/max` metadata; ID numbers are 9 or 12 digits and short numeric cells are padded with a warning; "same person" is the same phone and folded name; an existing profile is only filled where empty; the commit reads the file again, re-validates and refuses with `import_stale` when the counts changed; the preview holds no ID number or date of birth; a new read contract `IdentityApi.findResidentAccountsByPhones`; an hourly `import_expire` job removes the file of an expired job | §1 |
 | DR-315 | The import names the unit type (`unit_type` column, code or Vietnamese name, never creates one), a new unit takes the type's defaults for blank bedrooms and area, and the old aliases `Loại căn` and `Type` move from `bedrooms` to `unit_type` | §1.1, §1.2, §1.5 |
+| DR-317 | The fee file: rules DQ-62…81, `import_missing_column`, a fee month read from a date cell, a cap of 99,999,999,999 đ on a line | §2 |
 | DR-258 | The import as built: `FilesApi.read`, the job holds the file id, the two identity calls, the file read in two halves, the batched commit, the counts, the texts in the catalog | §1, §4 |
 
 ## 6. Not in this document
@@ -453,7 +573,7 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | The import job table, states and the conditional commit | DOC-16 §5.5, DR-21 |
 | The import flow, the account-creating contract, transfers and phone changes | DOC-27 |
 | Upload, verification and removal of files | DOC-37, DOC-17 §3.1 |
-| Fee-batch rules and the fee template | DOC-21, DOC-18 §2 |
+| The fee-batch lifecycle, the import flow and its commit | DOC-21 (the rules and texts are §2 here) |
 | Statement import and matching | DOC-25, DOC-18 §3 |
 | The error shape, status codes, ICU catalog files | DOC-50, DOC-42, DOC-68 |
 | The `import_expire` and `import_purge` jobs | DOC-38 |
@@ -470,8 +590,13 @@ Every new decision here is a DR, decided by Claude under the Owner's delegation,
 | DQ-47…49 db (unit type) | DR-314, DR-315 | FR-18.7; IM-78…86 |
 | DQ-50…52 commit | DR-21, DR-74, DR-114 | FR-18.1; IM-33…36 |
 | DQ-60, DQ-61 post | DR-22, DR-114 | FR-18.2; IM-37…39 |
+| DQ-62, DQ-63 fee file | DR-21, DR-22, DR-317 | FR-01.1; IM-54, IM-87, IM-88 |
+| DQ-64…74 fee row | DR-11, DR-22, DR-317 | FR-01.1, FR-01.5, FR-01.6; IM-55…58, IM-61, IM-89…91 |
+| DQ-75, DQ-76 fee set | DR-22 | FR-01.1, FR-01.6; IM-59, IM-60, IM-92 |
+| DQ-77, DQ-78 fee db | DR-22 | FR-01.1; IM-62, IM-63 |
+| DQ-79…81 fee commit and post | DR-22, DR-317 | FR-01.3; IM-64…73, IM-94 |
 | §1.4 preview | DR-21, DR-22, DR-58 | NFR-14; IM-30…32 |
 
 ## Open questions
 
-None for section 1. The decision made while writing (DR-114) is decided and does not block Phase 1. Sections 2 and 3 raise their own questions when they are written.
+None for sections 1 and 2. The decisions made while writing (DR-114 for §1, DR-317 for §2) are decided and do not block their phases. Section 3 raises its own questions when it is written.
