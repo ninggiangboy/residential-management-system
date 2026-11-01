@@ -27,6 +27,7 @@ import { Route as AppStaffIndexRouteImport } from './routes/_app/staff.index'
 import { Route as AppStaffNewRouteImport } from './routes/_app/staff.new'
 import { Route as AppUnitsIndexRouteImport } from './routes/_app/units.index'
 import { Route as AppUnitsUnitIdRouteImport } from './routes/_app/units.$unitId'
+import { Route as AppUnitsTypesRouteImport } from './routes/_app/units.types'
 import { Route as AppStaffStaffIdEditRouteImport } from './routes/_app/staff.$staffId.edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -118,6 +119,11 @@ const AppUnitsUnitIdRoute = AppUnitsUnitIdRouteImport.update({
   path: '/units/$unitId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppUnitsTypesRoute = AppUnitsTypesRouteImport.update({
+  id: '/units/types',
+  path: '/units/types',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStaffStaffIdEditRoute = AppStaffStaffIdEditRouteImport.update({
   id: '/$staffId/edit',
   path: '/$staffId/edit',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/residents/new': typeof AppResidentsNewRoute
   '/staff/new': typeof AppStaffNewRoute
   '/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/units/types': typeof AppUnitsTypesRoute
   '/residents/': typeof AppResidentsIndexRoute
   '/staff/': typeof AppStaffIndexRoute
   '/units/': typeof AppUnitsIndexRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/residents/new': typeof AppResidentsNewRoute
   '/staff/new': typeof AppStaffNewRoute
   '/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/units/types': typeof AppUnitsTypesRoute
   '/residents': typeof AppResidentsIndexRoute
   '/staff': typeof AppStaffIndexRoute
   '/units': typeof AppUnitsIndexRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/_app/residents/new': typeof AppResidentsNewRoute
   '/_app/staff/new': typeof AppStaffNewRoute
   '/_app/units/$unitId': typeof AppUnitsUnitIdRoute
+  '/_app/units/types': typeof AppUnitsTypesRoute
   '/_app/residents/': typeof AppResidentsIndexRoute
   '/_app/staff/': typeof AppStaffIndexRoute
   '/_app/units/': typeof AppUnitsIndexRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/residents/new'
     | '/staff/new'
     | '/units/$unitId'
+    | '/units/types'
     | '/residents/'
     | '/staff/'
     | '/units/'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/residents/new'
     | '/staff/new'
     | '/units/$unitId'
+    | '/units/types'
     | '/residents'
     | '/staff'
     | '/units'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/_app/residents/new'
     | '/_app/staff/new'
     | '/_app/units/$unitId'
+    | '/_app/units/types'
     | '/_app/residents/'
     | '/_app/staff/'
     | '/_app/units/'
@@ -384,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppUnitsUnitIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/units/types': {
+      id: '/_app/units/types'
+      path: '/units/types'
+      fullPath: '/units/types'
+      preLoaderRoute: typeof AppUnitsTypesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/staff/$staffId/edit': {
       id: '/_app/staff/$staffId/edit'
       path: '/$staffId/edit'
@@ -431,6 +450,7 @@ interface AppRouteChildren {
   AppResidentsRoute: typeof AppResidentsRouteWithChildren
   AppStaffRoute: typeof AppStaffRouteWithChildren
   AppUnitsUnitIdRoute: typeof AppUnitsUnitIdRoute
+  AppUnitsTypesRoute: typeof AppUnitsTypesRoute
   AppUnitsIndexRoute: typeof AppUnitsIndexRoute
 }
 
@@ -441,6 +461,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppResidentsRoute: AppResidentsRouteWithChildren,
   AppStaffRoute: AppStaffRouteWithChildren,
   AppUnitsUnitIdRoute: AppUnitsUnitIdRoute,
+  AppUnitsTypesRoute: AppUnitsTypesRoute,
   AppUnitsIndexRoute: AppUnitsIndexRoute,
 }
 

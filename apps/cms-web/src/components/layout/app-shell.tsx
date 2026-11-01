@@ -2,7 +2,7 @@ import type { IconName } from '@rms/design-tokens'
 import type { MessageKey } from '@rms/i18n-catalog/web'
 import type { StaffRole } from '@rms/shared-types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useMatches } from '@tanstack/react-router'
+import { Link, useMatches, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { staffMeQuery } from '../../api/hooks/staff-me'
 import { useChangeLanguage } from '../../api/hooks/staff-me-mutations'
@@ -11,6 +11,7 @@ import { env } from '../../env'
 import { useI18n } from '../../lib/i18n'
 import { useOnline } from '../../lib/online'
 import { useSidebar } from '../../lib/sidebar'
+import { cn } from '../../lib/utils'
 import { Avatar } from '../ui/avatar'
 import { IconButton } from '../ui/button'
 import { Icon } from '../ui/icon'
@@ -24,7 +25,9 @@ import { useBrand } from './public-layout'
 import { ThemeSwitch } from './theme-switch'
 
 interface NavItem {
-  to: '/units' | '/residents' | '/staff' | '/building'
+  to: '/units' | '/units/types' | '/residents' | '/staff' | '/building'
+  /** Routes under `to` that have an entry of their own: the shorter entry is not lit on them (`/units` on `/units/types`). */
+  except?: readonly string[]
   label: MessageKey
   icon: IconName
   roles: readonly StaffRole[]
@@ -44,7 +47,14 @@ const NAV: readonly NavGroup[] = [
   {
     label: 'web.shell.nav.group.residents',
     items: [
-      { to: '/units', label: 'web.shell.nav.units', icon: 'buildings', roles: BOTH },
+      {
+        to: '/units',
+        label: 'web.shell.nav.units',
+        icon: 'buildings',
+        roles: BOTH,
+        except: ['/units/types'],
+      },
+      { to: '/units/types', label: 'web.shell.nav.unit-types', icon: 'squares-four', roles: BOTH },
       { to: '/residents', label: 'web.shell.nav.residents', icon: 'users-three', roles: BOTH },
     ],
   },
@@ -57,12 +67,19 @@ const NAV: readonly NavGroup[] = [
   },
 ]
 
+/** An entry is lit on its route and on the routes under it, except those that have an entry of their own. */
+const isUnder = (pathname: string, route: string) =>
+  pathname === route || pathname.startsWith(`${route}/`)
+const isEntryActive = (item: NavItem, pathname: string) =>
+  isUnder(pathname, item.to) && !(item.except ?? []).some((route) => isUnder(pathname, route))
+
 function Sidebar({ role }: { role: StaffRole }) {
   const { t } = useI18n()
   const brand = useBrand()
   const queryClient = useQueryClient()
   const me = useQuery(staffMeQuery()).data
   const { rail } = useSidebar()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
   return (
     // The sidebar is clear over the page's `ground` with the top bar, without a border: the cards of the page are
     // the only white that rises from it, and the active entry rises the same way (DR-311). Its width follows `nav-full:`
@@ -98,35 +115,34 @@ function Sidebar({ role }: { role: StaffRole }) {
                 {t(group.label)}
               </p>
               <ul className="flex flex-col gap-0.5">
-                {items.map((item) => (
-                  <li key={item.to}>
-                    {/* The rail shows the icons alone, so their names come as tooltips; the full sidebar writes them. */}
-                    <Tooltip text={t(item.label)} side="right" disabled={!rail}>
-                      <Link
-                        to={item.to}
-                        search={{}}
-                        className="flex h-control-md items-center gap-2.5 whitespace-nowrap rounded-control px-3.5 text-label text-ink-muted outline-offset-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink hover:bg-fill/70 focus-visible:outline-2 focus-visible:outline-focus"
-                        activeProps={{
-                          className:
-                            'bg-surface !text-ink font-semibold shadow-panel hover:!bg-surface',
-                          'aria-current': 'page',
-                        }}
-                      >
-                        {({ isActive }: { isActive: boolean }) => (
-                          <>
-                            <Icon
-                              name={item.icon}
-                              weight={isActive ? 'fill' : 'regular'}
-                              className={isActive ? 'text-teal' : undefined}
-                            />
-                            <span className="hidden nav-full:inline">{t(item.label)}</span>
-                            <span className="sr-only nav-full:hidden">{t(item.label)}</span>
-                          </>
-                        )}
-                      </Link>
-                    </Tooltip>
-                  </li>
-                ))}
+                {items.map((item) => {
+                  const active = isEntryActive(item, pathname)
+                  return (
+                    <li key={item.to}>
+                      {/* The rail shows the icons alone, so their names come as tooltips; the full sidebar writes them. */}
+                      <Tooltip text={t(item.label)} side="right" disabled={!rail}>
+                        <Link
+                          to={item.to}
+                          search={{}}
+                          className={cn(
+                            'flex h-control-md items-center gap-2.5 whitespace-nowrap rounded-control px-3.5 text-label text-ink-muted outline-offset-2 transition-[color,background-color,box-shadow] duration-150 hover:text-ink hover:bg-fill/70 focus-visible:outline-2 focus-visible:outline-focus',
+                            active &&
+                              'bg-surface !text-ink font-semibold shadow-panel hover:!bg-surface',
+                          )}
+                          aria-current={active ? 'page' : undefined}
+                        >
+                          <Icon
+                            name={item.icon}
+                            weight={active ? 'fill' : 'regular'}
+                            className={active ? 'text-teal' : undefined}
+                          />
+                          <span className="hidden nav-full:inline">{t(item.label)}</span>
+                          <span className="sr-only nav-full:hidden">{t(item.label)}</span>
+                        </Link>
+                      </Tooltip>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )

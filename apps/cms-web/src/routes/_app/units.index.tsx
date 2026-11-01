@@ -8,6 +8,7 @@ const SearchShape = {
   occupancy: f.oneOf('occupied', 'rented', 'vacant'),
   floor: f.int(-5, 150),
   bedrooms: f.int(0, 20),
+  unitTypeId: f.string(64),
   cursor: f.string(300),
   limit: f.int(1, 200),
   dialog: f.oneOf('add'),

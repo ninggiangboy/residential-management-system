@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { apiErrorOf } from '../../api/errors'
@@ -7,8 +8,10 @@ import { Dialog } from '../../components/ui/dialog'
 import { toast } from '../../components/ui/toaster'
 import { applyServerErrors, formResolver } from '../../lib/forms'
 import { errorText, useI18n } from '../../lib/i18n'
+import { unitTypesQuery } from '../unit-types/hooks'
 import { type UnitDetail, useUnitMutations } from './hooks'
 import {
+  typeOptionsOf,
   UNIT_FORM_FIELDS,
   UnitFormFields,
   UnitFormSchema,
@@ -18,6 +21,7 @@ import {
 const valuesOf = (unit: UnitDetail): Values => ({
   code: unit.code,
   floor: unit.floor === null ? '' : String(unit.floor),
+  unitTypeId: unit.unitType?.unitTypeId ?? '',
   bedrooms: unit.bedrooms === null ? '' : String(unit.bedrooms),
   areaM2: unit.areaM2 ?? '',
   occupancy: unit.occupancy,
@@ -34,9 +38,10 @@ export function UnitEditDialog({
   open: boolean
   onClose: () => void
 }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { update } = useUnitMutations()
   const [banner, setBanner] = useState<string | null>(null)
+  const types = useQuery({ ...unitTypesQuery('active'), enabled: open }).data?.items ?? []
   const resolver = useMemo(() => formResolver<Values>(UnitFormSchema, t), [t])
   const form = useForm<Values>({ resolver, defaultValues: valuesOf(unit) })
 
@@ -53,6 +58,9 @@ export function UnitEditDialog({
     if (values.code.trim() !== before.code) body.code = values.code.trim()
     if (values.floor !== before.floor)
       body.floor = values.floor === '' ? null : Number(values.floor)
+    // Changing the type changes only the type: no default is applied here (DR-315).
+    if (values.unitTypeId !== before.unitTypeId)
+      body.unitTypeId = values.unitTypeId === '' ? null : values.unitTypeId
     if (values.bedrooms !== before.bedrooms)
       body.bedrooms = values.bedrooms === '' ? null : Number(values.bedrooms)
     if (values.areaM2 !== before.areaM2)
@@ -104,7 +112,7 @@ export function UnitEditDialog({
     >
       <form id="unit-edit-form" onSubmit={submit} className="flex flex-col gap-4 py-2" noValidate>
         {banner && <Banner tone="danger">{banner}</Banner>}
-        <UnitFormFields form={form} />
+        <UnitFormFields form={form} types={typeOptionsOf(types, lang, unit.unitType)} />
       </form>
     </Dialog>
   )

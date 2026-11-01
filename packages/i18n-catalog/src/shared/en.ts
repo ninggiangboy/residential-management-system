@@ -258,6 +258,8 @@ export const en = {
   'status.staff.active': 'Active',
   'status.staff.locked': 'Locked',
   'status.staff.disabled': 'Disabled',
+  'status.unit-type.active': 'In use',
+  'status.unit-type.archived': 'Not in use',
   'status.vehicle.pending': 'Waiting for review',
   'status.vehicle.approved': 'Approved',
   'status.vehicle.rejected': 'Rejected',

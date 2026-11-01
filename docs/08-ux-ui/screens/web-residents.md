@@ -383,7 +383,7 @@ None.
 
 > Status: Review · Prototype: not in the canvas (built from the parts of DOC-54, like `W-Staff`) · Phase: P1 (task P1-30) · DOC-65
 
-*Added 2026-11-01 (DR-314, DR-315).*
+*Added 2026-11-01 (DR-314, DR-315). Built in P1-30 (`apps/cms-web/src/features/unit-types`, `e2e/unit-types.spec.ts`): the screen follows this section; the type shows in the language of the screen with the Vietnamese name as the fallback.*
 
 ### 1. Persona, use cases, permissions
 
@@ -395,7 +395,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 (set up the units of the building), FR
 
 ### 3. Prototype
 
-Not in the canvas. Layout: web shell with the sidebar group "Cư dân", entry "Loại căn hộ" under "Căn hộ", breadcrumb "Cư dân / Căn hộ / Loại căn hộ"; page header (h1 "Loại căn hộ", the summary line, button primary with `plus` "Thêm loại căn hộ"); one table card; the add and edit `Dialog`.
+Not in the canvas. Layout: web shell with the sidebar group "Cư dân", entry "Loại căn hộ" under "Căn hộ", breadcrumb "Cư dân / Loại căn hộ" (the group and the page, as on every screen); page header (h1 "Loại căn hộ", the summary line, button primary with `plus` "Thêm loại căn hộ"); one table card; the add and edit `Dialog`.
 
 ### 4. Regions and components
 

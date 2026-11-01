@@ -532,6 +532,22 @@
       "label": "status.unit.vacant"
     },
     {
+      "entity": "unit_type",
+      "value": "active",
+      "audience": "staff",
+      "tone": "success",
+      "icon": "check-circle",
+      "label": "status.unit-type.active"
+    },
+    {
+      "entity": "unit_type",
+      "value": "archived",
+      "audience": "staff",
+      "tone": "neutral",
+      "icon": null,
+      "label": "status.unit-type.archived"
+    },
+    {
       "entity": "import_job",
       "value": "validated",
       "audience": "staff",
