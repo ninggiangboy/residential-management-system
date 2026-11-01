@@ -1,6 +1,6 @@
 # EXP-11: The nightly check reports every one of the 20 corruptions, and nothing on clean data
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, the 20 corruptions listed, DR-321) · DOC-100 / EXP-11
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, the 20 corruptions listed, DR-321) · DOC-100 / EXP-11
 > Depends on: [common protocol](README.md) (DOC-89), original SDD §20.2, [DR](../../00-decision-register.md) (DR-62, 78, 120, 243, 244, 266, 318, 321), [ADR-0005](../../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [DOC-22](../../06-design/ledger-and-allocation.md) §3, §12, §16.7, [DOC-15](../../05-data/finance-model.md) §11, §12.2, [DOC-38](../../06-design/jobs-and-outbox-runtime.md) §4, [DOC-40](../../06-design/observability.md) (`ledger_invariant_violations`, `integrity_findings`), [DOC-03](../../01-product/requirements.md) (NFR-09), [DOC-75](../../09-operations/runbooks/RB-01-ledger-invariant.md) (RB-01), [DOC-88](../test-strategy.md) §11
 > Main readers: P2-11 (the nightly check and this harness), P2-09 (void and the money log), the owners of `integrity_weekly` (DOC-27) and `integrity_notices` (DOC-31); the evaluation of NFR-09; the review of M2
 

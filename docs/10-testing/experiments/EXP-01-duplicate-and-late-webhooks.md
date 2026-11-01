@@ -1,6 +1,6 @@
 # EXP-01: Duplicate, late and forged webhooks make one payment each, and the payer sees it fast
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version; Stripe first, DR-325, DR-330) · DOC-90 / EXP-01
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version; Stripe first, DR-325, DR-330) · DOC-90 / EXP-01
 > Depends on: [common protocol](README.md) (DOC-89), original SDD §20.2, [DR](../../00-decision-register.md) (DR-29, 32, 78, 80, 281, 318, 325, 326, 330), [ADR-0008](../../04-adr/0008-settlement-idempotency.md), [DOC-23](../../06-design/payment-intents-and-settlement.md) §6, §7, §16.3, [DOC-24](../../06-design/payment-gateway-drivers.md) §4.4, §5, [DOC-52](../../07-api/sse-and-webhooks.md) §12, [DOC-03](../../01-product/requirements.md) (NFR-01, NFR-02, FR-08), [DOC-10](../../03-architecture/quality-attributes.md) §4.1
 > Main readers: P2-27 (the run), P2-23 (the webhook route), P2-06 (`settle()`), the evaluation of NFR-01 and NFR-02; the review of M2
 

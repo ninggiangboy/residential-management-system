@@ -138,6 +138,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-11-01 | Claude (delegated) | DR-326 (the Stripe driver on hosted Checkout Sessions, the provider-neutral port with presentations, saved cards, no personal data to Stripe) | DOC-24, DOC-23, DOC-15 |
 | 2026-11-01 | Owner | DR-327: a refund or a dispute at the provider is only recorded and attached to the related payment and invoice for cross-checking; the rule stays that an online payment is not voided in the system | DOC-24, DOC-22, DOC-15, DOC-66 |
 | 2026-11-01 | Claude (delegated) | Wrote DOC-45 (online payment flows), DOC-90 (EXP-01) and DOC-91 (EXP-02) and the webhook section of DOC-52 (P2-19, P2-20): DR-330 (sizes, hostile share, the poller, the exact release) | DOC-45, DOC-90, DOC-91, DOC-52 |
+| 2026-11-01 | Owner | Documents that touch no business rule may be checked and approved by Claude; business documents (requirements, use cases, features, money rules, screen content) stay with the Owner. Applied the same day to DOC-75, DOC-89, DOC-90, DOC-91, DOC-92, DOC-93, DOC-97 and DOC-100 after their SQL was run and their required content checked | README, the documents named |
 
 ---
 

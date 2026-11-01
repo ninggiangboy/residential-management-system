@@ -1,6 +1,6 @@
 # EXP-02: A webhook and a re-query that confirm the same payment at the same instant make one payment
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version; Stripe first, DR-325, DR-330) · DOC-91 / EXP-02
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version; Stripe first, DR-325, DR-330) · DOC-91 / EXP-02
 > Depends on: [common protocol](README.md) (DOC-89), original SDD §20.2, [DR](../../00-decision-register.md) (DR-29, 30, 78, 80, 318, 325, 326, 330), [ADR-0008](../../04-adr/0008-settlement-idempotency.md), [DOC-23](../../06-design/payment-intents-and-settlement.md) §6, §7.1, §8, §16.3 (IN-37), [DOC-24](../../06-design/payment-gateway-drivers.md) §4.4, §4.5, [DOC-03](../../01-product/requirements.md) (NFR-01, FR-08.3), [DOC-88](../test-strategy.md) §10
 > Main readers: P2-27 (the run), P2-24 (the re-query job), P2-06 (`settle()`); the evaluation of NFR-01; the review of M2
 

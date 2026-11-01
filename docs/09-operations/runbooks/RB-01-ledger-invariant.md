@@ -1,6 +1,6 @@
 # RB-01: The nightly ledger check found violations
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: first version, DR-322) · DOC-75 / RB-01
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-01) · Updated: 2026-11-01 (P1-27: first version, DR-322) · DOC-75 / RB-01
 >
 > Alert: `LedgerInvariantViolation` (critical, no `for`: the gauge is set once a day) and `InvariantCheckStale` (critical, no success for 36 hours) · Dashboard: RMS · Worker and jobs (the job `invariant_check`) · Related: DOC-22 §3, §6, §12, [EXP-11](../../10-testing/experiments/EXP-11-ledger-drift-detection.md), DOC-40, DOC-38 §4
 > Depends on: [DOC-22](../../06-design/ledger-and-allocation.md), [DOC-15](../../05-data/finance-model.md), [DOC-19](../../05-data/db-roles-and-grants.md) (the `rms_readonly` role), [DOC-70](../deploy-staging-and-production.md) (`maintenance.sh`), [DR](../../00-decision-register.md) (DR-16, 19, 24, 66, 78, 243, 266, 322)
