@@ -85,7 +85,7 @@ There are Bun workspaces `apps/*`, `modules/*` and `packages/*`, and the linker 
 
 **Design tokens.** Colors come only from `@rms/design-tokens`. A Biome GritQL plugin (`tools/biome/no-color-literal.grit`) rejects color literals everywhere except inside that package. The files in `packages/design-tokens/generated/` are generated and committed, and a test fails when they are stale.
 
-**Dependencies.** Versions are exact (no `^`). `bunfig.toml` sets `minimumReleaseAge` to 7 days. A new dependency or version must be the latest stable, checked on the web, and recorded in DOC-11. dependency-cruiser runs from `tools/depcruise`, which has its own lockfile because it needs TypeScript 6; the product uses TypeScript 7.
+**Dependencies.** Versions are exact (no `^`). `bunfig.toml` sets `minimumReleaseAge` to 7 days; only a fix for a HIGH or CRITICAL advisory may be pinned sooner (DR-316: its own `fix(deps)` pull request, `overrides` and `minimumReleaseAgeExcludes` with a removal date). A new dependency or version must be the latest stable, checked on the web, and recorded in DOC-11. dependency-cruiser runs from `tools/depcruise`, which has its own lockfile because it needs TypeScript 6; the product uses TypeScript 7.
 
 ## Workflow and CI
 
