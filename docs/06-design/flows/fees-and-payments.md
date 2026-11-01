@@ -124,7 +124,7 @@ sequenceDiagram
 | 16–17 | `ValidateFeeImport` → `db` | Read the batch | — | A batch that is not a draft of this building stores no job (DOC-21 §4.1) | 409 `invalid_transition` → "This can no longer be done in its current state."; 404 |
 | 18–19 | `ValidateFeeImport` → `s3` | Streamed read | — | `.xlsx`, first sheet, 5,000 rows at most, headers by alias (DOC-18 §1.1) | E1 → 400 `too_many_rows` "The file has more than 5000 rows. Split it into smaller files." No job |
 | 20 | `ValidateFeeImport` → `ResidencyApi` | `findUnitsByCodes` | the 112 distinct lower-cased codes in **one** call | `unit_not_found`, `unit_without_owner` per row (DOC-21 §4.3) | — |
-| 21 | `ValidateFeeImport` → `db` | `INSERT finance.import_job` | `status validated`, `expires_at = created_at + 24 h`, `result` = the preview, `params {batchId}` | A file-level `fail` (`import_no_header`, `import_no_price`) stores `failed` (DOC-21 §4.4) | — |
+| 21 | `ValidateFeeImport` → `db` | `INSERT finance.import_job` | `status validated`, `expires_at = created_at + 24 h`, `result` = the preview, `params {batchId}` | A file-level `fail` (`import_missing_column`, `import_no_price`) stores `failed` (DOC-21 §4.4) | — |
 | 22 | `api` → `W-Fee-Import` | 201 | The preview of DOC-21 §4.4: `counts {rows 240, valid 236, errors 4}`, the first 50 valid rows, issues at rows 12 (`unit_not_found`), 57 (`fee_month_mismatch`), 58 (`charge_item_duplicate`), 201 (`amount_mismatch` 185,000 vs 185,175) | A row is never recomputed silently (FR-01.5, E2); a unit with one wrong row keeps its valid rows only | — |
 
 <a id="fl-01-2"></a>
@@ -214,7 +214,7 @@ E-170 (add one unit's charge) and E-171 (remove one) follow the shape of steps 1
 | E1 A 5.2 MB file | FL-01.1 13 | 400 `validation_failed` (`file_too_large`) | "The file is too large. The limit is 5 MB." No job |
 | E1 5,001 rows | FL-01.1 19 | 400 `validation_failed` (`too_many_rows`) | "The file has more than 5000 rows. Split it into smaller files." No job |
 | E2 Unknown unit, wrong fee month, duplicate item, `amount ≠ quantity × unit price` | FL-01.1 22 | 201 with `issues` | The preview lists the row, column and message; the row is not saved |
-| A file without a price or amount column, or without a header | FL-01.1 22 | 201, job `failed` (`import_no_price`, `import_no_header`) | The preview shows the file error; "Save" is disabled; a commit is 409 `import_not_ready` |
+| A file without a price or amount column, or without a header | FL-01.1 22 | 201, job `failed` (`import_no_price`, `import_missing_column`) | The preview shows the file error; "Save" is disabled; a commit is 409 `import_not_ready` |
 | The batch is not a draft (at validation, or published before the commit) | FL-01.1 17, FL-01.2 10 | 409 `invalid_transition` | "This can no longer be done in its current state." |
 | E3 Commit after 24 h | FL-01.2 9 | 409 `import_expired` | "This preview has expired. Upload the file again." |
 | The data changed since the preview | FL-01.2 6 | 409 `import_stale` | "The data changed since the preview. Upload the file again." |

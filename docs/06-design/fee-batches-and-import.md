@@ -1,8 +1,8 @@
 # Fee batches and import
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
-> Depends on: original SDD §5.1…5.3, §5.8, §11.2, [DR](../00-decision-register.md) (DR-09…12, 17, 19…22, 56, 74, 87, 97, 105, 109, 114, 149, 226, 243…245, DR-265, DR-266, DR-293), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-01…04, FR-12.4, FR-44, FR-49), [DOC-04](../01-product/use-cases.md) (UC-01, UC-04, UC-13), [DOC-09](../03-architecture/messaging-contracts.md) §3.4, §6, §7, [DOC-12](../03-architecture/code-architecture.md) §4.5, §9.5, [DOC-14](../05-data/data-conventions.md) §10, [DOC-15](../05-data/finance-model.md) §4, §5, §10.1, §11, §12, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §4, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
-> Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-07 (recall, single void), P2-12 (publish notification), P2-15 and P2-16 (fee screens), DOC-18 §2 (P1-27), DOC-22, DOC-23, DOC-34, DOC-44 (FL), DOC-51, DOC-58, DOC-66, EXP-04, EXP-10
+> Status: **Draft** · Updated: 2026-11-01 (P1-27: the rows of §4.2 have their `DQ-62…81` numbers, `import_missing_column`, a cap on a line amount, DR-317) · 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
+> Depends on: original SDD §5.1…5.3, §5.8, §11.2, [DR](../00-decision-register.md) (DR-09…12, 17, 19…22, 56, 74, 87, 97, 105, 109, 114, 149, 226, 243…245, DR-265, DR-266, DR-293, DR-317), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-01…04, FR-12.4, FR-44, FR-49), [DOC-04](../01-product/use-cases.md) (UC-01, UC-04, UC-13), [DOC-09](../03-architecture/messaging-contracts.md) §3.4, §6, §7, [DOC-12](../03-architecture/code-architecture.md) §4.5, §9.5, [DOC-14](../05-data/data-conventions.md) §10, [DOC-15](../05-data/finance-model.md) §4, §5, §10.1, §11, §12, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §4, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
+> Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-07 (recall, single void), P2-12 (publish notification), P2-15 and P2-16 (fee screens), DOC-18 §2, DOC-22, DOC-23, DOC-34, DOC-44 (FL), DOC-51, DOC-58, DOC-66, EXP-04, EXP-10
 
 This document says how a **fee batch** lives: created as a draft, filled by an Excel file or by hand, published, extended, recalled, closed, re-issued, and how one wrong open charge is voided. It holds the fee import (template, rows, rounding, preview, commit transaction). It does not hold the tables (DOC-15 §5, §10.1), the validation catalog with `DQ-` numbers and message texts (DOC-18 §2, P1-27), the allocation of money, receipts, the money log, debt and the nightly check (DOC-22), the cancellation of payment links (DOC-23), the PDF of a bill (DOC-34) or the endpoint list with `E-xx` numbers (DOC-51; the numbers below are those of the catalog in `api-endpoints.md`).
 
@@ -277,28 +277,28 @@ The diagram shows that validation is part of the request and the commit is one t
 | `kind` | Loại, Kind, Type | No (default `fee`) | `fee` or `adjustment` (also `phí`, `điều chỉnh`) |
 | `note` | Ghi chú, Note, Reason | Required for `adjustment` | Text |
 
-**Row rules.** A rejected row names its `column` and `code`; the codes below are the contract with the client, and DOC-18 §2 gives them `DQ-` numbers and their vi/en texts (P1-27). `error` rejects the row, `warning` accepts it.
+**Row rules.** A rejected row names its `column` and `code`; the codes below are the contract with the client, and DOC-18 §2.2 gives each rule its `DQ-` number and its vi/en text (the column *DQ* below). `error` rejects the row, `warning` accepts it.
 
-| Layer | Rule | Severity | Code |
-| --- | --- | --- | --- |
-| file | A file-level rule of DOC-18 §1.2 (type, header, duplicate column, empty, too many rows) | fail / 400 | `import_file_type`, `import_no_header`, `import_duplicate_column`, `import_empty`, `too_many_rows` |
-| file | No column resolves to `unit_code`, `fee_month` or `item_name` | fail | `import_no_header` |
-| file | Neither `unit_price` nor `amount` has a column | fail | `import_no_price` |
-| row | Unit code is 1–20 characters of `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$` | error | `unit_code_invalid` |
-| row | `fee_month` parses (`MM/YYYY`, `YYYY-MM`, a date cell) and equals the batch's fee month | error | `fee_month_invalid`, `fee_month_mismatch` |
-| row | `item_name` 1–120 characters after trimming; `item_name_en` at most 120 | error | `item_name_invalid` |
-| row | `kind` is `fee` or `adjustment` (blank = `fee`) | error | `kind_invalid` |
-| row | `quantity` ≥ 0 with at most 3 decimals (`.` or `,` as the mark), at most 999,999,999.999 | error | `quantity_invalid` |
-| row | `unit_price` a whole number ≥ 0, at most 9,999,999,999 | error | `unit_price_invalid` |
-| row | Fee row: `amount` a whole number > 0. Adjustment row: whole number ≠ 0 | error | `amount_invalid` |
-| row | Both given: `amount` equals the half-up product (below); a mismatch is an error and **never silently recomputed** (FR-01.5) | error | `amount_mismatch` |
-| row | Only `unit_price` given (fee): the amount is computed; only `amount` given: quantity 1 and `unit_price` = `amount` for a fee; an adjustment takes `quantity` 1 and `unit_price` 0 | — | — |
-| row | An adjustment row has a non-blank `note` of at most 500 characters | error | `adjustment_note_required` |
-| row | A fee row with a `note` longer than 500 characters | error | `note_too_long` |
-| set | The same unit and item name twice in one file (compared by the folded key) | error | `charge_item_duplicate` |
-| set | The sum of the unit's lines is above zero; a unit whose total is ≤ 0 loses all its rows | error | `charge_total_zero` |
-| db | The unit exists in the building (`ResidencyApi.findUnitsByCodes`) | error | `unit_not_found` |
-| db | The unit has an active owner: a charge needs someone to notify | error | `unit_without_owner` |
+| DQ | Layer | Rule | Severity | Code |
+| --- | --- | --- | --- | --- |
+| 01, 03, 04, 05, 06 | file | A file-level rule of DOC-18 §1.2 (type, duplicate column, empty, too many rows, unknown column) | fail / 400 / warning | `import_file_type`, `import_duplicate_column`, `import_empty`, `too_many_rows`, `import_unknown_column` |
+| 62 | file | No column resolves to `unit_code`, `fee_month` or `item_name` (*DR-317: was `import_no_header`*) | fail | `import_missing_column` |
+| 63 | file | Neither `unit_price` nor `amount` has a column | fail | `import_no_price` |
+| 64 | row | Unit code is 1–20 characters of `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$` | error | `unit_code_invalid` |
+| 65, 66 | row | `fee_month` parses (`MM/YYYY`, `YYYY-MM`, a date cell, an Excel serial) and equals the batch's fee month | error | `fee_month_invalid`, `fee_month_mismatch` |
+| 67 | row | `item_name` 1–120 characters after trimming; `item_name_en` at most 120 | error | `item_name_invalid` |
+| 68 | row | `kind` is `fee` or `adjustment` (blank = `fee`) | error | `kind_invalid` |
+| 69 | row | `quantity` ≥ 0 with at most 3 decimals (`.` or `,` as the mark), at most 999,999,999.999 | error | `quantity_invalid` |
+| 70 | row | `unit_price` a whole number ≥ 0, at most 9,999,999,999 | error | `unit_price_invalid` |
+| 71 | row | Fee row: `amount` a whole number > 0. Adjustment row: whole number ≠ 0. Both at most 99,999,999,999 in absolute value (*DR-317*) | error | `amount_invalid` |
+| 72 | row | Both given: `amount` equals the half-up product (below); a mismatch is an error and **never silently recomputed** (FR-01.5) | error | `amount_mismatch` |
+| — | row | Only `unit_price` given (fee): the amount is computed; only `amount` given: quantity 1 and `unit_price` = `amount` for a fee; an adjustment takes `quantity` 1 and `unit_price` 0 | — | — |
+| 73 | row | An adjustment row has a non-blank `note` of at most 500 characters | error | `adjustment_note_required` |
+| 74 | row | A `note` longer than 500 characters | error | `note_too_long` |
+| 75 | set | The same unit and item name twice in one file (compared by the folded key) | error | `charge_item_duplicate` |
+| 76 | set | The sum of the unit's lines is above zero; a unit whose total is ≤ 0 loses all its rows | error | `charge_total_zero` |
+| 77 | db | The unit exists in the building (`ResidencyApi.findUnitsByCodes`) | error | `unit_not_found` |
+| 78 | db | The unit has an active owner: a charge needs someone to notify | error | `unit_without_owner` |
 
 **The half-up rule** (DR-11, FR-01.5): `amount = (quantity_milli × unit_price + 500) / 1000` with integer division, quantity held as integer thousandths. Run on 2026-10-26 (§9.1) against the formula and `ck_charge_line_amount`:
 
@@ -413,10 +413,10 @@ Codes and their wording are DOC-42 §5; the status here is the one the use case 
 | `charge_not_voidable` | 409 | Void of a `paid` charge or one with a live allocation; details `{ status }` | §3.9 |
 | `reason_too_short`, `reason_too_long` | 422 | A recall or void reason outside 5…500 | §3.5, §3.9 |
 | `import_expired`, `import_stale`, `import_not_ready` | 409 | The commit of an old, changed or failed job | §4.5 |
-| `import_no_price` (**new**), the row codes of §4.2 | job `failed` / row issues | The file or a row is wrong | §4.2 |
+| `import_missing_column` and `import_no_price` (**new**), the row codes of §4.2 | job `failed` / row issues | The file or a row is wrong | §4.2 |
 | `too_many_rows` | 400 | More than 5,000 rows; no job is stored | §4.2 |
 
-`import_no_price` and the row codes of §4.2 are not HTTP errors: they are `issues` of the preview (or the job's `failed` result). DOC-42 §5 lists the HTTP codes; the issue codes belong to DOC-18 §2 (P1-27), which also holds their texts. The only code here that DOC-42 lacks is `import_no_price`, a file-level `fail` rule that is listed in DOC-18 §2 with the others.
+`import_missing_column`, `import_no_price` and the row codes of §4.2 are not HTTP errors: they are `issues` of the preview (or the job's `failed` result). DOC-42 §5 lists the HTTP codes; the issue codes and their texts are DOC-18 §2.2 (P1-27). The two codes here that DOC-42 lacks are `import_missing_column` and `import_no_price`, file-level `fail` rules listed in DOC-18 §2.2 with the others.
 
 ## 9. Required tests
 
@@ -533,4 +533,4 @@ Both are recorded in the decision register (section C, after DR-245) as proposed
 
 ## Open questions
 
-None. DR-265 and DR-266 are approved by the Owner (2026-10-26). The document stays **Draft** until DOC-18 §2 (P1-27) gives the row codes of §4.2 their `DQ-` numbers, DOC-51 numbers E-170…E-172 and the sample owed for E-95, E-96 and E-100, and the P2 tasks have run the tests of §9.
+None. DR-265 and DR-266 are approved by the Owner (2026-10-26). The row codes of §4.2 have their `DQ-` numbers (DOC-18 §2, P1-27, DR-317). The document stays **Draft** until DOC-51 numbers E-170…E-172 and the sample owed for E-95, E-96 and E-100, and the P2 tasks have run the tests of §9.
