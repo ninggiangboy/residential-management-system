@@ -1,7 +1,7 @@
 # ADR-0007: Take online payments through a gateway port with one payOS payment link per intent
 
 - Status: Proposed
-- Date: 2026-10-19 · Related: DR-25, DR-26, DR-27, DR-28, DR-30, DR-31, DR-32, DR-84, FR-07…10, NFR-01, NFR-02, EXP-01, EXP-02
+- Date: 2026-10-19 · Extended by ADR-0029 (2026-11-01: Stripe is the first driver; the port gains presentations) · Related: DR-25, DR-26, DR-27, DR-28, DR-30, DR-31, DR-32, DR-84, FR-07…10, NFR-01, NFR-02, EXP-01, EXP-02
 
 ## Context
 

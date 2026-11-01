@@ -1,6 +1,6 @@
 # Resident app: sign-in and home
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-20 · DOC-57
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-325: the "Thanh toán" tile and the fee card button are P2, not P3) · 2026-10-20 · DOC-57
 > Depends on: original SDD §7.3, §7.4, §18, [DR](../../00-decision-register.md) (DR-37, 38, 40, 41…47, 59, 60, 69…72, 74, 128), [DOC-56](README.md) (convention, notes N1…N12), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, [DOC-54](../design-system.md) (components), [DOC-26](../../06-design/identity-and-sessions.md) §5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-35](../../06-design/audit-privacy-and-terms.md) §9, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-09, E-10, E-13, E-15…E-17, E-22), [DOC-42](../../06-design/error-handling.md) §5
 > Main readers: P1-11 (OTP), P1-17 (resident app shell, Maestro), P1-09 (catalog keys), the writers of DOC-58…60 and DOC-68, whoever builds a home card in P2…P5
 
@@ -569,7 +569,7 @@ The card matrix. A card exists when its **capability** is held and its **phase**
 | Bell with unread count to `Inbox` | `IconButton` + `Badge` | `personal_notifications` | P4 | E-78 |
 | Unit switcher (opens `Unit-Pick` as a sheet; not tappable with one unit) | `UnitSwitcher` | any | P1 | E-13, E-15 |
 | Fee card | `BillSlip` | `view_fees` | P2 | E-80 |
-| Tile "Thanh toán" (owner, family, tenant with `can_pay`) or "Phí của căn" (tenant without `can_pay`) | `ServiceTile` | `pay`, else `view_fees` | P3, else P2 | local |
+| Tile "Thanh toán" (owner, family, tenant with `can_pay`) or "Phí của căn" (tenant without `can_pay`) | `ServiceTile` | `pay`, else `view_fees` | P2 (*revised 2026-11-01, DR-325: was P3 for "Thanh toán"*) | local |
 | Tile "Tạo yêu cầu" | `ServiceTile` | `tickets` | P4 | local |
 | Tile "Tài liệu" | `ServiceTile` | `library` | P5 | local |
 | Tile "Bản tin" with a badge | `ServiceTile` | `broadcast_notices` | P4 | E-143 |
@@ -606,7 +606,7 @@ Query keys start with `['unit', unitId, …]` (DOC-55 §7.2); `staleTime` 30 s; 
 | --- | --- | --- | --- |
 | Tap the unit switcher | none | `Unit-Pick` sheet; selecting runs `select()` | n/a |
 | Tap the bell, the avatar, a tile, a card | none | Navigates to the route of DOC-53 §5.1 | The target's capability is checked again by the server |
-| Tap the fee card button ("Thanh toán N đợt") | none (opens `Pay-Select` with the charge ids, DOC-58) | P3 | n/a |
+| Tap the fee card button ("Thanh toán N đợt") | none (opens `Pay-Select` with the charge ids, DOC-58) | P2 (*DR-325, was P3*) | n/a |
 | First home after sign-in: push explanation | E-22 `POST /me/devices` after the OS permission | Token registered, id stored in `rms.device` | Permission denied: nothing is sent; the toggle in `Account` offers it again |
 | Pull to refresh | the reads above | Updated cards | Error toast `error.<code>`, old data kept |
 
@@ -784,7 +784,7 @@ Other keys: `Main`.
 
 | ID | Given / When / Then | Level |
 | --- | --- | --- |
-| UIRA-49 | **G** (P3 build) a tenant with `canPay` true **W** the home opens **T** the fee card has its pay button, the note shows, and "Thanh toán" is the first tile | maestro |
+| UIRA-49 | **G** (P2 build, *DR-325*) a tenant with `canPay` true **W** the home opens **T** the fee card has its pay button, the note shows, and "Thanh toán" is the first tile | maestro |
 | UIRA-50 | **G** the owner turns `canPay` off **W** the tenant brings the app to the foreground **T** the home becomes the no-pay variant without signing in again | maestro |
 
 ### 10. E2E cases
