@@ -495,7 +495,7 @@ Exported by the process that owns the pool (`api` or `worker`). The bulk job als
 
 ## 15. EXP-08
 
-### 15.1 Method (planned; DOC-97 holds the experiment)
+### 15.1 Method (planned; DOC-97 holds the experiment and its cases: 240 in `vi`, `en` and `both`, 5,000 in `both` cold and warm, DR-320)
 
 | | |
 | --- | --- |
