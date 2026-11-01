@@ -908,6 +908,7 @@ CREATE TABLE finance.gateway_event (
   unit_id      uuid,
   outcome      text        NOT NULL,
   payment_id   uuid,                                            -- set when outcome = 'posted'
+  related_payment_id uuid,                                      -- DR-327: the payment a 'refunded' or 'disputed' row concerns; read-only, not an allocation
   reviewed_by  uuid,
   reviewed_at  timestamptz,
   review_note  text,
@@ -915,12 +916,14 @@ CREATE TABLE finance.gateway_event (
   CONSTRAINT pk_gateway_event PRIMARY KEY (id),
   CONSTRAINT fk_gateway_event_intent  FOREIGN KEY (intent_id)  REFERENCES finance.payment_intent (id),
   CONSTRAINT fk_gateway_event_payment FOREIGN KEY (payment_id) REFERENCES finance.payment (id),
+  CONSTRAINT fk_gateway_event_related_payment FOREIGN KEY (related_payment_id) REFERENCES finance.payment (id),
   CONSTRAINT uq_gateway_event_provider_reference UNIQUE (provider, reference),
   CONSTRAINT ck_gateway_event_provider CHECK (provider ~ '^[a-z][a-z0-9]{2,15}$'),
   CONSTRAINT ck_gateway_event_source   CHECK (source IN ('webhook', 'requery', 'statement')),
   CONSTRAINT ck_gateway_event_outcome  CHECK (outcome IN ('pending', 'posted', 'amount_short', 'amount_over',
                                               'duplicate_transfer', 'charge_already_paid', 'charge_recalled', 'unknown_order',
                                               'refunded', 'disputed')),   -- DR-326, DR-327: written for an event after posting; they change no ledger row
+  CONSTRAINT ck_gateway_event_related  CHECK (related_payment_id IS NULL OR outcome IN ('refunded', 'disputed')),
   CONSTRAINT ck_gateway_event_amount   CHECK (amount > 0),
   CONSTRAINT ck_gateway_event_payload  CHECK (jsonb_typeof(payload) = 'object'),
   CONSTRAINT ck_gateway_event_posted   CHECK ((outcome = 'posted') = (payment_id IS NOT NULL)),

@@ -37,4 +37,4 @@ Option **A**, behind the port of ADR-0007 generalised so that the shape of the p
 - A temporary provider means a later migration of the gateway configuration and of any saved cards (they cannot move between providers; residents enter a card again).
 - **Availability.** DOC-11 recorded that Stripe is not available for this market, and a Stripe account for a Vietnamese merchant is not something this design assumes. Stripe is therefore the driver of the **sandbox, staging and the demo**; whether it can take real money for this building, with which entity and fees, is the Owner's to settle before go-live, and if it cannot, the driver that replaces it (VNPay, VietQR) is the next piece of work (DOC-103 lists it).
 - A redirect leaves the app: the return is a deep link, never trusted, and the app polls our intent status.
-- Refunds and disputes happen at Stripe, outside the ledger: DR-327 (proposed) turns them into review rows.
+- Refunds and disputes happen at Stripe, outside the ledger: DR-327 turns them into log rows attached to the payment, for cross-checking; the ledger is not changed.

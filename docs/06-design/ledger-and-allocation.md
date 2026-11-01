@@ -399,7 +399,7 @@ The planner used `ix_charge_building_batch` (a bitmap scan over `building_id` an
 
 ## 9. The money log
 
-Money that is not posted is a row of `gateway_event` (outcome) or `statement_line` (match status) and nothing else. There is **no** anomaly table, no credit and no link from a log row to any charge, period or payment (DR-84, DR-16).
+Money that is not posted is a row of `gateway_event` (outcome) or `statement_line` (match status) and nothing else. *Exception (DR-327):* a `refunded` or `disputed` row, written for an event after posting, carries a read-only `related_payment_id` so that a Manager can cross-check it against the payment, its receipts and its charges (§9.6). There is **no** anomaly table, no credit and no link from a log row to any charge, period or payment (DR-84, DR-16).
 
 ### 9.1 What is in it
 
@@ -459,6 +459,10 @@ The `outcome` and `unit` filters are added inside each half, so each half uses i
 ### 9.5 Clearing a debt is another action
 
 A wrong, short, over or duplicate transfer is refunded **outside the system**. To clear the debt, the resident pays the exact amount (a posted payment) or the Manager records a manual payment for whole charges (§5). The system never matches a log row to a charge, never pre-fills a payment, an adjustment line or a void from it (DR-84 item 5, DR-19).
+
+### 9.6 After posting: a refund or a dispute (DR-327)
+
+A provider can return money or have it contested after the payment was posted (Stripe: `charge.refunded`, `charge.dispute.created`, DOC-24 §4.10). The webhook writes a `gateway_event` row `refunded` or `disputed` with `related_payment_id` set to the payment it concerns. It is **recorded and attached, nothing more**: the payment, its allocations, the charges, the receipts and the debt do not change, and an online payment is still not voidable (§6, DR-24). From the payment a Manager sees a tag and a link to the row; from the row the Manager reaches the payment, its receipts and, through them, the batches. The row is reviewed once with a note (§9.2) like any other. The nightly check has no query for it: the ledger is consistent with itself, and the cross-check is the Manager's.
 
 ## 10. Races
 

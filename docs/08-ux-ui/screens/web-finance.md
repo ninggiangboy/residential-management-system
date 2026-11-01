@@ -574,7 +574,7 @@ Do not copy (N4, N6, DR-84):
 | Header | breadcrumb "Tài chính / Công nợ / {unit}", h1, `Plate`, owner line, buttons "Nhắc nợ" (E-103 for this unit) and primary "Ghi nhận nộp" (disabled with no open charge) | |
 | Tiles | three `Card`s: outstanding (count of batches), nearest due date (days left), overdue amount | |
 | Open charges | `DataTable`: checkbox (opens the payment dialog with it ticked), batch `Plate`, name, due date, status `Tag` (overdue danger, due soon warning, else neutral), amount, a warning icon "Đang có thanh toán online từ {time}" when an intent holds it (FR-05.6), a `⋯` with "Hủy khoản này" (`W-Charge-Void`); total row | `loading`, `loaded`, `empty` |
-| Receipt history | `DataTable`: receipt number(s), batch(es), method, date, payer, amount, status (`Tag` `Hiệu lực` / `Đã hủy`), actions "Xem biên lai" (E-106 PDF) and "Hủy phiếu thu" (cash and bank transfer only) | `loading`, `loaded`, `empty` |
+| Receipt history | `DataTable`: receipt number(s), batch(es), method, date, payer, amount, status (`Tag` `Hiệu lực` / `Đã hủy`), a second `Tag` "Đã hoàn tiền" or "Bị khiếu nại" linking to the money-log row when the payment has one (DR-327), actions "Xem biên lai" (E-106 PDF) and "Hủy phiếu thu" (cash and bank transfer only) | `loading`, `loaded`, `empty` |
 | Payment dialog | `Dialog`: the open charges as checkable rows with amounts, the computed sum (read-only, `suffix` đ), "Hình thức" (`RadioGroup`: Tiền mặt, Chuyển khoản), "Người nộp" (required, default the owner), "Ngày nộp" (`DateField`, not after today, not before today − 90 days unless Admin), "Số tham chiếu ngân hàng" (only for transfer), "Ghi chú", the dry-run summary, buttons | `idle`, `planning`, `saving`, `conflict` |
 | Void-payment dialog | reason `Textarea` (5 to 500), the list of charges that become open again and of receipts that become void | |
 
@@ -582,7 +582,7 @@ Do not copy (N4, N6, DR-84):
 
 | Read | Endpoint | Key | Notes |
 | --- | --- | --- | --- |
-| Debt of the unit | E-102 `GET /staff/units/{id}/debt` | `['staff','debt',unitId]` | `unit {id,code,floor,areaM2}`, `owner {name, phone}`, `summary {outstanding, openCharges, nearestDue, overdueAmount}`, `openCharges[]` (`chargeId`, `batch {code,name,feeMonth}`, `amount`, `dueDate`, `daysPastDue`, `version`, `activeIntent {since}`), and `payments[]` (first 20: `paymentId`, `source`, `amount`, `receivedAt`, `payerName`, `status`, `receipts[] {id, number, chargeId, status}`) with `nextCursor` (DR-324) |
+| Debt of the unit | E-102 `GET /staff/units/{id}/debt` | `['staff','debt',unitId]` | `unit {id,code,floor,areaM2}`, `owner {name, phone}`, `summary {outstanding, openCharges, nearestDue, overdueAmount}`, `openCharges[]` (`chargeId`, `batch {code,name,feeMonth}`, `amount`, `dueDate`, `daysPastDue`, `version`, `activeIntent {since}`), and `payments[]` (first 20: `paymentId`, `source`, `amount`, `receivedAt`, `payerName`, `status`, `moneyLogFlags[] {rowId, outcome}` for `refunded` and `disputed`, `receipts[] {id, number, chargeId, status}`) with `nextCursor` (DR-324) |
 | More payments | E-102 with `paymentsCursor` | the same key, appended | |
 
 ### 6. Interactions
@@ -593,7 +593,7 @@ Do not copy (N4, N6, DR-84):
 | Any change in the dialog | E-104 with `dryRun: true` (debounced 300 ms) | the plan: the sum, the number of receipts, warnings (`active_intent` per charge with its time) | 409 `charge_changed` → the list refetches and the dialog says "Có khoản phí đã được thanh toán hoặc hủy. Danh sách đã được cập nhật." |
 | "Ghi nhận và tạo phiếu thu" | E-104 `POST /staff/payments` `{unitId, chargeIds, method, payerName, receivedOn, bankReference?, note?}` with `Idempotency-Key` (one per dialog open) | 201: a success `Banner` with the receipt numbers (`BL-…`) and links "Xem biên lai"; the debt and the receipts refetch; a replay (200 `Idempotent-Replayed`) shows the same banner | 409 `charge_changed` as above; 400 `received_on_future`, `received_on_too_old`, `too_many_charges`; 422 `allocation_mismatch` (never sent by this form); 422 `idempotency_key_reuse` → the dialog restarts with a new key |
 | "Xem biên lai" | E-106 `GET /staff/receipts/{id}/pdf` | the PDF opens in a new tab; a void receipt is watermarked | 404 |
-| "Hủy phiếu thu" | dialog; E-105 `POST /staff/payments/{id}/void {reason}` | the payment turns `Đã hủy`, its charges are open again in the table above, a toast "Đã hủy phiếu thu. {n} khoản phí được mở lại." | 409 `payment_not_voidable` (an online payment: "Thanh toán online không hủy được trong hệ thống. Hoàn tiền ở trang quản trị của cổng thanh toán."; if DR-327 is decided, an online payment with a full `refunded` row is voidable); 409 `invalid_transition` (already void); 422 `reason_too_short` |
+| "Hủy phiếu thu" | dialog; E-105 `POST /staff/payments/{id}/void {reason}` | the payment turns `Đã hủy`, its charges are open again in the table above, a toast "Đã hủy phiếu thu. {n} khoản phí được mở lại." | 409 `payment_not_voidable` (an online payment: "Thanh toán online không hủy được trong hệ thống. Hoàn tiền ở trang quản trị của cổng thanh toán.", even when the payment has a `refunded` or `disputed` row: that row is only a cross-check, DR-327); 409 `invalid_transition` (already void); 422 `reason_too_short` |
 | "Hủy khoản này" | `W-Charge-Void` | | |
 | "Nhắc nợ" | E-103 `POST /staff/debts/reminders {unitIds:[id]}` with `Idempotency-Key` | toast "Đã gửi nhắc nợ" or "Hôm nay đã nhắc căn này rồi" (`alreadyRemindedToday`) | 429 `rate_limited` → "Bạn gửi nhắc nợ quá nhiều lần. Thử lại sau."; `noDebt` → "Căn này không còn nợ." |
 
@@ -1256,7 +1256,7 @@ Do not copy: no artboard. The table never offers a button that links a row to a 
 | --- | --- |
 | Filters | `SelectField` outcome, unit `SearchField`, date range, a `RadioGroup` state |
 | Table | `DataTable` of the rows of E-108: time, outcome `Tag`, unit, amount, reference (a copyable small line), status (open / reviewed by whom) |
-| Drawer | the facts of the row, the payload excerpt, the posted payment and receipt links when present, the review note, and the review action |
+| Drawer | the facts of the row, the payload excerpt, the posted payment and receipt links when present, **for a `refunded` or `disputed` row the related payment (code, amount, date), its receipts and the batches they paid, each a link to `W-Fee-Record`** (DR-327), the review note, and the review action |
 | Review dialog | `Textarea` note (5 to 1,000, required), button "Đánh dấu đã kiểm tra" |
 
 **Outcomes shown** (`gateway_event.outcome`, DOC-22 §9.1, DR-327): `duplicate_transfer`, `charge_already_paid`, `charge_recalled`, `unknown_order`, and for a bank-transfer driver `amount_short`, `amount_over`; for Stripe also `refunded` and `disputed`. The statement lines (`unmatched`, `statement_only`) join in P3. Each outcome has one plain sentence under its `Tag` that says what the Manager does (below).
@@ -1265,7 +1265,7 @@ Do not copy: no artboard. The table never offers a button that links a row to a 
 
 | Read | Endpoint | Key | Notes |
 | --- | --- | --- | --- |
-| The log | E-108 `GET /staff/money-log?outcome&unit&from&to&state&limit=25&cursor` | `['staff','money-log',{…},cursor]` | keyset `(at, id)`; each row `{kind, id, at, outcome, amount, unitId, unitCode, reference, intentId, paymentId, reviewedAt, reviewedBy}`; the first page adds `openCount` |
+| The log | E-108 `GET /staff/money-log?outcome&unit&from&to&state&limit=25&cursor` | `['staff','money-log',{…},cursor]` | keyset `(at, id)`; each row `{kind, id, at, outcome, amount, unitId, unitCode, reference, intentId, paymentId, relatedPayment {id, amount, receivedAt, receipts[] {id, number, batchCode}}, reviewedAt, reviewedBy}`; the first page adds `openCount` |
 
 ### 6. Interactions
 
@@ -1301,8 +1301,9 @@ Do not copy: no artboard. The table never offers a button that links a row to a 
 | `web.money-log.hint.charge_already_paid` | Khoản phí đã được thanh toán bằng cách khác trước khi tiền về. Hoàn tiền trong trang quản trị của cổng. | The fee was paid another way before this arrived. Refund it in the gateway's dashboard. |
 | `web.money-log.hint.charge_recalled` | Đợt phí đã thu hồi khi người trả đang thanh toán. Hoàn tiền trong trang quản trị của cổng. | The batch was recalled while the payer was paying. Refund it in the gateway's dashboard. |
 | `web.money-log.hint.unknown_order` | Không tìm thấy lượt thanh toán trong hệ thống. Kiểm tra trong trang quản trị của cổng. | No payment of ours matches this. Check in the gateway's dashboard. |
-| `web.money-log.hint.refunded` | Tiền đã được hoàn ở cổng. Phiếu thu và công nợ chưa thay đổi; hãy xử lý theo quy định của tòa nhà. | The money was refunded at the gateway. The receipt and the debt have not changed; handle it as the building's rules say. |
-| `web.money-log.hint.disputed` | Người trả khiếu nại khoản này tại ngân hàng. Làm việc với cổng thanh toán. | The payer disputed this with their bank. Work it out with the gateway. |
+| `web.money-log.hint.refunded` | Tiền đã được hoàn ở cổng. Hệ thống chỉ ghi lại để đối chiếu với giao dịch và biên lai bên dưới; phiếu thu và công nợ không thay đổi. | The money was refunded at the gateway. The system only records it so you can cross-check it against the payment and receipts below; the receipt and the debt do not change. |
+| `web.money-log.hint.disputed` | Người trả khiếu nại khoản này tại ngân hàng. Hệ thống chỉ ghi lại để đối chiếu; làm việc với cổng thanh toán. | The payer disputed this with their bank. The system only records it for cross-checking; work it out with the gateway. |
+| `web.fee-record.receipts.flag.refunded` / `.disputed` | Đã hoàn tiền / Bị khiếu nại | Refunded / Disputed |
 | `web.money-log.review` | Đánh dấu đã kiểm tra | Mark as checked |
 | `web.money-log.review.note` | Ghi chú (ít nhất 5 ký tự) | Note (at least 5 characters) |
 | `web.money-log.reviewed.by` | Đã kiểm tra bởi {name} lúc {time} | Checked by {name} at {time} |
@@ -1315,7 +1316,7 @@ Do not copy: no artboard. The table never offers a button that links a row to a 
 | UIWF-73 | **G** a confirmation of a charge paid in cash **W** the log opens **T** a row "Khoản đã được thanh toán" is open with the hint, and the charge, the payments and the debt are unchanged | api, web-e2e |
 | UIWF-74 | **G** an open row **W** it is reviewed with a note **T** E-109 is sent once, the row is reviewed with the Manager's name, `openCount` falls by one, and the ledger tables are byte-identical before and after | api, web-e2e |
 | UIWF-75 | **G** two Managers review the same row **W** both press **T** the second gets 409 `money_log_already_reviewed` and the drawer shows the first reviewer | api, web-e2e |
-| UIWF-76 | **G** a `charge.refunded` event for a posted payment **W** it is delivered **T** a row "Đã hoàn tiền" is open and the receipt stays valid (DR-327) | api, web-e2e |
+| UIWF-76 | **G** a `charge.refunded` event for a posted payment **W** it is delivered **T** a row "Đã hoàn tiền" is open and linked to that payment, the payment shows the tag "Đã hoàn tiền" in `W-Fee-Record` with a link back to the row, and the charge, the receipt and the debt are unchanged (DR-327) | api, web-e2e |
 | UIWF-77 | **G** a row **W** the drawer is inspected **T** it has no control to link the row to a charge or to create a payment, an adjustment or a void | web-e2e |
 | UIWF-78 | **G** a resident token **W** E-108 is called **T** 403 (EXP-10 cell) | api |
 
@@ -1446,4 +1447,4 @@ Recorded as DR-324 (decided, Claude delegated by the Owner; none changes a money
 
 ## Open questions
 
-None. DR-327 (proposed) decides whether a Manager may void a refunded online payment; until then `W-Fee-Record` follows DR-24. `W-Statement` and the P6 screens raise theirs when they are written.
+None. `W-Statement` and the P6 screens raise theirs when they are written.
