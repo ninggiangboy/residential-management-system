@@ -639,7 +639,7 @@ Goal: money can be charged, recorded, voided and reconciled in the ledger, and r
 
 | ID | Task | Output and acceptance | Depends on | Documents |
 | --- | --- | --- | --- | --- |
-| P2-00 | Doc gate: DOC-08, 15, 17 (notification tables), 18 (§2), 21, 22, 23, 24, 31 (core), 34, 44, 45, 52 (SSE, webhook), 58 (fees, pay), 66 (fees, debts, transactions, money log), 67 (gateway), 89, 90, 91, 92, 93, 97, 100, 75; ADR-0005, 0006, 0007, 0008, 0024, 0029 *(DR-325 added DOC-24, 45, 90, 91, 67 (gateway) and the payment parts of DOC-52, 58, 66, ADR-0007, ADR-0029)* | Approved | M1 | — |
+| P2-00 | Doc gate: DOC-08, 15, 17 (notification tables), 18 (§2), 21, 22, 23, 24, 31 (core), 34, 40 (payment alerts), 44, 45, 52 (SSE, webhook), 58 (fees, pay), 66 (fees, debts, transactions, money log), 67 (gateway), 74, 76, 77, 85, 87, 89, 90, 91, 92, 93, 97, 100, 75; ADR-0005, 0006, 0007, 0008, 0024, 0029 *(DR-325 added DOC-24, 45, 90, 91, 67 (gateway) and the payment parts of DOC-52, 58, 66, ADR-0007, ADR-0029)* | Approved | M1 | — |
 | P2-01 | Finance schema and constraints | Migrations for every table of DR-13, triggers, `order_code_seq`; one test per CHECK/UNIQUE of original SDD §16.2 (≥ 16) rejects its violating insert; trigger rejects an amount update on a non-draft charge | M1 | DOC-15 |
 | P2-02 | Gapless counters and codes | `GaplessCounter`; `BL-`, `PH-`, `TT-` codes; tests `LG-`: rollback leaves no gap; 100 concurrent receipts → unique and gapless; month rollover in building time at 23:59/00:01 | P2-01 | DOC-14, DOC-15, ADR-0014 |
 | P2-03 | Allocation use cases (all-or-nothing) | Race tests `LG-`: 500 charges, manual full payment vs online full payment at once → exactly one wins, the other is a log row `charge_already_paid`, 0 charges with two live allocations; a payment covering charges A,B racing one covering B,A → no deadlock; ids locked in ascending order; 2…8 racing sessions at READ COMMITTED, 10,000 attempts: exactly one of several full payments of a charge wins, A,B vs B,A does not deadlock, the receipt counter row does not serialize more than it should (formerly spike S-04) | P2-01, P2-02 | DOC-22, ADR-0006 |
@@ -678,7 +678,7 @@ Goal: a resident pays batches with VietQR and the system settles exactly once, e
 
 | ID | Task | Output and acceptance | Depends on | Documents |
 | --- | --- | --- | --- | --- |
-| P3-00 | Doc gate: DOC-18 (§3), 25, 40 (alerts), 66 (statement), 74, 76…80, 82, 85, 87 *(DR-325 moved DOC-24, 45, 52 (webhook), 58 (pay), 66 (transactions, money log), 67 (gateway), 90, 91 and ADR-0007 to P2-00)* | Approved | M2 | — |
+| P3-00 | Doc gate: DOC-18 (§3), 25, 40 (other alerts), 66 (statement), 78, 79, 80, 82 *(DR-325 moved DOC-74, 76, 77, 85, 87 and the payment alerts of DOC-40 for P2-28, and DOC-24, 45, 52 (webhook), 58 (pay), 66 (transactions, money log), 67 (gateway), 90, 91 and ADR-0007 to P2-00)* | Approved | M2 | — |
 | P3-01 | ~~payOS adapter, fake driver, simulator~~ — **moved to P2-21 (DR-325)**: online payment is built in P2 | — | — | — |
 | P3-02 | ~~Intent creation~~ — **moved to P2-22 (DR-325)**: online payment is built in P2 | — | — | — |
 | P3-03 | ~~Webhook endpoint hardening~~ — **moved to P2-23 (DR-325)**: online payment is built in P2 | — | — | — |
