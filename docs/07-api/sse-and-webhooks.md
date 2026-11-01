@@ -37,7 +37,7 @@ It does not hold: the outbox events that feed the stream (DOC-09 §6), the inbox
 | `@mod/realtime`: the hub (`LISTEN`), the route E-75, the generic handler, `realtime.events`, the job `realtime_purge` | `realtime` | **P2-12** | DR-76 item 4, DR-287 |
 | The six `integrations/realtime.ts` mappings | each producer (`notification`, `finance`, `identity`, `tickets`, `reporting`) | with the producer's event: `identity` and `notification` in P2-12, `finance` (`money_unposted`) in P2, `tickets` in P4, `reporting` in P6 | DOC-09 §5.4 |
 | The web client: the stream in the `_app` layout, the bell, the cache map, `session.revoked` | `apps/cms-web` | **P4** | DR-264 item 5, DR-287 |
-| The payment webhook E-117 | `finance` with the driver of DOC-24 | P3-03 | DR-25, DR-32 |
+| The payment webhook E-117 | `finance` with the driver of DOC-24 | **P2-23** (*DR-325; was P3-03*) | DR-25, DR-32, DR-326 |
 | Push to the apps | `notification` | P2-12 | DR-52, DOC-31 |
 
 DR-76 builds "the SSE module for the web CMS inbox in P2"; DR-264 (2026-10-25) leaves "the stream, the bell and `session.revoked`" of the web for P4. They do not conflict once the server and the client are told apart: the server side is built and tested over `app.handle` in P2-12 (test-strategy row `realtime`), and the web opens the stream in P4 (DR-287, proposed for the Owner). Until P4 the web shows a change at the next focus or navigation and a revoked session ends at the next refresh (DOC-55 §13); FL-07's arrow "SSE `money_log.opened`" (DOC-44) is live from P4.
@@ -422,17 +422,63 @@ On `ready` with `resumed: false` the web invalidates every key of its event map;
 
 **CORS.** The web CMS is cross-origin (DOC-50 §5.3). `Last-Event-ID` is not a CORS-safelisted header, so it must be in `Access-Control-Allow-Headers`, or the preflight of every reconnect fails. DR-288 adds it to DOC-50 §5.3 and to `ALLOWED_HEADERS` in `apps/api/src/app.ts` (SE-20).
 
-## 12. The payment webhook (P3, owed)
+## 12. The payment webhook (E-117, P2)
 
-Owed to P3-00 with DOC-24 (DR-25: no gateway sandbox yet). This section will hold, for E-117 `POST /payments/webhooks/{provider}/{gatewayConfigId}`:
+*Revised 2026-11-01 (DR-325, DR-326):* the first provider is Stripe and the webhook is built in P2 with the rest of the online payment (P2-23). The route is provider-neutral; the driver of the path decides the signature and the events (DOC-24 §4.4, §7). Nothing here asserts a Stripe behaviour that DOC-24 §4.12 lists as unverified; the sample below is **computed by this document's author, not recorded from Stripe** (see "Signed sample").
 
-- the request: headers, body and signature of the chosen provider, with **signed samples** that a test can verify (payOS: from its documentation and sandbox, DOC-24);
-- the response codes and when the gateway retries: 200 for processed and duplicate, 400, 401 `invalid_signature`, 5xx only for a transient failure (DR-32, DOC-39 §8 rule 6, DOC-42 §6);
-- the handling of the provider's test payload (the confirm call when the URL is registered, DR-32);
-- what is stored on a rejection (`finance.webhook_rejection`, DOC-15) and the limits (`WEBHOOK_PER_MINUTE_PER_IP`, `WEBHOOK_MAX_BODY_BYTES`, `WEBHOOK_KNOWN_IPS`, DOC-41);
-- the path from the route to `settle()`, which is DOC-23 §6.
+### 12.1 The request
 
-Nothing in this document asserts a payOS behaviour; DOC-23 §10.2 lists what is assumed and unverified.
+`POST /api/v1/payments/webhooks/{provider}/{gatewayConfigId}` (E-117), audience `webhook`, no bearer token, no `X-App-*` headers, no `Idempotency-Key`.
+
+| Part | Rule |
+| --- | --- |
+| `provider` | A word the driver registry knows (`stripe`, `fake`); another word is 404 and no row |
+| `gatewayConfigId` | An active `gateway_config` of that provider; another or unknown id is 404 and no row (DR-32 step 1: the existence check comes before any write) |
+| Body | The raw bytes, at most `WEBHOOK_MAX_BODY_BYTES` (256 KB, DOC-41); a larger body is 413 and one `webhook_rejection` |
+| Stripe header | `Stripe-Signature: t=<unix seconds>,v1=<hex>` (more than one `v1` is allowed; any matching one verifies) |
+| Content type | `application/json`; the route does not parse the body before the signature is checked |
+
+Per-IP limit `WEBHOOK_PER_MINUTE_PER_IP`; an optional allow-list `WEBHOOK_KNOWN_IPS` is a warning counter only (`webhook_unknown_ip_total`), never a refusal (DR-32).
+
+### 12.2 The signature
+
+Stripe's scheme (DOC-24 §4.4): the signed payload is `<t>.<raw body>`; the signature is HMAC-SHA256 of it with the endpoint's signing secret (`whsec_…`, the whole string) as the key, in lower-case hex; the timestamp must be within 5 minutes of the server's clock. The driver calls `StripeClient.webhooks.constructEvent` with the raw bytes; a failure of the signature, the tolerance or the JSON is `SignatureError`.
+
+**Signed sample** for the unit tests `PX-01` (a deterministic vector for the *algorithm above*, secret `whsec_test_0123456789abcdef0123456789abcdef`; the vectors recorded from a Stripe sandbox replace it in P2-21):
+
+```http
+POST /api/v1/payments/webhooks/stripe/0192f3c4-9b00-7000-8000-000000000f02
+Content-Type: application/json
+Stripe-Signature: t=1792543801,v1=0383945787be63ea08949e60dbb7db236477f672983239a0b03fbebaee05621e
+
+{"id":"evt_test_0001","object":"event","type":"checkout.session.completed","created":1792543800,"data":{"object":{"id":"cs_test_a1B2","object":"checkout.session","client_reference_id":"1000153","amount_total":2838000,"currency":"vnd","payment_status":"paid","status":"complete","payment_intent":"pi_3Test0001","metadata":{"intentId":"0192f3c4-8a10-7000-8000-000000000a01","buildingId":"0192f3c4-0000-7000-8000-000000000001","code":"TT-261019-0001"}}}}
+```
+
+The sample's `client_reference_id` `1000153` is the order code of DOC-23 §6.3 and the amount is its 2,838,000 đ.
+
+### 12.3 The answers
+
+| Case | Status | Body | What is written | Provider retries? |
+| --- | --- | --- | --- | --- |
+| Genuine, posted | 200 | `{ "received": true }` | the payment, after commit | no |
+| Genuine, `already_processed` | 200 | the same | nothing | no |
+| Genuine, a log row (`charge_already_paid`, `charge_recalled`, `duplicate_transfer`, `unknown_order`, …) | 200 | the same | the `gateway_event` row | no |
+| An event type the driver ignores | 200 | the same | nothing | no |
+| `foreign_building` (the order code is another building's) | 400 | `{ "error": { "code": "foreign_building" } }` | one `webhook_rejection` | no (4xx) |
+| Signature, tolerance or JSON invalid | 401 | `{ "error": { "code": "invalid_signature" } }` | one `webhook_rejection` (reason, IP, hash of the body, no body) | no |
+| Body too large | 413 | | one `webhook_rejection` | no |
+| Too many calls from one IP | 429 | | none (the counter) | yes, later |
+| A transient failure (database, after the retries of `settle()`) | 503 | | nothing committed | **yes** |
+
+A webhook is answered **after commit** (FR-08.6): the process killed between commit and answer leaves a payment and a provider retry that ends `already_processed`. More than three `webhook_rejection` rows in ten minutes raise the alert `WebhookSignatures` (DOC-40).
+
+### 12.4 The provider's test events
+
+Stripe's Dashboard and CLI can send test events of any type to an endpoint. They are verified like any event: an event whose type the driver does not handle is a 200 that writes nothing, and a `checkout.session.completed` whose `client_reference_id` matches no intent is `unknown_order` (DR-32). There is no special registration payload to recognise.
+
+### 12.5 From the route to `settle()`
+
+The route resolves the configuration, decrypts the secrets, calls the driver's `verifyWebhook`, and passes a `Confirmation` (or an `expired`, `refunded`, `disputed` signal) to the use case of DOC-23 §6 (or the expiry and log writers of DOC-23 §8 and DOC-24 §4.10). The event id is recorded in the inbox first (`stripe:<evt_…>`), so a repeated event is a 200 before any work.
 
 ## 13. Push to the apps (summary)
 

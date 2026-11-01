@@ -60,14 +60,14 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-42 | [Error handling](06-design/error-handling.md) | Approved |
 | DOC-43 | [Flows index](06-design/flows/README.md) | Approved |
 | DOC-44 | [Fees and payments (ledger level)](06-design/flows/fees-and-payments.md) (FL-01…09, FL-44; follows DOC-21, DOC-22, DOC-23) | Draft |
-| DOC-45 | Online payment (`06-design/flows/online-payment.md`) | Not written |
+| DOC-45 | [Online payment](06-design/flows/online-payment.md) (FL-10…14, FL-16; FL-15 is P3; Draft 2026-11-01) | Draft |
 | DOC-46 | [Identity and household](06-design/flows/identity-and-household.md) | Approved |
 | DOC-47 | Tickets (`06-design/flows/tickets.md`) | Not written |
 | DOC-48 | Notices, access, vehicles (`06-design/flows/notices-access-vehicles.md`) | Not written |
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Approved |
 | DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74, E-169 and E-180…E-182 specified, E-75…E-168 numbered) | Approved |
-| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE written, statements run on PostgreSQL 18.6; follows the proposed DR-287; webhook owed to P3) | Draft |
+| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE written, statements run on PostgreSQL 18.6; follows the proposed DR-287; webhook section written 2026-11-01, DR-325) | Draft |
 | DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Approved |
 | DOC-54 | [Design system](08-ux-ui/design-system.md) | Approved |
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |
@@ -105,8 +105,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-87 | RB 13: payos outage or credential change (`09-operations/runbooks/RB-13-payos-outage-or-credential-change.md`) | Not written |
 | DOC-88 | [Test strategy](10-testing/test-strategy.md) | Approved |
 | DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Draft |
-| DOC-90 | EXP 01: duplicate and late webhooks (`10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md`) | Not written |
-| DOC-91 | EXP 02: webhook vs requery (`10-testing/experiments/EXP-02-webhook-vs-requery.md`) | Not written |
+| DOC-90 | [EXP 01: duplicate and late webhooks](10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md) | Draft |
+| DOC-91 | [EXP 02: webhook vs requery](10-testing/experiments/EXP-02-webhook-vs-requery.md) | Draft |
 | DOC-92 | [EXP 03: online vs manual baseline](10-testing/experiments/EXP-03-online-vs-manual-baseline.md) | Draft |
 | DOC-93 | [EXP 04: recall vs payment](10-testing/experiments/EXP-04-recall-vs-payment.md) | Draft |
 | DOC-94 | EXP 05: qr revocation (`10-testing/experiments/EXP-05-qr-revocation.md`) | Not written |

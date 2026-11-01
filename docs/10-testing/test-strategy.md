@@ -563,7 +563,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
 | `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |
 | `XP-` | Experiment protocol (the harness library: percentiles, seeds, result files) | [DOC-89](experiments/README.md) | `XP-01…09` | Draft | P2-14 |
-| `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-03 (DOC-92), EXP-04 (DOC-93), EXP-08 (DOC-97), EXP-09 (DOC-98), EXP-10 (DOC-99), EXP-11 (DOC-100) | Draft | per EXP row of master plan §3.2 |
+| `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-01 (DOC-90), EXP-02 (DOC-91), EXP-03 (DOC-92), EXP-04 (DOC-93), EXP-08 (DOC-97), EXP-09 (DOC-98), EXP-10 (DOC-99), EXP-11 (DOC-100) | Draft | per EXP row of master plan §3.2 |
 
 Three notes. (1) The statement-test infix `S` is a numbering convention inside the prefix, not a prefix. (2) `DQ-` is the catalog of data-quality **rules** (DOC-18), not tests; its tests are `IM-`. (3) `RM-` also holds the residency side of the import commit (DOC-27 §17); the validator and the file rows are `IM-`.
 
