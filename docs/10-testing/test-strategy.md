@@ -68,7 +68,7 @@ flowchart TB
 | `identity` | ● `AU-` | ● SMS and mail senders (`AU-28`) | ● `AU-`, `IDM-` | ● `AU-23`, refresh, step-up | ● | ● `FI-` | ● OTP, staff login | EXP-09 |
 | `building` | ● `BD-` | ● S3 (`FS-`) | ● `BD-`, `FS-`, `OPM-` | ○ settings `version` | ● | ● settings, gateway, terms | — | — |
 | `residency` | ● `RM-` | — | ● `RM-`, `IM-` | ● owner transfer, invitation cap | ● (the policy table is matrix input) | ● units, import | ● unit switch | — |
-| `finance` | ● *`LG-`* | ● payOS adapter *`PX-`* | ● *`LG-`, `IN-`, `ST-`* | ● every conditional update | ● | ● *`FF-`, `FO-`* | ● fees, payment | EXP-01…04, 11 |
+| `finance` | ● *`LG-`* | ● gateway drivers *`PX-`* | ● *`LG-`, `IN-`, `ST-`* | ● every conditional update | ● | ● *`FF-`, `FO-`* | ● fees, payment | EXP-01…04, 11 |
 | `tickets` | ● *`TK-`* | — | ● *`TK-`* | ● assignment | ● internal notes | ● | ● | — |
 | `access` | ● *`QC-`* | — | ● *`QC-`* | ● credential version | ● | — | ● guard scan | EXP-05 |
 | `vehicles` | ● *`VH-`* | — | ● *`VH-`* | ○ review | ● | ● | ● | — |
@@ -513,7 +513,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | --- | --- | --- | --- | --- | --- |
 | `LG-` | Ledger, allocation, money log, batch lifecycle | [DOC-22](../06-design/ledger-and-allocation.md) owns `LG-01…60`; [DOC-21](../06-design/fee-batches-and-import.md) takes `LG-61…81` | `LG-01…81` | Draft (DOC-21, DOC-22) | P2-02, P2-03, P2-05, P2-07…P2-11 |
 | `IN-` | Payment intents and settlement | [DOC-23](../06-design/payment-intents-and-settlement.md) §16 | `IN-01…52` | Draft | P2-06, P3-02, P3-04 |
-| `PX-` | payOS gateway adapter | DOC-24 | not written | planned (P3) | P3 |
+| `PX-` | Payment gateway drivers (renamed from "payOS adapter", DR-326) | [DOC-24](../06-design/payment-gateway-drivers.md) | `PX-01…16` | Draft | P2 (P2-21) |
 | `ST-` | Bank-statement reconciliation | DOC-25 | not written | planned (P3) | P3-07 |
 | `AU-` | Identity and sessions | [DOC-26](../06-design/identity-and-sessions.md) §12 | `AU-01…55`; statement tests `AU-S01…S12` | Review | P1-10, P1-11 |
 | `RM-` | Residency and memberships | [DOC-27](../06-design/residency-and-memberships.md) §17 | `RM-01…62` | Review | P1-12, P4-10, P1-30 |
@@ -551,7 +551,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `DS-` | Design system (tokens, contrast, status table, motion and loading) | [DOC-54](../08-ux-ui/design-system.md) §14 | `DS-01…10` | Review | P1-09 |
 | `CL-` | Clients (fetcher, refresh, unit context, offline, push) | [DOC-55](../08-ux-ui/client-architecture.md) §18 | `CL-01…30` | Review | P1-16, P1-17 |
 | `UIRA-` | Screens: resident sign-in and home | [DOC-57](../08-ux-ui/screens/resident-signin-home.md) | `UIRA-01…55` | Review | P1-11, P1-17 |
-| `UIRF-` | Screens: resident fees and payment | [DOC-58](../08-ux-ui/screens/resident-fees-payment.md) | `UIRF-01…26` (the four P2 screens; the P3 payment screens continue from 27) | Draft | P2, P3 |
+| `UIRF-` | Screens: resident fees and payment | [DOC-58](../08-ux-ui/screens/resident-fees-payment.md) | `UIRF-01…50` (fees and payment, P2) | Draft | P2, P3 |
 | `UIRU-` | Screens: resident requests, unit, members, vehicles | DOC-59 | not written | planned (P4, P5) | P4, P5 |
 | `UIRQ-` | Screens: resident QR, notices, account | [DOC-60](../08-ux-ui/screens/resident-qr-notices-account.md) | `UIRQ-01…21` (account group; QR, notices P4, P5) | Review | P1-17 |
 | `UISM-` | Screens: staff app shared and Manager | [DOC-61](../08-ux-ui/screens/staff-shared-and-manager.md) | `UISM-01…18` (sign-in, account; Manager P4, P5) | Review | P1-17 |

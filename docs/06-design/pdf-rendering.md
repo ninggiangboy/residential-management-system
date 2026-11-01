@@ -1,6 +1,6 @@
 # PDF rendering
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-26: first version, DR-291…298) · DOC-34
+> Status: **Draft** · Updated: 2026-11-01 (DR-328: E-183, the resident fee-notice PDF) · 2026-10-28 (P1-26: first version, DR-291…298) · DOC-34
 > Depends on: original SDD §4.3, §5.6, §13, §14, [DR](../00-decision-register.md) (DR-06, 13, 17, 19, 40, 50, 54, 55, 56, 61, 71, 86, 115, 119, 120, 123, 180, 244, 245, 258), [DOC-03](../01-product/requirements.md) (FR-36, NFR-05), [DOC-04](../01-product/use-cases.md) (UC-01, UC-02, UC-03, UC-25), [DOC-09](../03-architecture/messaging-contracts.md) §4.3, §5, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §5, §7 (row 17), [DOC-12](../03-architecture/code-architecture.md) §4, [DOC-15](../05-data/finance-model.md) §5, §7.3, §10.2, [DOC-17](../05-data/operations-model.md) §1.1, §3.1, [DOC-21](fee-batches-and-import.md) §1, [DOC-22](ledger-and-allocation.md) §7, [DOC-36](building-configuration-and-demo.md) §4, §5, [DOC-37](files-and-uploads.md) §3, §4, §9, §10, [DOC-38](jobs-and-outbox-runtime.md) §3.2, §4, [DOC-40](observability.md) §4, [DOC-41](configuration-reference.md), [DOC-42](error-handling.md) §5, §7.2, [DOC-50](../07-api/api-guidelines.md) §12, [DOC-54](../08-ux-ui/design-system.md), [DOC-06](../02-glossary.md)
 > Main readers: P2-13 (PDF rendering), P2-16 (`W-Fee-Notice`, `W-Fee-Record`), P2-17 (receipt view and PDF in the resident app), P5-04 (library PDF), P6-02 (report PDF), EXP-08 (DOC-97), DOC-33, DOC-32, DOC-44, DOC-51, DOC-58, DOC-66
 
@@ -212,7 +212,7 @@ In `vi` or `en` mode every second line disappears and the amounts and dates foll
 | `published`, `closed` | `void` (one voided charge, DR-20) | 409 `invalid_transition` | skipped |
 | `recalled` | `void` | 409 `invalid_transition` | 409 `invalid_transition` |
 
-A notice prints what the unit owed at publish; it does not show whether the charge is paid. Residents read their fees in the app (`Fee-Detail`, DOC-58); there is no resident endpoint for a fee-notice PDF.
+A notice prints what the unit owed at publish; it does not show whether the charge is paid. Residents read their fees in the app (`Fee-Detail`, DOC-58) and may also download the notice: `GET /me/fees/{chargeId}/pdf` (E-183, DR-328) renders the notice of an `open` or `paid` charge of the member's unit, in the language the member picks, through the same cache key as the staff PDF; a `void` charge and a charge outside the member's history window are 404. *Revised 2026-11-01 (DR-328):* this sentence said there was no resident endpoint.
 
 ## 7. The receipt
 

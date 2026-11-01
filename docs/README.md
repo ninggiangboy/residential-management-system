@@ -39,7 +39,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes await DOC-18 §2) | Draft |
 | DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Draft |
 | DOC-23 | [Payment intents and settlement](06-design/payment-intents-and-settlement.md) (statements run on PostgreSQL 18.6; follows the proposed DR-27, 28, 30, 31, 280, 281, 283) | Draft |
-| DOC-24 | payOS gateway adapter (`06-design/payos-gateway-adapter.md`) | Not written |
+| DOC-24 | [Payment gateway port and drivers](06-design/payment-gateway-drivers.md) (Stripe first, fake, the checklist for a new driver; Draft 2026-11-01) | Draft |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |
 | DOC-26 | [Identity and sessions](06-design/identity-and-sessions.md) | Approved |
 | DOC-27 | [Residency and memberships](06-design/residency-and-memberships.md) | Approved |

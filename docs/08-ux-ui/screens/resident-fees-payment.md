@@ -1,10 +1,10 @@
 # Resident app: fees and payment
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: the four P2 screens `Fees`, `Fees-NoPay`, `Fee-Detail`, `Fee-History` written; the P3 payment screens are owed; DR-323) · DOC-58
-> Depends on: original SDD §5.1, §18, [DR](../../00-decision-register.md) (DR-16, 18, 19, 40, 41…47, 72, 84, 174, 194, 196, 200, 323), [DOC-56](README.md) (convention, notes N1, N4, N6, N10), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, §12, [DOC-54](../design-system.md) (components), [DOC-22](../../06-design/ledger-and-allocation.md) §8, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, §6.6, [DOC-34](../../06-design/pdf-rendering.md) §6.3, §8.2, [DOC-51](../../07-api/api-endpoints.md) (E-80…E-84, E-15, E-13), [DOC-57](resident-signin-home.md) (the home card and tile)
-> Main readers: P2-17 (receipt view and PDF in the resident app), P2-15 (the resident fee API), P2-16, P3-05 (the payment screens), P1-09 (catalog keys), DOC-68, DOC-88 (`UIRF-`)
+> Status: **Draft** · Updated: 2026-11-01 (DR-325…328: online payment is in P2 with Stripe; `Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards` written; the pay buttons and the fee-notice PDF are back; DR-323 revised) · 2026-11-01 (P1-27: the four fee screens written; DR-323) · DOC-58
+> Depends on: original SDD §5.1, §18, [DR](../../00-decision-register.md) (DR-16, 18, 19, 40, 41…47, 72, 84, 174, 194, 196, 200, 323, 325, 326, 328), [DOC-56](README.md) (convention, notes N1, N4, N6, N10), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, §12, [DOC-54](../design-system.md) (components), [DOC-22](../../06-design/ledger-and-allocation.md) §8, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, §6.6, [DOC-34](../../06-design/pdf-rendering.md) §6.3, §8.2, [DOC-23](../../06-design/payment-intents-and-settlement.md) §3…§5, [DOC-24](../../06-design/payment-gateway-drivers.md) §2, §4, [DOC-51](../../07-api/api-endpoints.md) (E-80…E-84, E-15, E-13), [DOC-57](resident-signin-home.md) (the home card and tile)
+> Main readers: P2-17 (receipt view and PDF in the resident app), P2-15 (the resident fee API), P2-16, P2-25 (the payment screens; was P3-05), P1-09 (catalog keys), DOC-68, DOC-88 (`UIRF-`)
 
-This document specifies the resident screens that show what a unit owes and has paid. **Written now (P2): `Fees`, `Fees-NoPay`, `Fee-Detail` and `Fee-History`.** The four payment screens (`Pay-Select`, `Pay-VietQR`, `Pay-Done`, `Pay-Mismatch`) belong to P3 and are listed at the end; their sections are written when P3-00 starts (master plan §3.2). The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Tokens and components are DOC-54, navigation DOC-53, the shared states DOC-68, the API DOC-51, and what a resident may see by membership DOC-22 §8.4.
+This document specifies the resident screens that show what a unit owes and has paid. **All are P2.** The four fee screens (`Fees`, `Fees-NoPay`, `Fee-Detail`, `Fee-History`) and the payment screens (`Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards`) are written. Online payment is in P2 and Stripe is the first gateway (DR-325); the screens render the **presentation** a driver returns (`redirect` or `qr`, DOC-24 §2), so `Pay-VietQR` and `Pay-Mismatch` are kept for a bank-transfer driver and are written when one is added. The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Tokens and components are DOC-54, navigation DOC-53, the shared states DOC-68, the API DOC-51, and what a resident may see by membership DOC-22 §8.4.
 
 ## Screens in this file
 
@@ -14,14 +14,17 @@ This document specifies the resident screens that show what a unit owes and has 
 | `Fees-NoPay` | The same list for a tenant who may not pay: a banner, no pay buttons | Tenant without `can_pay` | P2 | designed |
 | `Fee-Detail` | One charge: lines, total, due date, how to pay | Owner, Family member, Tenant | P2 | designed |
 | `Fee-History` | Paid charges by fee month, with the receipt | Owner, Family member, Tenant | P2 | designed |
-| `Pay-Select` | Choose charges and the method | Member with `pay` | P3 | designed — section owed |
-| `Pay-VietQR` | The dynamic QR | Member with `pay` | P3 | designed — section owed |
-| `Pay-Done` | Payment confirmed, one receipt per charge | Member with `pay` | P3 | designed — section owed |
-| `Pay-Mismatch` | A state of `Pay-VietQR`: a transfer of another amount arrived | Member with `pay` | P3 | to design — section owed |
+| `Pay-Select` | Choose the charges to pay and see the total | Member with `pay` | P2 | designed (changed, see section) |
+| `Pay-Redirect` | The wait while the hosted payment page is open | Member with `pay` | P2 | to design (new, replaces `Pay-VietQR` for a redirect driver) |
+| `Pay-Done` | Payment confirmed, one receipt per charge | Member with `pay` | P2 | designed |
+| `Pay-Failed` | The payment expired, was cancelled or failed | Member with `pay` | P2 | to design (new) |
+| `Cards` | Cards saved at the payment provider: list and remove | Member with `pay` | P2 | to design (new) |
+| `Pay-VietQR` | The dynamic QR of a bank-transfer driver | Member with `pay` | with a QR driver | designed — section owed |
+| `Pay-Mismatch` | A state of `Pay-VietQR`: a transfer of another amount arrived | Member with `pay` | with a QR driver | to design — section owed |
 
 **What every screen here shares.** All read the unit chosen in `Unit-Pick` (header `X-Unit-Id`, DOC-55 §5); every query key starts with `['unit', unitId, 'fees', …]`, so a unit switch drops the data of the old unit with no flash of it (UIRQ-02). The capability is `view_fees` (owner, family member, tenant); a helper has no tab "Phí" and a direct URL answers 403 `forbidden` and the generic forbidden state of DOC-68. A **charge** is one unit's bill in one batch; the resident word is "đợt" (batch) for the whole bill and "khoản" for a line. Money is shown as `2.838.000 đ` (Vietnamese) or `2,838,000 đ` (English), never as a decimal (DOC-14 §8). Dates are building-local `dd/MM/yyyy`, and "today" is the building's day (DR-09).
 
-**Phase 2 has no payment in the app.** The pay buttons, the QR and the payment methods are P3 and are not drawn, disabled or announced in a P2 build (DR-174, DR-196, DR-323): a resident reads the fees, the receipts and how to pay at the office. The places where P3 adds a control are marked **(P3)** below.
+**Payment is in P2 (DR-325).** A member with `pay` sees the pay buttons when the building has an active gateway; the list answer carries `payment {enabled, presentation, savedMethods, limits}` (E-80) so the app draws a button only when a payment can really start, and a building with no gateway configured shows the office caption instead (DR-326). The resident's word for a method comes from the presentation ("Thanh toán bằng thẻ" for `redirect`, "Chuyển khoản VietQR" for `qr`), never from the provider's name. Nothing in these screens depends on Stripe: another driver changes no screen except the one that renders its presentation.
 
 ---
 
@@ -43,7 +46,7 @@ Canvas artboard `Fees` (title "Phí cần thanh toán", 390 × 1560, scrolls). R
 
 Do not copy:
 
-- The pay buttons and the caption's "nộp một phần" (N6, DR-84): there is no partial payment, and in P2 there is no payment button at all.
+- The caption's "nộp một phần" (N6, DR-84): there is no partial payment. The pay buttons stay (DR-325) and are drawn when `payment.enabled` and the member has `pay`.
 - The `BillSlip` unit of measure in the line detail ("85 m² × 12.000 đ", "14 m³", "1 xe"): a line holds `quantity × unitPrice` and the item name (DR-13); the screen prints `quantity × unitPrice` or the price alone when the quantity is 1, as the notice does (DOC-34 §6.1). A Manager who wants "m²" in the sentence writes it in the item name.
 - The icons per line (`buildings`, `drop`, `car`): the line has no kind or icon; the screen uses one neutral `receipt` glyph for a fee and `minus-circle` for an adjustment.
 - The bell count "4 mục chưa đọc" and the tab badge "2": sample numbers. The badge on the tab is the number of open charges of the unit (E-80), and the bell is DOC-31's.
@@ -57,7 +60,9 @@ Do not copy:
 | Summary line | muted label + bold amount (tabular numerals) | E-80 `total`, `count` |
 | Month section | `h2` "Phí tháng {m}/{y}" (from `feeMonth`) | E-80 |
 | Charge card | `BillSlip`: period line "Đợt {n}, phát hành {dd/MM}", due line, status chip, lines, total | E-80 `items[]` with `lines[]` (DR-323) |
-| How to pay caption | one muted paragraph under the list, with a link "Liên hệ BQL" to `Contact` | local, E-15 |
+| Pay buttons | `Button` "Thanh toán đợt này" on each card and tonal "Thanh toán nhiều đợt cùng lúc" under the list, only when `payment.enabled` and the member has `pay` | E-80 `payment` |
+| How to pay caption | one muted paragraph under the list, with a link "Liên hệ BQL" to `Contact`; shown when no pay button is drawn | local, E-15 |
+| Saved cards link | `ListItem` "Thẻ đã lưu" to `Cards`, when `payment.savedMethods` | E-80 `payment` |
 | Tab bar | `TabBar` (the badge on "Phí" = `count`) | E-80 |
 
 **The status chip** is computed from `daysPastDue` (negative before the due date), by the client with the server's day (DR-09):
@@ -75,7 +80,7 @@ Do not copy:
 
 | Read | Endpoint | Key | Notes |
 | --- | --- | --- | --- |
-| Open charges | E-80 `GET /me/fees` | `['unit', unitId, 'fees', 'open']` | all `open` charges of the unit, whatever the membership date (DOC-22 §8.4). Items: `chargeId`, `batch {code, name {vi,en}, feeMonth, ordinal}`, `amount`, `dueDate`, `daysPastDue`, `overdue`, `lines[]` (DR-323). Plus `total`, `count`. `staleTime` 30 s; refetched on focus after 30 s and on the push `fee.batch_published`, `fee.charge_paid`, `fee.batch_recalled` |
+| Open charges | E-80 `GET /me/fees` | `['unit', unitId, 'fees', 'open']` | all `open` charges of the unit, whatever the membership date (DOC-22 §8.4). Items: `chargeId`, `batch {code, name {vi,en}, feeMonth, ordinal}`, `amount`, `dueDate`, `daysPastDue`, `overdue`, `lines[]` (DR-323). Plus `total`, `count` and `payment {enabled, presentation, savedMethods, limits}` (DR-326). `staleTime` 30 s; refetched on focus after 30 s and on the push `fee.batch_published`, `fee.charge_paid`, `fee.batch_recalled` |
 | Unit and capabilities | the session (E-13) | `['me']` | `pay` decides `Fees` or `Fees-NoPay`; P2 uses it only for the banner |
 | Contact for the caption | E-15 | `['contact']` | cached by the home |
 
@@ -90,7 +95,8 @@ There is no polling. A pull-to-refresh refetches E-80. The list is not paginated
 | Pull to refresh | E-80 refetch |
 | Tap "Liên hệ BQL" in the caption | `Contact` (E-15) |
 | Tap the bell | `Inbox` (P4; absent in P2 builds without it) |
-| **(P3)** "Thanh toán đợt này", "Thanh toán nhiều đợt cùng lúc" | `Pay-Select` with the charge(s) selected |
+| "Thanh toán đợt này" / "Thanh toán nhiều đợt cùng lúc" | `Pay-Select` with that charge / all open charges selected |
+| "Thẻ đã lưu" | `Cards` |
 
 ### 7. States
 
@@ -123,7 +129,10 @@ There is no polling. A pull-to-refresh refetches E-80. The list is not paginated
 | `res.fees.chip.today` | Hạn hôm nay | Due today |
 | `res.fees.chip.left` | Còn {days, plural, one {# ngày} other {# ngày}} | {days, plural, one {# day} other {# days}} left |
 | `res.fees.card.detail` | Xem chi tiết | View details |
-| `res.fees.howto` | Mỗi đợt thanh toán đủ số tiền. Muốn nộp tiền mặt hoặc chuyển khoản, bạn liên hệ Ban quản lý. | Each batch is paid in full. To pay in cash or by transfer, contact the management office. |
+| `res.fees.howto` | Mỗi đợt thanh toán đủ số tiền. Muốn nộp tiền mặt, bạn liên hệ Ban quản lý. | Each batch is paid in full. To pay in cash, contact the management office. |
+| `res.fees.pay.one` | Thanh toán đợt này | Pay this batch |
+| `res.fees.pay.many` | Thanh toán nhiều đợt cùng lúc | Pay several batches at once |
+| `res.fees.cards.link` | Thẻ đã lưu | Saved cards |
 | `res.fees.howto.link` | Liên hệ BQL | Contact the office |
 | `res.fees.empty.title` | Căn hộ không còn khoản phí nào cần thanh toán | This unit has no fees to pay |
 | `res.fees.empty.last` | Lần thanh toán gần nhất: {date} | Last payment: {date} |
@@ -135,7 +144,7 @@ There is no polling. A pull-to-refresh refetches E-80. The list is not paginated
 | --- | --- | --- |
 | UIRF-01 | **G** A-1508 with two open charges (2,488,000 and 350,000) **W** `Fees` opens **T** the summary says "Còn phải thanh toán, 2 đợt" and "2.838.000 đ", the tab badge shows 2, and the cards are in due-date order | maestro |
 | UIRF-02 | **G** a charge due in 6 days, one due in 16, one 3 days overdue **W** the list renders **T** the chips are "Còn 6 ngày" (warning), "Còn 16 ngày" (neutral) and "Quá hạn 3 ngày" (danger), and the summary adds "Trong đó quá hạn" | api, maestro |
-| UIRF-03 | **G** a P2 build **W** `Fees` is inspected **T** no control named "Thanh toán" exists, the caption says the office takes cash or transfer, and no text says "nộp một phần" | maestro |
+| UIRF-03 | **G** an owner and a building with an active gateway **W** `Fees` is inspected **T** each card has "Thanh toán đợt này", the tonal button pays all open charges, no text says "nộp một phần", and a building with no gateway shows the office caption and no pay button | api, maestro |
 | UIRF-04 | **G** the unit switch from A-1508 to A-0703 **W** the user picks A-0703 **T** the queries `['unit', A-1508, 'fees', …]` are gone and the list shows A-0703 with no flash of A-1508 | maestro |
 | UIRF-05 | **G** a unit with no open charge **W** the screen opens **T** the empty state shows with the date of the last payment | maestro |
 | UIRF-06 | **G** a helper **W** the user opens the deep link `/fees` **T** the screen is the forbidden state, and the tab "Phí" is not in the bar | maestro |
@@ -239,7 +248,7 @@ Canvas artboard `Fee-Detail` (title "Thông báo phí", 390 × 1480): `TopBar` (
 
 Do not copy:
 
-- The button "Tải thông báo phí PDF": there is no resident endpoint for the fee-notice PDF (DOC-34 §6.3: "residents read their fees in the app"); it is removed (DR-323). The receipt PDF is another thing and has its own button (below).
+- Nothing is removed for the button "Tải thông báo phí PDF": the Owner wants it (DR-328), so the screen keeps it and E-183 serves it. A line beside the button says the notice shows the amount at publish, not whether it is paid.
 - "Qua VNPay hoặc VietQR" (N1): P3 shows the methods of the configured provider (VietQR).
 - The bank line "[NGÂN HÀNG], số tài khoản …, nội dung A1508 T10 D1": no building field holds a collection account for manual transfers (the fee notice has no such line, DOC-34 §6.1), and a transfer content that is not an intent's `TT…` code (DR-27) would be matched to nothing. The line is omitted until the Owner supplies the data (then a DR).
 - "Phát hành … hotline [HOTLINE]" with a placeholder: the strip reads the company name and hotline from E-15, and the issue date from `batch.publishedAt`.
@@ -254,7 +263,8 @@ Do not copy:
 | Company strip | initials `Plate` + name + "Phát hành {date}, hotline {hotline}" | E-15 `contact`, E-81 `batch.publishedAt` |
 | Bill | `BillSlip`: unit code, period "{batch.code}, đợt {n}", due, chip (as `Fees`), `lines[]`, total | E-81 |
 | Adjustment lines | a line with `kind = adjustment` shows its `note` under the name and a negative amount "−35.175 đ" in `danger`-free ink (not red: an adjustment is not an error) | E-81 `lines[].note` |
-| How to pay | `List` of `ListItem`s, each present only if its source exists: **(P3)** "Thanh toán trong ứng dụng" (a gateway is `active` and the member has `pay`); "Tiền mặt tại văn phòng BQL" (`contact.workingHours` set: "Tầng …, {hours}" — the floor is not stored, so the item reads "Văn phòng BQL, {hours}") | E-15, E-13 |
+| How to pay | `List` of `ListItem`s, each present only if its source exists: "Thanh toán trong ứng dụng" (a gateway is `active` and the member has `pay`); "Tiền mặt tại văn phòng BQL" (`contact.workingHours` set: "Tầng …, {hours}" — the floor is not stored, so the item reads "Văn phòng BQL, {hours}") | E-15, E-13 |
+| Notice PDF | `Button` outline "Tải thông báo phí PDF" with the muted line `res.fee.pdf.note`; for an `open` or `paid` charge | E-183 |
 | Receipt | for a `paid` charge: a `Button` outline "Xem biên lai" and the receipt number | E-81 `receipt {id, number}` |
 | Status banner | `Banner` for `paid` ("Đã thanh toán ngày {date}, {method}") and for `void` ("Khoản phí này đã bị thu hồi") | E-81 |
 
@@ -274,7 +284,8 @@ The first paint uses the card data already in the list cache (`placeholderData` 
 | Toggle the language | none | item names switch between `itemName.vi` and `itemName.en` (falls back to `vi` when `en` is null) |
 | "Xem biên lai" (paid) | E-84 `GET /me/receipts/{id}/pdf` with the bearer token | the PDF is downloaded to the cache and opened in the system viewer (DOC-55 §12); 404 → "Không tìm thấy biên lai" and the row is refetched; the PDF may be rendered on demand and take a few seconds (DOC-34 §8.2): the button shows a spinner after 150 ms |
 | Back | none | previous screen |
-| **(P3)** "Thanh toán" | none | `Pay-Select` with this charge selected |
+| "Tải thông báo phí PDF" | E-183 `GET /me/fees/{chargeId}/pdf?lang=` | the PDF is downloaded to the cache and opened in the system viewer, in the language of the toggle; spinner after 150 ms; 404 → the not-found state |
+| "Thanh toán" (open charge, `pay`) | none | `Pay-Select` with this charge selected |
 
 ### 7. States
 
@@ -306,6 +317,9 @@ The first paint uses the card data already in the list cache (`placeholderData` 
 | `res.fee.method.bank_transfer` | chuyển khoản | bank transfer |
 | `res.fee.method.online` | thanh toán trong ứng dụng | in the app |
 | `res.fee.void.banner` | Khoản phí này đã bị thu hồi. | This fee was withdrawn. |
+| `res.fee.pdf` | Tải thông báo phí PDF | Download the fee notice (PDF) |
+| `res.fee.pdf.note` | Thông báo ghi số tiền lúc phát hành, không cho biết đã thanh toán hay chưa. | The notice shows the amount at publication, not whether it is paid. |
+| `res.fee.howto.app` | Thanh toán trong ứng dụng, gạch nợ ngay khi thành công | Pay in the app; your balance updates as soon as it succeeds |
 | `res.fee.receipt.open` | Xem biên lai | View receipt |
 | `res.fee.receipt.number` | Biên lai {number} | Receipt {number} |
 | `res.fee.receipt.missing` | Không tìm thấy biên lai. | The receipt was not found. |
@@ -318,7 +332,7 @@ The first paint uses the card data already in the list cache (`placeholderData` 
 | UIRF-12 | **G** an open charge with 4 lines (total 2,488,000) **W** `Fee-Detail` opens **T** the four lines show `quantity × unitPrice` and the total reads "2.488.000 đ" | maestro |
 | UIRF-13 | **G** a charge with an adjustment line −35,175 "Trừ phí nước tính thừa tháng 9" **W** it renders **T** the line shows the note and "−35.175 đ", and the total is the sum | api, maestro |
 | UIRF-14 | **G** the toggle on English **W** it is tapped **T** the item names switch to `itemName.en`, the app language is unchanged, and a line with no English name keeps the Vietnamese one | maestro |
-| UIRF-15 | **G** a P2 build **W** the screen is inspected **T** no button to download a fee notice PDF exists, and "How to pay" lists the office only (when `workingHours` is set) | maestro |
+| UIRF-15 | **G** an open charge **W** "Tải thông báo phí PDF" is tapped **T** `GET /me/fees/{chargeId}/pdf` is sent once and the PDF opens; a `void` charge answers 404 | api, maestro |
 | UIRF-16 | **G** a paid charge with a receipt **W** "Xem biên lai" is tapped **T** `GET /me/receipts/{id}/pdf` is sent once and the PDF opens | maestro |
 | UIRF-17 | **G** a charge paid before the member's `startedAt` **W** its URL is opened **T** E-81 answers 404 and the not-found state shows | api, maestro |
 | UIRF-18 | **G** a recalled (void) charge opened from an old push **W** the screen loads **T** it shows the withdrawn banner, or the not-found state when E-81 answers 404, and never an error screen | api, maestro |
@@ -428,20 +442,475 @@ None.
 
 ---
 
-## The payment screens (P3)
+---
 
-`Pay-Select`, `Pay-VietQR`, `Pay-Done` and `Pay-Mismatch` are specified when P3-00 starts, from E-85…E-88, DOC-23 and DOC-24. Their rows in the screens index (DOC-56 §3) and the notes N1 and N4 stay the contract until then. Their test IDs continue after `UIRF-26` and their keys are `res.pay.*`.
+## Pay-Select
+
+> Status: Draft · Prototype: designed (changed by N1, N4, DR-325) · Phase: P2 · DOC-58
+
+### 1. Persona, use cases, permissions
+
+PS-5 Owner, PS-6 Family member, PS-7 Tenant with `can_pay`. UC-03 steps 1 to 3, FR-07.1 (who may pay), FR-07.2 (whole charges only), FR-07.4 (a second member meets an open payment), FR-07.6 (amount limits), FR-07.7 (abuse limit). Capability `pay`. A tenant without `can_pay` and a helper never see the screen (403 `forbidden`).
+
+### 2. URL and search params
+
+`/fees/pay` (a stack screen over the tab). Search: `charges` (comma-separated charge ids to preselect; none means all open charges).
+
+### 3. Prototype
+
+Artboard `Pay-Select` (title "Chọn đợt và hình thức thanh toán"): a back `TopBar`; a list of batches with a check per row (period, due date, amount); a "Hình thức" block with VietQR and a second, VNPay row; a total bar and a primary "Thanh toán {amount}".
+
+Do not copy:
+
+- The VNPay row (N1): the method comes from the building's active gateway; the screen shows **one** method, named by its presentation, never a provider list.
+- "Chọn hình thức" as a choice: with one gateway there is nothing to choose; the block is one line that names the method and, for a card, says "Bạn có thể lưu thẻ ở trang thanh toán".
+- A partial amount or an "other amount" field (DR-84): a batch is paid whole.
+- The sample codes and amounts.
+
+### 4. Regions and components
+
+| Region | Components | Source |
+| --- | --- | --- |
+| Top | `TopBar` back, title `res.pay.select.title` | local |
+| Charges | `List` of selectable `BillSlip`-style rows: period "Đợt {n}", batch name, due chip, amount; at least one must stay checked | E-80 |
+| Method | `ListItem` with the method line (`res.pay.method.redirect` or `.qr`) | E-80 `payment.presentation` |
+| Holder notice | `Banner` neutral "{name} đã bắt đầu thanh toán lúc {time}" with "Tiếp tục thanh toán" when a household member holds an intent (409 `payment_in_progress`, or the same set returned) | E-85 |
+| Total bar | sticky: "Tổng {amount}" and `Button` primary "Thanh toán {amount}" | local |
+
+### 5. Data
+
+The list of E-80 (already cached under `['unit', unitId, 'fees', 'open']`) is the data; the screen makes no request until the button. The limits (`payment.limits {min, max}`) come with E-80.
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| Check / uncheck a charge | none | the total updates; the button disables below `limits.min` with `res.pay.select.min` and above `limits.max` with `res.pay.select.max` |
+| "Thanh toán {amount}" | E-85 `POST /me/payments/intents` `{chargeIds}` with `Idempotency-Key` (one per press of the screen) | 201: `Pay-Redirect` (or `Pay-VietQR` for a `qr` presentation) with the intent; **200 "started by"**: the same selection already has an intent of the household: the screen goes to it with `startedBy` shown |
+| E-85 errors | | 409 `payment_in_progress {holder, startedAt, intentId}` → the holder `Banner` and "Tiếp tục thanh toán" opens that intent; 409 `charge_changed` → the list refetches and the screen says a charge was paid or voided; 400 `amount_below_minimum`, `amount_above_maximum`; 403 `forbidden` (no `pay`); 429 `rate_limited` ("Bạn thao tác quá nhanh. Thử lại sau ít phút."); 502 `gateway_unavailable` → "Chưa kết nối được cổng thanh toán. Thử lại sau." and the intent is `failed`, no charge held |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `ready` | rows checked, total shown, button enabled |
+| `below minimum` / `above maximum` | the total in `danger` ink with the reason, button disabled |
+| `holder` | the holder banner; the button reads "Tiếp tục thanh toán" |
+| `submitting` | button disabled, spinner after 150 ms; the rows stay |
+| `error`, `offline`, `forbidden` | DOC-68; offline disables the button |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `res.pay.select.title` | Thanh toán | Pay |
+| `res.pay.select.charges` | Chọn các đợt thanh toán | Choose the batches to pay |
+| `res.pay.method.redirect` | Thanh toán bằng thẻ. Bạn có thể lưu thẻ ở trang thanh toán. | Pay by card. You can save the card on the payment page. |
+| `res.pay.method.qr` | Chuyển khoản VietQR | VietQR bank transfer |
+| `res.pay.select.total` | Tổng {amount} | Total {amount} |
+| `res.pay.select.cta` | Thanh toán {amount} | Pay {amount} |
+| `res.pay.select.continue` | Tiếp tục thanh toán | Continue the payment |
+| `res.pay.select.holder` | {name} đã bắt đầu thanh toán lúc {time}. | {name} started a payment at {time}. |
+| `res.pay.select.min` | Số tiền tối thiểu là {amount}. | The minimum is {amount}. |
+| `res.pay.select.max` | Số tiền tối đa là {amount}. Hãy bỏ bớt một đợt. | The maximum is {amount}. Remove a batch. |
+| `res.pay.select.changed` | Có khoản phí đã được thanh toán hoặc thu hồi. Danh sách đã được cập nhật. | A fee was paid or withdrawn. The list has been updated. |
+| `res.pay.select.gateway` | Chưa kết nối được cổng thanh toán. Thử lại sau. | The payment service is not reachable. Try again later. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIRF-27 | **G** an owner with two open charges **W** the screen opens **T** both are checked, the total is their sum, and one method line is shown with no provider name | maestro |
+| UIRF-28 | **G** one charge unchecked **W** the button is pressed **T** E-85 is sent with that one `chargeId` and one `Idempotency-Key` | api, maestro |
+| UIRF-29 | **G** a total below the minimum **W** the screen shows **T** the button is disabled with the minimum message and no request is sent | maestro |
+| UIRF-30 | **G** the owner started an intent for A and B **W** a family member selects A and B **T** E-85 returns the same intent ("started by" the owner) and the app opens it | api, maestro |
+| UIRF-31 | **G** the family member selects only A **W** the button is pressed **T** 409 `payment_in_progress` shows the holder banner with the owner's name and time | api, maestro |
+| UIRF-32 | **G** a charge is paid in cash while the screen is open **W** the button is pressed **T** 409 `charge_changed` refreshes the list with the message and nothing is held | api, maestro |
+| UIRF-33 | **G** a tenant without `can_pay` **W** `/fees/pay` is opened **T** the forbidden state shows and E-85 answers 403 | api, maestro |
+
+### 10. E2E cases
+
+Maestro with the fake gateway: `pay-select.yaml` (UIRF-27, 28, 29), `pay-two-phones.yaml` (UIRF-30, 31); UIRF-32 and 33 are API tests with one assertion each.
+
+### 11. Open questions
+
+None.
+
+---
+
+## Pay-Redirect
+
+> Status: Draft · Prototype: to design (a wireframe below; replaces `Pay-VietQR` for a redirect driver) · Phase: P2 · DOC-58
+
+### 1. Persona, use cases, permissions
+
+As `Pay-Select`. UC-03 steps 4 to 8, FR-08.4 (visible quickly), FR-08.7 (receipt on screen), FR-10.3 ("I have transferred" brings the check forward).
+
+### 2. URL and search params
+
+`/fees/pay/[intentId]`. The deep link `rms-resident://pay/return?intent=<id>&result=success|cancel` opens this route (DOC-55 §7). A return is never trusted: the screen decides from the intent status.
+
+### 3. Wireframe
+
+```text
+┌──────────────────────────────┐
+│ ←  Thanh toán                │
+│                              │
+│        ◔  Đang chờ thanh     │
+│           toán               │
+│   2.838.000 đ · 2 đợt        │
+│   Còn 28:41                  │
+│                              │
+│ Hoàn tất ở trang thanh toán, │
+│ rồi quay lại ứng dụng.       │
+│                              │
+│ [ Mở lại trang thanh toán ]  │
+│ [ Tôi đã thanh toán xong ]   │
+│ Hủy thanh toán               │
+└──────────────────────────────┘
+```
+
+Do not copy: no artboard; the QR screen is another presentation. The screen never shows a card form (the page is the provider's) and never says a payment succeeded before the intent is `paid`.
+
+### 4. Regions and components
+
+| Region | Components |
+| --- | --- |
+| Status | spinner glyph, title, the amount and count, a countdown to `displayUntil` |
+| Hint | one muted paragraph |
+| Actions | `Button` primary "Mở lại trang thanh toán" (reopens `presentation.url`), outline "Tôi đã thanh toán xong" (E-88), ghost "Hủy thanh toán" (E-87) |
+| Holder | when the screen was opened as a non-creator ("started by"), a line "{name} đang thanh toán" and no cancel for a member who is not the creator or the owner |
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| The intent | E-86 `GET /me/payments/intents/{id}` | `['unit', unitId, 'intent', intentId]` | `status` (`pending`, `paid`, `cancelling`, `cancelled`, `expired`, `failed`), `amount`, `displayUntil`, `presentation`, `startedBy`, `receipts[]` when paid. Polled every **2 s for 60 s, then every 3 s**, while the screen is focused; stops on a terminal status. Pull-to-refresh and focus refetch at once |
+
+On first open with a `redirect` presentation the app opens `presentation.url` with `expo-web-browser`; it does so once per intent (a flag in the screen state), and on the return deep link it closes the tab.
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| The tab closes (return or back) | none | the polling continues; with `result=cancel` the hint changes to `res.pay.redirect.unfinished` and the buttons stay |
+| "Mở lại trang thanh toán" | none | the same URL opens again; if the session expired the next poll shows `expired` |
+| "Tôi đã thanh toán xong" | E-88 `POST …/check` | brings the next re-query forward; answers `{status, checkScheduled}`; the screen keeps polling; rate-limited to once per 10 s |
+| "Hủy thanh toán" | confirm sheet, then E-87 `POST …/cancel` | `Pay-Failed` with `cancelled`; 409 `intent_not_cancellable` (paid meanwhile) → the screen follows the status to `Pay-Done` |
+| `status = paid` | none | `Pay-Done` |
+| `status = expired`, `cancelled`, `failed` | none | `Pay-Failed` |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `waiting` | as the wireframe |
+| `unfinished` | after a return with `result=cancel`: "Bạn chưa hoàn tất thanh toán" and the same actions |
+| `checking` | after "Tôi đã thanh toán xong": the button shows its spinner for the call only |
+| `slow` | after the countdown is under 5 minutes: "Nếu bạn đã thanh toán, khoản phí sẽ tự được ghi nhận trong vài phút." |
+| `offline` | the last status and a strip; polling resumes when the network returns |
+| `error` | the generic error with a retry; the intent is not lost (it is in the URL) |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `res.pay.redirect.title` | Đang chờ thanh toán | Waiting for payment |
+| `res.pay.redirect.amount` | {amount} · {count, plural, one {# đợt} other {# đợt}} | {amount} · {count, plural, one {# batch} other {# batches}} |
+| `res.pay.redirect.left` | Còn {time} | {time} left |
+| `res.pay.redirect.hint` | Hoàn tất ở trang thanh toán, rồi quay lại ứng dụng. | Finish on the payment page, then come back to the app. |
+| `res.pay.redirect.unfinished` | Bạn chưa hoàn tất thanh toán. | You have not finished paying. |
+| `res.pay.redirect.reopen` | Mở lại trang thanh toán | Reopen the payment page |
+| `res.pay.redirect.done` | Tôi đã thanh toán xong | I have paid |
+| `res.pay.redirect.cancel` | Hủy thanh toán | Cancel the payment |
+| `res.pay.redirect.cancel.confirm` | Hủy lượt thanh toán này? Các đợt phí được mở lại để bạn thanh toán sau. | Cancel this payment? The batches are released so you can pay later. |
+| `res.pay.redirect.slow` | Nếu bạn đã thanh toán, khoản phí sẽ tự được ghi nhận trong vài phút. | If you have paid, the fee is recorded automatically within minutes. |
+| `res.pay.redirect.by` | {name} đang thanh toán | {name} is paying |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIRF-34 | **G** an intent with a `redirect` presentation **W** the screen opens **T** the browser tab opens once with `presentation.url`, and E-86 is polled every 2 s | maestro |
+| UIRF-35 | **G** the fake gateway page is paid **W** the deep link returns **T** the tab closes and the screen moves to `Pay-Done` without a manual refresh | maestro |
+| UIRF-36 | **G** the return link says `cancel` **W** it opens the app **T** the intent is still `pending`, the screen shows "Bạn chưa hoàn tất" and "Mở lại" works | maestro |
+| UIRF-37 | **G** the deep link is lost **W** the webhook settles the intent **T** polling alone moves the screen to `Pay-Done` within 5 s | api, maestro |
+| UIRF-38 | **G** "Tôi đã thanh toán xong" is pressed twice in 5 s **W** the second runs **T** it is not sent (client) and E-88 never answers 429 to a normal use | maestro |
+| UIRF-39 | **G** "Hủy thanh toán" is confirmed **W** E-87 answers 200 **T** `Pay-Failed` shows with `cancelled` and the charges are payable again | api, maestro |
+| UIRF-40 | **G** the payment settles between the press of "Hủy" and E-87 **W** E-87 answers 409 **T** the screen shows `Pay-Done`, not an error | api, maestro |
+
+### 10. E2E cases
+
+Maestro with the fake gateway: `pay-redirect.yaml` (UIRF-34, 35, 36), `pay-cancel.yaml` (UIRF-39); UIRF-37, 38, 40 are API tests with one assertion each.
+
+### 11. Open questions
+
+None.
+
+---
+
+## Pay-Done
+
+> Status: Draft · Prototype: designed (N1, N4) · Phase: P2 · DOC-58
+
+### 1. Persona, use cases, permissions
+
+As `Pay-Select`. UC-03 step 9, FR-08.7.
+
+### 2. URL and search params
+
+`/fees/pay/[intentId]/done` (replaces `Pay-Redirect` in the stack).
+
+### 3. Prototype
+
+Artboard `Pay-Done` (title "Thanh toán thành công"): a success mark, "Thanh toán thành công", the amount, the time and method, one `ListItem` per receipt ("Đợt 1", the receipt number, the amount, a download action), and the buttons "Xem biên lai" and "Về trang Phí".
+
+Do not copy: a receipt code `PT-…` (N4: the number is `BL-2610-0153`); "VNPay" or "VietQR" in the method line (the method is `res.fee.method.online`).
+
+### 4. Regions and components
+
+| Region | Components |
+| --- | --- |
+| Result | success glyph, title, amount, "lúc {time}, {date}" |
+| Receipts | `List` of `ListItem`: "Đợt {n}", `BL-…` number, amount, a download `IconButton` (E-84) |
+| Actions | primary "Về trang Phí" (clears the stack to the tab), outline "Xem biên lai" when there is exactly one |
+
+### 5. Data
+
+E-86 (cached from `Pay-Redirect`): `status = paid`, `paidAt`, `amount`, `receipts[] {id, number, chargeId, batch {ordinal}, amount}`. The `['unit', unitId, 'fees', …]` queries are invalidated on arrival so `Fees` and `Fee-History` show the new state.
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| "Xem biên lai" / the row action | E-84 | the receipt PDF opens (as `Fee-Detail`) |
+| "Về trang Phí" | none | `Fees` |
+| Back | none | `Fees` (never `Pay-Redirect`) |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `loaded` | as §4 |
+| `rendering` | a receipt's PDF is not ready: the row action shows a spinner after 150 ms and the PDF is rendered on demand (DOC-34 §8.2) |
+| `error`, `offline` | DOC-68; the data is cached from the previous screen |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `res.pay.done.title` | Thanh toán thành công | Payment successful |
+| `res.pay.done.at` | Lúc {time}, {date} | At {time}, {date} |
+| `res.pay.done.receipt` | Biên lai {number} | Receipt {number} |
+| `res.pay.done.back` | Về trang Phí | Back to Fees |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIRF-41 | **G** a payment of two batches **W** it settles **T** `Pay-Done` lists two receipts `BL-…-0001` and `-0002` with their amounts and the sum equals the total | api, maestro |
+| UIRF-42 | **G** the screen is open **W** Back is pressed **T** `Fees` shows, with both charges gone from the open list and present in `view=history` | maestro |
+| UIRF-43 | **G** a payment from a family member's phone **W** the owner's phone opens `Fees` **T** the charges are gone after the next refetch or the `fee.charge_paid` push | api, maestro |
+
+### 10. E2E cases
+
+Maestro: `pay-done.yaml` (UIRF-41, 42). UIRF-43 is an API test of the push plus one assertion.
+
+### 11. Open questions
+
+None.
+
+---
+
+## Pay-Failed
+
+> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
+
+### 1. Persona, use cases, permissions
+
+As `Pay-Select`. UC-03 alternative flows (expiry, cancel, failure), FR-10.2.
+
+### 2. URL and search params
+
+`/fees/pay/[intentId]/failed?reason=expired|cancelled|failed`.
+
+### 3. Wireframe
+
+```text
+┌──────────────────────────────┐
+│ ←  Thanh toán                │
+│                              │
+│        ⚠                     │
+│  Thanh toán chưa hoàn tất    │
+│  Lượt thanh toán đã hết hạn. │
+│                              │
+│  Nếu bạn đã bị trừ tiền, khoản│
+│  phí sẽ tự được ghi nhận      │
+│  trong vài phút.             │
+│                              │
+│ [ Thử lại ]                  │
+│ [ Về trang Phí ]             │
+└──────────────────────────────┘
+```
+
+Do not copy: no artboard. The screen never blames the card (a decline happens on the provider's page and leaves the session open).
+
+### 4. Regions and components
+
+A warning glyph, a title, one reason line by `reason`, the reassurance line, `Button` primary "Thử lại" (back to `Pay-Select` with the same charges, if they are still open), outline "Về trang Phí".
+
+### 5. Data
+
+E-86 for the status; E-80 for whether the charges are still open (a charge paid meanwhile removes "Thử lại").
+
+### 6. Interactions
+
+| Action | Result |
+| --- | --- |
+| "Thử lại" | `/fees/pay?charges=…` with the charges still open |
+| "Về trang Phí" | `Fees` |
+| A late confirmation arrives (an expired intent is posted, IN-32) | the next E-86 poll or E-80 refetch shows the charges paid; the screen switches to `Pay-Done` if still open |
+
+### 7. States
+
+| `reason` | Line |
+| --- | --- |
+| `expired` | "Lượt thanh toán đã hết hạn." |
+| `cancelled` | "Bạn đã hủy lượt thanh toán." (or "{name} đã hủy" when a household member did) |
+| `failed` | "Không tạo được lượt thanh toán. Vui lòng thử lại." |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `res.pay.failed.title` | Thanh toán chưa hoàn tất | The payment did not finish |
+| `res.pay.failed.expired` | Lượt thanh toán đã hết hạn. | The payment window ended. |
+| `res.pay.failed.cancelled` | Bạn đã hủy lượt thanh toán. | You cancelled the payment. |
+| `res.pay.failed.cancelled.by` | {name} đã hủy lượt thanh toán. | {name} cancelled the payment. |
+| `res.pay.failed.failed` | Không tạo được lượt thanh toán. Vui lòng thử lại. | The payment could not be started. Please try again. |
+| `res.pay.failed.charged` | Nếu bạn đã bị trừ tiền, khoản phí sẽ tự được ghi nhận trong vài phút. | If you were charged, the fee is recorded automatically within minutes. |
+| `res.pay.failed.retry` | Thử lại | Try again |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIRF-44 | **G** an intent that passed `expires_at` **W** the screen opens **T** the expired line, the reassurance line and "Thử lại" show | api, maestro |
+| UIRF-45 | **G** the charges were paid in cash **W** `Pay-Failed` is reopened **T** there is no "Thử lại" and "Về trang Phí" is the only action | api, maestro |
+| UIRF-46 | **G** an expired intent whose exact payment arrives late **W** the app polls **T** the screen moves to `Pay-Done` | api, maestro |
+
+### 10. E2E cases
+
+Maestro: `pay-failed.yaml` (UIRF-44, 45); UIRF-46 is an API test (DOC-23 IN-32) with one assertion.
+
+### 11. Open questions
+
+None.
+
+---
+
+## Cards
+
+> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
+
+### 1. Persona, use cases, permissions
+
+PS-5, PS-6, PS-7 with `pay`. UC-03 (pay again with a saved card). Only for a driver with `capabilities.savedMethods` (Stripe); the link is not drawn otherwise. A member sees **only the cards they saved themselves** (DOC-24 §4.7).
+
+### 2. URL and search params
+
+`/fees/cards`. No params.
+
+### 3. Wireframe
+
+```text
+┌──────────────────────────────┐
+│ ←  Thẻ đã lưu                │
+│                              │
+│ ▭ Visa •••• 4242   12/2028 ⋯ │
+│ ▭ Mastercard •••• 4444 …   ⋯ │
+│                              │
+│ Bạn lưu thẻ khi thanh toán,  │
+│ ở trang thanh toán. Ứng dụng │
+│ không lưu số thẻ.            │
+└──────────────────────────────┘
+```
+
+Do not copy: no artboard. There is no "add a card" button: a card is saved on the provider's page during a payment (DR-326). There is no "default card" and no automatic charge.
+
+### 4. Regions and components
+
+`List` of `ListItem` (brand glyph, "{brand} •••• {last4}", expiry, a `⋯` with "Xóa thẻ"); a muted explanation.
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| Saved cards | E-184 `GET /me/payment-methods` | `['me', 'payment-methods']` | `methods[] {id, brand, last4, expMonth, expYear}`; read live from the provider, never stored; refetched on focus |
+
+### 6. Interactions
+
+| Action | Endpoint | Result |
+| --- | --- | --- |
+| "Xóa thẻ" | confirm sheet, then E-185 `DELETE /me/payment-methods/{id}` | the row leaves; a toast "Đã xóa thẻ"; 404 (not the caller's, or gone) → refetch |
+
+### 7. States
+
+| State | Screen |
+| --- | --- |
+| `loading` | skeleton rows |
+| `loaded` | as §4 |
+| `empty` | "Bạn chưa lưu thẻ nào." and the explanation |
+| `error` | the generic error with a retry; "Dịch vụ thanh toán chưa phản hồi" for a 502 |
+| `forbidden` | a member without `pay`: DOC-68 forbidden |
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `res.cards.title` | Thẻ đã lưu | Saved cards |
+| `res.cards.item` | {brand} •••• {last4} | {brand} •••• {last4} |
+| `res.cards.expiry` | Hết hạn {month}/{year} | Expires {month}/{year} |
+| `res.cards.remove` | Xóa thẻ | Remove card |
+| `res.cards.remove.confirm` | Xóa thẻ {brand} •••• {last4}? Bạn có thể lưu lại khi thanh toán. | Remove {brand} •••• {last4}? You can save it again when you pay. |
+| `res.cards.removed` | Đã xóa thẻ. | Card removed. |
+| `res.cards.empty` | Bạn chưa lưu thẻ nào. | You have not saved a card. |
+| `res.cards.note` | Bạn lưu thẻ khi thanh toán, ở trang thanh toán. Ứng dụng không lưu số thẻ. | You save a card when you pay, on the payment page. The app does not store card numbers. |
+
+### 9. Acceptance criteria
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIRF-47 | **G** two saved cards **W** `Cards` opens **T** two rows show brand, last four and expiry, and no full number appears anywhere in the response or the screen | api, maestro |
+| UIRF-48 | **G** a card **W** it is removed and confirmed **T** E-185 is sent once, the row leaves, and the next payment page no longer offers it | api, maestro |
+| UIRF-49 | **G** a tenant who saved a card **W** the owner opens `Cards` **T** the owner's list does not contain the tenant's card; a forced delete of it answers 404 | api |
+| UIRF-50 | **G** a building whose gateway has no saved methods **W** `Fees` renders **T** the link "Thẻ đã lưu" is absent | api, maestro |
+
+### 10. E2E cases
+
+Maestro: `cards.yaml` (UIRF-47, 48, 50); UIRF-49 is an API test.
+
+### 11. Open questions
+
+None.
+
+---
+
+## The screens for a bank-transfer driver
+
+`Pay-VietQR` (the QR, its copy and save-image actions, "I transferred") and `Pay-Mismatch` (a transfer of another amount arrived, DR-84 item 8) are written when a QR driver (VietQR, payOS) is added; the work is listed in DOC-24 §6. Until then their rows in DOC-56 §3 and the notes N1 and N4 stay the contract, the app renders only the presentation types a driver declares, and the gateway screen refuses a QR driver while no `Pay-VietQR` exists (DOC-67).
 
 ## Decisions made while writing
 
-Recorded as DR-323 (decided, Claude delegated by the Owner; none touches money or access).
+Recorded as DR-323 (decided, Claude delegated by the Owner), revised by DR-325, DR-326 and DR-328 (the payment items and the fee-notice PDF).
 
 | Part of DR-323 | Decision | Where used |
 | --- | --- | --- |
 | Lines in the list | E-80 returns `lines[]` for each charge, so a card needs no second request; E-81 returns the same lines | `Fees` §5 |
-| No payment in P2 | No pay button, QR or method is drawn or disabled in a P2 build; the caption sends the resident to the office | `Fees`, `Fee-Detail` |
-| No fee-notice PDF for residents | The canvas button is removed (DOC-34 §6.3); the receipt PDF stays | `Fee-Detail` |
-| No bank-account line | No field holds a collection account; the line is omitted until the Owner supplies it | `Fee-Detail` |
+| ~~No payment in P2~~ | *Revised 2026-11-01 (DR-325):* payment is in P2; the pay buttons are drawn when E-80 says `payment.enabled` and the member has `pay`; a building with no gateway shows the office caption | `Fees`, `Fee-Detail` |
+| ~~No fee-notice PDF for residents~~ | *Revised 2026-11-01 (DR-328):* E-183 serves the fee-notice PDF to a member; the canvas button stays | `Fee-Detail` |
+| No bank-account line | No field holds a collection account; the app is the way to pay online and the line is not needed; it is omitted | `Fee-Detail` |
+| Payment presentation | The screens render `redirect` or `qr` by the type the driver returns, never by provider name; `Cards` only for a driver with saved methods (DR-326) | `Pay-*`, `Cards` |
 | Status chip | Thresholds from `daysPastDue`: overdue, today, 1–7 days left (warning), more (neutral) | `Fees` |
 | History summary | E-82 carries `summary {outstanding, paidThisYear}` inside the member's window | `Fee-History` |
 
@@ -450,7 +919,7 @@ Recorded as DR-323 (decided, Claude delegated by the Owner; none touches money o
 | Topic | Lives in |
 | --- | --- |
 | What a resident may see by membership date | DOC-22 §8.4, DOC-27 §6.6 |
-| The payment screens | DOC-58 (P3), DOC-23 |
+| The server side of a payment | DOC-23, DOC-24 |
 | The staff view of the same charges | DOC-66 |
 | The receipt PDF and its render | DOC-34 §7, §8.2 |
 | The push for a new batch or a paid charge | DOC-31, DOC-44 |
@@ -464,7 +933,12 @@ Recorded as DR-323 (decided, Claude delegated by the Owner; none touches money o
 | `Fees-NoPay` | FR-03, FR-07.1 | DR-40, DR-72 | `UIRF-09…11` |
 | `Fee-Detail` | FR-03, FR-12.3, FR-36 | DR-19, DR-40, DR-323 | `UIRF-12…19` |
 | `Fee-History` | FR-06.5 | DR-17, DR-40, DR-323 | `UIRF-20…26` |
+| `Pay-Select` | FR-07.1, FR-07.2, FR-07.4, FR-07.6, FR-07.7 | DR-28, DR-84, DR-325, DR-326 | `UIRF-27…33` |
+| `Pay-Redirect` | FR-08.4, FR-08.7, FR-10.3 | DR-326 | `UIRF-34…40` |
+| `Pay-Done` | FR-08.7 | DR-326 | `UIRF-41…43` |
+| `Pay-Failed` | FR-10.2 | DR-28, DR-326 | `UIRF-44…46` |
+| `Cards` | FR-07 | DR-325, DR-326 | `UIRF-47…50` |
 
 ## Open questions
 
-None for the four P2 screens. The payment screens raise theirs in P3.
+None. `Pay-VietQR` and `Pay-Mismatch` are written when a bank-transfer driver is added.

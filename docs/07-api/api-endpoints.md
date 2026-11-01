@@ -155,6 +155,9 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-180 | `GET /staff/unit-types` | `listUnitTypes` | staff: admin, manager | | | UC-13 | §10 (DR-314, P1-30) |
 | E-181 | `POST /staff/unit-types` | `createUnitType` | staff: admin, manager | R | | UC-13 | §10 (DR-314, P1-30) |
 | E-182 | `PATCH /staff/unit-types/{id}` | `updateUnitType` | staff: admin, manager | | | UC-13 | §10 (DR-314, DR-315, P1-30) |
+| E-183 | `GET /me/fees/{chargeId}/pdf` | `downloadMyFeeNotice` | unit: view_fees | | | UC-03 | DOC-34 §6.3, §8.1 (DR-328, P2); query `lang` `vi`, `en`, `both` |
+| E-184 | `GET /me/payment-methods` | `listMySavedMethods` | unit: pay | | | UC-03 | DOC-24 §4.7 (DR-326, P2); `{ methods: [{ id, brand, last4, expMonth, expYear }], supported }` from the provider, nothing stored |
+| E-185 | `DELETE /me/payment-methods/{id}` | `removeMySavedMethod` | unit: pay | | | UC-03 | DOC-24 §4.7 (DR-326, P2); the card must belong to the caller's Customer, else 404 |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -170,10 +173,10 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-82 | `GET /me/fees/history` | `listMyFeeHistory` | unit: view_fees | | UC-03 | P2 |
 | E-83 | `GET /me/receipts` | `listMyReceipts` | unit: view_fees | | UC-03 | P2 |
 | E-84 | `GET /me/receipts/{id}/pdf` | `downloadMyReceipt` | unit: view_fees | | UC-03 | P2; the PDF and its on-demand render: DOC-34 §8.2 |
-| E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 §4 (P3); the sample is DOC-23 §4.6, copied here when the P3 group is specified |
-| E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P3 (the response carries `unmatchedTransfer {amount, receivedAt}` for the outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, DR-96) |
-| E-87 | `POST /me/payments/intents/{id}/cancel` | `cancelPaymentIntent` | unit: pay | | UC-03 | P3 |
-| E-88 | `POST /me/payments/intents/{id}/check` | `checkPaymentIntent` | unit: pay | | UC-18 | P3 (answers `{status, checkScheduled}`, DOC-23 §5.2) |
+| E-85 | `POST /me/payments/intents` | `createPaymentIntent` | unit: pay | R | UC-03 | DOC-23 §4 (P2); the sample is DOC-23 §4.6, copied here when the P2 group is specified The response carries `presentation` (`{type:"redirect", url}` for Stripe, `{type:"qr", payload, receiving}` for a QR driver, DOC-24 §2) and `provider` is not exposed. *Revised 2026-11-01 (DR-326).* |
+| E-86 | `GET /me/payments/intents/{id}` | `getPaymentIntent` | unit: view_fees | | UC-03 | P2 (the response carries `unmatchedTransfer {amount, receivedAt}` for the outcomes `amount_short`, `amount_over`, `charge_already_paid`, `charge_recalled`, DR-96) |
+| E-87 | `POST /me/payments/intents/{id}/cancel` | `cancelPaymentIntent` | unit: pay | | UC-03 | P2 |
+| E-88 | `POST /me/payments/intents/{id}/check` | `checkPaymentIntent` | unit: pay | | UC-18 | P2 (answers `{status, checkScheduled}`, DOC-23 §5.2) |
 | E-89 | `GET /staff/fee-batches` | `listFeeBatches` | staff: admin, manager | | UC-01 | DOC-21 (P2) |
 | E-90 | `POST /staff/fee-batches` | `createFeeBatch` | staff: admin, manager | R | UC-01 | P2 |
 | E-91 | `GET /staff/fee-batches/{id}` | `getFeeBatch` | staff: admin, manager | | UC-01 | P2 |
@@ -2887,6 +2890,8 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-175 | `POST /staff/payments/intents/{id}/cancel` | A Manager or Admin cancels a resident's open payment (DR-28 rule 4, DR-282) |
 | E-176 | `GET /staff/charges/{id}/pdf` | One unit's fee notice, the "Tải PDF căn này" button of `W-Fee-Notice`; drafts render with the draft mark (DR-293) |
 | E-177 | `GET /staff/fee-batches/{id}/pdf` | The state of the latest bulk fee-notice job and its ZIP (DR-293) |
+| E-183 | `GET /me/fees/{chargeId}/pdf` | The resident's download of the fee notice of an open or paid charge (DR-328) |
+| E-184, E-185 | `GET /me/payment-methods`, `DELETE /me/payment-methods/{id}` | The resident's saved cards at the payment provider: list and remove (DR-326); only for a driver with `capabilities.savedMethods` |
 | E-178, E-179 | `POST /me/inbox/{id}/read`, `POST /staff/inbox/{id}/read` | Mark one inbox entry read when it is opened (DR-302) |
 | E-118 | `GET /me/ticket-types` | The resident form needs the types |
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |

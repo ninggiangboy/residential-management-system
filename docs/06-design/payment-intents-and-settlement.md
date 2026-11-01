@@ -1,10 +1,12 @@
 # Payment intents and settlement
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-25: first version, DR-280…283) · DOC-23
+> Status: **Draft** · Updated: 2026-11-01 (DR-325, DR-326: Stripe is the first gateway and payment moves to P2; §10.3, the provider note) · 2026-10-28 (P1-25: first version, DR-280…283) · DOC-23
 > Depends on: [DOC-50](../07-api/api-guidelines.md) §8, original SDD §5.7, §5.8, §6.1…6.5, §16.2, §19.3, [DR](../00-decision-register.md) (DR-14, 16, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 64, 74, 80, 84, 91, 96, 126, 244, 267, DR-280…283), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [DOC-03](../01-product/requirements.md) (FR-07…FR-10, NFR-01, NFR-02), [DOC-04](../01-product/use-cases.md) (UC-03, UC-18), [DOC-09](../03-architecture/messaging-contracts.md) §4.2, §6, [DOC-12](../03-architecture/code-architecture.md) §4, §8, §11, [DOC-15](../05-data/finance-model.md) §4, §6, §7, §8, [DOC-21](fee-batches-and-import.md) §2.1, §3.5, §3.9, [DOC-22](ledger-and-allocation.md) §2.1, §4, §9, §10, [DOC-27](residency-and-memberships.md) §4, [DOC-36](building-configuration-and-demo.md), [DOC-38](jobs-and-outbox-runtime.md) §3, §4, [DOC-40](observability.md) §4.5, §5, [DOC-41](configuration-reference.md), [DOC-42](error-handling.md) §5, §6, §7.3, [DOC-06](../02-glossary.md)
-> Main readers: P2-06 (`settle()`), P2-07 (`IntentCancellation`), P3-02 (intent creation), P3-03 (the webhook route around `settle()`), P3-04 (re-query, expiry, cancel handler), P3-05, P3-06, P3-08 (EXP-01, EXP-02), P3-09, DOC-08, DOC-24, DOC-25, DOC-44 (FL-09), DOC-45, DOC-51, DOC-58, DOC-66, DOC-90, DOC-91, RB-02
+> Main readers: P2-06 (`settle()`), P2-07 (`IntentCancellation`), P2-22 (intent creation; was P3-02), P2-23 (the webhook route around `settle()`; was P3-03), P2-24 (re-query, expiry, cancel handler; was P3-04), P2-25, P2-26, P2-27 (EXP-01, EXP-02), P2-28, DOC-08, DOC-24, DOC-25, DOC-44 (FL-09), DOC-45, DOC-51, DOC-58, DOC-66, DOC-90, DOC-91, RB-02
 
 This document says how an online payment works on the server: how a payment intent is created and holds its charges, how a household meets an open intent, how `settle()` turns one authenticated confirmation into a payment or a money-log row, how the re-query job and the cancel handler move intents that the webhook did not, and what each step writes to the outbox. It does not hold the tables (DOC-15), the allocation statement, receipts and the money log viewer (DOC-22), the batch recall and the void of one charge (DOC-21), the gateway port, the payOS driver and the webhook signature (DOC-24), the statement path (DOC-25) or the screens (DOC-58, DOC-66).
+
+**Provider note (DR-325, DR-326).** The first gateway is **Stripe** (hosted Checkout, cards, saved cards), not payOS; the provider-neutral port and both drivers are DOC-24. Everything about the intent, the hold, `settle()`, the money log, the re-query and the cancel is unchanged and provider-neutral. Three things in this document were written for a **bank-transfer** gateway and apply to a bank-transfer driver only (`capabilities.exactAmountOnly = false`): the QR string and the transfer content (`qr_payload`, `receiving`, DR-27), the outcomes `amount_short` and `amount_over` with `unmatchedTransfer`, and the 9-character description limit. For Stripe the resident is sent to `checkout_url`, the amount is exact by construction, and §10.3 maps each step. Where the text says "link", read "session"; where it says "QR", read "the presentation of the driver".
 
 **Draft until the gateway is verified.** The intent lifecycle, the transfer content, the re-query and the cancel follow DR-27, DR-28, DR-30 and DR-31, which stay *proposed* until the Owner reports a gateway sandbox (DR-25; decision log 2026-10-28). The payOS behaviour this document assumes is listed in §10.2; every such place is marked *unverified*. `settle()` follows DR-29 and DR-32, which are decided.
 
@@ -616,6 +618,20 @@ The handler's update is `UPDATE … SET status = 'cancelled', cancelled_at = now
 | `cancel` on a paid link says so | §9 | `getStatus` runs anyway on any 4xx before the local cancel (a cheap extra call) |
 | The payload's `transactionDateTime` is local time without a zone | `paid_at` (DR-29) | DOC-24's mapping changes; `settle()` does not |
 | The description limit is 9 characters | transfer content (DR-27) | A longer content needs a linked account; matching never depends on it |
+
+### 10.3 The Stripe driver in this document's terms (DR-326)
+
+| This document | Stripe |
+| --- | --- |
+| Create the link (§4.5) | `checkout.sessions.create`, one session per intent, `client_reference_id` = `order_code`, `expires_at` = `display_until`; the answer's `url` goes to `checkout_url`, its `id` to `link_id`; no QR |
+| `getStatus` by order code (§8) | `checkout.sessions.retrieve` by `link_id` (the order code is the `client_reference_id`) |
+| A confirmation (§6) | `checkout.session.completed` / `async_payment_succeeded` with `payment_status = paid`; `reference` = the PaymentIntent id |
+| Cancel (§9) | `checkout.sessions.expire`; a session already complete answers 400 and the handler runs `getStatus` and settles |
+| The window (DR-28) | `display_until` is the session's `expires_at`; Stripe allows 30 minutes to 24 hours (to verify, DOC-24 §4.12), so the 60-minute re-query window of `expires_at` stays |
+| `amount_short`, `amount_over` | Not produced by a card; `duplicate_transfer` still covers two paid sessions for one intent |
+| `unmatchedTransfer` of E-86 | Always null for Stripe; the field stays for bank-transfer drivers |
+| Money after posting | A refund or a dispute at Stripe is a review row (`refunded`, `disputed`), never a change of the ledger (DR-327, proposed) |
+| Saved cards | One Customer per resident account, `finance.payment_customer`; the intent's `created_by` is the account whose Customer is used |
 
 ## 11. Notifications
 

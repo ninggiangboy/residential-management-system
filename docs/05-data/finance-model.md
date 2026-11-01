@@ -1,6 +1,6 @@
 # Finance model
 
-> Status: **Draft** · Updated: 2026-10-28 (DR-281, proposed: `ck_payment_intent_failed` reads `<=`; DR-243…245 confirmed by the Owner) · 2026-10-22 · DOC-15
+> Status: **Draft** · Updated: 2026-11-01 (DR-326, DR-327: `provider` is a pattern, `payment_customer`, outcomes `refunded` and `disputed`) · 2026-10-28 (DR-281, proposed: `ck_payment_intent_failed` reads `<=`; DR-243…245 confirmed by the Owner) · 2026-10-22 · DOC-15
 > Depends on: original SDD §5, §6, §16, [DR](../00-decision-register.md) (DR-09…14, 16…21, 23…35, 56, 60, 84, 86, 87, 96, 97, 105, 109, 115, 119, 120, 126, DR-243…245), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-14](data-conventions.md), [DOC-16](identity-and-residency-model.md) §5.5, [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-20](data-lifecycle.md) §2.4, [DOC-36](../06-design/building-configuration-and-demo.md) §10, [DOC-03](../01-product/requirements.md) (FR-01…12, 44, 46, 47, 49), [DOC-06](../02-glossary.md)
 > Main readers: P2-01 (finance schema), P2-02 (counters), P2-03, P2-06…P2-11, P2-13, P3-02…P3-07, DOC-21, DOC-22, DOC-23, DOC-24, DOC-25, DOC-34, DOC-19 (grants), DOC-100 (EXP-11), DOC-75 (RB-01)
 
@@ -479,10 +479,10 @@ CREATE TABLE finance.payment_intent (
   amount            bigint      NOT NULL,                       -- Σ charge.amount of the items
   status            text        NOT NULL DEFAULT 'creating',
   gateway_config_id uuid        NOT NULL,                       -- building.gateway_config.id
-  provider          text        NOT NULL DEFAULT 'payos',
+  provider          text        NOT NULL DEFAULT 'stripe',
   link_id           text,                                       -- paymentLinkId
   qr_payload        text,                                       -- EMVCo VietQR string
-  checkout_url      text,
+  checkout_url      text,                                       -- the redirect presentation (Stripe, VNPay); null for a QR driver
   receiving         jsonb,                                      -- {bin, bankName, accountNumber, accountName} snapshot
   created_by        uuid        NOT NULL,                       -- identity.resident_account.id
   display_until     timestamptz NOT NULL,                       -- expiredAt sent to the gateway (30 min)
@@ -505,7 +505,7 @@ CREATE TABLE finance.payment_intent (
   CONSTRAINT uq_payment_intent_order_code UNIQUE (order_code),
   CONSTRAINT uq_payment_intent_building_code UNIQUE (building_id, code),
   CONSTRAINT ck_payment_intent_status   CHECK (status IN ('creating', 'pending', 'cancelling', 'paid', 'failed', 'expired', 'cancelled')),
-  CONSTRAINT ck_payment_intent_provider CHECK (provider IN ('payos')),
+  CONSTRAINT ck_payment_intent_provider CHECK (provider ~ '^[a-z][a-z0-9]{2,15}$'),   -- DR-326: a driver adds a word, not a migration
   CONSTRAINT ck_payment_intent_code     CHECK (code ~ '^TT-[0-9]{6}-[0-9]{4,}$'),
   CONSTRAINT ck_payment_intent_order_code CHECK (order_code BETWEEN 1000000 AND 34359738367),
   CONSTRAINT ck_payment_intent_amount   CHECK (amount > 0),
@@ -592,6 +592,19 @@ stateDiagram-v2
 - **Written and read by:** `finance`.
 
 ```sql
+-- DR-326: the provider's customer of a resident account, for saved cards. Holds ids only; no name, phone or e-mail.
+CREATE TABLE finance.payment_customer (
+  id                   uuid        NOT NULL,
+  building_id          uuid        NOT NULL,
+  account_id           uuid        NOT NULL,                    -- identity.resident_account.id (no foreign key across modules, ADR-0014)
+  provider             text        NOT NULL,
+  provider_customer_id text        NOT NULL,                    -- Stripe: cus_…
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT pk_payment_customer PRIMARY KEY (id),
+  CONSTRAINT uq_payment_customer_account_provider UNIQUE (building_id, account_id, provider),
+  CONSTRAINT ck_payment_customer_provider CHECK (provider ~ '^[a-z][a-z0-9]{2,15}$')
+);
+
 CREATE TABLE finance.payment_intent_item (
   id          uuid        NOT NULL,
   building_id uuid        NOT NULL,
@@ -903,10 +916,11 @@ CREATE TABLE finance.gateway_event (
   CONSTRAINT fk_gateway_event_intent  FOREIGN KEY (intent_id)  REFERENCES finance.payment_intent (id),
   CONSTRAINT fk_gateway_event_payment FOREIGN KEY (payment_id) REFERENCES finance.payment (id),
   CONSTRAINT uq_gateway_event_provider_reference UNIQUE (provider, reference),
-  CONSTRAINT ck_gateway_event_provider CHECK (provider IN ('payos')),
+  CONSTRAINT ck_gateway_event_provider CHECK (provider ~ '^[a-z][a-z0-9]{2,15}$'),
   CONSTRAINT ck_gateway_event_source   CHECK (source IN ('webhook', 'requery', 'statement')),
   CONSTRAINT ck_gateway_event_outcome  CHECK (outcome IN ('pending', 'posted', 'amount_short', 'amount_over',
-                                              'duplicate_transfer', 'charge_already_paid', 'charge_recalled', 'unknown_order')),
+                                              'duplicate_transfer', 'charge_already_paid', 'charge_recalled', 'unknown_order',
+                                              'refunded', 'disputed')),   -- DR-326, DR-327: written for an event after posting; they change no ledger row
   CONSTRAINT ck_gateway_event_amount   CHECK (amount > 0),
   CONSTRAINT ck_gateway_event_payload  CHECK (jsonb_typeof(payload) = 'object'),
   CONSTRAINT ck_gateway_event_posted   CHECK ((outcome = 'posted') = (payment_id IS NOT NULL)),

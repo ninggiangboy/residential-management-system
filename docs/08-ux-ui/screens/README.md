@@ -1,6 +1,6 @@
 # Screens index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `W-Unit-Types` in DOC-65) · 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-325: the payment screens move to P2; `Pay-Redirect`, `Pay-Failed`, `Cards`) · 2026-11-01 (DR-314: `W-Unit-Types` in DOC-65) · 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-27, 33, 38, 39, 40, 41…47, 48, 59, 69…72, 74, 75, 84, 128), [DOC-03](../../01-product/requirements.md), [DOC-04](../../01-product/use-cases.md), [DOC-14](../../05-data/data-conventions.md) (human codes), [DOC-27](../../06-design/residency-and-memberships.md) §3.2 (policy table), [DOC-51](../../07-api/api-endpoints.md), DOC-53, DOC-54, DOC-55, [design screens catalog](../../references/design-screens.md)
 > Main readers: the writers of DOC-57…67 and DOC-68, P1-16, P1-17 (the client shells), P1-09 (i18n catalog), every task that builds or tests a screen
 
@@ -87,10 +87,13 @@ File `08-ux-ui/screens/resident-fees-payment.md` · Resident app · 8 sections (
 | `Fees-NoPay` | Same list, read-only (no pay button) | Tenant without `can_pay` | P2 | designed |  |
 | `Fee-Detail` | Fee notice of one batch: lines, how to pay | Owner, Family member, Tenant | P2 | designed | N1 |
 | `Fee-History` | Paid batches and receipts | Owner, Family member, Tenant | P2 | designed | N1, N4 |
-| `Pay-Select` | Select batches and the payment method | Owner, Family member, Tenant with `can_pay` | P3 | designed | N1 |
-| `Pay-VietQR` | Dynamic VietQR for the selected batches | Owner, Family member, Tenant with `can_pay` | P3 | designed | N4 |
-| `Pay-Done` | Payment confirmed, one receipt per batch | Owner, Family member, Tenant with `can_pay` | P3 | designed | N4 |
-| `Pay-Mismatch` | State of `Pay-VietQR`: a transfer of another amount arrived (DR-84 item 8) | Owner, Family member, Tenant with `can_pay` | P3 | to design |  |
+| `Pay-Select` | Select batches and see the total (one method of the active gateway) | Owner, Family member, Tenant with `can_pay` | P2 | designed | N1 |
+| `Pay-Redirect` | The wait while the hosted payment page is open (*DR-325*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
+| `Pay-Failed` | The payment expired, was cancelled or failed (*DR-325*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
+| `Cards` | Cards saved at the provider: list and remove (*DR-326*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
+| `Pay-VietQR` | Dynamic VietQR for the selected batches | Owner, Family member, Tenant with `can_pay` | with a QR driver (*DR-325*) | designed | N4 |
+| `Pay-Done` | Payment confirmed, one receipt per batch | Owner, Family member, Tenant with `can_pay` | P2 | designed | N4 |
+| `Pay-Mismatch` | State of `Pay-VietQR`: a transfer of another amount arrived (DR-84 item 8) | Owner, Family member, Tenant with `can_pay` | with a QR driver (*DR-325*) | to design |  |
 
 ### DOC-59 · Resident: requests, unit, members, vehicles
 
@@ -239,9 +242,9 @@ File `08-ux-ui/screens/web-finance.md` · Web CMS · 15 sections (8 designed, 7 
 | `W-Charge-Void` | Dialog: void one open charge, reason of at least 5 characters | Admin, Manager | P2 | to design |  |
 | `W-Fee-Reissue` | Re-issue a recalled batch as a new draft | Admin, Manager | P2 | to design |  |
 | `W-Debts` | Debt per unit, aging, push reminders | Admin, Manager | P2 | designed |  |
-| `W-Transactions` | Online transactions, pending, duplicates, re-query | Admin, Manager | P3 | designed | N3, N4 |
-| `W-Money-Log` | Tab of `W-Transactions`: every confirmation and unmatched line, review (DR-16) | Admin, Manager | P2, P3 | to design |  |
-| `UnitMoneyPanel` | Component: the log rows of one unit (DR-16) | Admin, Manager | P3 | to design |  |
+| `W-Transactions` | Online transactions, pending, duplicates, re-query | Admin, Manager | P2 (*DR-325*) | designed | N3, N4 |
+| `W-Money-Log` | Tab of `W-Transactions`: every confirmation and unmatched line, review (DR-16) | Admin, Manager | P2 (*DR-325*) | to design |  |
+| `UnitMoneyPanel` | Component: the log rows of one unit (DR-16) | Admin, Manager | P2 (*DR-325*) | to design |  |
 | `W-Statement` | Bank-statement upload and reconciliation | Admin, Manager | P3 | to design |  |
 | `W-Reports` | Aging, collection per item, ticket statistics | Admin, Manager | P6 | designed |  |
 | `W-Export-Center` | Requested exports and downloads (DR-55) | Admin, Manager | P6 | to design |  |
@@ -256,7 +259,7 @@ File `08-ux-ui/screens/web-system.md` · Web CMS · 7 sections (6 designed, 1 to
 | `W-Staff-New` | Create a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed |  |
 | `W-Building` | Building and company info, defaults, terms | Admin | P1 | designed |  |
 | `W-Step-Up` | Dialog: request a code, enter password and code (DR-39) | Admin | P1 | to design |  |
-| `W-Gateway` | Payment gateway configuration and checks | Admin | P3 | designed | N3 |
+| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed | N3 |
 | `W-Audit` | Audit log of staff data changes | Admin; Manager (narrowed set) | P6 | designed |  |
 | `W-System` | Backups, storage, notification channels | Admin | P6 | designed |  |
 
@@ -268,15 +271,15 @@ DR-72 lists the screens to design before their phase. 13 rows, of which one is a
 | Screen | File | Purpose | Phase |
 | --- | --- | --- | --- |
 | `Terms-Update` | DOC-57 | Re-consent after a new terms version (DR-59, FR-41) | P1 |
-| `Pay-Mismatch` | DOC-58 | State of `Pay-VietQR`: a transfer of another amount arrived (DR-84 item 8) | P3 |
+| `Pay-Mismatch` | DOC-58 | State of `Pay-VietQR`: a transfer of another amount arrived (DR-84 item 8) | with a QR driver |
 | `Account-Deletion` | DOC-60 | Request and cancel account deletion (DR-59); the cooling-off days come from E-13 (DR-202); wireframe in DOC-60 | P1 |
 | `Sessions` | DOC-60 | Signed-in devices, revoke one (DR-38; the staff variants are inside `W-Profile` and `S-Account`); wireframe in DOC-60 | P1 |
 | `W-Ticket-Cancel` | DOC-64 | Manager cancels a ticket with a reason (DR-44) | P4 |
 | `W-Fee-Recall` | DOC-66 | Recall a published batch, with the 409 result | P2 |
 | `W-Charge-Void` | DOC-66 | Dialog: void one open charge, reason of at least 5 characters | P2 |
 | `W-Fee-Reissue` | DOC-66 | Re-issue a recalled batch as a new draft | P2 |
-| `W-Money-Log` | DOC-66 | Tab of `W-Transactions`: every confirmation and unmatched line, review (DR-16) | P2, P3 |
-| `UnitMoneyPanel` | DOC-66 | Component: the log rows of one unit (DR-16) | P3 |
+| `W-Money-Log` | DOC-66 | Tab of `W-Transactions`: every confirmation and unmatched line, review (DR-16) | P2 |
+| `UnitMoneyPanel` | DOC-66 | Component: the log rows of one unit (DR-16) | P2 |
 | `W-Statement` | DOC-66 | Bank-statement upload and reconciliation | P3 |
 | `W-Export-Center` | DOC-66 | Requested exports and downloads (DR-55) | P6 |
 | `W-Step-Up` | DOC-67 | Dialog: request a code, enter password and code (DR-39). It opens on a 403 `step_up_required` and, when the form knows its action, on submit (DR-216); the usage rule every web screen follows is in DOC-67 `W-Step-Up` | P1 |
@@ -309,9 +312,9 @@ Each note is a place where a drawn artboard contradicts a decided DR or another 
 
 | Note | Artboards | The prototype shows | Write instead |
 | --- | --- | --- | --- |
-| N1 | `Pay-Select`, `Fee-Detail`, `Fee-History` | VNPay as a second payment method ("VNPay", "Qua VNPay hoặc VietQR", a sample row paid by VNPay) | Phase 1 offers VietQR only (DR-72). The method list comes from the configured provider; history rows show the recorded method as data |
+| N1 | `Pay-Select`, `Fee-Detail`, `Fee-History` | VNPay as a second payment method ("VNPay", "Qua VNPay hoặc VietQR", a sample row paid by VNPay) | The first version has one method, the active gateway's (a card through Stripe, *DR-325*; VietQR only until then, DR-72). The screen names the method by its presentation, not by a provider; history rows show the recorded method as data |
 | N2 | `W-Login`, `S-Login-Error` | "Còn 2 lần thử", "Bạn còn 2 lần thử" (a counter of tries left) | One 401 `invalid_credentials` body for every credential failure; no count anywhere; the locked state is 423 `account_locked` with `retryAfter` (DR-128). A static policy sentence (5 wrong tries, 15 minutes) may stay as copy owned by DOC-68, never as a number computed per account |
-| N3 | `W-Gateway`, `W-Transactions` | A choice between VNPay and VietQR ("Chọn 1 cổng"), the word "IPN", an on-screen design note "Đang chờ chốt VNPay hoặc VietQR cho bản đầu" | One configured provider, fields defined by its driver and stored as one encrypted blob (DR-33, DR-72); provider-neutral "webhook" wording; design notes are not copy |
+| N3 | `W-Gateway`, `W-Transactions` | A choice between VNPay and VietQR ("Chọn 1 cổng"), the word "IPN", an on-screen design note "Đang chờ chốt VNPay hoặc VietQR cho bản đầu" | One configured provider (Stripe first, *DR-325*), fields defined by its driver and stored as one encrypted blob (DR-33, DR-72); provider-neutral "webhook" wording; design notes are not copy |
 | N4 | `Fee-History`, `Pay-VietQR`, `Pay-Done`, `W-Fee-Record`, `W-Transactions` | Codes `TT-0910-0045` (MMDD), `PT-0915-0118` for a receipt, `YC-1009-010` | Human codes follow DOC-14: `BL-YYMM-NNNN` receipt, `PH-YYMM-NN` batch, `TT-YYMMDD-NNNN` intent, `YC-YYMMDD-NNN` ticket. There is no `PT-` code. The transfer content shown on `Pay-VietQR` follows DR-27, not the sample `MM A1508 T10 D1D2 8F3K` |
 | N5 | `W-Fees` | Status tabs Nháp, Đã phát hành, Đã đóng | Add `recalled` (DR-72). "Closed" is the Manager's manual freeze for reporting; charges stay payable (DR-20) |
 | N6 | `Fees`, `W-Fee-Record` | The sentence "nộp tiền mặt hoặc nộp một phần"; a record form that picks batches and a method | No partial payment and no credit (DR-84): remove "nộp một phần". The manual form selects whole charges and shows the computed sum, with no amount field; a wrong entry is voided from its own dialog (DR-72, DR-84) |
@@ -320,7 +323,7 @@ Each note is a place where a drawn artboard contradicts a decided DR or another 
 | N9 | `S-Account`, `W-Profile`, `Sessions` | `W-Profile` lists recent sessions; `S-Account` has none; the resident app has no `Sessions` | Every account kind lists its sessions and can revoke one (DR-38): resident `Sessions` (E-20, E-21), `W-Profile` and `S-Account` (E-32, E-33) |
 | N10 | `Main`, `Home-*` | Tiles and cards for fees, requests, notices, QR, vehicles on one home | The home is a P1 screen but its widgets belong to later phases: a tile or card appears only when its module ships (DR-196) |
 | N11 | `Home-Helper`, `Inbox` | A bell with an unread count on a helper's home | A helper has no `personal_notifications` (DOC-27 §3.2): no bell, no `Inbox`; general notices only |
-| N12 | `W-Unit-Detail` | Debt block without the money log | From P3 it embeds `UnitMoneyPanel` (DR-72, DR-16) |
+| N12 | `W-Unit-Detail` | Debt block without the money log | From P2 it embeds `UnitMoneyPanel` (DR-72, DR-16, DR-325) |
 
 ## 6. How a screen document is written
 
