@@ -1711,12 +1711,13 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
       "receivingAccount": { "bankBin": "970436", "bankName": "Vietcombank", "accountNumber": "0011001234567", "accountName": "CONG TY QUAN LY SUNRISE" },
       "secrets": { "clientId": "••••a1b2", "apiKey": "••••9z8y", "checksumKey": "••••4d5e" },
       "lastCheckAt": "2026-10-19T03:10:00.000Z", "lastCheckOk": true, "version": 3 } ],
-    "drivers": { "payos": { "fields": ["clientId", "apiKey", "checksumKey"], "allowed": true },
-                 "fake": { "fields": [], "allowed": false } }
+    "drivers": { "payos": { "fields": ["clientId", "apiKey", "checksumKey"], "allowed": true, "presentations": ["qr"] },
+                 "stripe": { "fields": ["restrictedKey", "webhookSecret"], "allowed": true, "presentations": ["redirect"], "savedMethods": true },
+                 "fake": { "fields": [], "allowed": false, "presentations": ["redirect", "qr"] } }
   }
   ```
 
-  A building with no configuration returns `"configs": []`.
+  A building with no configuration returns `"configs": []`. *Revised 2026-11-01 (DR-325, DR-326):* the first driver is `stripe`, whose config has no `receivingAccount` (`null`), shows `lastWebhookAt` and `rejections24h` (DR-331), shows `mode` (`test` or `live`, read from the key prefix) and `limits {min, max}`, and the answer lists each driver's `presentations` and `savedMethods` (DOC-24 §2, §4.12).
 - **Errors:** 403 `forbidden`.
 - **Data source:** `building.gateway_config` (the active row per provider); decrypt in memory only to mask (`SecretBox`, DOC-36 §6); no log line holds a secret.
 - **Cache:** `Cache-Control: no-store`.
@@ -1732,13 +1733,14 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
 
   | Name | In | Type | Required | Default | Constraints |
   | --- | --- | --- | --- | --- | --- |
-  | `provider` | body | string | yes | | `payos` today (DR-25); the provider key of the driver registry |
-  | `driver` | body | string | yes on create or when the driver changes | the stored driver | `payos`, `vietqr` or `fake`; `fake` only for a demo building |
+  | `provider` | body | string | yes | | `stripe` first (DR-325); the provider key of the driver registry (`payos`, `vnpay` later) |
+  | `driver` | body | string | yes on create or when the driver changes | the stored driver | `stripe`, `payos`, `vietqr` or `fake`; `fake` only for a demo building |
   | `status` | body | string | no | stored (`active` on create) | `active` or `disabled` |
-  | `receivingAccount.bankBin` | body | string | yes on create | stored | six digits |
+  | `receivingAccount.bankBin` | body | string | yes on create **for a driver with the `qr` presentation**; forbidden for `stripe` | stored | six digits |
   | `receivingAccount.accountNumber` | body | string | yes on create | stored | 6…20 digits |
   | `receivingAccount.accountName` | body | string | yes on create | stored | 1…50 upper-case ASCII letters, digits and spaces |
-  | `secrets` | body | object | yes on create or a new driver | stored | The driver's fields (`clientId`, `apiKey`, `checksumKey` for `payos`). A field present replaces the stored one; a field absent keeps it |
+  | `secrets` | body | object | yes on create or a new driver | stored | The driver's fields (`clientId`, `apiKey`, `checksumKey` for `payos`; `restrictedKey`, `webhookSecret` for `stripe`). A field present replaces the stored one; a field absent keeps it |
+  | `limits` | body | object | no | stored | `{ min, max }` in đồng, `min` ≥ 1, `max` ≥ `min`; defaults 2,000 and 500,000,000 (DR-28) |
   | `stepUp` | body | object | yes | | `{ password, code }` (E-38) |
 
 - **Request example (receiving account change):**

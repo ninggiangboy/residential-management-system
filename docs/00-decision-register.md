@@ -2205,6 +2205,12 @@ flowchart TB
 - **Consequences:** EXP-01 reports "duplicates blocked: n" for the demo of master plan §5; the staging host needs the scratch building of 1,000 units (`--seed-only`).
 - **Write to:** DOC-90, DOC-91.
 
+### DR-331 · `W-Gateway` shows the health of the webhook from E-49 — refines DR-33 — **Decided (Claude, delegated by Owner, 2026-11-01)**
+- **Problem:** The canvas of `W-Gateway` has an "IPN gần nhất" card and counts that E-51 does not return (the last webhook), and the web does not read the metrics endpoint.
+- **Decision:** E-49 returns, for the active configuration, `lastWebhookAt` (the `received_at` of the latest verified `gateway_event` of that configuration) and `rejections24h` (the `webhook_rejection` rows of the last 24 hours). The screen shows two lines from them and no health cards.
+- **Consequences:** Two read-only fields in E-49 (DOC-51); no new table.
+- **Write to:** DOC-51 (E-49), DOC-67 (`W-Gateway`).
+
 ### DR-227 · The dry run of DOC-69 is the acceptance of P1-03, not a condition of M0 — **Decided (Owner, 2026-10-21)**
 - **Problem:** The acceptance of P0-31 says "a new machine can follow DOC-69 to a running stack (dry-run on a clean user account)". The scripts that DOC-69 describes (`bun run setup`, `infra:up`, `dev`) are written in P1-01 and P1-03, so the dry run cannot be done before M0, and DOC-69 could not reach `Approved` at the M0 review (P0-35).
 - **Options:** (1) the dry run is the acceptance of P1-03 and is recorded in DOC-69 §14 then; M0 approval of DOC-69 does not wait for it; (2) postpone the approval of DOC-69 until P1-03 is done.

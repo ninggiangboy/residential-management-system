@@ -259,7 +259,7 @@ Tests use a **sandbox** created for development (`stripe sandbox create`), separ
 
 `fake` implements the port without a network (DR-26, ADR-0026).
 
-- `createSession` stores the session in `finance.fake_gateway_session` and returns `{type: 'redirect', url}` to a local page (`/dev/pay/{id}`, served only in `local` and `staging`) with three buttons: pay, decline, let it expire. With `presentation: 'qr'` in the configuration it returns a fake QR instead, to test the `Pay-VietQR` screen.
+- `createSession` stores the session in `finance.fake_gateway_link` and returns `{type: 'redirect', url}` to a local page (`/dev/pay/{id}`, served only in `local` and `staging`) with three buttons: pay, decline, let it expire. With `presentation: 'qr'` in the configuration it returns a fake QR instead, to test the `Pay-VietQR` screen.
 - `getStatus` reads the row; `cancel` sets it `cancelled`; `listSavedMethods` returns a stored list, to test `Cards`.
 - **Simulator:** `bun run pay:sim` signs a payload with the configured secret and posts it to the real webhook route: `--repeat`, `--shuffle`, `--delay`, `--wrong-signature`, `--amount`, `--event`. It works for `fake` and, with a Stripe test signing secret, for `stripe`.
 - Allowed only for a building with `is_demo = true`, in `local` and `staging`; production refuses to boot with a non-demo `fake` configuration (DR-26, DR-60).
