@@ -151,7 +151,7 @@ tokens(tᵢ)     = min(cap, tokens(last grant) + (tᵢ − last grant) × rate) 
 refused        otherwise (tokens and the last grant instant unchanged)
 ```
 
-`bucketModel(spacing, n, cap, perHour)` in `apps/api/test/exp/model.ts` evaluates this. Results the run is compared with (computed, not measured):
+`bucketModel(spacing, n, cap, perHour)` in `apps/api/tests/exp/model.ts` evaluates this. Results the run is compared with (computed, not measured):
 
 | Case | Grants (SMS commands) |
 | --- | --- |
@@ -240,7 +240,7 @@ The experiment **passes** when C1, C3 to C10 (and C11 in the final run) hold in 
 
 - `bun run exp:09 -- summary` reads the five run files and writes the summary: per criterion the min, median and max of the observed value, and `pass` only when every run passes.
 - It also writes `EXP-09-<utc>-timeline.svg`: cumulative SMS commands of each run's phone A against the model, so a limiter that drifts from the arithmetic shows as a visible gap.
-- The script `apps/api/test/exp/analyze.ts` has a unit test over the model values of §6.1 (`bun test`), so the arithmetic that the verdict relies on is itself tested.
+- The script `apps/api/tests/exp/analyze.ts` has a unit test over the model values of §6.1 (`bun test`), so the arithmetic that the verdict relies on is itself tested.
 - The report quotes the files: `docs/10-testing/experiments/results/EXP-09-*.json`.
 
 ## 9. Result table template

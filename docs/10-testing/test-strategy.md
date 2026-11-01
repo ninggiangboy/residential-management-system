@@ -55,7 +55,7 @@ flowchart TB
 | Web end to end | The CMS flows: import and publish a batch, record a payment, assign a ticket | Playwright 1.64.1 | `apps/cms-web/e2e/` | ≤ 6 min, one worker |
 | Mobile | Critical resident and staff flows on simulators | Maestro 2.11.0 | `apps/resident-app/.maestro/`, `apps/staff-app/.maestro/` | on demand |
 | Load | Mixed traffic, payment burst, fan-out | k6 2.3.0 | `apps/api/test/load/` | EXP-07, on demand |
-| Experiments | The twelve claims of original SDD §20.2 | scripts in `apps/api/test/exp/` | DOC-90…101 | per experiment |
+| Experiments | The twelve claims of original SDD §20.2 | scripts in `apps/api/tests/exp/` | DOC-90…101 | per experiment |
 
 "Planned cost" is a design target, not a measurement; P1-19 measures the whole pipeline against the 12-minute limit (master plan P1-19) and records the numbers in DOC-71.
 
@@ -127,7 +127,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `*.authz.test.ts` | authorization | `apps/api/tests/authz/matrix.authz.test.ts` |
 | `*.spec.ts` | Playwright | `apps/cms-web/e2e/fee-batch.spec.ts` |
 | `*.yaml` | Maestro | `apps/resident-app/.maestro/otp-sign-in.yaml` |
-| `exp<NN>-<name>.ts` | experiment script | `apps/api/test/exp/exp09-otp-abuse.ts` |
+| `exp<NN>-<name>.ts` | experiment script | `apps/api/tests/exp/exp09-otp-abuse.ts` |
 
 **Test titles start with the ID** of the document's "Required tests" table, then the scenario in the document's words, so that `grep "AU-22"` finds the test and the document row:
 
@@ -392,7 +392,7 @@ describe('allocation arbiter (DR-14)', () => {
 
 `rounds(ci, nightly)` returns the number for the active profile. The id `LG-12` is illustrative: DOC-22 (P2) owns the numbering. The real test exercises the use case (`allocate`), not the bare statement; the bare statement is the §9 test of DOC-22. The shape stays: N sessions, one barrier, assertions on winners, failures and the final rows.
 
-**The naive baseline.** EXP-03 (DOC-92, P2-14) runs the same race against `apps/api/test/exp/baseline.ts` (read the status, decide in code, write without the predicate) and expects charges settled twice. That documents why the predicate exists (DR-78). A race test of the chosen design never runs against the baseline.
+**The naive baseline.** EXP-03 (DOC-92, P2-14) runs the same race against `apps/api/tests/exp/baseline.ts` (read the status, decide in code, write without the predicate) and expects charges settled twice. That documents why the predicate exists (DR-78). A race test of the chosen design never runs against the baseline.
 
 ## 9. Fakes
 
@@ -447,7 +447,7 @@ The stage names are those of DOC-71. A pull request must pass `verify`, `unit`, 
 
 ## 12. Experiments and result files
 
-Each experiment is a file `10-testing/experiments/EXP-NN-*.md` (template A.6) and a script `apps/api/test/exp/expNN-*.ts` run by `bun run exp:NN`. The common protocol (machine, five runs, statistics, seeds) is DOC-89 (P2); until it exists, DR-78 and §6 of each experiment hold it. Rules shared by all (DR-77, DR-78):
+Each experiment is a file `10-testing/experiments/EXP-NN-*.md` (template A.6) and a script `apps/api/tests/exp/expNN-*.ts` run by `bun run exp:NN`. The common protocol (machine, five runs, statistics, seeds, result files, blocking) is [DOC-89](experiments/README.md) (Draft, DR-318). Rules shared by all (DR-77, DR-78):
 
 - All experiments run on the **staging host** of DR-06, except EXP-03 and EXP-04, which are database-only and may run on a developer machine that the result describes.
 - Each runs **5 times**; the report gives min, median and max; pass criteria apply to **every run** for correctness metrics and to the **median** for latency.
@@ -562,6 +562,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
 | `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |
+| `XP-` | Experiment protocol (the harness library: percentiles, seeds, result files) | [DOC-89](experiments/README.md) | `XP-01…09` | Draft | P2-14 |
 | `EXP-` | Experiments (an experiment's own steps are not test IDs; its criteria are `C1…`) | DOC-89, DOC-90…101 | EXP-09 (DOC-98), EXP-10 (DOC-99) | Draft | per EXP row of master plan §3.2 |
 
 Three notes. (1) The statement-test infix `S` is a numbering convention inside the prefix, not a prefix. (2) `DQ-` is the catalog of data-quality **rules** (DOC-18), not tests; its tests are `IM-`. (3) `RM-` also holds the residency side of the import commit (DOC-27 §17); the validator and the file rows are `IM-`.
