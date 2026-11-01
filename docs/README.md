@@ -107,8 +107,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Draft |
 | DOC-90 | EXP 01: duplicate and late webhooks (`10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md`) | Not written |
 | DOC-91 | EXP 02: webhook vs requery (`10-testing/experiments/EXP-02-webhook-vs-requery.md`) | Not written |
-| DOC-92 | EXP 03: online vs manual baseline (`10-testing/experiments/EXP-03-online-vs-manual-baseline.md`) | Not written |
-| DOC-93 | EXP 04: recall vs payment (`10-testing/experiments/EXP-04-recall-vs-payment.md`) | Not written |
+| DOC-92 | [EXP 03: online vs manual baseline](10-testing/experiments/EXP-03-online-vs-manual-baseline.md) | Draft |
+| DOC-93 | [EXP 04: recall vs payment](10-testing/experiments/EXP-04-recall-vs-payment.md) | Draft |
 | DOC-94 | EXP 05: qr revocation (`10-testing/experiments/EXP-05-qr-revocation.md`) | Not written |
 | DOC-95 | EXP 06: notice fan out (`10-testing/experiments/EXP-06-notice-fan-out.md`) | Not written |
 | DOC-96 | EXP 07: api load (`10-testing/experiments/EXP-07-api-load.md`) | Not written |

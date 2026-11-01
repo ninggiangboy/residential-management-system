@@ -15,7 +15,7 @@ Until now DR-78 and a paragraph in each experiment stood in for this protocol (E
 | EXP-01 | DOC-90 | Duplicate and late webhooks make one payment | NFR-01, NFR-02 | staging | correctness, latency (p95 ≤ 5 s) | P3-08 | M3 |
 | EXP-02 | DOC-91 | Webhook and re-query at one instant make one payment | NFR-01 | staging | correctness | P3-08 | M3 |
 | EXP-03 | DOC-92 | Online and manual payment of one charge: exactly one wins | NFR-01 | database only | correctness, against a baseline | P2-14 | M2 |
-| EXP-04 | DOC-93 | A recall racing payments leaves no live allocation on a void charge | NFR-01 | database only | correctness | P2-14 | M2 |
+| EXP-04 | DOC-93 | A recall racing payments leaves no live allocation on a void charge | NFR-01 | database only | correctness, against a baseline | P2-14 | M2 |
 | EXP-05 | DOC-94 | A revoked QR code is never accepted | NFR-06 | staging | correctness | P5-02 | M5 |
 | EXP-06 | DOC-95 | A notice reaches 5,000 recipients in time and once | NFR-04 | staging | latency, correctness | P4-06 | M4 |
 | EXP-07 | DOC-96 | The API holds the load target | NFR-03 | staging | latency (median) | P6-07 | M6 |
@@ -65,7 +65,7 @@ Until now DR-78 and a paragraph in each experiment stood in for this protocol (E
 An experiment compares the system with an **oracle** that is not the system.
 
 - **Computed from the input.** The generator knows how many payments there should be (one per reference), how many recipients (5,000), which corruption it injected (EXP-11). The expected value comes from the generator, never from a query on the table that the system wrote.
-- **Read by independent SQL.** The observed value is read by a query written for the experiment, in `apps/api/tests/exp/oracle/`, connected as `rms_migrator` with the grants of DOC-14 (it reads every table). It does not call a repository or a use case of the module under test. The ledger invariants of DOC-22 §6 are the shared queries (the same text the nightly job runs), so the experiment and the job cannot drift apart.
+- **Read by independent SQL.** The observed value is read by a query written for the experiment, in `apps/api/tests/exp/oracle/`, connected as `rms_migrator` with the grants of DOC-14 (it reads every table). It does not call a repository or a use case of the module under test. The ledger invariants of DOC-22 §12 (Q01…Q19) are the shared queries (the same text the nightly job runs), so the experiment and the job cannot drift apart.
 - **Written down before the run.** The `expected` of every criterion is in the experiment's document, with the number, and is copied to the file. A criterion changed after a run is a new experiment version (§9).
 
 ## 6. Baselines
@@ -82,7 +82,7 @@ A baseline is a deliberately naive or deliberately broken implementation of the 
 | EXP | Baseline |
 | --- | --- |
 | EXP-03 | The naive settlement above; expected to settle some charges twice |
-| EXP-04 | The recall that updates the charges without the conditional predicate on the allocation |
+| EXP-04 | A recall that voids the charges of the batch without `status = 'open'` and without the count check of DOC-21 §3.5; expected to leave a void charge with a live allocation |
 | EXP-10 | The 11 mutants (a defective guard each, DOC-99 §3) |
 | EXP-11 | The 20 corruptions injected into a copy of clean data; the clean copy must report 0 (no false positive) |
 | EXP-01, 02, 05, 06, 09 | A forged-signature-first case, a revoked code, a killed worker, a burst: each is a negative case inside the experiment, not a second implementation |
@@ -237,7 +237,7 @@ EXP_RUNS=1 bun run exp:03     # a smoke run: writes results/EXP-03-<utc>-smoke-r
 | The test pyramid, fixtures, the template database, the race harness | DOC-88 |
 | The numbers an experiment checks (targets, budgets) | DOC-10 |
 | Hypothesis, variables, steps and criteria of one experiment | DOC-90…101 |
-| The invariant queries that EXP-11 and the nightly job share | DOC-22 §6 |
+| The invariant queries that EXP-11 and the nightly job share | DOC-22 §12 (Q01…Q19) |
 | The CI stages that run the cut-down forms | DOC-71, DOC-88 §11 |
 
 ## 16. Traceability
