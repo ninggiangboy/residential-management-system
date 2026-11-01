@@ -137,6 +137,7 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-11-01 | Owner | Online payment goes into P2 (not P3); the first gateway is Stripe, temporarily and for easy testing (card entry, saved cards, paying again), built so that VNPay or VietQR is a later driver; a resident may download the fee notice PDF; no partial payment, amounts that differ are handled by hand; no Excel button or by-month tab on the debt page in P2 (DR-325, DR-328) | master plan, ADR-0029, DOC-24, DOC-23, DOC-58, DOC-66, DOC-67 |
 | 2026-11-01 | Claude (delegated) | DR-326 (the Stripe driver on hosted Checkout Sessions, the provider-neutral port with presentations, saved cards, no personal data to Stripe) | DOC-24, DOC-23, DOC-15 |
 | 2026-11-01 | Owner | DR-327: a refund or a dispute at the provider is only recorded and attached to the related payment and invoice for cross-checking; the rule stays that an online payment is not voided in the system | DOC-24, DOC-22, DOC-15, DOC-66 |
+| 2026-11-01 | Claude (delegated) | Wrote DOC-45 (online payment flows), DOC-90 (EXP-01) and DOC-91 (EXP-02) and the webhook section of DOC-52 (P2-19, P2-20): DR-330 (sizes, hostile share, the poller, the exact release) | DOC-45, DOC-90, DOC-91, DOC-52 |
 
 ---
 
@@ -2197,6 +2198,12 @@ flowchart TB
 - **Decision:** (1) `POST /staff/payments/intents/{id}/check` (E-186, Manager and Admin) brings the next re-query forward like E-88, at most once per 10 seconds per intent. (2) The screen shows the active driver's label from E-49 and the word "webhook"; no provider name is fixed in the copy. (3) The tab "Tiền cần kiểm tra" is the money log (`W-Money-Log`), with the open count in its badge. (4) The tiles count the filtered range; the default range is 7 days. (5) The screen is P2, with the online payment (DR-325).
 - **Consequences:** E-186 in DOC-51; keys `web.transactions.*`.
 - **Write to:** DOC-66, DOC-51.
+
+### DR-330 · EXP-01 and EXP-02 with Stripe: sizes, the hostile share, the poller, the exact release — refines DR-78 — **Decided (Claude, delegated by Owner, 2026-11-01)**
+- **Problem:** DR-78 gives the original SDD's sizes for EXP-01 (1,000 intents, 1 to 5 deliveries, some forged first, some late) and EXP-02 (1,000 intents, a barrier, 10 times) but not how the shares are chosen, how latency is measured with a real poller, or how the paths are released together when the sender is a simulator and the provider is Stripe.
+- **Decision:** (1) Both run on the staging host with the `fake` session and the Stripe **signature format** signed by `pay:sim` with a test signing secret, through the real webhook route; the provider's own behaviour is read from its documentation and checked once in P2-29. (2) EXP-01: deliveries per confirmation 1 to 5 from the seeded `Rng`, 10 % of the intents with 1 to 3 forged calls first, 10 % late (half expired, half cancelled) of which 2 % are paid in cash first, a third delivered in parallel; latency is measured by one simulated poller per intent at the app's 2 s then 3 s cadence from a random offset. (3) EXP-02: 10 rounds of 1,000 intents (10,000 per run), 50 in flight, each path released after a seeded offset of −3…+3 ms; the re-query is the `RequeryIntent` use case called by the harness so that the release is exact. (4) The run is `invalid` when fewer than 90 % of the intents overlapped, and EXP-02 also when either order won fewer than 5 % of the intents (the race was not tested). (5) `baseSeed` 10000 (EXP-01) and 20000 (EXP-02).
+- **Consequences:** EXP-01 reports "duplicates blocked: n" for the demo of master plan §5; the staging host needs the scratch building of 1,000 units (`--seed-only`).
+- **Write to:** DOC-90, DOC-91.
 
 ### DR-227 · The dry run of DOC-69 is the acceptance of P1-03, not a condition of M0 — **Decided (Owner, 2026-10-21)**
 - **Problem:** The acceptance of P0-31 says "a new machine can follow DOC-69 to a running stack (dry-run on a clean user account)". The scripts that DOC-69 describes (`bun run setup`, `infra:up`, `dev`) are written in P1-01 and P1-03, so the dry run cannot be done before M0, and DOC-69 could not reach `Approved` at the M0 review (P0-35).
