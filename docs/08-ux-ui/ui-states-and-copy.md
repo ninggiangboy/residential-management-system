@@ -1,6 +1,6 @@
 # UI states and copy
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-10-28 (DR-306: §2 the refreshing state and layout-shaped skeletons) · 2026-10-28 (P1-26: the `notify.*` and `pdf.*` families owned by DOC-31 and DOC-34, §1) · 2026-10-28 (DR-279: §4.6 the usage switch) · 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-11-01 (DR-314: copy for five error codes, reserved in DOC-42 §5.8 until P1-30, and `status.unit-type.*`) · 2026-10-28 (DR-306: §2 the refreshing state and layout-shaped skeletons) · 2026-10-28 (P1-26: the `notify.*` and `pdf.*` families owned by DOC-31 and DOC-34, §1) · 2026-10-28 (DR-279: §4.6 the usage switch) · 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
 > Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 
@@ -106,6 +106,9 @@ Parameters come from `details` (DOC-42 §3). Money in a message is passed alread
 | `member_exists` | 409 | Người này đã là thành viên của căn. | This person is already a member of this home. | Field error; link to the existing membership | DOC-65 | P1 |
 | `unit_has_owner` | 409 | Căn này đã có chủ hộ. Hãy chuyển quyền chủ hộ. | This unit already has an owner. Transfer ownership instead. | Field error; offer the transfer dialog | DOC-65 | P1 |
 | `unit_code_in_use` | 409 | Mã căn này đã được dùng. | This unit code is already used. | Field error on the unit code | DOC-65 | P1 |
+| `unit_type_code_in_use` | 409 | Mã loại này đã được dùng. | This unit type code is already used. | Field error on the code | DOC-65 | P1 |
+| `unit_type_name_in_use` | 409 | Tên loại này đã được dùng. | This unit type name is already used. | Field error on the Vietnamese name | DOC-65 | P1 |
+| `unit_type_limit` | 409 | Mỗi tòa nhà có tối đa {max} loại căn hộ. | A building can have at most {max} unit types. | max; banner in the dialog | DOC-65 | P1 |
 | `invalid_transition` | 409 | Không thể làm việc này ở trạng thái hiện tại. | This can no longer be done in its current state. | Refetch the resource, show the message, keep the user's input (UX-02) | DOC-65, DOC-67 | P1 |
 
 ### 3.4 Finance (DOC-42 §5.5)
@@ -190,6 +193,8 @@ A rule code is the `details[].code` of a `validation_failed`. Its key is `error.
 | `one_change_only` | 400 | Mỗi lần chỉ đổi một thông tin. | Change one thing at a time. | — | — | P1 |
 | `min_properties` | 400 | Chưa có thay đổi nào để lưu. | There is nothing to save. | — | — | P1 |
 | `can_pay_tenant_only` | 422 | Chỉ người thuê mới được cấp quyền thanh toán phí. | Only a tenant can be allowed to pay fees. | — | DOC-65 | P1 |
+| `unit_type_unknown` | 422 | Loại căn hộ này không còn. Hãy chọn loại khác. | This unit type no longer exists. Choose another. | Field error on the type; the select reloads | DOC-65 | P1 |
+| `unit_type_archived` | 422 | Loại căn hộ này đã ngừng dùng. Hãy chọn loại khác. | This unit type is no longer in use. Choose another. | Field error on the type; the select reloads | DOC-65 | P1 |
 | `driver_not_allowed` | 422 | Chế độ thanh toán này chỉ dành cho tòa nhà demo. | This payment mode is only for demo buildings. | — | — | P1 |
 
 Two more rules apply to every rule code: the wording is a **sentence about the field**, not about the person; and the same code on two fields reads the same ("Nhập ít nhất 5 ký tự." for a reason and for a note).
@@ -520,6 +525,15 @@ Import preview (`W-Import`, `W-Fee-Import`) and the status of an import job in t
 | `status.import.expired` | Hết hạn | Expired | neutral | proposed (DR-226) |
 
 Other labels that are not statuses: the ticket code, batch code and receipt code (plates) are never translated (DOC-54 §9).
+
+### 5.17 `status.unit-type.*`
+
+*Added 2026-11-01 (DR-314).* The status of a unit type (`W-Unit-Types`, the type select of `W-Units`).
+
+| Key | `vi` | `en` | Tone | Text |
+| --- | --- | --- | --- | --- |
+| `status.unit-type.active` | Đang dùng | In use | success | proposed (DR-314) |
+| `status.unit-type.archived` | Ngừng dùng | Not in use | neutral | proposed (DR-314) |
 
 ## 6. `auth.*`, `offline.*`, `upgrade.*`
 

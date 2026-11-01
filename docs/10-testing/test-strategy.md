@@ -1,6 +1,6 @@
 # Test strategy
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (`DS-09`, `DS-10` in DOC-54 §17) · 2026-10-28 (P1-26: `NT-` written in DOC-31, `PD-` in DOC-34, new prefix `SE-` in DOC-52, `OPM-100…152`; P1-25: `IN-` written in DOC-23, `FF-` in DOC-44; DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: `RM-01…62`, `IM-78…86`, `IDM-01…88`, `IDM-S01…S18`, `UIWR-01…53`, BD-49 and BD-50) · 2026-10-28 (`DS-09`, `DS-10` in DOC-54 §17) · 2026-10-28 (P1-26: `NT-` written in DOC-31, `PD-` in DOC-34, new prefix `SE-` in DOC-52, `OPM-100…152`; P1-25: `IN-` written in DOC-23, `FF-` in DOC-44; DR-279: prefix `UA-`) · 2026-10-27 (DR-277: a change of documents only skips the code stages, §11) · 2026-10-22 (DOC-15: prefix `FNM-` in §15; P1-19: §10 mechanism measured, §11 stages as built; DR-238…240; earlier: DR-226: IM-01…43, UIWR-01…42, 169 routes; earlier: DR-195: screen and client prefixes in §15; earlier P0-32; DR-169, DR-163 stage names merged) · DOC-88
 > Depends on: original SDD §20, §19.5, [DR](../00-decision-register.md) (DR-08, 26, 76, 77, 78, 80, 82, 95, 151, 156, DR-226), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §4, [DOC-11](../03-architecture/tech-stack-and-versions.md) §1, §8, §9, [DOC-12](../03-architecture/code-architecture.md) §2, §5.3, §6, [DOC-19](../05-data/db-roles-and-grants.md) §9, [DOC-39](../06-design/security.md) §4, §16, [DOC-41](../06-design/configuration-reference.md) §19, [DOC-71](../09-operations/ci-cd.md)
 > Main readers: P1-01, P1-03, P1-04, P1-15, P1-19 and every task that writes a test; [DOC-71](../09-operations/ci-cd.md) (stages), [DOC-89](experiments/README.md) (experiment protocol), DOC-90…101
 
@@ -516,7 +516,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `PX-` | payOS gateway adapter | DOC-24 | not written | planned (P3) | P3 |
 | `ST-` | Bank-statement reconciliation | DOC-25 | not written | planned (P3) | P3-07 |
 | `AU-` | Identity and sessions | [DOC-26](../06-design/identity-and-sessions.md) §12 | `AU-01…55`; statement tests `AU-S01…S12` | Review | P1-10, P1-11 |
-| `RM-` | Residency and memberships | [DOC-27](../06-design/residency-and-memberships.md) §17 | `RM-01…51` | Review | P1-12, P4-10 |
+| `RM-` | Residency and memberships | [DOC-27](../06-design/residency-and-memberships.md) §17 | `RM-01…62` | Review | P1-12, P4-10, P1-30 |
 | `TK-` | Tickets | DOC-28 | not written | planned (P4) | P4-01 |
 | `QC-` | Resident QR | DOC-29 | not written | planned (P5) | P5-01 |
 | `VH-` | Vehicles | DOC-30 | not written | planned (P5) | P5-03 |
@@ -532,8 +532,8 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `MC-` | Messaging contracts | [DOC-09](../03-architecture/messaging-contracts.md) §9 | `MC-01…20` | Review | P1-02, P1-05 |
 | `ER-` | Error handling | [DOC-42](../06-design/error-handling.md) §14 | `ER-01…45` | Review | P1-03, P1-04, P1-05 |
 | `UA-` | Usage analytics | [DOC-104](../06-design/usage-analytics.md) §13 | `UA-01…36` | Written in P1-29 (DOC-104 §13.2) | P1-29 |
-| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 holds `IM-50…77` (fee import) | `IM-01…43`, `IM-50…77` | Draft (DOC-18, DOC-21) | P1-13, P2-04 |
-| `IDM-` | Identity and residency tables (statement and constraint tests) | [DOC-16](../05-data/identity-and-residency-model.md) §9 | `IDM-01…68`; statement tests `IDM-S01…S14` | Review | P1-05 |
+| `IM-` | Imports (units and owners; fee batches) | [DOC-18](../05-data/data-quality-rules.md) §4 owns `IM-01…49` (written `IM-01…43`); DOC-21 holds `IM-50…77` (fee import); DOC-18 also holds `IM-78…86` (the unit type column, DR-315) | `IM-01…43`, `IM-50…77`, `IM-78…86` | Draft (DOC-18, DOC-21) | P1-13, P2-04 |
+| `IDM-` | Identity and residency tables (statement and constraint tests) | [DOC-16](../05-data/identity-and-residency-model.md) §9 | `IDM-01…88`; statement tests `IDM-S01…S18` | Review | P1-05, P1-30 |
 | `OPM-` | Operations-model tables | [DOC-17](../05-data/operations-model.md) §13 | `OPM-01…44`, `50…66`, `70…74`, `80…83`, `90…99` (80 tests); statement tests `OPM-S01…S12`; §6 notification tables `OPM-100…117`, `120…129`, `140…152`, statement tests `OPM-S13…S24` (P1-26) | Draft | P1-05, P1-07, P2-12 |
 | `FNM-` | Finance tables (constraint, trigger and statement tests) | [DOC-15](../05-data/finance-model.md) §13 | `FNM-01…123`; statement tests `FNM-S01…S12` | Draft | P2-01, P2-02 |
 | `GRT-` | Roles and grants | [DOC-19](../05-data/db-roles-and-grants.md) §9 | `GRT-01…97` | Review | P1-06 |
@@ -558,7 +558,7 @@ The first backticked word of the first column is the prefix; `check:test-ids` re
 | `UIST-` | Screens: staff app Technician | DOC-62 | not written | planned (P4) | P4 |
 | `UISG-` | Screens: staff app Guard | DOC-63 | not written | planned (P4, P5) | P4, P5 |
 | `UIWO-` | Screens: web sign-in, dashboard, operations | [DOC-64](../08-ux-ui/screens/web-auth-dashboard-operations.md) | `UIWO-01…26` (sign-in, profile; the rest P4…P6) | Review | P1-16 |
-| `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…42` | Review | P1-16 |
+| `UIWR-` | Screens: web residents | [DOC-65](../08-ux-ui/screens/web-residents.md) | `UIWR-01…53` | Review | P1-16, P1-30 |
 | `UIWF-` | Screens: web finance | DOC-66 | not written | planned (P2, P3, P6) | P2, P3, P6 |
 | `UIWS-` | Screens: web system | [DOC-67](../08-ux-ui/screens/web-system.md) | `UIWS-01…32` (staff, building, step-up; the rest P3, P6) | Review | P1-16 |
 | `UICP-` | UI states and copy (catalog parity cases) | [DOC-68](../08-ux-ui/ui-states-and-copy.md) | `UICP-01…14` (the row said "reserved" until 2026-10-22; `check:test-ids` found the gap) | Approved | P1-09 |

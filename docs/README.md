@@ -31,7 +31,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-13 | [ADR index](04-adr/README.md) | Approved (28 ADRs; ADR-0024 written in P1-26; ADR-0028, DR-279: self-hosted usage analytics; ADR-0027, DR-268: files and backups in SeaweedFS on the VPS for `vn`, ADR-0016, 0017, 0020 superseded in part) |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Approved |
 | DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; intent and statement tables follow proposed DR-27, 28, 30, 34, 35) | Draft |
-| DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) | Approved |
+| DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) (`unit_type` §5.6, DR-314) | Approved |
 | DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written; §6.1–6.3 notification tables and §9.1 `realtime.events` Draft for P2; the rest of §4–9 owed) | Approved (§1–3) |
 | DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 written, §2–3 owed) | Approved |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Approved |
@@ -66,7 +66,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-48 | Notices, access, vehicles (`06-design/flows/notices-access-vehicles.md`) | Not written |
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Approved |
-| DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74 and E-169 specified, E-75…E-168 numbered) | Approved |
+| DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74, E-169 and E-180…E-182 specified, E-75…E-168 numbered) | Approved |
 | DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE written, statements run on PostgreSQL 18.6; follows the proposed DR-287; webhook owed to P3) | Draft |
 | DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Approved |
 | DOC-54 | [Design system](08-ux-ui/design-system.md) | Approved |
@@ -80,7 +80,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-62 | Staff app: Technician (`08-ux-ui/screens/staff-technician.md`) | Not written |
 | DOC-63 | Staff app: Guard (`08-ux-ui/screens/staff-guard.md`) | Not written |
 | DOC-64 | [Web: sign-in, dashboard, operations](08-ux-ui/screens/web-auth-dashboard-operations.md) (§1 P1) | Approved |
-| DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1; W-Vehicles owed P5) | Approved |
+| DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1, `W-Unit-Types` added by DR-314 for P1-30; W-Vehicles owed P5) | Approved |
 | DOC-66 | Web: finance (`08-ux-ui/screens/web-finance.md`) | Not written |
 | DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Approved |
 | DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (102 error codes and the P1 keys; grows per phase) | Approved |

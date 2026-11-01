@@ -33,6 +33,8 @@ This document defines the words of the project, as the project uses them. Every 
 | resident account | — | An account in `identity.resident_account`: one phone number is one account across units and buildings. Signs in with an OTP. Rights come from memberships, not from the account. Status `active`, `deletion_requested` or `deleted`. | DR-36, DR-38 |
 | resident | — | A person using the resident app through a membership of a unit. | |
 | unit | — | One apartment, identified by a code unique in the building (`A-1508`). Never deleted, only marked vacant. Floor is an attribute, not a module. | DR-40, DR-12 |
+| unit type | Loại căn hộ | The kind of a unit in one building (`apartment`, `studio`, `duplex`, `penthouse`, `shophouse`…): a stable code, a bilingual name, optional default bedrooms and area, and a status `active` or `archived`. Managed on `W-Unit-Types`; a unit has one or none. Never deleted. Not the bedroom count. | DR-314, DR-315 |
+| unit type default | — | The bedrooms or area stored on a unit type that fill the blank of a **new** unit of that type, in the add dialog, E-58 and the import. They never rewrite an existing unit. | DR-315 |
 | occupancy | — | Status of a unit set by the Manager: `occupied`, `rented` or `vacant`. Not derived from memberships. | DR-40 |
 | owner | — | The resident who owns a unit. Exactly one per unit. Has every unit feature, including adding, locking and removing members and granting a tenant `can_pay`. | original SDD §3.1, DR-40 |
 | family member | — | A resident of the unit with every unit feature except member management; may pay. A member type separate from tenant, even though the two look alike. | DR-81 |

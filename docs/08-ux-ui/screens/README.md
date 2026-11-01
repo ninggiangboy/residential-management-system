@@ -1,6 +1,6 @@
 # Screens index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `W-Unit-Types` in DOC-65) · 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-27, 33, 38, 39, 40, 41…47, 48, 59, 69…72, 74, 75, 84, 128), [DOC-03](../../01-product/requirements.md), [DOC-04](../../01-product/use-cases.md), [DOC-14](../../05-data/data-conventions.md) (human codes), [DOC-27](../../06-design/residency-and-memberships.md) §3.2 (policy table), [DOC-51](../../07-api/api-endpoints.md), DOC-53, DOC-54, DOC-55, [design screens catalog](../../references/design-screens.md)
 > Main readers: the writers of DOC-57…67 and DOC-68, P1-16, P1-17 (the client shells), P1-09 (i18n catalog), every task that builds or tests a screen
 
@@ -35,7 +35,7 @@ The Owner's prototype has moved on since the catalog was written. The canvas is 
 | DOC-62 | `08-ux-ui/screens/staff-technician.md` | Staff app: Technician | 6 | 6 | 0 | P4 | Not gated by P1 |
 | DOC-63 | `08-ux-ui/screens/staff-guard.md` | Staff app: Guard | 9 | 9 | 0 | P4, P5 | Not gated by P1 |
 | DOC-64 | `08-ux-ui/screens/web-auth-dashboard-operations.md` | Web CMS: Sign-in, dashboard, operations | 14 | 13 | 1 | P1, P4, P5, P6 | 4 sections: `W-Login`, `W-Forgot-Sent`, `W-Reset`, `W-Profile` |
-| DOC-65 | `08-ux-ui/screens/web-residents.md` | Web CMS: Residents, units, import | 6 | 6 | 0 | P1, P5 | 5 sections: `W-Residents`, `W-Resident-Add`, `W-Units`, `W-Unit-Detail`, `W-Import` |
+| DOC-65 | `08-ux-ui/screens/web-residents.md` | Web CMS: Residents, units, import | 7 | 6 | 1 | P1, P5 | 6 sections: `W-Residents`, `W-Resident-Add`, `W-Units`, `W-Unit-Detail`, `W-Unit-Types`, `W-Import` |
 | DOC-66 | `08-ux-ui/screens/web-finance.md` | Web CMS: Finance | 15 | 8 | 7 | P2, P3, P6 | Not gated by P1 |
 | DOC-67 | `08-ux-ui/screens/web-system.md` | Web CMS: System administration | 7 | 6 | 1 | P1, P3, P6 | 4 sections: `W-Staff`, `W-Staff-New`, `W-Building`, `W-Step-Up` |
 
@@ -212,7 +212,7 @@ File `08-ux-ui/screens/web-auth-dashboard-operations.md` · Web CMS · 14 sectio
 
 ### DOC-65 · Web: residents
 
-File `08-ux-ui/screens/web-residents.md` · Web CMS · 6 sections (6 designed, 0 to design)
+File `08-ux-ui/screens/web-residents.md` · Web CMS · 7 sections (6 designed, 1 to design)
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -220,6 +220,7 @@ File `08-ux-ui/screens/web-residents.md` · Web CMS · 6 sections (6 designed, 0
 | `W-Resident-Add` | Create an owner by phone, or link an existing account | Admin, Manager | P1 | designed |  |
 | `W-Units` | Unit list | Admin, Manager | P1 | designed |  |
 | `W-Unit-Detail` | Unit: members, debt, vehicles; change phone, lock, transfer | Admin, Manager | P1 | designed | N12 |
+| `W-Unit-Types` | Unit types and their defaults: list, add, edit, archive | Admin, Manager | P1 | to design | no artboard; specified from DOC-54 parts (DR-314, task P1-30) |
 | `W-Import` | Excel import of units and residents: validate, row errors, save, recent imports | Admin, Manager | P1 | designed | the recent-imports table has no artboard (DR-226) |
 | `W-Vehicles` | Vehicle review with photos | Admin, Manager | P5 | designed |  |
 
@@ -429,7 +430,7 @@ Use cases are in DOC-04 and requirements in DOC-03; this view is by group, not b
 | Web notices | `W-Notices`, `W-Notice-*` | UC-11, UC-19 | FR-27, FR-28 |
 | Web library | `W-Docs` | UC-23 | FR-32 |
 | Web dashboard and reports | `W-Dashboard`, `W-Reports`, `W-Export-Center` | UC-25 | FR-34, FR-35, FR-48 |
-| Web residents | `W-Residents`, `W-Resident-Add`, `W-Units`, `W-Unit-Detail`, `W-Import` | UC-13 | FR-18 |
+| Web residents | `W-Residents`, `W-Resident-Add`, `W-Units`, `W-Unit-Detail`, `W-Unit-Types`, `W-Import` | UC-13 | FR-18 |
 | Web vehicles | `W-Vehicles` | UC-12 | FR-30, FR-43 |
 | Web fee batches | `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Recall`, `W-Fee-Reissue`, `W-Charge-Void` | UC-01, UC-04 | FR-01…04, FR-36, FR-44, FR-49 |
 | Web payments and debt | `W-Fee-Record`, `W-Debts` | UC-02, UC-05 | FR-05, FR-06, FR-12 |

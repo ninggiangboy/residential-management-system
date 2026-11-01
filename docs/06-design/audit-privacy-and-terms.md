@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: the owner's name on a printed fee notice, DR-292 to confirm; push tokens of a dead session, DR-300) · 2026-10-28 (DR-282: `finance.intent.cancel` in §4.1; DR-279: §7.2 rule 6, §8 and §9.4 for the usage record) · 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `residency.unit_type.create` and `.update`, §4.2, §8) · 2026-10-28 (P1-26: the owner's name on a printed fee notice, DR-292 to confirm; push tokens of a dead session, DR-300) · 2026-10-28 (DR-282: `finance.intent.cancel` in §4.1; DR-279: §7.2 rule 6, §8 and §9.4 for the usage record) · 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -169,7 +169,8 @@ One row per action the design knows today. Each document that adds staff mutatio
 | Action | Object | Who | Changes | R | Source |
 | --- | --- | --- | --- | --- | --- |
 | `residency.import.commit` | `import_job` | Manager, Admin | — (`created`, `updated`, `skipped`) | | FR-18 |
-| `residency.unit.create` · `.update` | `unit` | Manager, Admin | edited fields | | FR-18 |
+| `residency.unit.create` · `.update` | `unit` | Manager, Admin | edited fields (`unitTypeId` since DR-314) | | FR-18 |
+| `residency.unit_type.create` · `.update` | `unit_type` | Manager, Admin | edited fields (`code` on create only, `name`, `defaultBedrooms`, `defaultAreaM2`, `status`); an archive or a restore is an `update` listing `status` | | FR-18.7, DR-314 |
 | `residency.profile.update` | `resident_profile` | Manager, Admin | masked fields (§3.4) | | FR-18 |
 | `residency.membership.add` · `.update` · `.lock` · `.unlock` · `.remove` | `membership` | Manager, Admin | `status`, `memberType`, `canPay` | | FR-17, FR-18 |
 | `residency.owner.transfer` | `unit` | Manager, Admin | `owner` (member id), `removedOthers` | R | FR-18 |
@@ -305,7 +306,7 @@ DOC-20 §2 is the table of every table and file; §5 holds the purge statements 
 | Ledger: charges, lines, payments, allocations, receipts, intents, `gateway_event`, `statement_line` (the money log) | Never deleted | — | Voided or logged, not removed (DR-57, DR-84) |
 | Audit rows of finance objects (`retention_class = 'finance'`) | Deleted by age | 5 years (default until P0-06) | `audit_purge`, monthly day 1 at 04:30; `audit.purge` clamps the cut-off to the floor (DR-110) |
 | Other audit rows | Deleted by age | 2 years (default until P0-06) | The same |
-| Units, memberships, `unit_history`, terms versions, terms acceptances | Never deleted | — | `terms_acceptance.ip` set to null at account deletion |
+| Units, unit types (archived, never deleted), memberships, `unit_history`, terms versions, terms acceptances | Never deleted | — | `terms_acceptance.ip` set to null at account deletion |
 | Tickets, vehicles, notices, library and their files | Never deleted | — | Bounded by the 50 GiB quota (DR-115) |
 | Resident personal fields | Cleared at account deletion | `accountDeletionDays` after approval (30) | §10 |
 | OTP challenges; reset, invite and step-up tokens; sessions | Deleted by age | 24 h; 7 days; 30 days after revocation | `otp_purge`, `token_purge` daily 03:45 |

@@ -1,10 +1,10 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` on E-57) · 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
-> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228, DR-293, DR-300, DR-302), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-11-01 (DR-314, DR-315: E-180…E-182 the unit types; E-57…E-60 carry `unitType` and `unitTypeId`; E-71 template column `unit_type`) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` on E-57) · 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228, DR-293, DR-300, DR-302, DR-314, DR-315), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
-This document numbers every endpoint of the API (`E-01…E-179`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74` and `E-169`, the import history added by DR-226). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
+This document numbers every endpoint of the API (`E-01…E-182`) and specifies, one section each, the endpoints of the groups the first phase builds: public and health, auth, the resident account, the household, the staff account, staff administration, building administration and residency (`E-01…E-74`, `E-169`, the import history added by DR-226, and `E-180…E-182`, the unit types added by DR-314). The later groups (`E-75…E-168`) already have their number, method, path, audience and use case in §2, so screens, tests and the authorization matrix can refer to them; their sections are written before the phase that builds them (§11). The rules every endpoint follows (formats, headers, idempotency, pagination, errors) are DOC-50 and are not repeated. The behavior behind an endpoint (statements, state machines, rate buckets) is in the design document the section cites.
 
 Every new decision in this document is recorded as DR-142…DR-14x and summarized in §13. Sample requests and responses use the sample building (DOC-01): unit `A-1508`, owner Nguyễn Văn An, tenant Trần Thị Bình.
 
@@ -152,6 +152,9 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-177 | `GET /staff/fee-batches/{id}/pdf` | `getBatchPdfJob` | staff: admin, manager | | | UC-01 | DOC-34 §9.1 (DR-293, P2) |
 | E-178 | `POST /me/inbox/{id}/read` | `readMyInboxEntry` | unit: personal_notifications | | | UC-19 | DOC-31 §4.4 (DR-302, P2) |
 | E-179 | `POST /staff/inbox/{id}/read` | `readStaffInboxEntry` | staff: any | | | UC-19 | DOC-31 §4.4 (DR-302, P2) |
+| E-180 | `GET /staff/unit-types` | `listUnitTypes` | staff: admin, manager | | | UC-13 | §10 (DR-314, P1-30) |
+| E-181 | `POST /staff/unit-types` | `createUnitType` | staff: admin, manager | R | | UC-13 | §10 (DR-314, P1-30) |
+| E-182 | `PATCH /staff/unit-types/{id}` | `updateUnitType` | staff: admin, manager | | | UC-13 | §10 (DR-314, DR-315, P1-30) |
 
 ### 2.2 Later groups (numbered now, specified before their phase)
 
@@ -1991,7 +1994,7 @@ All of this group is the Admin's, except the Manager's narrowed read of the audi
 - **Tests:** BD-37…BD-43.
 - **Built (P1-21, 2026-10-27, DR-270):** `ResetDemo` in `building` and `DemoReset.run`, over HTTP in `apps/api/tests/integration/demo.integration.test.ts`. The 404 comes first: before the rate limit, so the bucket of a real building is never created, and before anything is read. The answer is exactly `{durationMs, deleted, created}`, with the counts of the modules built so far (`building.*`, `identity.*`, `residency.*`; the others join with their modules); the Admin's own session ends with the reset. The matrix of EXP-10 expects 404 for this route, because both of its buildings are real (`DEMO_ONLY` in `tests/authz/expected.ts`). A reset took 81 ms on a laptop (BD-40 is the staging host).
 
-## 10. Residency, staff side (E-57…E-74, E-169)
+## 10. Residency, staff side (E-57…E-74, E-169, E-180…E-182)
 
 *Built in P1-14 (2026-10-23, DR-260):* E-57…E-67 and E-69, over HTTP in `apps/api/tests/integration/residency-staff.integration.test.ts`; E-71…E-74 and E-169 came with P1-13. Not built: E-68 (with the deletion task) and E-70 (with `access`, P5-05). Where the build differs from the text: E-65 writes its `pii.read` row after the read, in the same transaction, so a failed insert still returns no data; E-69 answers the `MembershipDto` after the change and `memberType` accepts only `family` or `tenant`; `neverSignedIn` and `deletion=requested` of E-63 restrict the page through `identity`.
 
@@ -2000,14 +2003,18 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 ```jsonc
 // UnitDto (E-58, E-60, and the head of E-59)
 { "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "code": "A-1508", "floor": 15, "bedrooms": 2, "areaM2": "68.50",
+  "unitType": { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c1", "code": "apartment", "name": { "vi": "Căn hộ", "en": "Apartment" } },
   "occupancy": "occupied", "note": null, "version": 3 }
+// UnitTypeDto (E-180, E-181, E-182)
+{ "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c1", "code": "apartment", "name": { "vi": "Căn hộ", "en": "Apartment" },
+  "defaultBedrooms": 2, "defaultAreaM2": "68.00", "status": "active", "unitCount": 192, "version": 1 }
 // MembershipDto (E-59 members, E-69)
 { "membershipId": "0192f3c4-5a1e-7000-8000-000000000062", "accountId": "0192f3c4-5a1e-7000-8000-000000000042",
   "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "memberType": "tenant", "canPay": false,
   "status": "active", "lockedBy": null, "startedAt": "2026-10-01T03:00:00.000Z" }
 ```
 
-`occupancy` is `occupied`, `rented` or `vacant`; `status` is `active`, `locked` or `removed`; `lockedBy` is `owner`, `manager` or `null`. Until `finance` exists (P2) the `debt` object of E-59 is `{ "openChargeCount": 0, "openAmount": 0, "oldestDueDate": null }`.
+`unitType` is `null` for a unit with no type (*added 2026-11-01, DR-314*); `occupancy` is `occupied`, `rented` or `vacant`; `status` is `active`, `locked` or `removed`; `lockedBy` is `owner`, `manager` or `null`. Until `finance` exists (P2) the `debt` object of E-59 is `{ "openChargeCount": 0, "openAmount": 0, "oldestDueDate": null }`.
 
 ### E-57 `GET /staff/units` · `listUnits`
 
@@ -2020,7 +2027,8 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | `q` | query | string | no | | 1…100 characters, NFC, trimmed. With `q` the answer is the search of DOC-27 §11.1 (unit code prefix, at least 2 characters, exact match first), capped at 20, with no cursor; with 1 character it is an empty list |
   | `occupancy` | query | enum | no | | `occupied`, `rented`, `vacant` |
   | `floor` | query | integer | no | | −5…150 |
-  | `bedrooms` | query | integer | no | | 0…20 (DR-212; the "Loại" filter of `W-Units`) |
+  | `bedrooms` | query | integer | no | | 0…20 (DR-212; the "Phòng ngủ" filter of `W-Units` since DR-314) |
+  | `unitTypeId` | query | UUID | no | | The "Loại" filter of `W-Units` (DR-314); a type of another building or an unknown one gives an empty list, never 404 |
   | `cursor` | query | string | no | | Opaque; 400 `invalid_cursor` when it does not decode |
   | `limit` | query | integer | no | 50 | 1…200 |
 
@@ -2030,27 +2038,31 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   {
     "items": [
       { "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "code": "A-1508", "floor": 15, "bedrooms": 2, "areaM2": "68.50",
+        "unitType": { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c1", "code": "apartment", "name": { "vi": "Căn hộ", "en": "Apartment" } },
         "occupancy": "occupied", "note": null, "version": 3, "memberCount": 3,
         "owner": { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "accountId": "0192f3c4-5a1e-7000-8000-000000000041",
                    "fullName": "Nguyễn Văn An", "phone": "+84901234567" } },
       { "unitId": "0192f3c4-5a1e-7000-8000-000000000022", "code": "A-1509", "floor": 15, "bedrooms": 3, "areaM2": "82.00",
-        "occupancy": "vacant", "note": null, "version": 1, "memberCount": 0, "owner": null }
+        "unitType": null, "occupancy": "vacant", "note": null, "version": 1, "memberCount": 0, "owner": null }
     ],
     "nextCursor": "eyJjIjoiQS0xNTA5IiwiaSI6IjAxOTJmM2M0LTVhMWUifQ",
     "summary": { "total": 240, "occupied": 171, "rented": 52, "vacant": 17, "floors": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "bedrooms": [1, 2, 3] }
   }
 
-  *Revised 2026-10-20 (DR-212):* `memberCount` counts the non-removed memberships of the unit, the owner included. `summary` covers the whole building, whatever the filters, and is present on every page (one `GROUP BY occupancy` over `residency.unit`). *Revised 2026-10-29 (DR-309):* `summary.floors` and `summary.bedrooms` list the distinct non-null floors and bedroom counts of the building's units, ascending, for the two filters (one `GROUP BY` each).
+  *Revised 2026-10-20 (DR-212):* `memberCount` counts the non-removed memberships of the unit, the owner included. `summary` covers the whole building, whatever the filters, and is present on every page (one `GROUP BY occupancy` over `residency.unit`). *Revised 2026-10-29 (DR-309):* `summary.floors` and `summary.bedrooms` list the distinct non-null floors and bedroom counts of the building's units, ascending, for the two filters (one `GROUP BY` each). *Revised 2026-11-01 (DR-314):* each item carries `unitType` (`null` without a type); the "Loại" select reads E-180, not `summary`, so `summary` is unchanged.
   ```
 
 - **Errors:** 400 `validation_failed`, 400 `invalid_cursor`, 401, 403 `forbidden`.
 - **Data source:** `residency.unit` left-joined to the active owner row of `residency.membership`; the owner's name from `resident_profile`, the phone from `IdentityApi.getResidentAccounts` (one call per page). Keyset in code order on `(code, id)` through `unit_code_key`, so `A-100` sorts before `A-20` (DOC-27 §4.2); search through `unit_code_prefix_idx`.
 
   ```sql
-  SELECT u.id, u.code, u.floor, u.bedrooms, u.area_m2, u.occupancy, u.note, u.version, m.id AS owner_membership_id, m.account_id AS owner_account_id
+  SELECT u.id, u.code, u.floor, u.bedrooms, u.area_m2, u.occupancy, u.note, u.version, m.id AS owner_membership_id, m.account_id AS owner_account_id,
+         t.id AS unit_type_id, t.code AS unit_type_code, t.name AS unit_type_name
     FROM residency.unit u
+    LEFT JOIN residency.unit_type t ON t.building_id = u.building_id AND t.id = u.unit_type_id
     LEFT JOIN residency.membership m ON m.building_id = u.building_id AND m.unit_id = u.id AND m.member_type = 'owner' AND m.status <> 'removed'
    WHERE u.building_id = :b AND (u.code, u.id) > (:after_code, :after_id)
+     AND (:unit_type_id IS NULL OR u.unit_type_id = :unit_type_id)   -- unit_type_idx
    ORDER BY u.code, u.id LIMIT :limit + 1;
   ```
 
@@ -2068,28 +2080,30 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | --- | --- | --- | --- | --- | --- |
   | `code` | body | string | yes | | `^[A-Za-z0-9][A-Za-z0-9._/-]{0,19}$`, trimmed, stored upper-case (DOC-27 §4.1 rule 2) |
   | `floor` | body | integer \| null | no | null | −5…150 |
-  | `bedrooms` | body | integer \| null | no | null | 0…20 |
-  | `areaM2` | body | string \| null | no | null | Decimal string above 0, at most `"2000"`, at most 2 decimals |
+  | `unitTypeId` | body | UUID \| null | no | null | A type of the building (E-180). Archived: 422 rule `unit_type_archived`; unknown or of another building: 422 rule `unit_type_unknown` (DR-314) |
+  | `bedrooms` | body | integer \| null | no | the type's `defaultBedrooms`, else null | 0…20. **Absent** takes the default of `unitTypeId`; an explicit `null` stays null (DR-315) |
+  | `areaM2` | body | string \| null | no | the type's `defaultAreaM2`, else null | Decimal string above 0, at most `"2000"`, at most 2 decimals. Absent takes the default; explicit `null` stays null (DR-315) |
   | `occupancy` | body | enum | no | `vacant` | `occupied`, `rented`, `vacant` |
   | `note` | body | string \| null | no | null | at most 500 characters |
 
 - **Request example:**
 
   ```json
-  { "code": "a-1509", "floor": 15, "bedrooms": 3, "areaM2": "82.00", "occupancy": "vacant", "note": null }
+  { "code": "a-1509", "floor": 15, "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c2", "occupancy": "vacant", "note": null }
   ```
 
 - **Response 201** (`Location: /api/v1/staff/units/0192f3c4-5a1e-7000-8000-000000000022`, `ETag: "1"`): a `UnitDto`.
 
   ```json
-  { "unitId": "0192f3c4-5a1e-7000-8000-000000000022", "code": "A-1509", "floor": 15, "bedrooms": 3, "areaM2": "82.00",
+  { "unitId": "0192f3c4-5a1e-7000-8000-000000000022", "code": "A-1509", "floor": 15, "bedrooms": 3, "areaM2": "120.00",
+    "unitType": { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c2", "code": "duplex", "name": { "vi": "Duplex", "en": "Duplex" } },
     "occupancy": "vacant", "note": null, "version": 1 }
   ```
 
-- **Errors:** 400 `validation_failed` (`pattern` on `code`, `maximum`, `enum`, `unknown_key`), 409 `unit_code_in_use` (the unique index `unit_code_key`, matched case-insensitively), 422 `idempotency_key_reuse`, 403 `forbidden`.
-- **Data source:** `INSERT INTO residency.unit … RETURNING`; a duplicate raises `23505` on `unit_code_key`, which the module maps to `unit_code_in_use`. Audit `residency.unit.create` in the same transaction.
+- **Errors:** 400 `validation_failed` (`pattern` on `code`, `maximum`, `enum`, `unknown_key`), 422 `validation_failed` (rule `unit_type_unknown` or `unit_type_archived`, `details[0].path` `unitTypeId`), 409 `unit_code_in_use` (the unique index `unit_code_key`, matched case-insensitively), 422 `idempotency_key_reuse`, 403 `forbidden`.
+- **Data source:** when `unitTypeId` is set, `SELECT … FROM residency.unit_type WHERE id = :t AND building_id = :b FOR SHARE` in the same transaction (the defaults and the archived check), then `INSERT INTO residency.unit … RETURNING`; a duplicate raises `23505` on `unit_code_key`, which the module maps to `unit_code_in_use`. Audit `residency.unit.create` in the same transaction.
 - **Performance:** p95 ≤ 300 ms.
-- **Tests:** RM-40.
+- **Tests:** RM-40, RM-57, RM-58.
 
 ### E-59 `GET /staff/units/{id}` · `getUnit`
 
@@ -2101,6 +2115,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   ```json
   {
     "unitId": "0192f3c4-5a1e-7000-8000-000000000021", "code": "A-1508", "floor": 15, "bedrooms": 2, "areaM2": "68.50",
+    "unitType": { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c1", "code": "apartment", "name": { "vi": "Căn hộ", "en": "Apartment" } },
     "occupancy": "occupied", "note": null, "version": 3,
     "owner": { "membershipId": "0192f3c4-5a1e-7000-8000-000000000061", "accountId": "0192f3c4-5a1e-7000-8000-000000000041",
                "fullName": "Nguyễn Văn An", "phone": "+84901234567", "status": "active", "lockedBy": null },
@@ -2121,10 +2136,10 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 
 ### E-60 `PATCH /staff/units/{id}` · `updateUnit`
 
-- **Purpose / UC:** The Manager edits the code (the typo case), floor, bedrooms, area, occupancy or note (UC-13, DOC-27 §4.1). `occupancy` is set by the Manager and never derived from memberships (DR-40).
+- **Purpose / UC:** The Manager edits the code (the typo case), floor, bedrooms, area, unit type, occupancy or note (UC-13, DOC-27 §4.1). `occupancy` is set by the Manager and never derived from memberships (DR-40).
 - **Authorization:** `staff: admin, manager`.
 - **Headers:** `If-Match: "<unit.version>"` required (428 `precondition_required` without it).
-- **Parameters (body):** any of `code`, `floor`, `bedrooms`, `areaM2`, `occupancy`, `note` with the constraints of E-58; an absent key is kept; `null` clears `floor`, `bedrooms`, `areaM2` and `note` (not `code`, not `occupancy`). An empty body is 400 `validation_failed` rule `min_properties`.
+- **Parameters (body):** any of `code`, `floor`, `bedrooms`, `areaM2`, `unitTypeId`, `occupancy`, `note` with the constraints of E-58; an absent key is kept; `null` clears `floor`, `bedrooms`, `areaM2`, `unitTypeId` and `note` (not `code`, not `occupancy`). An empty body is 400 `validation_failed` rule `min_properties`. *Added 2026-11-01 (DR-314, DR-315):* changing `unitTypeId` changes nothing else: no default of the type is applied. Naming the type the unit already has is accepted even if it is archived; naming another archived type is 422 rule `unit_type_archived`.
 - **Request example:**
 
   ```http
@@ -2143,7 +2158,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Errors:** 400 `validation_failed`, 404 `not_found`, 409 `version_conflict` (`details.current` is the fresh `UnitDto`), 409 `unit_code_in_use`, 428 `precondition_required`.
 - **Data source:** `UPDATE residency.unit SET …, version = version + 1 WHERE id = :id AND building_id = :b AND version = :expected RETURNING …` (DOC-27 §4.1 rule 5). A change of `occupancy` across the vacancy boundary writes a `unit_history` row in the same transaction: to `vacant` is `moved_out`, from `vacant` is `moved_in`; between `occupied` and `rented` none (DR-141). Audit `residency.unit.update` lists the changed fields.
 - **Performance:** p95 ≤ 300 ms.
-- **Tests:** RM-40, RM-41.
+- **Tests:** RM-40, RM-41, RM-57, RM-59.
 
 ### E-61 `POST /staff/units/{id}/owner` · `transferOwnership`
 
@@ -2224,6 +2239,89 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
 - **Data source:** `residency.unit_history` newest first, keyset on `(at, id)` through `unit_history_unit_idx`; actor names from `IdentityApi.getStaff` or `getResidentAccounts`, one call per page.
 - **Performance:** p95 ≤ 300 ms.
 - **Tests:** RM-23, RM-41.
+
+### E-180 `GET /staff/unit-types` · `listUnitTypes`
+
+- **Purpose / UC:** The type list of `W-Unit-Types`, the "Loại" filter of `W-Units` and the type select of the add and edit dialogs (UC-13, DR-314).
+- **Authorization:** `staff: admin, manager`.
+- **Parameters:**
+
+  | Name | In | Type | Required | Default | Constraints |
+  | --- | --- | --- | --- | --- | --- |
+  | `status` | query | enum | no | all | `active`, `archived`. The dialogs ask for `active`; the screen and the filter ask for all |
+
+- **Response 200:**
+
+  ```json
+  {
+    "items": [
+      { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c1", "code": "apartment", "name": { "vi": "Căn hộ", "en": "Apartment" },
+        "defaultBedrooms": 2, "defaultAreaM2": "68.00", "status": "active", "unitCount": 192, "version": 1 },
+      { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c3", "code": "shophouse", "name": { "vi": "Shophouse", "en": null },
+        "defaultBedrooms": null, "defaultAreaM2": "90.00", "status": "active", "unitCount": 8, "version": 2 }
+    ],
+    "summary": { "total": 5, "active": 5, "archived": 0, "withoutType": 0 }
+  }
+  ```
+
+  `name.en` is `null` when the type has no English name (the API never omits the key in an answer). `items` are ordered by the lower-case Vietnamese name. There is no cursor: a building has at most 50 types (DR-314). `unitCount` counts every unit with the type, whatever its occupancy. `summary` covers the whole building whatever `status` says; `withoutType` is the number of units with no type (the "Chưa phân loại" line of the screen).
+- **Errors:** 400 `validation_failed` (`enum`), 401, 403 `forbidden`.
+- **Data source:** one statement, IDM-S15 (DOC-16 §9.3), served by `unit_type_idx`; `withoutType` is `SELECT count(*) FROM residency.unit WHERE building_id = :b AND unit_type_id IS NULL`.
+- **Cache:** `Cache-Control: private, no-cache`; no `ETag` (the list changes with every unit edit through `unitCount`).
+- **Performance:** p95 ≤ 100 ms (planned: at most 50 types over 240 to 5,000 units).
+- **Tests:** RM-61, RM-62.
+
+### E-181 `POST /staff/unit-types` · `createUnitType`
+
+- **Purpose / UC:** The Manager adds a kind of unit to the building (UC-13, DR-314). A type is never deleted; one made by mistake is archived (E-182).
+- **Authorization:** `staff: admin, manager`.
+- **Headers:** `Idempotency-Key` required.
+- **Parameters (body):**
+
+  | Name | In | Type | Required | Default | Constraints |
+  | --- | --- | --- | --- | --- | --- |
+  | `code` | body | string | yes | | `^[a-z][a-z0-9_]{1,29}$`; never edited afterwards (DR-315) |
+  | `name` | body | object | yes | | `{"vi": "…", "en": "…"}`; `vi` 1…60 characters, required; `en` 1…60 characters or absent; no other key (DOC-14 §8) |
+  | `defaultBedrooms` | body | integer \| null | no | null | 0…20 (DR-315) |
+  | `defaultAreaM2` | body | string \| null | no | null | Decimal string above 0, at most `"2000"`, at most 2 decimals |
+
+- **Request example:**
+
+  ```json
+  { "code": "duplex", "name": { "vi": "Duplex", "en": "Duplex" }, "defaultBedrooms": 3, "defaultAreaM2": "120" }
+  ```
+
+- **Response 201** (`Location: /api/v1/staff/unit-types/0192f3c4-5a1e-7000-8000-0000000000c2`, `ETag: "1"`): a `UnitTypeDto`; the area is normalised to `"120.00"` and `unitCount` is 0.
+
+  ```json
+  { "unitTypeId": "0192f3c4-5a1e-7000-8000-0000000000c2", "code": "duplex", "name": { "vi": "Duplex", "en": "Duplex" },
+    "defaultBedrooms": 3, "defaultAreaM2": "120.00", "status": "active", "unitCount": 0, "version": 1 }
+  ```
+
+- **Errors:** 400 `validation_failed` (`pattern`, `maximum`, `required`, `unknown_key`), 409 `unit_type_code_in_use`, 409 `unit_type_name_in_use` (the Vietnamese name of another type, any case), 409 `unit_type_limit` (the building has 50 types, archived ones counted), 422 `idempotency_key_reuse`, 403 `forbidden`.
+- **Data source:** one transaction: `pg_advisory_xact_lock` on the building, `SELECT count(*)`, `INSERT INTO residency.unit_type … RETURNING`; a duplicate raises `23505` on `unit_type_code_key` or `unit_type_name_key`, which the module maps to the two codes. Audit `residency.unit_type.create` in the same transaction.
+- **Performance:** p95 ≤ 300 ms.
+- **Tests:** RM-52, RM-53, RM-54.
+
+### E-182 `PATCH /staff/unit-types/{id}` · `updateUnitType`
+
+- **Purpose / UC:** The Manager renames a type, changes its defaults, archives it or restores it (UC-13, DR-314, DR-315). The `code` cannot be changed.
+- **Authorization:** `staff: admin, manager`.
+- **Headers:** `If-Match: "<unit_type.version>"` required (428 `precondition_required` without it).
+- **Parameters (body):** any of `name`, `defaultBedrooms`, `defaultAreaM2`, `status` (`active` or `archived`) with the constraints of E-181; an absent key is kept; `null` clears `name.en` (inside `name`), `defaultBedrooms` and `defaultAreaM2`. A `code`, or any other key, is 400 `validation_failed` rule `unknown_key`; an empty body is rule `min_properties`. Changing a default changes **no unit** (DR-315).
+- **Request example:**
+
+  ```http
+  PATCH /api/v1/staff/unit-types/0192f3c4-5a1e-7000-8000-0000000000c2
+  If-Match: "1"
+  { "defaultAreaM2": "125", "status": "archived" }
+  ```
+
+- **Response 200** (`ETag: "2"`): the `UnitTypeDto` with the new `version` and the current `unitCount`.
+- **Errors:** 400 `validation_failed`, 404 `not_found` (unknown id, or a type of another building), 409 `version_conflict` (`details.current` is the fresh `UnitTypeDto`), 409 `unit_type_name_in_use`, 428 `precondition_required`.
+- **Data source:** `UPDATE residency.unit_type SET …, archived_at = CASE … END, version = version + 1 WHERE id = :id AND building_id = :b AND version = :expected RETURNING …` (DOC-27 §4.3 rule 6). Setting `status` to `archived` sets `archived_at = now()`; to `active` clears it. Audit `residency.unit_type.update` lists the changed fields, `status` included.
+- **Performance:** p95 ≤ 300 ms.
+- **Tests:** RM-55, RM-56, RM-59.
 
 ### E-63 `GET /staff/residents` · `listResidents`
 
@@ -2490,6 +2588,7 @@ Group notes. Every staff query takes the `BuildingScope` of the token's `bid` (D
   | --- | --- | --- | --- | --- |
   | `unit_code` | Mã căn hộ | Unit code | Yes | Text |
   | `floor` | Tầng | Floor | No | Whole number |
+  | `unit_type` | Loại căn hộ | Unit type | No | Text: a type code or its Vietnamese name (*added 2026-11-01, DR-315*) |
   | `bedrooms` | Số phòng ngủ | Bedrooms | No | Whole number |
   | `area_m2` | Diện tích (m²) | Area (m²) | No | Number |
   | `occupancy` | Tình trạng | Occupancy | No | Text |
@@ -2780,6 +2879,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-41 | `GET /staff/accounts/{id}` | The `ETag` for an edit with `If-Match` |
 | E-73 | `GET /staff/imports/{id}` | Read the stored preview again |
 | E-169 | `GET /staff/imports` | The import history of `W-Import` (DR-226, added after the catalog was numbered) |
+| E-180, E-181, E-182 | `GET`, `POST /staff/unit-types`, `PATCH /staff/unit-types/{id}` | The unit types of the building and their defaults (DR-314, DR-315, added after the catalog was numbered) |
 | E-170 | `POST /staff/fee-batches/{id}/charges` | Add one unit's charge to a draft (DR-265) |
 | E-171 | `DELETE /staff/charges/{id}` | Remove a draft charge (DR-265) |
 | E-172 | `DELETE /staff/fee-batches/{id}` | Discard a draft batch (DR-265) |
@@ -2810,6 +2910,7 @@ Every new decision is a DR (decided, Claude delegated by the Owner) and is summa
 | DR-148 | Building administration: the storage breakdown, `PUT /staff/gateway` is addressed by `provider`, the connection check writes no audit row | §9 |
 | DR-149 | Imports: one route dispatched by `kind` through an `ImportHandler`, the body carries `fileId`, over 5,000 rows is a 400 with no stored job, the `deletion=requested` filter of E-63 | §10 |
 | DR-226 | `GET /staff/imports` (E-169): the import history of `W-Import`, Owner decision 2026-10-21; no new table | §10 |
+| DR-314, DR-315 | `unit_type`: E-180…E-182, `unitType` and `unitTypeId` on E-57…E-60, the import column `unit_type` on E-71; one table and one column, no other module | §10 |
 | DR-143 and DR-144 are in [DOC-50](api-guidelines.md) §18. | | |
 
 ## 14. Traceability

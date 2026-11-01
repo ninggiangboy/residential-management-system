@@ -1,12 +1,12 @@
 # Web: residents
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-10-29 (DR-309: the floor and type selects list `summary.floors` and `summary.bedrooms`) · 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
-> Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
+> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-11-01 (DR-314, DR-315: `W-Unit-Types`, the type filter, column and field of `W-Units`, the type tag of `W-Unit-Detail`, the column `unit_type` of `W-Import`; UIWR-43…53) · 2026-10-29 (DR-309: the floor and type selects list `summary.floors` and `summary.bedrooms`) · 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
+> Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226, 314, 315), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, E-180…E-182, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
 > Main readers: P1-16 (web CMS shell: sign in, create staff, import units), P1-13, P1-14, DOC-68 (copy), DOC-88 (prefix `UIWR-`)
 
-This document specifies the five web screens that set up the people of the building: the unit list, the unit detail, the resident list, the form that gives a person to a unit, and the Excel import of units and owners. The phase-1 screens are all five (`W-Units`, `W-Unit-Detail`, `W-Residents`, `W-Resident-Add`, `W-Import`); `W-Vehicles` (P5) and the money blocks of the unit detail (P2, P3) are only listed in "Specified before P5 and P3". The canvas draws the five screens but not their dialogs; the dialogs are specified here with small wireframes. Tokens and components are DOC-54, the endpoints are DOC-51, and the strings of the error codes are DOC-68.
+This document specifies the six web screens that set up the people and the units of the building: the unit list, the unit detail, the unit types, the resident list, the form that gives a person to a unit, and the Excel import of units and owners. The phase-1 screens are all six (`W-Units`, `W-Unit-Detail`, `W-Unit-Types`, `W-Residents`, `W-Resident-Add`, `W-Import`; `W-Unit-Types` is task P1-30 and is not in the canvas, DR-314); `W-Vehicles` (P5) and the money blocks of the unit detail (P2, P3) are only listed in "Specified before P5 and P3". The canvas draws five of the screens but not their dialogs; the dialogs are specified here with small wireframes. Tokens and components are DOC-54, the endpoints are DOC-51, and the strings of the error codes are DOC-68.
 
-Test prefix: `UIWR-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it).
+Test prefix: `UIWR-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it). UIWR-43…53 are the unit-type cases (DR-314).
 
 ## Screens in this file
 
@@ -14,11 +14,12 @@ Test prefix: `UIWR-` (DOC-56 §6.3; unused before this document; DOC-88 §15 ind
 | --- | --- | --- | --- | --- | --- | --- |
 | `W-Units` | BQL: Danh sách căn hộ | Unit list, filters, add a unit | Admin, Manager | P1 | designed (dialog `Thêm căn` to design) | [W-Units](#w-units) |
 | `W-Unit-Detail` | BQL: Chi tiết căn hộ | Members, history, edit, transfer, phone change, lock, remove | Admin, Manager | P1 (members, history) | designed (dialogs, history tab to design) | [W-Unit-Detail](#w-unit-detail) |
+| `W-Unit-Types` | (not in the canvas) | The building's unit types and their defaults: list, add, edit, archive, restore | Admin, Manager | P1 (P1-30) | not in the canvas; built from DOC-54 parts like `W-Staff` (DR-314) | [W-Unit-Types](#w-unit-types) |
 | `W-Residents` | BQL: Cư dân | Resident accounts, filters, profile, deletion approval | Admin, Manager | P1 | designed (profile dialog to design) | [W-Residents](#w-residents) |
 | `W-Resident-Add` | BQL: Gán chủ hộ | Create a person for a unit or link an existing account | Admin, Manager | P1 | designed | [W-Resident-Add](#w-resident-add) |
 | `W-Import` | BQL: Nhập căn hộ từ Excel | Upload, validate, preview, save valid rows | Admin, Manager | P1 | designed (steps 1 and 3 to design) | [W-Import](#w-import) |
 
-## Rules shared by the five screens
+## Rules shared by the screens
 
 | Topic | Rule |
 | --- | --- |
@@ -27,7 +28,7 @@ Test prefix: `UIWR-` (DOC-56 §6.3; unused before this document; DOC-88 §15 ind
 | Personal data | A list shows the full login phone and the ID number masked (`•••• 2345`), never a date of birth, never an email in the import preview. The full ID number and the date of birth appear in one place only: the profile dialog of `W-Residents` (E-65, which writes `pii.read`). No other screen of this file calls E-65 (UX-18, DOC-35 §6) |
 | Concurrency | The unit loaded by E-59 keeps its `ETag` (the `version`) and sends it as `If-Match` on E-60 and E-61. On 409 `version_conflict` the page refetches, keeps what the user typed, shows the message and waits (UX-02). No write is replayed by the client |
 | Idempotency | Creates (E-58, E-64, E-72) carry one `Idempotency-Key` per intent, reused on a retry and renewed only when the form changes (DOC-55 §4) |
-| Query keys | `staffKey('units', filters)`, `staffKey('units', 'detail', unitId)`, `staffKey('units', 'detail', unitId, 'history')`, `staffKey('residents', filters)`, `staffKey('residents', 'detail', accountId)`, `staffKey('imports', importId)`. A write invalidates `['staff','units']` and `['staff','residents']`; the profile dialog's query is never cached (`gcTime: 0`, E-65 is `no-store`) |
+| Query keys | `staffKey('units', filters)`, `staffKey('units', 'detail', unitId)`, `staffKey('units', 'detail', unitId, 'history')`, `staffKey('units', 'types', status)` (DR-314), `staffKey('residents', filters)`, `staffKey('residents', 'detail', accountId)`, `staffKey('imports', importId)`. A write invalidates `['staff','units']` and `['staff','residents']`; the profile dialog's query is never cached (`gcTime: 0`, E-65 is `no-store`) |
 | Real-time | None. The residency module emits no web event (DR-75). Lists refetch on window focus and after the page's own write (`staleTime` 30 s) |
 | Phone display | The API sends `+84901234567`. The web shows `0901 234 567` (national format, groups 4-3-3) and sends E.164 or the national form the user typed; the API parses it (DOC-51 E-61) |
 | Language | Every string is a catalog key `web.<screen>.<element>` (DOC-56 §6.4); member-type labels are `common.member-type.<type>`, status labels `status.<entity>.<value>` and error messages `error.<code>`, owned by DOC-68 |
@@ -46,7 +47,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 (set up and look up units), FR-18; cap
 
 ### 2. URL and search params
 
-`/units`. Search parameters (DOC-53 §4, with one addition, DR-212): `q` string (unit-code prefix, at least 2 characters), `occupancy` `occupied` | `rented` | `vacant`, `floor` integer, `bedrooms` integer 0…20, `cursor`, `limit` (default 50). A changed filter drops `cursor`. `dialog=add` opens the add dialog.
+`/units`. Search parameters (DOC-53 §4, with the additions of DR-212 and DR-314): `q` string (unit-code prefix, at least 2 characters), `occupancy` `occupied` | `rented` | `vacant`, `floor` integer, `unitTypeId` UUID (DR-314), `bedrooms` integer 0…20, `cursor`, `limit` (default 50). A changed filter drops `cursor`. `dialog=add` opens the add dialog.
 
 ### 3. Prototype
 
@@ -60,14 +61,15 @@ Do not copy:
 - The search placeholder "Tìm mã căn, chủ hộ, SĐT": E-57 searches the unit code only. The owner is found on `W-Residents` (DR-212).
 - The footer "1–10 trên 240 căn": the list is a cursor list without a total of the filtered rows (DR-212).
 - Owner phones as drawn (`0986 210 334`) are a display format of the E.164 value ("Rules shared" above).
+- *Added 2026-11-01 (DR-314):* the drawn "Loại" column and select show the bedroom count ("2PN"). They now show the **unit type**; the bedroom count keeps its own select "Phòng ngủ" and appears under the type name.
 
 ### 4. Regions and components
 
 | Region | Components (DOC-54) | Shown state |
 | --- | --- | --- |
 | Header | `Button` outline "Nhập từ Excel" (links to `/import`), `Button` primary with `plus` "Thêm căn" | always |
-| Filters | `SearchField`, `SelectField` (the floors are E-57 `summary.floors`, the building's distinct floors whatever the filters, plus the floor of the URL if no unit has it; DR-309), `SelectField` (Loại = bedrooms, the options are E-57 `summary.bedrooms` the same way; DR-309), `SelectField` (Trạng thái) | the active filters |
-| Table | `Plate` (code), `Tag` (status), `Avatar`-less text for the owner, caret icon | rows; the row is a link to `/units/$unitId` |
+| Filters | `SearchField`, `SelectField` (the floors are E-57 `summary.floors`, the building's distinct floors whatever the filters, plus the floor of the URL if no unit has it; DR-309), `SelectField` (Loại = the unit type, the options are E-180 with every type that has a unit, archived ones too, plus the type of the URL if it is gone; DR-314), `SelectField` (Phòng ngủ = the bedroom count, the options are E-57 `summary.bedrooms` the same way as the floors; DR-309), `SelectField` (Trạng thái) | the active filters |
+| Table | `Plate` (code), the type name with the bedroom count as muted text under it ("{count}PN"; "Chưa phân loại" muted when the unit has no type; DR-314), `Tag` (status), `Avatar`-less text for the owner, caret icon | rows; the row is a link to `/units/$unitId` |
 | Owner cell | name and phone; for a unit without an owner "Chưa có chủ hộ" (muted) and a ghost link "Gán chủ hộ bằng SĐT" to `/residents/new?unitId=` | per row |
 | Footer | `IconButton` × 2 (previous, next) and the text "Trang {page}" | hidden when `q` is set (no cursor) |
 | Add dialog | `Dialog`, `TextField`, `SelectField`, `Button` | `dialog=add` |
@@ -76,6 +78,7 @@ Do not copy:
 
 | Read | Endpoint | Key | Notes |
 | --- | --- | --- | --- |
+| Unit types | E-180 `GET /staff/unit-types` | `['staff','units','types','all']` | the "Loại" select and, with `?status=active`, the select of the add dialog; `staleTime` 30 s; refetched after any write of this screen (DR-314) |
 | Page of units, summary | E-57 `GET /staff/units` | `['staff','units',filters]` | `limit` 50; `q` makes a search capped at 20 with no cursor; the header line reads `summary`, which ignores the filters (DR-212); `useInfiniteQuery` keeps the cursors visited so "Trang trước" works (the cursor is opaque and never built by the client, DOC-55 §4) |
 
 Refetch: on focus after 30 s, after E-58, E-60, E-61, E-72 commit and E-69 (counts of members). Real-time: none.
@@ -89,7 +92,8 @@ Refetch: on focus after 30 s, after E-58, E-60, E-61, E-72 commit and E-69 (coun
 | Next / previous page | E-57 with the stored cursor | page replaced | as above |
 | Open a row | none | navigate to `/units/$unitId` | |
 | "Nhập từ Excel" | none | navigate to `/import` | |
-| "Thêm căn" → submit | E-58 `POST /staff/units` (`Idempotency-Key`) | dialog closes, toast "Đã thêm căn {code}", the new unit is opened | 409 `unit_code_in_use` → error on the code field; 400 `validation_failed` → field errors from `details[{path,code,message}]`; 422 `idempotency_key_reuse` → reload the form |
+| Pick a type in the add dialog | none | the fields that the Manager has not touched take the type's `defaultBedrooms` and `defaultAreaM2` and a muted line under them says "Lấy từ loại {type}" (DR-315); a field that was typed is never overwritten; picking "Chưa phân loại" or another type does not clear a filled field | |
+| "Thêm căn" → submit | E-58 `POST /staff/units` (`Idempotency-Key`) with `bedrooms` and `areaM2` exactly as the form shows them | dialog closes, toast "Đã thêm căn {code}", the new unit is opened | 409 `unit_code_in_use` → error on the code field; 422 `unit_type_archived` or `unit_type_unknown` → error on the type field and the select reloads; 400 `validation_failed` → field errors from `details[{path,code,message}]`; 422 `idempotency_key_reuse` → reload the form |
 
 Dialog "Thêm căn hộ" (not drawn; the form of E-58):
 
@@ -98,8 +102,11 @@ Dialog "Thêm căn hộ" (not drawn; the form of E-58):
 | Thêm căn hộ                         [x]|
 | Mã căn *              Tình trạng       |
 | [ VD: A-1509     ]   [ Trống        v] |
+| Loại căn hộ                            |
+| [ Chưa phân loại                    v] |
 | Tầng      Số phòng ngủ   Diện tích     |
 | [ VD: 15 ] [ VD: 3 ]   [ VD: 82,5  m²] |
+| Lấy từ loại Duplex                     |
 | Ghi chú                                |
 | [ Thông tin thêm về căn hộ           ] |
 | [                                    ] |
@@ -108,7 +115,7 @@ Dialog "Thêm căn hộ" (not drawn; the form of E-58):
 +----------------------------------------+
 ```
 
-The dialog opens with the caret in "Mã căn"; the placeholders are examples, never the only hint (DOC-54 §17.9). The edit dialog of `W-Unit-Detail` has the same fields and layout.
+The dialog opens with the caret in "Mã căn"; the placeholders are examples, never the only hint (DOC-54 §17.9). The edit dialog of `W-Unit-Detail` has the same fields and layout, **without** the prefill: changing the type there changes only the type (DR-315). The type select lists the active types, plus the unit's own type when it is archived (shown with "(ngừng dùng)").
 
 ### 7. States
 
@@ -129,14 +136,18 @@ Loading: 8 skeleton rows after 150 ms. Empty with no filter: title and body belo
 | `web.units.field.search.empty` | Không có căn nào khớp mã này. | No unit matches this code. |
 | `web.units.field.floor.label` | Tầng | Floor |
 | `web.units.field.floor.all` | Tất cả tầng | All floors |
-| `web.units.field.bedrooms.label` | Loại | Type |
-| `web.units.field.bedrooms.all` | Tất cả loại | All types |
+| `web.units.field.type.label` | Loại | Type |
+| `web.units.field.type.all` | Tất cả loại | All types |
+| `web.units.field.type.archived` | {name} (ngừng dùng) | {name} (not in use) |
+| `web.units.field.bedrooms.label` | Phòng ngủ | Bedrooms |
+| `web.units.field.bedrooms.all` | Tất cả | All |
 | `web.units.field.bedrooms.option` | {count}PN | {count} BR |
 | `web.units.field.occupancy.label` | Trạng thái | Status |
 | `web.units.field.occupancy.all` | Tất cả | All |
 | `web.units.col.code` | Mã căn | Unit |
 | `web.units.col.floor` | Tầng | Floor |
 | `web.units.col.type` | Loại | Type |
+| `web.units.type.none` | Chưa phân loại | Not classified |
 | `web.units.col.area` | Diện tích | Area |
 | `web.units.col.status` | Trạng thái | Status |
 | `web.units.col.owner` | Chủ hộ | Owner |
@@ -154,6 +165,8 @@ Loading: 8 skeleton rows after 150 ms. Empty with no filter: title and body belo
 | `web.units.dialog.add.title` | Thêm căn hộ | Add a unit |
 | `web.units.dialog.add.field.code.label` / `.placeholder` | Mã căn / VD: A-1509 | Unit code / e.g. A-1509 |
 | `web.units.dialog.add.field.floor.label` / `.placeholder` | Tầng / VD: 15 | Floor / e.g. 15 |
+| `web.units.dialog.add.field.type.label` / `.none` | Loại căn hộ / Chưa phân loại | Unit type / Not classified |
+| `web.units.dialog.add.field.type.defaults` | Lấy từ loại {type} | Taken from the type {type} |
 | `web.units.dialog.add.field.bedrooms.label` / `.placeholder` | Số phòng ngủ / VD: 3 | Bedrooms / e.g. 3 |
 | `web.units.dialog.add.field.area.label` / `.placeholder` / `.suffix` | Diện tích / VD: 82,5 / m² | Area / e.g. 82.5 / m² |
 | `web.units.dialog.add.field.occupancy.label` | Tình trạng | Occupancy |
@@ -161,7 +174,7 @@ Loading: 8 skeleton rows after 150 ms. Empty with no filter: title and body belo
 | `web.units.dialog.add.confirm` | Thêm căn | Add unit |
 | `web.units.toast.created` | Đã thêm căn {code} | Unit {code} added |
 
-Errors use `error.unit_code_in_use`, `error.validation_failed`, `error.invalid_cursor`.
+Errors use `error.unit_code_in_use`, `error.unit_type_archived`, `error.unit_type_unknown`, `error.validation_failed`, `error.invalid_cursor`.
 
 ### 9. Acceptance criteria
 
@@ -211,7 +224,7 @@ Do not copy:
 
 | Region | Components | State |
 | --- | --- | --- |
-| Header | `Plate` lg, `Tag` (unit status), `Button` outline "Sửa thông tin căn", `Button` outline "Chuyển chủ hộ" (hidden when the unit has no owner; then `Button` primary "Gán chủ hộ" to `/residents/new?unitId=`) | always |
+| Header | `Plate` lg, `Tag` neutral with the type name (none when the unit has no type; an archived type shows as it is, DR-314), `Tag` (unit status), `Button` outline "Sửa thông tin căn", `Button` outline "Chuyển chủ hộ" (hidden when the unit has no owner; then `Button` primary "Gán chủ hộ" to `/residents/new?unitId=`) | always |
 | Tabs | `Tabs` with `members` and `history` | P1 |
 | Members table | `Avatar`, text, `Tag` (membership status), `Button` ghost (row actions), `IconButton` `dots-three` for the overflow menu | one row per non-removed membership, owner first |
 | Row actions | owner: "Đổi SĐT", "Khóa" / "Mở khóa"; others: "Đổi SĐT", "Khóa" / "Mở khóa", "Xóa"; overflow menu on a family member or a tenant: "Đổi thành Người thuê" / "Đổi thành Thành viên gia đình" | per row |
@@ -223,7 +236,7 @@ Do not copy:
 
 | Read | Endpoint | Key | Notes |
 | --- | --- | --- | --- |
-| Unit, owner, members, debt | E-59 `GET /staff/units/{id}` | `['staff','units','detail',unitId]` | keeps the `ETag` for E-60 and E-61; the `debt` object is ignored in P1 (it is zeros until `finance` exists) and read from P2; `phone` is shown in full to Admin and Manager (the Guard's mask is a P5 screen, DR-48) |
+| Unit, owner, members, debt | E-59 `GET /staff/units/{id}` | `['staff','units','detail',unitId]` | keeps the `ETag` for E-60 and E-61; `unitType` is the header tag; the `debt` object is ignored in P1 (it is zeros until `finance` exists) and read from P2; `phone` is shown in full to Admin and Manager (the Guard's mask is a P5 screen, DR-48) |
 | History | E-62 `GET /staff/units/{id}/history` | `[…,'history']` | `useInfiniteQuery`, 50 per page, "Xem thêm" loads the next cursor; no phone in the answer |
 | Phone lookup in the transfer dialog | E-63 `GET /staff/residents?q=<digits>` | not cached | same rule as `W-Resident-Add` (its Data section); shows name and masked ID number only |
 
@@ -277,6 +290,7 @@ Loading: header and table skeleton. Not found: E-59 404 → `NotFound` with a li
 | --- | --- | --- |
 | `web.unit-detail.title` | Tầng {floor}, {bedrooms} phòng ngủ, {area} m² | Floor {floor}, {bedrooms} bedrooms, {area} m² |
 | `web.unit-detail.title.fallback` | Căn hộ {code} | Unit {code} |
+| `web.unit-detail.type.none` | Chưa phân loại | Not classified |
 | `web.unit-detail.subtitle.owner` | Chủ hộ {name}, {phone} | Owner {name}, {phone} |
 | `web.unit-detail.subtitle.no-owner` | Chưa có chủ hộ | No owner yet |
 | `web.unit-detail.cta.edit` | Sửa thông tin căn | Edit unit |
@@ -339,7 +353,7 @@ Loading: header and table skeleton. Not found: E-59 404 → `NotFound` with a li
 | `web.unit-detail.dialog.remove.confirm` | Xóa khỏi căn | Remove from unit |
 | `web.unit-detail.toast.saved` | Đã lưu thông tin căn | Unit saved |
 
-Errors use `error.version_conflict`, `error.unit_code_in_use`, `error.member_exists`, `error.phone_in_use`, `error.phone_invalid`, `error.invalid_transition`, `error.owner_must_transfer`.
+Errors use `error.version_conflict`, `error.unit_code_in_use`, `error.unit_type_archived`, `error.unit_type_unknown`, `error.member_exists`, `error.phone_in_use`, `error.phone_invalid`, `error.invalid_transition`, `error.owner_must_transfer`.
 
 ### 9. Acceptance criteria
 
@@ -358,6 +372,138 @@ Errors use `error.version_conflict`, `error.unit_code_in_use`, `error.member_exi
 ### 10. E2E cases
 
 File `apps/cms-web/e2e/unit-detail.spec.ts`: UIWR-07…UIWR-15, in the flows "household management" (UIWR-07, 11, 12, 13), "transfer" (UIWR-08, 09, 14) and "login phone" (UIWR-10).
+
+### 11. Open questions
+
+None.
+
+---
+
+## W-Unit-Types
+
+> Status: Review · Prototype: not in the canvas (built from the parts of DOC-54, like `W-Staff`) · Phase: P1 (task P1-30) · DOC-65
+
+*Added 2026-11-01 (DR-314, DR-315).*
+
+### 1. Persona, use cases, permissions
+
+PS-2 Manager (PS-1 Admin the same); UC-13 (set up the units of the building), FR-18.7. Roles `admin`, `manager`. A Technician or a Guard on the web lands on `/wrong-app` (DR-174). No step-up. The screen sets up the kinds of unit a building has (apartment, studio, duplex, penthouse, shophouse…) and the defaults that save typing when a unit is added. A type is never deleted: it is archived (DR-314).
+
+### 2. URL and search params
+
+`/units/types`, one level under `/units` as `/tickets/types` is under `/tickets` (DOC-53 §4); a static segment wins over `/units/$unitId`. Search: `dialog` `add` | `edit`; with `edit` the parameter `unitTypeId` names the row. A dialog reopens after a reload (DOC-53 §4 rule 4). There are no filters and no cursor: a building has at most 50 types.
+
+### 3. Prototype
+
+Not in the canvas. Layout: web shell with the sidebar group "Cư dân", entry "Loại căn hộ" under "Căn hộ", breadcrumb "Cư dân / Căn hộ / Loại căn hộ"; page header (h1 "Loại căn hộ", the summary line, button primary with `plus` "Thêm loại căn hộ"); one table card; the add and edit `Dialog`.
+
+### 4. Regions and components
+
+| Region | Components (DOC-54) | Shown state |
+| --- | --- | --- |
+| Header | `Button` primary with `plus` "Thêm loại căn hộ"; summary line | always |
+| Table | `DataTable` with columns Mã (monospace), Tên (the Vietnamese name, the English one muted under it), Phòng ngủ mặc định, Diện tích mặc định, Số căn, Trạng thái (`Tag`: `active` success "Đang dùng", `archived` neutral "Ngừng dùng"); the row opens the edit dialog | rows |
+| Add and edit dialog | `Dialog` 480 px, `TextField` × 4, `Switch` (edit only), `Button`; code and names share rows as DOC-54 §17.9 asks | `dialog=add`, `dialog=edit` |
+| Conflict | the two-choice banner of DR-310 inside the dialog | on 409 `version_conflict` |
+
+### 5. Data
+
+| Read | Endpoint | Key | Notes |
+| --- | --- | --- | --- |
+| Types, counts, summary | E-180 `GET /staff/unit-types` | `['staff','units','types','all']` | no `status` filter; the rows carry `version` for `If-Match`; refetched on focus after 30 s and after any write of this screen or of `W-Units` (a unit write invalidates `['staff','units']`, which holds this key, because `unitCount` moves) |
+
+### 6. Interactions
+
+| Action | Endpoint | Success | Failure |
+| --- | --- | --- | --- |
+| "Thêm loại căn hộ" → submit | E-181 `POST /staff/unit-types` (`Idempotency-Key`) | dialog closes, toast "Đã thêm loại {name}", the table refetches | 409 `unit_type_code_in_use` → error on "Mã"; 409 `unit_type_name_in_use` → error on "Tên tiếng Việt"; 409 `unit_type_limit` → a `Banner` in the dialog; 400 `validation_failed` → field errors; 422 `idempotency_key_reuse` → reload the form |
+| A row → save | E-182 `PATCH /staff/unit-types/{id}` with `If-Match` = the row's `version`; only the changed fields | dialog closes, toast "Đã lưu loại {name}", refetch | 409 `version_conflict` → the two choices of DR-310 (use the new version, or keep mine and save again); 409 `unit_type_name_in_use` → field error; 404 `not_found` → the dialog closes and the list refetches |
+| The switch "Đang dùng" turned off, then save | E-182 `{status:"archived"}` | the row's tag reads "Ngừng dùng"; the type leaves the select of the add dialog at once | as above |
+| The switch turned on, then save | E-182 `{status:"active"}` | the tag reads "Đang dùng" | as above |
+
+Dialog "Thêm loại căn hộ" (the edit dialog is the same with the title "Sửa loại căn hộ", the "Mã" field read-only, the switch, and the button "Lưu"):
+
+```
++----------------------------------------+
+| Thêm loại căn hộ                    [x]|
+| Mã *                                   |
+| [ VD: duplex                         ] |
+| Chữ thường, số và dấu _; không đổi được|
+| Tên tiếng Việt *     Tên tiếng Anh     |
+| [ VD: Duplex     ]  [ VD: Duplex     ] |
+| Mặc định cho căn mới                   |
+| Số phòng ngủ         Diện tích         |
+| [ VD: 3          ]  [ VD: 120    m²  ] |
+| Chỉ điền sẵn khi thêm căn mới; không   |
+| đổi các căn đã có.                     |
+|----------------------------------------|
+|                 [ Hủy ] [ Thêm loại ]  |
++----------------------------------------+
+```
+
+The dialog opens with the caret in "Mã" (on edit, in "Tên tiếng Việt"). Placeholders are examples, never the only hint (DOC-54 §17.9). A default left empty means "no default": the field of a new unit stays empty.
+
+### 7. States
+
+Loading: the table header and 5 skeleton rows after 150 ms. Empty: title and body below and the button "Thêm loại căn hộ". Error: the generic error state of DOC-68 with the request id and a retry. Forbidden: `/wrong-app`. Offline: not applicable (web). A type with 0 units shows "0" in "Số căn". When units have no type, the summary line adds "{withoutType} căn chưa phân loại".
+
+### 8. Microcopy
+
+| Key | vi | en |
+| --- | --- | --- |
+| `web.unit-types.title` | Loại căn hộ | Unit types |
+| `web.unit-types.subtitle` | {total} loại, {active} đang dùng | {total} types, {active} in use |
+| `web.unit-types.subtitle.without-type` | {count} căn chưa phân loại | {count} units not classified |
+| `web.unit-types.cta` | Thêm loại căn hộ | Add a unit type |
+| `web.unit-types.col.code` | Mã | Code |
+| `web.unit-types.col.name` | Tên | Name |
+| `web.unit-types.col.bedrooms` | Phòng ngủ mặc định | Default bedrooms |
+| `web.unit-types.col.area` | Diện tích mặc định | Default area |
+| `web.unit-types.col.units` | Số căn | Units |
+| `web.unit-types.col.status` | Trạng thái | Status |
+| `web.unit-types.default.none` | — | — |
+| `web.unit-types.empty.title` | Chưa có loại căn hộ nào | No unit types yet |
+| `web.unit-types.empty.body` | Thêm các loại như căn hộ, studio, duplex để phân loại căn và điền sẵn số phòng ngủ, diện tích. | Add types such as apartment, studio or duplex to classify units and fill in bedrooms and area. |
+| `web.unit-types.dialog.add.title` | Thêm loại căn hộ | Add a unit type |
+| `web.unit-types.dialog.edit.title` | Sửa loại căn hộ | Edit unit type |
+| `web.unit-types.dialog.field.code.label` / `.placeholder` / `.hint` | Mã / VD: duplex / Chữ thường, số và dấu _; không đổi được. | Code / e.g. duplex / Lowercase letters, digits and _; cannot be changed. |
+| `web.unit-types.dialog.field.name-vi.label` / `.placeholder` | Tên tiếng Việt / VD: Duplex | Vietnamese name / e.g. Duplex |
+| `web.unit-types.dialog.field.name-en.label` / `.placeholder` | Tên tiếng Anh / VD: Duplex | English name / e.g. Duplex |
+| `web.unit-types.dialog.defaults.title` | Mặc định cho căn mới | Defaults for new units |
+| `web.unit-types.dialog.defaults.hint` | Chỉ điền sẵn khi thêm căn mới; không đổi các căn đã có. | Only filled in when a new unit is added; existing units do not change. |
+| `web.unit-types.dialog.field.bedrooms.label` / `.placeholder` | Số phòng ngủ / VD: 3 | Bedrooms / e.g. 3 |
+| `web.unit-types.dialog.field.area.label` / `.placeholder` / `.suffix` | Diện tích / VD: 120 / m² | Area / e.g. 120 / m² |
+| `web.unit-types.dialog.field.active.label` | Đang dùng | In use |
+| `web.unit-types.dialog.field.active.hint` | {count} căn vẫn giữ loại này; loại này chỉ không chọn được cho căn mới. | {count} units keep this type; it can only no longer be chosen for new units. |
+| `web.unit-types.dialog.add.confirm` | Thêm loại | Add type |
+| `web.unit-types.dialog.edit.confirm` | Lưu | Save |
+| `web.unit-types.limit.banner` | Mỗi tòa nhà có tối đa {max} loại căn hộ. Hãy ngừng dùng một loại không cần nữa. | A building has at most {max} unit types. Archive one you no longer need. |
+| `web.unit-types.toast.created` | Đã thêm loại {name} | Type {name} added |
+| `web.unit-types.toast.saved` | Đã lưu loại {name} | Type {name} saved |
+
+Statuses: `status.unit-type.active` "Đang dùng" / "In use", `status.unit-type.archived` "Ngừng dùng" / "Not in use". Errors use `error.unit_type_code_in_use`, `error.unit_type_name_in_use`, `error.unit_type_limit`, `error.version_conflict`, `error.validation_failed`.
+
+### 9. Acceptance criteria
+
+UIWR-43, 44, 45 and 52 test the other screens of this file for the types; they are listed here because the types are the subject.
+
+| ID | Given / When / Then | Level |
+| --- | --- | --- |
+| UIWR-43 | **Given** units of three types and one with none **When** a Manager opens `/units?unitTypeId=<studio>` **Then** E-57 is called with `unitTypeId`, only studio units show, the "Loại" select shows "Studio", the "Phòng ngủ" select is still a separate filter, and changing either drops `cursor`; a row of a unit with no type shows "Chưa phân loại" | web-e2e |
+| UIWR-44 | **Given** the add dialog and a type `studio` with defaults 0 and 32 **When** the Manager picks it **Then** "Số phòng ngủ" shows 0 and "Diện tích" 32 with the line "Lấy từ loại Studio"; **When** the Manager had typed 2 in "Số phòng ngủ" first **Then** picking the type leaves 2; E-58 is sent with the values on screen | web-e2e |
+| UIWR-45 | **Given** a unit with a type **When** `/units/<id>` opens **Then** the header shows the type tag; in the edit dialog changing the type leaves bedrooms and area as they were, and the saved unit changes only its type | web-e2e |
+| UIWR-46 | **Given** the sample building with its five types **When** a Manager opens `/units/types` **Then** E-180 is called once, five rows show with code, names, defaults, unit counts and tags, and a type without a default shows "—" | web-e2e |
+| UIWR-47 | **Given** the add dialog **When** the Manager enters `duplex`, "Duplex", 3 and 120 and saves **Then** E-181 is sent with an `Idempotency-Key`, the toast "Đã thêm loại Duplex" shows and the row appears with 0 units | web-e2e |
+| UIWR-48 | **Given** a type `studio` **When** the code `studio` is added again, then another code with the name `STUDIO` **Then** the error shows on "Mã", then on "Tên tiếng Việt", and the dialog stays open; at 50 types the banner `web.unit-types.limit.banner` shows | web-e2e |
+| UIWR-49 | **Given** a type used by 3 units **When** the Manager changes its default area and saves **Then** the "Mã" field was read-only, E-182 sends only `defaultAreaM2`, and the three units keep their areas (E-57 shows the old values) | web-e2e |
+| UIWR-50 | **Given** an active type used by 3 units **When** the Manager turns "Đang dùng" off and saves **Then** the tag reads "Ngừng dùng", the add dialog of `W-Units` no longer offers the type, the 3 units still show it, and turning the switch on again restores it | web-e2e |
+| UIWR-51 | **Given** a second Manager saved the type after this dialog opened **When** the first saves **Then** the 409 banner with the two choices of DR-310 shows, the typed values stay, and nothing is lost until the Manager chooses | web-e2e |
+| UIWR-52 | **Given** an import file with the column "Loại căn hộ", one row naming `loft` and one new unit with `studio` and blank bedrooms and area **When** it is uploaded **Then** the preview shows `unit_type_unknown` on the first row and `unit_type_defaults_applied` on the second | web-e2e |
+| UIWR-53 | **Given** a Technician or a Guard token **When** `/units/types` is opened **Then** the page is `/wrong-app` and E-180 is never called | web-e2e |
+
+### 10. E2E cases
+
+File `apps/cms-web/e2e/unit-types.spec.ts`: UIWR-43…UIWR-53, in the flows "set up the unit types" (UIWR-46…51), "units with a type" (UIWR-43…45), "import with a type" (UIWR-52) and "wrong app" (UIWR-53).
 
 ### 11. Open questions
 
@@ -730,6 +876,7 @@ Error, forbidden: DOC-68. Offline: not applicable; a lost connection during the 
 | `web.import.col.note` | Ghi chú | Notes |
 | `web.import.column.unit_code` | Mã căn hộ | Unit code |
 | `web.import.column.floor` | Tầng | Floor |
+| `web.import.column.unit_type` | Loại căn hộ | Unit type |
 | `web.import.column.bedrooms` | Số phòng ngủ | Bedrooms |
 | `web.import.column.area_m2` | Diện tích (m²) | Area (m²) |
 | `web.import.column.occupancy` | Tình trạng | Occupancy |
@@ -817,6 +964,7 @@ These parts of the screens above have no section yet. They are listed so that th
 | --- | --- | --- | --- |
 | DR-212 | The unit and resident lists get the fields their screens draw: E-57 gains the filter `bedrooms`, the item field `memberCount` and `summary {total, occupied, rented, vacant}` (whole building, ignoring the filters); E-63 gains `summary {total}`, the item field `lastAppOpenAt` and the filter `neverSignedIn`; the search boxes search only what the endpoints search (unit code on `W-Units`; name and phone on `W-Residents`); the pager is forward with a client stack of cursors, with no filtered total | Claude (delegated by Owner) | DOC-51 E-57, E-63, DOC-53 §4, DOC-27 §11 |
 | DR-213 | Import: each `issues[]` entry of E-72/E-73 carries `unitCode` (nullable), so the error table can show the "Mã căn" the canvas draws; the error list is a CSV built in the browser; there is no list of past imports in phase 1 (*revised 2026-10-21, DR-226: the list is E-169*) | Claude (delegated by Owner) | DOC-51 E-72, E-73, DOC-18 §1.4 |
+| DR-314, DR-315 | Unit types: the screen `W-Unit-Types`, the "Loại" filter and column now the type, the "Phòng ngủ" filter, the type tag, the prefill of the add dialog, the import column | Claude (delegated by Owner) | DOC-51 §10, DOC-53, DOC-56 |
 | DR-214 | `W-Resident-Add` offers the four member types, because E-64 accepts them (the canvas draws the owner only); "Chủ hộ" is disabled for a unit that has an owner, with a link to the transfer | Claude (delegated by Owner) | DOC-27 §5.1, DOC-56 |
 | DR-215 | The lookup of an existing phone in `W-Resident-Add` and in the transfer dialog uses E-63 and shows the name and the masked ID number only; the canvas's read-only full ID number, date of birth and email are not shown, because only E-65 may return them (UX-18, DOC-35 §6) | Claude (delegated by Owner) | DOC-35 §6, DOC-56 |
 
@@ -850,4 +998,4 @@ These parts of the screens above have no section yet. They are listed so that th
 
 ## Not yet in the canvas
 
-The following are specified above with wireframes and still need an artboard (DOC-56 §4 lists the owner and phase; these rows are owed there): `W-Units` dialog "Thêm căn hộ"; `W-Unit-Detail` dialogs (edit unit, transfer ownership, change login phone, confirm lock, unlock and remove), the history tab and the row overflow menu; `W-Residents` profile dialog and the deletion approval; `W-Import` steps 1 and 3, the recent-imports table (DR-226), the warnings section and the failed, expired and committed states. All belong to P1.
+`W-Unit-Types` (DR-314) has no artboard at all; its layout above is the specification until one is drawn. The following are specified above with wireframes and still need an artboard (DOC-56 §4 lists the owner and phase; these rows are owed there): `W-Units` dialog "Thêm căn hộ"; `W-Unit-Detail` dialogs (edit unit, transfer ownership, change login phone, confirm lock, unlock and remove), the history tab and the row overflow menu; `W-Residents` profile dialog and the deletion approval; `W-Import` steps 1 and 3, the recent-imports table (DR-226), the warnings section and the failed, expired and committed states. All belong to P1.

@@ -1,6 +1,6 @@
 # Data conventions
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-28 (P1-26: `device_token` and `push_ticket` on the allow-list, §5.3) · 2026-10-22 (P1-07 and P1-08: the first `schema.ts` files, `drizzle.config.ts` and migrations, §14.1, §16.1) · 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `unit_type.name` in the bilingual columns, §8) · 2026-10-28 (P1-26: `device_token` and `push_ticket` on the allow-list, §5.3) · 2026-10-22 (P1-07 and P1-08: the first `schema.ts` files, `drizzle.config.ts` and migrations, §14.1, §16.1) · 2026-10-21 (P1-06: the bootstrap and the migration command exist, checks 1, 9 and 13 of §16 run, DR-250) · 2026-10-19 (DR-110, DR-112, DR-113) · DOC-14
 > Depends on: original SDD §16, [DR](../00-decision-register.md) (DR-09, 10, 11, 12, 14, 21, 41, 42, 55, 62, 71, 74, 85, 87, 100, 101), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-07](../03-architecture/system-context-and-containers.md) §5–§6, [DOC-11](../03-architecture/tech-stack-and-versions.md), [DOC-12](../03-architecture/code-architecture.md) §7–§9, [DOC-06](../02-glossary.md)
 > Main readers: P1-06 (roles, bootstrap and migrations), P1-05, P1-07, P1-08 (first migrations), P2-01, P2-02 (finance tables and counters), DOC-15, DOC-16, DOC-17, DOC-18, DOC-19 (every table document follows this one), every task that writes a migration
 
@@ -246,7 +246,7 @@ A charge is payable through the end of its due day and overdue when `buildingTod
 SELECT coalesce(name ->> :lang, name ->> 'vi') FROM example.fee_batch;
 ```
 
-The bilingual columns are the ones the Manager or Admin writes and the residents read: `fee_batch.name`, `charge_line.item_name`, `notice.title/body`, `ticket_type.name`, `wiki.folder.name`, `wiki.page.title/body`. System messages (inbox entries, push, errors) are not stored as text: they store a template key and parameters (DR-53).
+The bilingual columns are the ones the Manager or Admin writes and the residents read: `fee_batch.name`, `charge_line.item_name`, `notice.title/body`, `ticket_type.name`, `unit_type.name`, `wiki.folder.name`, `wiki.page.title/body`. System messages (inbox entries, push, errors) are not stored as text: they store a template key and parameters (DR-53).
 
 **Other JSON columns** (`payload`, `headers`, `changes`, `snapshot`, `params`, `details`):
 

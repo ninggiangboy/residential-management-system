@@ -1,6 +1,6 @@
 # UX principles and information architecture
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-29 (DR-310: UX-02, the two choices of a form that meets a 409) · 2026-10-28 (P1-26: the `urgent` channel also carries `payment.received`, DR-303, §5.3) · 2026-10-21 (DR-226: `importId` row of `W-Import`; earlier: DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `W-Unit-Types`, the type filter of `W-Units`, a sidebar entry) · 2026-10-29 (DR-310: UX-02, the two choices of a form that meets a 409) · 2026-10-28 (P1-26: the `urgent` channel also carries `payment.received`, DR-303, §5.3) · 2026-10-21 (DR-226: `importId` row of `W-Import`; earlier: DR-204, 210, 211, 212, 216, 219: URL rows and UX-09) · DOC-53
 > Depends on: original SDD §6.1, §7.4, §18, [DR](../00-decision-register.md) (DR-39, 40, 43, 44, 48, 69, 70, 71, 72, 73, 74, 75, 84, 127), [DOC-01](../01-product/vision-and-scope.md), [DOC-02](../01-product/personas-and-journeys.md), [DOC-03](../01-product/requirements.md) (NFR-02, 03, 12, 13), [DOC-10](../03-architecture/quality-attributes.md), [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md) §3, [DOC-39](../06-design/security.md), [DOC-42](../06-design/error-handling.md) §9, [DOC-50](../07-api/api-guidelines.md), [DOC-51](../07-api/api-endpoints.md), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0019](../04-adr/0019-mobile-and-web-client-stacks.md)
 > Main readers: P1-09, P1-16, P1-17, every screen document DOC-57…67, DOC-54, DOC-55, DOC-68, the E2E tests of P1-16 and P1-17
 
@@ -119,7 +119,7 @@ flowchart LR
   OP --> WN["W-Notices, W-Notice-Edit, W-Notice-Stats"]
   OP --> WK["W-Docs"]
   WD --> RS["Cư dân"]
-  RS --> WU["W-Units, W-Unit-Detail"]
+  RS --> WU["W-Units, W-Unit-Detail, W-Unit-Types"]
   RS --> WR["W-Residents, W-Resident-Add, W-Import"]
   RS --> WV["W-Vehicles"]
   WD --> FI["Tài chính"]
@@ -167,6 +167,7 @@ The bell (Inbox), the avatar (Account), the unit switcher (`Unit-Pick` as a shee
 | | Bản tin | `/notices` | Y | Y | P4 |
 | | Tài liệu | `/docs` | Y | Y | P5 |
 | Cư dân | Căn hộ | `/units` | Y | Y | P1 |
+| | Loại căn hộ | `/units/types` | Y | Y | P1 (DR-314) |
 | | Cư dân | `/residents` | Y | Y | P1 |
 | | Phương tiện (badge: pending) | `/vehicles` | Y | Y | P5 |
 | Tài chính | Đợt phí | `/fees` | Y | Y | P2 |
@@ -216,7 +217,8 @@ The web CMS uses TanStack Router with file-based routes (DR-70). Rules (DR-176):
 | `W-Notice-Edit` | `/notices/new`, `/notices/$noticeId/edit` | `lang` · `vi`, `en` · `vi` | Admin, Manager | P4 |
 | `W-Notice-Stats` | `/notices/$noticeId/stats` | `memberType`; `cursor` (unread list) | Admin, Manager | P4 |
 | `W-Docs` | `/docs` | `folder` · id; `page` · id; `lang` · `vi`, `en` · `vi`; `q` | Admin, Manager | P5 |
-| `W-Units` | `/units` | `q`; `occupancy` · `occupied`, `rented`, `vacant`; `floor` · integer; `bedrooms` · integer 0…20 (DR-212); `cursor`, `limit` (E-57); `dialog` · `add` | Admin, Manager | P1 |
+| `W-Units` | `/units` | `q`; `occupancy` · `occupied`, `rented`, `vacant`; `floor` · integer; `unitTypeId` · UUID (DR-314); `bedrooms` · integer 0…20 (DR-212); `cursor`, `limit` (E-57); `dialog` · `add` | Admin, Manager | P1 |
+| `W-Unit-Types` | `/units/types` | `dialog` · `add`, `edit`; `unitTypeId` with `edit` (E-180; DR-314) | Admin, Manager | P1 |
 | `W-Unit-Detail` | `/units/$unitId` | `tab` · `members`, `history`, then `debt`, `vehicles`, `money`, `tickets` · `members`; `dialog` · `edit`, `transfer`, `phone`, `member` (with `phone` and `member`, `membershipId` names the row) | Admin, Manager | P1 (members, history), P2 (debt), P3 (money), P5 (vehicles) |
 | `W-Residents` | `/residents` | `q`; `unitId`; `memberType` · `owner`, `family`, `tenant`, `helper`; `status` · `active`, `locked`; `deletion` · `requested`; `neverSignedIn` · boolean (DR-212); `cursor`, `limit` (E-63); `dialog` · `profile` with `accountId` | Admin, Manager | P1 |
 | `W-Resident-Add` | `/residents/new` | `unitId` · prefilled unit | Admin, Manager | P1 |

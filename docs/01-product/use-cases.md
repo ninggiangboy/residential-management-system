@@ -1,6 +1,6 @@
 # Use cases
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-10-26 (DR-268: UC-29 repository on SeaweedFS, whole-VPS loss scoped) · 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314, DR-315: UC-13 unit types) · 2026-10-26 (DR-268: UC-29 repository on SeaweedFS, whole-VPS loss scoped) · 2026-10-21 (DR-96 decided; E-169 listed in UC-13; earlier: DR-128: no "tries left" on the staff login) · DOC-04
 > Depends on: original SDD §3.2, §5–§12, §17, [DR](../00-decision-register.md) (DR-14, 16…24, 28…32, 35…42, 44…49, 50…53, 59, 62, 66, 72…75, 84, DR-96, DR-268), [DOC-01](vision-and-scope.md), [DOC-02](personas-and-journeys.md), [DOC-03](requirements.md), [DOC-06](../02-glossary.md)
 > Main readers: DOC-05, DOC-21…49 (each detailed flow `FL-xx` expands one use case), DOC-51 (endpoints), DOC-56…67 (screens), P0-29, every task `Pn-xx` that builds a use case
 
@@ -480,7 +480,7 @@ flowchart LR
 - **Trigger:** The building is set up, an owner changes, or a resident changes their phone number.
 - **Preconditions:** The Manager is signed in. For the import, the template of kind `unit_owner`.
 - **Main flow (import):**
-  1. On `W-Import` the Manager downloads the template (`GET /staff/imports/templates/unit_owner`), fills unit code, floor, bedrooms, area, occupancy, owner full name, phone, optional email, CCCD and date of birth.
+  1. On `W-Import` the Manager downloads the template (`GET /staff/imports/templates/unit_owner`), fills unit code, floor, unit type (optional, a code or name from `W-Unit-Types`), bedrooms, area, occupancy, owner full name, phone, optional email, CCCD and date of birth.
   2. The browser uploads the file; `POST /staff/imports {kind: "unit_owner", fileId}` (*revised 2026-10-20, DR-149: the id of the verified upload, not an object key*) validates it synchronously (a 2,000-row file with 40 errors previews in ≤ 10 s, NFR-12) and stores the preview in `residency.import_job`.
   3. The preview lists valid rows, rows that update an existing unit ("12 units exist, will be updated") and row errors.
   4. The Manager presses "Save valid rows" (`POST /staff/imports/{id}/commit`): one transaction creates or updates units, resident profiles and owner memberships.
@@ -497,6 +497,7 @@ flowchart LR
   - 3b. Search: the Manager types "nguyen", "van an" or "4567"; the resident is found by each; a phone fragment under 4 digits does not search by phone (FR-18.5).
   - 3c. The unit detail shows `unit_history`: kind, actor and time (FR-18.6).
   - 3d. Lock or remove a member from `W-Unit-Detail` (`PATCH /staff/memberships/{id}`); a membership locked by the Manager can be unlocked only by the Manager (FR-17.4).
+  - 3e. *(DR-314, DR-315)* Set up the unit types on `W-Unit-Types`: the Manager adds the building's kinds of unit (code, Vietnamese and English name, optional default bedrooms and area), edits or archives them; a type is never deleted. When the Manager adds a unit on `W-Units` and picks a type, the empty bedrooms and area fill from the type's defaults; typed values are kept; existing units never change when a default changes.
 - **Error flows:**
   - E1. One phone appears for two different people → the second row is a row error. A unit that already has an owner and a file naming another → row error "transfer is a deliberate action". An existing account is linked and its name is not overwritten; the preview says so (FR-18.1).
   - E2. A file of 5.2 MB → 400 `validation_failed` rule `file_too_large` at the upload; 5,001 rows → 400 `validation_failed` rule `too_many_rows` and no job is stored (FR-01.2 limits apply; *revised 2026-10-20, DR-149*). A job older than 24 h → 409 `import_expired`.
