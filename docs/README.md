@@ -39,7 +39,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes from DOC-18 §2) | Approved (2026-11-02) |
 | DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Approved (2026-11-02) |
 | DOC-23 | [Payment intents and settlement](06-design/payment-intents-and-settlement.md) (statements run on PostgreSQL 18.6; follows DR-27, 28, 30, 31, 280, 281, 283, decided 2026-11-02; gateway facts unverified until P2-21) | Approved (2026-11-02) |
-| DOC-24 | [Payment gateway port and drivers](06-design/payment-gateway-drivers.md) (Stripe first, fake, the checklist for a new driver; Draft 2026-11-01) | Draft |
+| DOC-24 | [Payment gateway port and drivers](06-design/payment-gateway-drivers.md) (Stripe first, fake, the checklist for a new driver; Stripe facts of §4.12 recorded by P2-21) | Approved (2026-11-02) |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |
 | DOC-26 | [Identity and sessions](06-design/identity-and-sessions.md) | Approved |
 | DOC-27 | [Residency and memberships](06-design/residency-and-memberships.md) | Approved |
@@ -89,10 +89,10 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-71 | [CI/CD](09-operations/ci-cd.md) | Approved |
 | DOC-72 | Backup and restore (`09-operations/backup-restore.md`) | Not written |
 | DOC-73 | [Mobile release](09-operations/mobile-release.md) (skeleton: final P6) | Approved |
-| DOC-74 | [Runbook index](09-operations/runbooks/README.md) | Draft |
+| DOC-74 | [Runbook index](09-operations/runbooks/README.md) | Approved (2026-11-02) |
 | DOC-75 | [RB 01: ledger invariant](09-operations/runbooks/RB-01-ledger-invariant.md) | Approved |
-| DOC-76 | [RB 02: payments stuck](09-operations/runbooks/RB-02-payments-stuck.md) | Draft |
-| DOC-77 | [RB 03: webhook signatures](09-operations/runbooks/RB-03-webhook-signatures.md) | Draft |
+| DOC-76 | [RB 02: payments stuck](09-operations/runbooks/RB-02-payments-stuck.md) | Approved (2026-11-02) |
+| DOC-77 | [RB 03: webhook signatures](09-operations/runbooks/RB-03-webhook-signatures.md) | Approved (2026-11-02) |
 | DOC-78 | RB 04: outbox lag (`09-operations/runbooks/RB-04-outbox-lag.md`) | Not written |
 | DOC-79 | RB 05: dead letters (`09-operations/runbooks/RB-05-dead-letters.md`) | Not written |
 | DOC-80 | RB 06: sms failures (`09-operations/runbooks/RB-06-sms-failures.md`) | Not written |
@@ -100,9 +100,9 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-82 | RB 08: storage quota (`09-operations/runbooks/RB-08-storage-quota.md`) | Not written |
 | DOC-83 | RB 09: api errors (`09-operations/runbooks/RB-09-api-errors.md`) | Not written |
 | DOC-84 | RB 10: restore from backup (`09-operations/runbooks/RB-10-restore-from-backup.md`) | Not written |
-| DOC-85 | [RB 11: money to check](09-operations/runbooks/RB-11-money-to-check.md) | Draft |
+| DOC-85 | [RB 11: money to check](09-operations/runbooks/RB-11-money-to-check.md) | Approved (2026-11-02) |
 | DOC-86 | RB 12: rotate secrets and keys (`09-operations/runbooks/RB-12-rotate-secrets-and-keys.md`) | Not written |
-| DOC-87 | [RB 13: provider outage or credential change](09-operations/runbooks/RB-13-provider-outage-or-credential-change.md) | Draft |
+| DOC-87 | [RB 13: provider outage or credential change](09-operations/runbooks/RB-13-provider-outage-or-credential-change.md) | Approved (2026-11-02) |
 | DOC-88 | [Test strategy](10-testing/test-strategy.md) | Approved |
 | DOC-89 | [Experiments: common protocol](10-testing/experiments/README.md) | Approved |
 | DOC-90 | [EXP 01: duplicate and late webhooks](10-testing/experiments/EXP-01-duplicate-and-late-webhooks.md) | Approved |
@@ -119,7 +119,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-101 | EXP 12: restore drill (`10-testing/experiments/EXP-12-restore-drill.md`) | Not written |
 | DOC-102 | Demo script (`10-testing/demo-script.md`) | Not written |
 | DOC-103 | Go-live checklist and UAT (`10-testing/go-live-checklist-and-uat.md`) | Not written |
-| DOC-104 | [Usage analytics](06-design/usage-analytics.md) (DR-279, task P1-29 built) | Review |
+| DOC-104 | [Usage analytics](06-design/usage-analytics.md) (DR-279, task P1-29 built) | Approved (2026-11-02) |
 
 ## Structure
 

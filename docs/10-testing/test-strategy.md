@@ -406,7 +406,7 @@ describe('allocation arbiter (DR-14)', () => {
 | `FakeGateway` | `modules/finance/testing` (DR-26) | The `fake` driver of `PaymentGateway`: stores links in a table, lets a test set a link `PAID`, `CANCELLED` or `EXPIRED`, answers `getStatus` |
 | `FakeSms` | `modules/identity/testing` | `SmsSender` that records `{ to, text, at }` and can be set to fail N times; the count of recorded sends is what `sms_sent_total{outcome="sent"}` counts |
 | Fake Expo endpoint | `modules/notification/testing` | An HTTP server answering `POST /--/api/v2/push/send` with tickets after a configurable delay (200 ms in EXP-06) |
-| `payos:sim` | `bun run payos:sim` (DR-26) | Signs payloads with a configured checksum key and posts them to the real webhook route (`--repeat`, `--shuffle`, `--delay`, `--wrong-signature`, `--amount`) |
+| `pay:sim` | `bun run pay:sim` (DR-26, DR-326) | Signs payloads with the configured webhook secret of the driver and posts them to the real webhook route (`--repeat`, `--shuffle`, `--delay`, `--wrong-signature`, `--amount`) |
 
 Fake and real adapters share a **port suite** (§14), so a fake that drifts from the real behavior fails the contract test. Repositories are faked inline per unit-test file only when the test is about the use case's orchestration.
 

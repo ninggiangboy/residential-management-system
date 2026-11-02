@@ -134,7 +134,7 @@ Rules for every metric (DR-154):
 | `sse_stream_opens_total` | counter | `outcome` (`resumed`, `fresh`, `limited`) | `api` | DOC-52 §15 (DR-289) | P2-12 (as above) |
 | `sse_events_published_total` | counter | `type` (`inbox.created`, `ticket.created`, `ticket.changed`, `money_log.opened`, `export.ready`, `session.revoked`) | `worker` | DOC-52 §15 (DR-289) | P2-12 (as above) |
 | `metrics_collection_errors_total` | counter | `gauge` (the metric that timed out or failed) | all | §4 rule 3 | P1 |
-| `provider_auth_failed_total` | counter | `provider` (`sms`, `mail`, `push`, `payos`, `storage`) | `worker`, `api` | DOC-42 §7.1 | P1-22 (the provider adapters) |
+| `provider_auth_failed_total` | counter | `provider` (`sms`, `mail`, `push`, `stripe`, `storage`; a later payment driver adds its word) | `worker`, `api` | DOC-42 §7.1 | P1-22 (the provider adapters) |
 | `handler_outcomes_total` | counter | `handler`, `outcome` (`ok`, `deferred`, `failed`; `skipped`, an inbox hit, is not seen by the bus) | `worker` | DOC-42 §8.5 | P1 |
 | `delivery_failed_total` | counter | `channel` (`sms`, `mail`, `push`), `reason` (for `push`: `device_not_registered`, `message_too_big`, `message_rate_exceeded`, `mismatch_sender_id`, `invalid_credentials`, `other`, DOC-31 §10) | `worker` | DOC-42 §8.5 | P1-22 (the provider adapters) |
 | `process_cpu_seconds_total`, `process_resident_memory_bytes` | counter, gauge | none | all | the library's default process metrics (§2, verified in P1-18) | P1 |
@@ -195,7 +195,7 @@ The names come from DR-63; the owning document confirms the labels.
 | Metric | Type | Labels | Defined in | Phase |
 | --- | --- | --- | --- | --- |
 | `ledger_invariant_violations` | gauge | none (the count of violating rows over the 19 queries of DOC-22 §12, DR-266; demo excluded) | DOC-22 | P2 |
-| `payment_intents_pending_overdue` | gauge | none (`pending` older than 60 minutes and not moving to `expired`; demo excluded) | DOC-23 | P2 (*DR-325*) |
+| `payment_intents_pending_overdue` | gauge | none (`pending` more than 2 minutes past its `expires_at`, the 60-minute hold of DR-28, without moving to `expired`; demo excluded; DOC-23 §14) | DOC-23 | P2 (*DR-325*) |
 | `payment_intents_creating_stale` | gauge | none (`creating` older than 2 minutes; demo excluded) | DOC-23 | P2 (*DR-325*) |
 | `money_log_open` | gauge | none (log rows without a review; demo excluded) | DOC-25 | P2 (*DR-325*) |
 | `webhook_rejections_total` | counter | `reason` (the five of DR-32) | DOC-24 | P2 (*DR-325*) |
@@ -467,7 +467,7 @@ Provisioned from JSON files in the repository (`ops/grafana/dashboards/`, path o
 | **Overview** | Request rate by route group; p50, p95, p99 of `http_request_duration_seconds` (lines at 0.3 and 0.8 s); 5xx ratio; `rate_limited_total` by scope; open alerts | `ApiErrors`, NFR-03 |
 | **Worker and jobs** | Outbox oldest age by schema; dead letters; table of `time() - job_last_success_timestamp` per job beside `job_stale_after_seconds`; `job_runs_total{status="failed"}`; `job_duration_seconds` p95; `handler_outcomes_total` by outcome | `OutboxLag`, `DeadLetters`, `JobStale`, RB-04, RB-05 |
 | **Identity** | Staff sign-in outcomes; OTP requested and verified by outcome; refresh by outcome (reuse line); lockouts; step-up outcomes; SMS and mail sent by outcome; `sms_provider_down`; `otp_challenges_24h` against 3000 | `OtpDailyCapReached`, `SmsProviderDown`, `RefreshTokenReuse`, `LockoutSpike`, EXP-09 |
-| **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payos_requests_total` by outcome; `payment_settle_duration_seconds` p95 and `payment_settlements_total` by outcome (DOC-23 §14) | `LedgerInvariantViolation`, `PaymentsStuck`, `GatewayErrors`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
+| **Money** (P2, P3) | `ledger_invariant_violations`; pending overdue and creating stale; `money_log_open`; `webhook_rejections_total` by reason and `webhook_unknown_ip_total`; `payment_gateway_requests_total` by provider and outcome; `payment_settle_duration_seconds` p95 and `payment_settlements_total` by outcome (DOC-23 §14) | `LedgerInvariantViolation`, `PaymentsStuck`, `GatewayErrors`, `WebhookSignatures`, `MoneyLogOpen`, EXP-01, EXP-02 |
 | **Storage and database** | `storage_usage_ratio`; disk used; `pg_stat_activity_count` against `max_connections`; `db_pool_waiting`; archive failures and age; WAL size | `StorageQuota`, `DiskUsage`, `DbPoolWaiting`, `PostgresArchiveFailing` |
 | **Backup** | Time since `backup_last_success_timestamp`; last restore drill date (a Grafana annotation made by hand) | `BackupMissing`, NFR-11 |
 | **Usage** (DR-279, built in P1-29: `ops/grafana/dashboards/usage.json`) | Top 10 screens and top 10 controls over 7 days; opens per day and the average and median time of a stretch; events per hour by app; residents against staff; dropped events by reason (the queries are DOC-104 §8.1). It supports no alert; Prometheus keeps 15 days, longer periods are SQL on `usage_daily` | DR-279 |

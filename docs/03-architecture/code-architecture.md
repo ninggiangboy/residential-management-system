@@ -259,7 +259,7 @@ apps/api/src/
 │   ├── boot.ts                # waitForDatabase: 30 s of retries, then exit 1 (DR-161)
 │   ├── module-catalog.ts      # manifests of the installed modules, in migration order (audit, building; identity and residency follow in P1-10 and P1-12)
 │   └── guards.ts              # resident, staff and unit guards (§5.3); written with the first guard in P1-10
-└── scripts/                   # config-example, healthcheck; db:migrate, outbox:list, seed:demo, payos:sim follow (no business logic)
+└── scripts/                   # config-example, healthcheck; db:migrate, outbox:list, seed:demo, pay:sim follow (no business logic)
 ```
 
 `createContainer` order follows the contract graph of DOC-07 §5.2, providers first: host (config, logger, clock, ids, database, storage, mailer, SMS) → `identity` → `building` → `audit` → `residency` → `finance`, `tickets`, `access`, `vehicles`, `notices` → `notification` (with every producer's integration) → `wiki` → `reporting` → `realtime` → `createRuntime` (bus, relay, maintenance flag, timers). `ContainerOverrides` lets e2e tests swap the mailer, SMS, payment gateway (`fake`), clock and storage while keeping the rest of the real graph.
