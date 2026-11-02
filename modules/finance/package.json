@@ -28,6 +28,11 @@
       "bun": "./src/integrations/building/index.ts",
       "types": "./src/integrations/building/index.ts",
       "default": "./src/integrations/building/index.ts"
+    },
+    "./integrations/residency": {
+      "bun": "./src/integrations/residency/index.ts",
+      "types": "./src/integrations/residency/index.ts",
+      "default": "./src/integrations/residency/index.ts"
     }
   },
   "scripts": {
@@ -42,6 +47,8 @@
     "@core/runtime": "workspace:*",
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
+    "@mod/residency": "workspace:*",
+    "@rms/i18n-catalog": "workspace:*",
     "@rms/shared-types": "workspace:*",
     "drizzle-orm": "0.45.4",
     "exceljs": "4.4.0"

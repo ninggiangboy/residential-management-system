@@ -1,3 +1,4 @@
+import type { Language } from '@rms/shared-types'
 import type { Sheet } from '../domain/fee-import/sheet'
 
 /** A unit found by its code (DOC-21 §2.1, DR-265): `occupancy` is for display, `hasActiveOwner` decides DQ-78. */
@@ -19,4 +20,9 @@ export type WorkbookRead = { ok: false } | { ok: true; sheet: Sheet; tooMany: bo
 /** The streaming `exceljs` reader of DOC-18 §1.1; it never reads past the 5,001st data row (DQ-05). */
 export interface WorkbookReader {
   read(bytes: Uint8Array): Promise<WorkbookRead>
+}
+
+/** The template of E-71 for a fee file, written in memory (DOC-18 §2.1). */
+export interface TemplateWriter {
+  write(language: Language): Promise<Uint8Array>
 }

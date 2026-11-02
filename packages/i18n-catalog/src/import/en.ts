@@ -47,4 +47,31 @@ export const importEn = {
     'Unit {code} will take the default {fields, select, bedrooms {bedrooms} area {area} other {bedrooms and area}} of the type “{type}”.',
   'common.import.profile_field_differs':
     '{field} differs from the stored profile and is not changed.',
+  // The fee file (DOC-18 §2.2, DQ-62…DQ-78).
+  'common.import.import_missing_column':
+    'Required columns are missing: {columns}. Use the template.',
+  'common.import.import_no_price': 'The file needs a “Unit price” or an “Amount” column.',
+  'common.import.fee_month_invalid': 'Fee month must be MM/YYYY or YYYY-MM.',
+  'common.import.fee_month_mismatch':
+    "Fee month {got} differs from the batch's fee month ({expected}).",
+  'common.import.item_name_invalid':
+    'The item name must be {min, number} to {max, number} characters.',
+  'common.import.kind_invalid': 'Kind must be “fee” or “adjustment”.',
+  'common.import.quantity_invalid':
+    'Quantity must be 0 or more, with at most 3 decimals and no more than {max, number}.',
+  'common.import.unit_price_invalid':
+    'Unit price must be a whole number from 0 to {max, number} đ.',
+  'common.import.amount_invalid':
+    '{kind, select, adjustment {An adjustment must be a whole number other than 0, at most {max, number} đ.} other {The amount must be a whole number above 0, at most {max, number} đ.}}',
+  'common.import.amount_mismatch':
+    'The amount {got, number} đ does not equal quantity × unit price ({expected, number} đ). Fix it or leave the amount blank.',
+  'common.import.adjustment_note_required': 'An adjustment row needs a note giving the reason.',
+  'common.import.note_too_long': 'The note has at most {max, number} characters.',
+  'common.import.charge_item_duplicate':
+    'The item “{item}” of this unit already appears in row {firstRow}.',
+  'common.import.charge_total_zero':
+    'The lines of unit {code} total {total, number} đ, which is not above 0, so no charge is created.',
+  'common.import.unit_not_found': 'There is no unit {code} in this building.',
+  'common.import.unit_without_owner':
+    'Unit {code} has no owner, so nobody could be notified of the fee.',
 } as const

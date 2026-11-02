@@ -21,6 +21,7 @@ import {
   VALIDATE_UNIT_OWNER_IMPORT_ROLES,
   type ValidateUnitOwnerImport,
 } from '../application/use-cases/validate-unit-owner-import'
+import type { ImportHandler } from '../contracts'
 import { isUnitOwnerColumn, TEMPLATE_HEADERS } from '../domain/import/columns'
 import type { ImportIssue, PreviewNote } from '../domain/import/types'
 import type { CommittedCounts, ImportJobRecord } from '../domain/import-job'
@@ -32,6 +33,8 @@ export interface ImportRouteDeps {
   commit: CommitUnitOwnerImport
   guards: Guards
   idempotent: Idempotent
+  /** The handlers of the kinds other modules own (DR-149), read at request time: the host builds them after `residency`. */
+  importHandlers: () => readonly ImportHandler[]
 }
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -74,7 +77,18 @@ const CreateBody = strictObject({
     }),
   ),
   params: Type.Optional(
-    strictObject({}, { description: 'Extra parameters of the kind. `unit_owner` takes none' }),
+    strictObject(
+      {
+        batchId: Type.Optional(
+          Type.String({
+            format: 'uuid',
+            description:
+              'Required for `fee_batch`: the draft batch the file fills (DOC-21 §4.1). Another building’s or an unknown batch is 404, one that is not a draft 409 `invalid_transition`',
+          }),
+        ),
+      },
+      { description: 'Extra parameters of the kind. `unit_owner` takes none' },
+    ),
   ),
 })
 const ListQuery = strictObject({
@@ -165,20 +179,47 @@ function jobBody(job: ImportJobRecord, committed: CommittedCounts | null, lang: 
 
 /**
  * `/staff/imports` (E-71…E-74, E-169; DOC-27 §9, DOC-18 §1): the template, the synchronous validation that stores the preview, the
- * preview again, the commit and the history. `kind` selects the module; `unit_owner` is `residency`'s, `fee_batch` waits for
- * `finance` (P2-04) and is 404 on the template and 400 on the body until then. Every handler is the call of a use case or a query.
+ * preview again, the commit and the history. `kind` selects the module (DR-149): `unit_owner` is `residency`'s, `fee_batch` is
+ * `finance`'s through the `ImportHandler` the host hands over (P2-04). Every handler is the call of a use case, a query or a handler.
  * E-72 takes an `Idempotency-Key` (DOC-50 §8, P1-28) in the `external` mode: the validation reads the bucket, so the key is committed
  * `in_progress` before and completed after, and a retry replays the first preview, `Location` included.
  */
 export function importRoutes(d: ImportRouteDeps) {
+  const handlerOf = (kind: string | undefined) =>
+    d.importHandlers().find((handler) => handler.kind === kind)
+
+  /** E-73 and E-74 get only an id: `residency`'s table first, then each handler in turn (DR-149, UUIDv7 in two tables). */
+  async function byId<A, B>(
+    own: () => Promise<A>,
+    other: (h: ImportHandler) => Promise<B | null>,
+  ): Promise<A | B> {
+    try {
+      return await own()
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error
+    }
+    for (const handler of d.importHandlers()) {
+      const found = await other(handler)
+      if (found !== null) return found
+    }
+    throw new NotFoundError()
+  }
+
   const template = async (context: { params: Static<typeof KindParams>; request: Request }) => {
-    if (context.params.kind !== 'unit_owner') throw new NotFoundError()
     const language = languageOf(context.request.headers.get('accept-language'))
-    const bytes = await d.queries.template(staffOf(context), language)
+    const staff = staffOf(context)
+    const handler = handlerOf(context.params.kind)
+    if (context.params.kind !== 'unit_owner' && !handler) throw new NotFoundError()
+    const { bytes, fileName } = handler
+      ? await handler.template(staff, language)
+      : {
+          bytes: await d.queries.template(staff, language),
+          fileName: `unit-owner-template-${language}.xlsx`,
+        }
     return new Response(Buffer.from(bytes), {
       headers: {
         'content-type': XLSX,
-        'content-disposition': `attachment; filename="unit-owner-template-${language}.xlsx"`,
+        'content-disposition': `attachment; filename="${fileName}"`,
         'cache-control': 'no-store',
       },
     })
@@ -189,47 +230,92 @@ export function importRoutes(d: ImportRouteDeps) {
     request: Request
     set: RouteSet
   }) => {
-    if (context.body.kind !== 'unit_owner')
-      throw new ValidationError([
-        { path: 'kind', code: 'unsupported', message: 'not available yet' },
-      ])
-    const job = await d.validate.execute(staffOf(context), {
-      fileId: context.body.fileId,
-      fileName: context.body.fileName,
-    })
+    const { kind, fileId, fileName, params } = context.body
+    const language = languageOf(context.request.headers.get('accept-language'))
+    const body = await (kind === 'unit_owner'
+      ? validateUnitOwner(staffOf(context), { fileId, fileName, params }, language)
+      : validateOther(staffOf(context), kind, { fileId, fileName, params }, language))
     context.set.status = 201
-    context.set.headers.location = `/api/v1/staff/imports/${job.id}`
-    return jobBody(job, null, languageOf(context.request.headers.get('accept-language')))
+    context.set.headers.location = `/api/v1/staff/imports/${body.importId}`
+    return body
+  }
+
+  type CreateInput = Pick<Static<typeof CreateBody>, 'fileId' | 'fileName' | 'params'>
+
+  async function validateUnitOwner(
+    staff: ReturnType<typeof staffOf>,
+    input: CreateInput,
+    language: Language,
+  ) {
+    if (input.params?.batchId !== undefined)
+      throw new ValidationError([
+        { path: 'params.batchId', code: 'unsupported', message: '`unit_owner` takes no batch' },
+      ])
+    const job = await d.validate.execute(staff, { fileId: input.fileId, fileName: input.fileName })
+    return jobBody(job, null, language)
+  }
+
+  async function validateOther(
+    staff: ReturnType<typeof staffOf>,
+    kind: string,
+    input: CreateInput,
+    language: Language,
+  ) {
+    const handler = handlerOf(kind)
+    if (!handler)
+      throw new ValidationError([{ path: 'kind', code: 'unsupported', message: 'not available' }])
+    if (input.params?.batchId === undefined)
+      throw new ValidationError([
+        { path: 'params.batchId', code: 'required', message: 'the draft batch to fill' },
+      ])
+    const params = { batchId: input.params.batchId }
+    return handler.validate(
+      staff,
+      { fileId: input.fileId, fileName: input.fileName, params },
+      language,
+    )
   }
 
   const get = async (context: { params: Static<typeof IdParams>; request: Request }) => {
-    const { job, committed } = await d.queries.get(staffOf(context), context.params.id)
-    return jobBody(job, committed, languageOf(context.request.headers.get('accept-language')))
+    const staff = staffOf(context)
+    const language = languageOf(context.request.headers.get('accept-language'))
+    return byId(
+      async () => {
+        const { job, committed } = await d.queries.get(staff, context.params.id)
+        return jobBody(job, committed, language)
+      },
+      (handler) => handler.get(staff, context.params.id, language),
+    )
   }
 
   const commit = async (context: { params: Static<typeof IdParams> }) => {
-    const { job, committed } = await d.commit.execute(staffOf(context), context.params.id)
-    return {
-      importId: job.id,
-      status: 'committed' as const,
-      committedAt: job.committedAt?.toISOString() ?? null,
-      committed,
-    }
+    const staff = staffOf(context)
+    return byId(
+      async () => {
+        const { job, committed } = await d.commit.execute(staff, context.params.id)
+        return {
+          importId: job.id,
+          status: 'committed' as const,
+          committedAt: job.committedAt?.toISOString() ?? null,
+          committed: { ...committed },
+        }
+      },
+      (handler) => handler.commit(staff, context.params.id),
+    )
   }
 
   const list = async (context: { query: Static<typeof ListQuery> }) => {
     const { kind, status, cursor, limit } = context.query
-    if (kind === 'fee_batch')
-      throw new ValidationError([
-        { path: 'kind', code: 'unsupported', message: 'not available yet' },
-      ])
     const size = limit === undefined ? 20 : Number(limit)
     if (size < 1 || size > 100)
       throw new ValidationError([{ path: 'limit', code: 'range', message: '1 to 100' }])
+    const after = cursor === undefined ? undefined : decodeCursor(cursor)
+    if (kind !== undefined && kind !== 'unit_owner')
+      return listOther(staffOf(context), kind, { status, after, limit: size })
     const page = await d.queries.list(staffOf(context), {
       kind: 'unit_owner',
       status,
-      after: cursor === undefined ? undefined : decodeCursor(cursor),
+      after,
       limit: size,
     })
     return {
@@ -248,6 +334,29 @@ export function importRoutes(d: ImportRouteDeps) {
         createdAt: row.createdAt.toISOString(),
         expiresAt: row.expiresAt.toISOString(),
         committedAt: row.committedAt?.toISOString() ?? null,
+      })),
+      nextCursor: page.next ? encodeCursor(page.next) : null,
+    }
+  }
+
+  /** E-169 for another module's kind: its page, the creators named by `residency`, which reads the staff of `identity`. */
+  async function listOther(
+    staff: ReturnType<typeof staffOf>,
+    kind: string,
+    query: Parameters<ImportHandler['list']>[1],
+  ) {
+    const handler = handlerOf(kind)
+    if (!handler)
+      throw new ValidationError([{ path: 'kind', code: 'unsupported', message: 'not available' }])
+    const page = await handler.list(staff, query)
+    const names = await d.queries.staffNames(
+      staff,
+      page.items.map((row) => row.createdBy),
+    )
+    return {
+      items: page.items.map(({ createdBy, ...row }) => ({
+        ...row,
+        createdBy: { staffId: createdBy, name: names.get(createdBy) ?? null },
       })),
       nextCursor: page.next ? encodeCursor(page.next) : null,
     }

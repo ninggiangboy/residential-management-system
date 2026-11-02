@@ -20,5 +20,6 @@ export function installResidency(host: ResidencyHost): ResidencyModule {
     pii: host.pii,
     audited: host.audited,
     outboxMaxPayloadBytes: host.outboxMaxPayloadBytes,
+    importHandlers: host.importHandlers,
   })
 }

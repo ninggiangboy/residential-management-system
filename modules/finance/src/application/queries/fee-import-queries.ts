@@ -1,5 +1,5 @@
 import { type Clock, NotFoundError, requireRole } from '@core/kernel'
-import type { StaffContext, StaffRole } from '@rms/shared-types'
+import type { Language, StaffContext, StaffRole } from '@rms/shared-types'
 import {
   type FeeImportJobRecord,
   type FeeImportStatus,
@@ -10,6 +10,7 @@ import type {
   FeeImportJobSummary,
   FeeImportRepository,
 } from '../../domain/fee-import-repository'
+import type { TemplateWriter } from '../ports'
 
 /** The Manager's and the Admin's (DOC-27 §3.3); the routes read the same list for their guard and audience. */
 export const FEE_IMPORT_READ_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
@@ -27,14 +28,21 @@ export interface FeeImportList {
 }
 
 /**
- * The reads of the fee import (E-73, E-169 with `kind = fee_batch`): one job with the status the clock gives it, and the history
+ * The reads of the fee import (E-71, E-73, E-169 with `kind = fee_batch`): the template, one job with the status the clock gives it, and the history
  * list. No state change and no rule of its own (DOC-12 §4.5 rule 3).
  */
 export class FeeImportQueries {
   constructor(
     private readonly jobs: Pick<FeeImportRepository, 'findJob' | 'listJobs'>,
+    private readonly templates: TemplateWriter,
     private readonly clock: Clock,
   ) {}
+
+  /** E-71: the workbook in memory; no file is stored. */
+  template(staff: StaffContext, language: Language): Promise<Uint8Array> {
+    requireRole(staff, FEE_IMPORT_READ_ROLES)
+    return this.templates.write(language)
+  }
 
   /** E-73: another building's job is 404 like an unknown id; a `validated` job past `expires_at` reads `expired` at once. */
   async get(staff: StaffContext, id: string): Promise<FeeImportJobRecord> {

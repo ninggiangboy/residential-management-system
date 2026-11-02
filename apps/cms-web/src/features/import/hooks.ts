@@ -10,7 +10,11 @@ import { unwrap } from '../../api/errors'
 import { env } from '../../env'
 import { languageStore } from '../../lib/i18n'
 
-export type ImportJob = NonNullable<Awaited<ReturnType<typeof api.staff.imports.post>>['data']>
+/** The units-and-owners job this screen shows; `fee_batch` answers the same routes with its own body (DR-149, W-Fee-Import). */
+export type ImportJob = Extract<
+  NonNullable<Awaited<ReturnType<typeof api.staff.imports.post>>['data']>,
+  { kind: 'unit_owner' }
+>
 
 const importKey = (importId: string) => staffKey('imports', importId)
 
@@ -22,7 +26,13 @@ export const importQuery = (importId: string) =>
     staleTime: 30_000,
   })
 
-/** E-169: the building's jobs of the last 30 days, newest first, 10 per page. */
+/** One page of the units-and-owners history; the `fee_batch` page has its own rows (DR-149). */
+type ImportPage = Extract<
+  NonNullable<Awaited<ReturnType<typeof api.staff.imports.get>>['data']>,
+  { items: { kind: 'unit_owner' }[] }
+>
+
+/** E-169: the building's units-and-owners jobs of the last 30 days, newest first, 10 per page. */
 export const recentImportsQuery = () =>
   infiniteQueryOptions({
     queryKey: staffKey('imports', 'list'),
@@ -30,9 +40,9 @@ export const recentImportsQuery = () =>
     queryFn: async ({ pageParam }) =>
       unwrap(
         await api.staff.imports.get({
-          query: { limit: '10', ...(pageParam ? { cursor: pageParam } : {}) },
+          query: { kind: 'unit_owner', limit: '10', ...(pageParam ? { cursor: pageParam } : {}) },
         }),
-      ),
+      ) as ImportPage,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
 

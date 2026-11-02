@@ -69,6 +69,17 @@ export class ImportQueries {
     return { job, committed: status === 'committed' ? committedOf(job.result.counts) : null }
   }
 
+  /** The names of the creators of a page of another kind's jobs (E-169), from one `getStaff` call. */
+  async staffNames(
+    staff: StaffContext,
+    staffIds: readonly string[],
+  ): Promise<Map<string, string | null>> {
+    requireRole(staff, IMPORT_READ_ROLES)
+    if (staffIds.length === 0) return new Map()
+    const rows = await this.identity.getStaff([...new Set(staffIds)])
+    return new Map(rows.map((row) => [row.staffId, row.fullName]))
+  }
+
   /** E-169: newest first, the creators' names from one `getStaff` call per page. */
   async list(staff: StaffContext, query: ImportListQuery): Promise<ImportList> {
     requireRole(staff, IMPORT_READ_ROLES)
