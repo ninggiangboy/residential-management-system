@@ -86,6 +86,8 @@ export const vi: Record<keyof typeof en, string> = {
   'error.too_many_charges': 'Bạn chọn tối đa {max} khoản phí mỗi lần thanh toán.',
   'error.too_few_charges': 'Hãy chọn ít nhất một khoản phí để thanh toán.',
   'error.amount_below_minimum': 'Tổng tiền thấp hơn mức tối thiểu để thanh toán online ({min}).',
+  'error.amount_above_maximum':
+    'Tổng tiền vượt mức tối đa để thanh toán online ({max}). Hãy chọn ít khoản hơn.',
   'error.password_weak': 'Mật khẩu cần 8 ký tự trở lên, có cả chữ và số.',
   'error.phone_invalid': 'Số điện thoại chưa đúng. Kiểm tra lại số bạn nhập.',
   'error.received_on_future': 'Ngày nhận tiền không được ở tương lai.',
@@ -102,6 +104,8 @@ export const vi: Record<keyof typeof en, string> = {
   'error.external_url': 'Không được chèn ảnh từ trang ngoài.',
   'error.unsafe_link': 'Liên kết này không được phép.',
   'error.terms_text': 'Văn bản dùng định dạng không được phép (dòng {line}).',
+  'error.too_many_rows_for_pdf':
+    'Báo cáo có hơn {max} dòng, quá nhiều để xuất PDF. Hãy xuất Excel hoặc thu hẹp bộ lọc.',
   'error.reason_too_short': 'Nhập ít nhất {min} ký tự.',
   'error.same_assignee': 'Phiếu này đang do người đó phụ trách.',
   'error.assignee_locked': 'Người này không nhận được việc. Hãy chọn người khác.',

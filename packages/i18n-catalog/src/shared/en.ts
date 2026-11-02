@@ -88,6 +88,8 @@ export const en = {
   'error.too_many_charges': 'You can pay at most {max} charges at once.',
   'error.too_few_charges': 'Select at least one charge to pay.',
   'error.amount_below_minimum': 'The total is below the minimum for online payment ({min}).',
+  'error.amount_above_maximum':
+    'The total is above the maximum for online payment ({max}). Select fewer charges.',
   'error.password_weak': 'The password needs 8 or more characters, with letters and digits.',
   'error.phone_invalid': 'This phone number is not valid. Check the number you entered.',
   'error.received_on_future': 'The payment date cannot be in the future.',
@@ -104,6 +106,8 @@ export const en = {
   'error.external_url': 'External images are not allowed.',
   'error.unsafe_link': 'This link is not allowed.',
   'error.terms_text': 'The text uses formatting that is not allowed (line {line}).',
+  'error.too_many_rows_for_pdf':
+    'The report has more than {max} rows, too many for a PDF. Export to Excel or narrow the filter.',
   'error.reason_too_short': 'Write at least {min} characters.',
   'error.same_assignee': 'This ticket is already assigned to that person.',
   'error.assignee_locked': 'That person cannot take jobs. Choose someone else.',
