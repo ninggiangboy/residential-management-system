@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import type { ModuleManifest } from '@core/runtime'
+import { FINANCE_EVENTS } from './contracts/events'
 import { financeOutbox } from './infrastructure/persistence/schema'
 
 /**
@@ -13,6 +14,10 @@ export const financeManifest = {
   migrations: fileURLToPath(new URL('../migrations', import.meta.url)),
   schemaFile: fileURLToPath(new URL('./infrastructure/persistence/schema.ts', import.meta.url)),
   outbox: financeOutbox,
+  outboxPolicies: {
+    [FINANCE_EVENTS.receiptIssued]: 'default',
+    [FINANCE_EVENTS.receiptRenderRequested]: 'default',
+  },
   config: undefined,
   auditActions: [],
 } as const satisfies ModuleManifest
