@@ -1,5 +1,5 @@
 import type { Database } from '@core/db'
-import { and, asc, eq, gt, inArray, ne, or } from 'drizzle-orm'
+import { and, asc, eq, exists, gt, inArray, ne, or, sql } from 'drizzle-orm'
 import type {
   ActiveMembershipView,
   MembershipReader,
@@ -184,6 +184,38 @@ export class DrizzleMembershipReader implements MembershipReader {
       .select({ id: unit.id, code: unit.code, floor: unit.floor, occupancy: unit.occupancy })
       .from(unit)
       .where(inArray(unit.id, [...ids]))
+    return rows.map((row) => ({ ...row, occupancy: row.occupancy as UnitView['occupancy'] }))
+  }
+
+  async findUnitsByCodes(
+    buildingId: string,
+    codesLower: readonly string[],
+  ): Promise<Array<UnitView & { hasActiveOwner: boolean }>> {
+    if (codesLower.length === 0) return []
+    // `unit_code_prefix_idx` serves `lower(code)` equality (DOC-18 §1.5); the owner is a non-removed owner membership (DOC-27 §2.1).
+    const owner = this.database.executor
+      .select({ one: sql`1` })
+      .from(membership)
+      .where(
+        and(
+          eq(membership.buildingId, unit.buildingId),
+          eq(membership.unitId, unit.id),
+          eq(membership.memberType, 'owner'),
+          ne(membership.status, 'removed'),
+        ),
+      )
+    const rows = await this.database.executor
+      .select({
+        id: unit.id,
+        code: unit.code,
+        floor: unit.floor,
+        occupancy: unit.occupancy,
+        hasActiveOwner: sql<boolean>`${exists(owner)}`,
+      })
+      .from(unit)
+      .where(
+        and(eq(unit.buildingId, buildingId), inArray(sql`lower(${unit.code})`, [...codesLower])),
+      )
     return rows.map((row) => ({ ...row, occupancy: row.occupancy as UnitView['occupancy'] }))
   }
 }
