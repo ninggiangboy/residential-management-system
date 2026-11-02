@@ -1,6 +1,6 @@
 # Payment intents and settlement
 
-> Status: **Draft** · Updated: 2026-11-01 (DR-325, DR-326: Stripe is the first gateway and payment moves to P2; §10.3, the provider note) · 2026-10-28 (P1-25: first version, DR-280…283) · DOC-23
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-27, 28, 30, 31, 280, 281, 283 decided; DR-283 applied) · 2026-11-01 (DR-325, DR-326: Stripe is the first gateway and payment moves to P2; §10.3, the provider note) · 2026-10-28 (P1-25: first version, DR-280…283) · DOC-23
 > Depends on: [DOC-50](../07-api/api-guidelines.md) §8, original SDD §5.7, §5.8, §6.1…6.5, §16.2, §19.3, [DR](../00-decision-register.md) (DR-14, 16, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 64, 74, 80, 84, 91, 96, 126, 244, 267, DR-280…283), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [DOC-03](../01-product/requirements.md) (FR-07…FR-10, NFR-01, NFR-02), [DOC-04](../01-product/use-cases.md) (UC-03, UC-18), [DOC-09](../03-architecture/messaging-contracts.md) §4.2, §6, [DOC-12](../03-architecture/code-architecture.md) §4, §8, §11, [DOC-15](../05-data/finance-model.md) §4, §6, §7, §8, [DOC-21](fee-batches-and-import.md) §2.1, §3.5, §3.9, [DOC-22](ledger-and-allocation.md) §2.1, §4, §9, §10, [DOC-27](residency-and-memberships.md) §4, [DOC-36](building-configuration-and-demo.md), [DOC-38](jobs-and-outbox-runtime.md) §3, §4, [DOC-40](observability.md) §4.5, §5, [DOC-41](configuration-reference.md), [DOC-42](error-handling.md) §5, §6, §7.3, [DOC-06](../02-glossary.md)
 > Main readers: P2-06 (`settle()`), P2-07 (`IntentCancellation`), P2-22 (intent creation; was P3-02), P2-23 (the webhook route around `settle()`; was P3-03), P2-24 (re-query, expiry, cancel handler; was P3-04), P2-25, P2-26, P2-27 (EXP-01, EXP-02), P2-28, DOC-08, DOC-24, DOC-25, DOC-44 (FL-09), DOC-45, DOC-51, DOC-58, DOC-66, DOC-90, DOC-91, RB-02
 
@@ -8,7 +8,7 @@ This document says how an online payment works on the server: how a payment inte
 
 **Provider note (DR-325, DR-326).** The first gateway is **Stripe** (hosted Checkout, cards, saved cards), not payOS; the provider-neutral port and both drivers are DOC-24. Everything about the intent, the hold, `settle()`, the money log, the re-query and the cancel is unchanged and provider-neutral. Three things in this document were written for a **bank-transfer** gateway and apply to a bank-transfer driver only (`capabilities.exactAmountOnly = false`): the QR string and the transfer content (`qr_payload`, `receiving`, DR-27), the outcomes `amount_short` and `amount_over` with `unmatchedTransfer`, and the 9-character description limit. For Stripe the resident is sent to `checkout_url`, the amount is exact by construction, and §10.3 maps each step. Where the text says "link", read "session"; where it says "QR", read "the presentation of the driver".
 
-**Draft until the gateway is verified.** The intent lifecycle, the transfer content, the re-query and the cancel follow DR-27, DR-28, DR-30 and DR-31, which stay *proposed* until the Owner reports a gateway sandbox (DR-25; decision log 2026-10-28). The payOS behaviour this document assumes is listed in §10.2; every such place is marked *unverified*. `settle()` follows DR-29 and DR-32, which are decided.
+**Approved; the gateway facts are still to be verified.** The intent lifecycle, the transfer content, the re-query and the cancel follow DR-27, DR-28, DR-30 and DR-31, decided by the Owner on 2026-11-02 as the defaults of the design (the Stripe driver of DR-326 revises them where a card differs). The payOS behaviour this document assumes is listed in §10.2 and the Stripe facts in DOC-24 §4.12; every such place is marked *unverified* until P2-21 and P3 check it. `settle()` follows DR-29 and DR-32, also decided.
 
 **Statements run on 2026-10-28** on `postgres:18.6` (x86_64, Docker) on a database built from the DDL of DOC-15 §3.1 and §4…§11; §17 lists what ran. Race and timing figures are *planned*: they are measured by P2-06, P3-02, P3-04 and EXP-01, EXP-02.
 
@@ -72,7 +72,7 @@ export const CANCEL_PAYMENT_INTENT_BY_STAFF_ROLES = ['admin', 'manager'] as cons
 // modules/finance/src/application/intent-cancellation.ts (the port of DOC-21 §2.1)
 export interface IntentCancellation {
   /** In the caller's transaction: the active intents of the building that hold any of the charges → cancelling, as a whole. */
-  cancelHolding(tx: Tx, scope: BuildingScope, chargeIds: ChargeId[], reason: 'batch_recalled' | 'charge_voided'): Promise<{ intentIds: Uuid[] }>
+  cancelHolding(tx: Tx, scope: BuildingScope, chargeIds: ChargeId[], reason: 'batch_recalled' | 'charge_voided' | 'charge_paid'): Promise<{ intentIds: Uuid[] }>
 }
 ```
 
@@ -125,9 +125,10 @@ The payload `reason` of the cancel command is for the log only; it is derived fr
 | Supersede (§4.4) | `superseded` | `replaced` |
 | Batch recall | `batch_recalled` | `batch_recalled` |
 | Void of one charge | `charge_voided` | `charge_voided` |
+| A payment of a held charge: a manual payment, or a late confirmation (DR-283) | `charge_paid` | `charge_paid` |
 | Expiry at 60 min (§8) | — (the intent is `expired`) | `expired` |
 
-The command reason `charge_paid` of DOC-09 is not produced: a payment of a held charge leaves the intent as it is (DR-28 rule 5; DR-283 proposes to change that).
+The command reason `charge_paid` of DOC-09 is produced by a payment of a held charge (DR-283, decided 2026-11-02): the other intent that holds the charge is cancelled in the payer's transaction (§5.4, §6.1 step 6). DR-28 rule 5 no longer applies.
 
 An intent created, superseded, expired or cancelled sends **no** resident notification. The household learns about a recall or a voided charge from `fee.batch_recalled` and `fee.charge_voided` (DOC-09 §7.3), and the app learns the state of its own intent from E-86.
 
@@ -372,7 +373,7 @@ Then release the items, write `finance.intent_cancel_requested.v1`, and for staf
 
 ### 5.4 Cancelling the holders of charges
 
-`IntentCancellation.cancelHolding` runs in the transaction of a recall (DOC-21 §3.5 step 4) or of a void of one charge (DOC-21 §3.9), after the charges were made `void`:
+`IntentCancellation.cancelHolding` runs in the transaction of a recall (DOC-21 §3.5 step 4), of a void of one charge (DOC-21 §3.9), or of a payment (§6.1 step 6, DOC-22 §5.2, DR-283), after the charges were made `void` or `paid`:
 
 ```sql
 WITH holders AS (
@@ -388,6 +389,8 @@ RETURNING i.id;
 ```
 
 The whole intent is cancelled, including a charge of another batch in it (FR-04.1, DR-31); the household starts again. A `creating` intent is cancelled too: its link may not exist yet, and §4.5 repeats the command if the link appears afterwards.
+
+**A payment as the cause (DR-283).** `RecordManualPayment` calls it with `'charge_paid'` for the charges it just allocated (DOC-22 §5.2 step 5), and `settle()` calls it in step 6 for the charges of the paying intent. The paying intent's own items are released first, so it never cancels itself: only another intent can still hold the charges, which happens when the payer is a *superseded* intent that accepted a late confirmation, or when a Manager records cash while a member's link is open. The cancelled intent is told to the app by E-86 (`cancelled`), and the household sees the receipts of the payment that closed the charges; no extra notification is sent. A Manager who records cash still sees the warning of FR-05.6 before saving (DOC-22 §5.2).
 
 ## 6. `settle()` step by step
 
@@ -429,7 +432,7 @@ One transaction at READ COMMITTED. The numbers are DR-29's.
 
    Zero rows: another reference claimed it between step 3 and now (the payer transferred twice). `ROLLBACK TO SAVEPOINT settle_money`, outcome `duplicate_transfer`, `money_unposted`, commit.
 5. **Pay the charges.** Insert the payment (`source 'online'`, `provider`, `gateway_reference = :reference`, `intent_id`, `unit_id`, `amount = intent.amount`, `received_at = :paid_at`, `payer_name` = the creator's name or `null`), then `ChargeAllocator.allocate(tx, scope, payment, items as {chargeId, expectedAmount: item.amount})` (DOC-22 §4). `ok: false` on any charge → `ROLLBACK TO SAVEPOINT settle_money` (the claim, the payment and the earlier allocations, receipts and counter increments go with it), outcome `charge_already_paid` (the charge is `paid`) or `charge_recalled` (it is `void`), `money_unposted`, commit. No part of the intent is posted on its own (DR-84 item 2).
-6. **Finish.** Release the intent's items (a late confirmation finds none to release), set `gateway_event.outcome = 'posted'` and `payment_id`, write `finance.payment_posted.v1` (the allocator wrote the receipt messages), the audit row `finance.payment.post` with actor `system`, commit. Return `posted`.
+6. **Finish.** Release the intent's items (a late confirmation finds none to release), then `IntentCancellation.cancelHolding(tx, scope, chargeIds, 'charge_paid')` for the charges just paid: any other active intent that holds one of them becomes `cancelling` (§5.4, DR-283). Set `gateway_event.outcome = 'posted'` and `payment_id`, write `finance.payment_posted.v1` (the allocator wrote the receipt messages), the audit row `finance.payment.post` with actor `system`, commit. Return `posted`.
 
 **Retry.** On SQLSTATE `40001` or `40P01` the transaction wrapper runs the whole function again, at most 3 times, with 20–60 ms jitter (DOC-12 §8.1, FR-08.8). A retry starts at step 1, so a confirmation that a concurrent call recorded meanwhile ends as `already_processed`. A fourth failure, or any other database error, throws; the webhook answers 503 and the gateway retries (DOC-42 §6); the re-query leaves `next_check_at` for the next tick.
 
@@ -512,7 +515,7 @@ Whichever path inserts first settles; the other becomes a no-op without an error
 | Creation's supersede vs a late confirmation of the superseded intent | The superseded intent's row | Either order ends consistent: the supersede waits for the claim and then refuses (0 rows → T1 again → 409 `charge_changed`, the charges are paid), or the claim takes `cancelling → paid` and pays the charges, which the new intent then holds; see DR-283 |
 | Two settlements over the same charges in different orders | Ascending charge id inside the allocator | No deadlock; one wins (DR-14) |
 
-**Two lock orders meet in one place.** `settle()` locks the intent, then the charges; a recall or void locks the charges, then (through `cancelHolding`) the intents; creation locks the charges `FOR SHARE`, then a superseded intent. When a recall and a settlement touch the same intent and charge at the same instant, PostgreSQL detects the cycle after `deadlock_timeout` (1 s) and aborts one with `40P01`; the wrapper retries it, and the retry meets the committed state of the other: the settlement retried after a recall ends `charge_recalled`, the recall retried after a settlement ends 409 `batch_has_payments`. The pair is rare (it needs a recall during the second a transfer is posted) and harmless; reordering `settle()` to lock the charges first would contradict DR-29, so the retry is the answer. IN-36 measures it.
+**Two lock orders meet in one place.** `settle()` locks the intent, then the charges; a recall or void locks the charges, then (through `cancelHolding`) the intents; creation locks the charges `FOR SHARE`, then a superseded intent. When a recall and a settlement touch the same intent and charge at the same instant, PostgreSQL detects the cycle after `deadlock_timeout` (1 s) and aborts one with `40P01`; the wrapper retries it, and the retry meets the committed state of the other: the settlement retried after a recall ends `charge_recalled`, the recall retried after a settlement ends 409 `batch_has_payments`. The pair is rare (it needs a recall during the second a transfer is posted) and harmless; reordering `settle()` to lock the charges first would contradict DR-29, so the retry is the answer. IN-36 measures it. DR-283 adds one more meeting of the same kind: `settle()` of a superseded intent A locks A, then the charges, then (through `cancelHolding('charge_paid')`) the intent N that holds those charges now, while the confirmation of N locks N, then the charges. The cycle is resolved the same way: one side gets `40P01`, is retried and meets the committed state (A retried after N paid ends `charge_already_paid`; N retried after A paid finds its intent `cancelling` and its charge `paid`, and ends `charge_already_paid` as well). IN-54 measures it.
 
 ### 7.3 What a crash leaves
 
@@ -788,6 +791,8 @@ All with a `FakeClock` and the fake driver.
 | IN-50 | One settlement of each outcome | `payment_settlements_total` rises by one per `(source, outcome)`; `payment_settle_duration_seconds` has one sample per call |
 | IN-51 | A demo building with an overdue intent | The gauges do not count it (OB-09) |
 | IN-52 | `GatewayErrors` with `promtool`: 6 failed of 10 calls; 1 failed of 1 call | Fires after 5 min; does not fire (the floor of 10) |
+| IN-53 | Cash recorded for a charge held by a `pending` intent N; then a late exact confirmation of a superseded intent A that holds nothing now but pays a charge N holds (two cases) | In both, N becomes `cancelling` with `cancel_reason 'charge_paid'` in the payer's transaction, its items are released and one `finance.intent_cancel_requested.v1` (`reason: charge_paid`) is written; a transfer for N later is `charge_already_paid` or, if N's charges are all still open, posted (DR-283, DR-29) |
+| IN-54 | A barrier: `settle()` of the superseded A and the confirmation of N, 200 runs | No run ends with two live allocations of one charge; a `40P01` is retried; exactly one payment is `posted` per charge, the other a `charge_already_paid` row (DR-283) |
 
 ## 17. Statements run
 
@@ -813,10 +818,10 @@ Run on 2026-10-28 as a `psql` script that is **not committed**, on `postgres:18.
 
 | ID | Decision | Status | Where used |
 | --- | --- | --- | --- |
-| DR-280 | Intent creation details DR-28 leaves open: (1) the charges are locked `FOR SHARE` in ascending id order in the creation transaction; (2) the holder rule: the exact set with a live QR is returned, holders that are all `pending` past `display_until` or without a QR are superseded, anything else is 409, and a hold-index conflict runs the decision once more; (3) a link found only by `GET` without a QR payload leaves the intent `pending`, answers 502 and is superseded by the next creation; (4) a gateway `EXPIRED` before `expires_at` keeps the intent `pending` (refines DR-30), and a gateway `CANCELLED` of a `pending` intent makes it `cancelled` with `cancel_reason 'staff'` | Proposed (money, for the Owner) | §4, §8.2 |
-| DR-281 | A late exact confirmation of a `failed` intent is posted like that of an `expired` one, as DR-29's "any status that is not `paid`" says; `ck_payment_intent_failed` reads `<=` (DOC-15 §6.1 revised); ADR-0008 step 4 and original SDD §6.4 list five statuses ⚠ | Proposed (money, for the Owner) | §3, §6.1 |
+| DR-280 | Intent creation details DR-28 leaves open: (1) the charges are locked `FOR SHARE` in ascending id order in the creation transaction; (2) the holder rule: the exact set with a live QR is returned, holders that are all `pending` past `display_until` or without a QR are superseded, anything else is 409, and a hold-index conflict runs the decision once more; (3) a link found only by `GET` without a QR payload leaves the intent `pending`, answers 502 and is superseded by the next creation; (4) a gateway `EXPIRED` before `expires_at` keeps the intent `pending` (refines DR-30), and a gateway `CANCELLED` of a `pending` intent makes it `cancelled` with `cancel_reason 'staff'` | Decided (Owner, 2026-11-02) | §4, §8.2 |
+| DR-281 | A late exact confirmation of a `failed` intent is posted like that of an `expired` one, as DR-29's "any status that is not `paid`" says; `ck_payment_intent_failed` reads `<=` (DOC-15 §6.1 revised); ADR-0008 step 4 and original SDD §6.4 list five statuses ⚠ | Decided (Owner, 2026-11-02) | §3, §6.1 |
 | DR-282 | Small details: (1) the `foreign_building` check runs before the `gateway_event` insert with one unscoped existence read marked `scope-ok`; (2) the mapping of `cancel_reason` to the command's `reason`, `charge_paid` unused; (3) staff cancel is E-175 `POST /staff/payments/intents/{id}/cancel`, Manager and Admin, reason 5…500, audited `finance.intent.cancel`; a member's cancel is not audited; (4) `payment_in_progress` details gain `intentId`, new rule code `amount_above_maximum`; (5) gateway client timeout 10 s and the initial `next_check_at` values; (6) metrics `payment_settlements_total`, `payment_settle_duration_seconds` and the alert `GatewayErrors`; (7) E-88 answers `{status, checkScheduled}`; (8) the intent gauges count non-demo buildings from `BuildingApi.listBuildings()` | Decided (Claude, delegated by Owner) | §2.3, §5, §6.1, §14 |
-| DR-283 | A payment of a charge held by another active intent cancels that intent in the same transaction (`cancel_reason 'charge_paid'`, a new value), so a household is never shown a live QR for charges already paid | Proposed (money, for the Owner): DR-28 rule 5 and DR-23 item 6 keep the intent today | Open questions |
+| DR-283 | A payment of a charge held by another active intent cancels that intent in the same transaction (`cancel_reason 'charge_paid'`, a new value), so a household is never shown a live QR for charges already paid | Decided (Owner, 2026-11-02): option 2; DR-28 rule 5 and DR-23 item 6 are replaced | §5.4, §6.1 |
 
 ## 19. Not in this document
 
@@ -849,6 +854,4 @@ Run on 2026-10-28 as a `psql` script that is **not committed**, on `postgres:18.
 
 ## Open questions
 
-1. **DR-27, DR-28, DR-30, DR-31** stay proposed until the gateway sandbox arrives (decision log 2026-10-28); the facts of §10.2 are verified then (DR-25). The document stays **Draft** until they are decided.
-2. **DR-280 and DR-281** (proposed, money): the creation lock and holder rules, and the late confirmation of a `failed` intent. DR-281 also needs the Owner to accept that ADR-0008 step 4 lists one status fewer than DR-29.
-3. **DR-283** (proposed, money): should a payment of a held charge (cash, or the late confirmation of a superseded intent) cancel the other intent that holds it? Today the intent stays live (DR-28 rule 5), and a household member could transfer again for charges already paid; that transfer becomes `charge_already_paid` and is refunded by hand. The proposal adds `cancelHolding(…, 'charge_paid')` to `settle()` step 6 and to `RecordManualPayment`, and the value `charge_paid` to `ck_payment_intent_cancel_reason`.
+None. DR-27, 28, 30, 31, 280, 281 and 283 were decided by the Owner on 2026-11-02. The statements of §10.2 (payOS) and DOC-24 §4.12 (Stripe) that are marked *unverified* are facts to check in P2-21 and P3, not decisions. DR-281 changes `ck_payment_intent_failed` in DOC-15 §6.1 and ADR-0008 step 4 is not edited (this document records DR-29 as the source, §3).

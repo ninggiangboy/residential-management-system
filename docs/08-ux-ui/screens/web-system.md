@@ -1,10 +1,10 @@
 # Web: system
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); W-Gateway, W-Audit and W-System are owed) · Updated: 2026-11-01 (DR-325, DR-326: `W-Gateway` is P2 and follows Stripe) · 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); Owner, 2026-11-02, for `W-Gateway` (P2); W-Audit and W-System are owed) · Updated: 2026-11-01 (DR-325, DR-326: `W-Gateway` is P2 and follows Stripe) · 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-33, 38, 39, 41…47, 59, 72, 74, 128, 133, 147, 148), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-38, FR-41, FR-50), [DOC-04](../../01-product/use-cases.md) (UC-17), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-36](../../06-design/building-configuration-and-demo.md) §4…8, [DOC-37](../../06-design/files-and-uploads.md), [DOC-51](../../07-api/api-endpoints.md) (E-08, E-38…E-56), [DOC-42](../../06-design/error-handling.md) §5, [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md), DOC-54
 > Main readers: P1-16 (web CMS shell: `W-Staff`, `W-Staff-New`, `W-Building`), P1-14, P1-15, the writers of DOC-64…66 (they cite the step-up rule below), P3 and P6 (the later table), EXP-10
 
-This document specifies the web screens of the System group of the sidebar (`Hệ thống`): staff accounts, building and configuration, and the step-up dialog that every sensitive Admin action opens. The sections `W-Staff`, `W-Staff-New`, `W-Building` and `W-Step-Up` are **P1** and complete for the P1 gate. `W-Gateway` (P3), `W-Audit` and `W-System` (P6) have no section yet: §"Specified before P3 and P6" lists what their sections must fix. Tokens and components are DOC-54, URLs are DOC-53 §4, the client layers are DOC-55, copy strings of errors and statuses are DOC-68. Section layout follows DOC-56 §6.2 (the Prototype part replaces the wireframe, DR-194).
+This document specifies the web screens of the System group of the sidebar (`Hệ thống`): staff accounts, building and configuration, and the step-up dialog that every sensitive Admin action opens. The sections `W-Staff`, `W-Staff-New`, `W-Building` and `W-Step-Up` are **P1** and complete for the P1 gate. `W-Gateway` is P2 and written below; `W-Audit` and `W-System` (P6) have no section yet: §"Specified before P3 and P6" lists what their sections must fix. Tokens and components are DOC-54, URLs are DOC-53 §4, the client layers are DOC-55, copy strings of errors and statuses are DOC-68. Section layout follows DOC-56 §6.2 (the Prototype part replaces the wireframe, DR-194).
 
 Test prefix: `UIWS-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it).
 
@@ -497,7 +497,7 @@ These screens are designed. They get full sections (A.5) before their phase; thi
 
 ## W-Gateway
 
-> Status: Draft · Prototype: designed (changed by N3, DR-325, DR-326) · Phase: P2 · DOC-67
+> Status: Approved · Prototype: designed (changed by N3, DR-325, DR-326) · Phase: P2 · DOC-67
 
 ### 1. Persona, use cases, permissions
 

@@ -1,6 +1,6 @@
 # Web CMS: finance
 
-> Status: **Draft** · Updated: 2026-11-01 (DR-325, DR-326, DR-329: online payment is in P2; `W-Transactions`, `W-Money-Log` and `UnitMoneyPanel` written; `W-Fee-Record` and `W-Fee-Notice` follow Stripe) · 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325, DR-326, DR-329: online payment is in P2; `W-Transactions`, `W-Money-Log` and `UnitMoneyPanel` written; `W-Fee-Record` and `W-Fee-Notice` follow Stripe) · 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
 > Depends on: original SDD §5, §18, [DR](../../00-decision-register.md) (DR-09, 11, 18, 19, 20, 22, 23, 24, 72, 84, 97, 194, 196, 265, 267, 293, 304, 306, 324, 325, 326, 327, 329), [DOC-56](README.md) (convention, notes N4, N5, N6, N12), [DOC-53](../ux-principles-and-ia.md), [DOC-54](../design-system.md) §17 (the web quality bar), [DOC-55](../client-architecture.md) §12, [DOC-21](../../06-design/fee-batches-and-import.md), [DOC-22](../../06-design/ledger-and-allocation.md), [DOC-18](../../05-data/data-quality-rules.md) §2, [DOC-34](../../06-design/pdf-rendering.md) §6, §9, [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-51](../../07-api/api-endpoints.md) (E-71…E-74, E-89…E-106, E-169…E-172, E-176, E-177), [DOC-65](web-residents.md) (`W-Unit-Detail` debt card), [DOC-58](resident-fees-payment.md) (what the resident sees)
 > Main readers: P2-16 (the fee screens), P2-15 (the finance API), P2-13 (the PDF screens), P2-04 (fee import), P3 and P6 writers of this file, P1-09 (catalog keys), DOC-68, DOC-88 (`UIWF-`)
 
@@ -38,7 +38,7 @@ This document specifies the web screens of the finance group that a Manager or A
 
 ## W-Fees
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -140,7 +140,7 @@ None.
 
 ## W-Fee-Import
 
-> Status: Draft · Prototype: designed (step 2; the settings card is partly drawn) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed (step 2; the settings card is partly drawn) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -274,7 +274,7 @@ None.
 
 ## W-Fee-Batch
 
-> Status: Draft · Prototype: designed (the draft; the published view is to design) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed (the draft; the published view is to design) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -433,7 +433,7 @@ None.
 
 ## W-Fee-Notice
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -543,7 +543,7 @@ None.
 
 ## W-Fee-Record
 
-> Status: Draft · Prototype: designed (the form is changed by N6) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed (the form is changed by N6) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -682,7 +682,7 @@ None.
 
 ## W-Fee-Recall
 
-> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -792,7 +792,7 @@ None.
 
 ## W-Charge-Void
 
-> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -893,7 +893,7 @@ None.
 
 ## W-Fee-Reissue
 
-> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
+> Status: Approved · Prototype: to design (a wireframe below) · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -988,7 +988,7 @@ None.
 
 ## W-Debts
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-66
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -1113,7 +1113,7 @@ None.
 
 ## W-Transactions
 
-> Status: Draft · Prototype: designed (N3, N4 apply) · Phase: P2 (DR-325) · DOC-66
+> Status: Approved · Prototype: designed (N3, N4 apply) · Phase: P2 (DR-325) · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -1221,7 +1221,7 @@ None.
 
 ## W-Money-Log
 
-> Status: Draft · Prototype: to design (a wireframe below; a tab of `W-Transactions`) · Phase: P2 (DR-325) · DOC-66
+> Status: Approved · Prototype: to design (a wireframe below; a tab of `W-Transactions`) · Phase: P2 (DR-325) · DOC-66
 
 ### 1. Persona, use cases, permissions
 
@@ -1332,7 +1332,7 @@ None.
 
 ## UnitMoneyPanel
 
-> Status: Draft · Prototype: to design (a component; wireframe below) · Phase: P2 (DR-325) · DOC-66
+> Status: Approved · Prototype: to design (a component; wireframe below) · Phase: P2 (DR-325) · DOC-66
 
 ### 1. Persona, use cases, permissions
 

@@ -1,6 +1,6 @@
 # Fee batches and import
 
-> Status: **Draft** · Updated: 2026-11-01 (P1-27: the rows of §4.2 have their `DQ-62…81` numbers, `import_missing_column`, a cap on a line amount, DR-317) · 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-283: the reason `charge_paid`) · 2026-11-01 (P2-00 review: E-170 refusals, DR-332) · 2026-11-01 (P1-27: the rows of §4.2 have their `DQ-62…81` numbers, `import_missing_column`, a cap on a line amount, DR-317) · 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
 > Depends on: original SDD §5.1…5.3, §5.8, §11.2, [DR](../00-decision-register.md) (DR-09…12, 17, 19…22, 56, 74, 87, 97, 105, 109, 114, 149, 226, 243…245, DR-265, DR-266, DR-293, DR-317), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-01…04, FR-12.4, FR-44, FR-49), [DOC-04](../01-product/use-cases.md) (UC-01, UC-04, UC-13), [DOC-09](../03-architecture/messaging-contracts.md) §3.4, §6, §7, [DOC-12](../03-architecture/code-architecture.md) §4.5, §9.5, [DOC-14](../05-data/data-conventions.md) §10, [DOC-15](../05-data/finance-model.md) §4, §5, §10.1, §11, §12, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §4, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-07 (recall, single void), P2-12 (publish notification), P2-15 and P2-16 (fee screens), DOC-18 §2, DOC-22, DOC-23, DOC-34, DOC-44 (FL), DOC-51, DOC-58, DOC-66, EXP-04, EXP-10
 
@@ -43,7 +43,7 @@ One building per deployment (DR-115); every statement still carries `building_id
 | `GaplessCounter.next(scope, 'batch', 'YYMM')` | The batch code (DOC-12 §9.5, DR-10) | One helper for every series |
 | `FilesApi.verify/read/remove` | The import file: size and type at validation, bytes at commit, removal by `finance_purge` | Files are `building`'s (DOC-37 §3) |
 | `AuditApi.record` | The actions of §2.3, in the use case's transaction | Audit is `audit`'s |
-| `IntentCancellation.cancelHolding(tx, chargeIds, reason)` | Recall and single void: every active intent holding one of the charges is marked `cancelling` as a whole and its cancel command is written. **A port inside `finance`**, built by DOC-23; the SQL and the outbox row are DOC-23's | One implementation for recall, void and supersede |
+| `IntentCancellation.cancelHolding(tx, chargeIds, reason)` | Recall, single void and (DR-283) a payment of a held charge: every active intent holding one of the charges is marked `cancelling` as a whole and its cancel command is written. **A port inside `finance`**, built by DOC-23; the SQL and the outbox row are DOC-23's | One implementation for recall, void and supersede |
 
 ```ts
 // modules/finance/src/application/ports.ts (the new contract is added to ResidencyApi, DOC-27 §2.1)
@@ -53,7 +53,7 @@ findUnitsByCodes(buildingId: Uuid, codes: string[]): Promise<FoundUnitDto[]>
 
 interface IntentCancellation {
   /** In the caller's transaction: intents of the building that hold any of the charges and are active → cancelling (whole intent). */
-  cancelHolding(tx: Tx, scope: BuildingScope, chargeIds: Uuid[], reason: 'batch_recalled' | 'charge_voided'): Promise<{ intentIds: Uuid[] }>
+  cancelHolding(tx: Tx, scope: BuildingScope, chargeIds: Uuid[], reason: 'batch_recalled' | 'charge_voided' | 'charge_paid'): Promise<{ intentIds: Uuid[] }>
 }
 ```
 
@@ -127,6 +127,8 @@ RETURNING version;
 | `ReplaceDraftCharge` | `PUT /staff/charges/{id}` (E-94), `If-Match` | `{ lines: [...] }` | `charge.version`, batch `draft` | All lines of that charge are deleted and re-inserted; `amount` is recomputed; `charge.version + 1` |
 | `AddDraftCharge` | `POST /staff/fee-batches/{id}/charges` (E-170) | `{ unitCode, lines: [...] }` | batch `draft`, no charge of that unit yet in the batch | One charge; the unit is looked up like an import row (§4.3) |
 | `RemoveDraftCharge` | `DELETE /staff/charges/{id}` (E-171), `If-Match` | none | `charge.version`, batch `draft` | The charge and its lines are deleted (hard, a draft) |
+
+*Refusals of `AddDraftCharge` (E-170), DR-332:* the unit is resolved with the checks of §4.3, so the codes of rows 77 and 78 become HTTP answers: an unknown `unitCode` is 404 `unit_not_found`; a unit with no active owner is 422 `unit_without_owner`; a unit that already has a charge in the batch is 409 `charge_exists` (`details: {chargeId}`, so the screen can open that row); a batch that is not a `draft` is 409 `invalid_transition`. Nothing is written in any of the four cases.
 
 A line in the body is `{ kind, itemName: { vi, en? }, quantity, unitPrice, amount?, note? }` with the rules of §4.2. The charge total must stay above zero: otherwise 422 `charge_total_zero`. The two-writer case of FR-02.2:
 

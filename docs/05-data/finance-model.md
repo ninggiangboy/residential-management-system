@@ -1,6 +1,6 @@
 # Finance model
 
-> Status: **Draft** · Updated: 2026-11-01 (DR-326, DR-327: `provider` is a pattern, `payment_customer`, outcomes `refunded` and `disputed`) · 2026-10-28 (DR-281, proposed: `ck_payment_intent_failed` reads `<=`; DR-243…245 confirmed by the Owner) · 2026-10-22 · DOC-15
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02, for §1–§8 and §10–§16; §9 (statements) is approved for P3 with DR-34 and DR-35) · Updated: 2026-11-02 (DR-27, 28, 30, 31, 280, 281, 283 decided; open questions closed) · 2026-11-02 (DR-283: `charge_paid` in `ck_payment_intent_cancel_reason`) · 2026-11-01 (DR-326, DR-327: `provider` is a pattern, `payment_customer`, outcomes `refunded` and `disputed`) · 2026-10-28 (DR-281, proposed: `ck_payment_intent_failed` reads `<=`; DR-243…245 confirmed by the Owner) · 2026-10-22 · DOC-15
 > Depends on: original SDD §5, §6, §16, [DR](../00-decision-register.md) (DR-09…14, 16…21, 23…35, 56, 60, 84, 86, 87, 96, 97, 105, 109, 115, 119, 120, 126, DR-243…245), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-14](data-conventions.md), [DOC-16](identity-and-residency-model.md) §5.5, [DOC-07](../03-architecture/system-context-and-containers.md) §6, [DOC-20](data-lifecycle.md) §2.4, [DOC-36](../06-design/building-configuration-and-demo.md) §10, [DOC-03](../01-product/requirements.md) (FR-01…12, 44, 46, 47, 49), [DOC-06](../02-glossary.md)
 > Main readers: P2-01 (finance schema), P2-02 (counters), P2-03, P2-06…P2-11, P2-13, P3-02…P3-07, DOC-21, DOC-22, DOC-23, DOC-24, DOC-25, DOC-34, DOC-19 (grants), DOC-100 (EXP-11), DOC-75 (RB-01)
 
@@ -8,7 +8,7 @@ This document holds every table of the `finance` schema: fee batches, charges an
 
 **DDL tested on PostgreSQL 18.6 (`postgres:18.6`, x86_64) on 2026-10-22.** The blocks of §3.1 and §4–§11 were applied in order with `psql -v ON_ERROR_STOP=1` on an empty database, then the 123 constraint tests of §13.2 and the 12 statement tests of §13.3 ran: **135 of 135 passed**, including a race of 8 sessions over 300 pairs of charges. The blocks are the files the tests ran; a block that is edited is run again.
 
-Every new decision in this document is recorded as a DR (DR-243…245) and summarized in §16. The intent and statement tables follow DR-27, DR-28, DR-30, DR-34 and DR-35, which are still **proposed**; the open questions at the end say what each one can still change.
+Every new decision in this document is recorded as a DR (DR-243…245) and summarized in §16. The intent tables follow DR-27, DR-28, DR-30, DR-280, DR-281 and DR-283, decided by the Owner on 2026-11-02; the statement tables follow DR-34 and DR-35, which stay **proposed** until the company's statement sample arrives (P3); the open questions at the end say what each one can still change.
 
 ## 1. Scope
 
@@ -514,7 +514,7 @@ CREATE TABLE finance.payment_intent (
   CONSTRAINT ck_payment_intent_paid     CHECK ((status = 'paid') = (paid_at IS NOT NULL)
                                                AND (paid_at IS NULL) = (gateway_reference IS NULL)),
   CONSTRAINT ck_payment_intent_cancel_reason CHECK (cancel_reason IN
-                                               ('resident', 'staff', 'superseded', 'batch_recalled', 'charge_voided')),
+                                               ('resident', 'staff', 'superseded', 'batch_recalled', 'charge_voided', 'charge_paid')),
   CONSTRAINT ck_payment_intent_cancelling CHECK (status NOT IN ('cancelling', 'cancelled')
                                                OR (cancel_reason IS NOT NULL AND cancel_requested_at IS NOT NULL)),
   CONSTRAINT ck_payment_intent_cancelled CHECK ((status = 'cancelled') <= (cancelled_at IS NOT NULL)),
@@ -582,7 +582,7 @@ stateDiagram-v2
 | `creating`, `pending` → `cancelling` | resident, Manager, Admin (`pending` only); supersede (`pending`); recall and single void (any active state) | `cancel_reason`, `cancel_requested_at`; items released; `finance.intent_cancel_requested.v1` |
 | `pending` → `expired` | `intent_requery` at `expires_at` | `expired_at`; items released; cancel command |
 | `cancelling` → `cancelled` | `CancelIntentLink` handler | `cancelled_at` |
-| any state but `paid` → `paid` | `settle()` step 4 | `paid_at`, `gateway_reference`; items released. *Revised (DR-281, proposed):* `failed` is claimable too, as DR-29 says; the row keeps `failed_at` (DOC-23 §3) |
+| any state but `paid` → `paid` | `settle()` step 4 | `paid_at`, `gateway_reference`; items released. *Revised (DR-281, decided 2026-11-02):* `failed` is claimable too, as DR-29 says; the row keeps `failed_at` (DOC-23 §3) |
 
 "Active" means `creating`, `pending` or `cancelling`. The rows of a `creating` intent cancelled before its link existed keep `link_id` null (FNM-122); `pending` and `expired` require it (FNM-75, FNM-123).
 
@@ -1926,12 +1926,6 @@ Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-1
 
 ## Open questions
 
-Decisions made while writing are DR-243…245 (§16), confirmed by the Owner on 2026-10-28. The document stays **Draft** because five tables follow DRs that are still proposed; each line says what the decision can still change.
+None for §1–§8 and §10–§16. DR-243…245 were confirmed by the Owner on 2026-10-28, and DR-27, DR-28, DR-30, DR-31, DR-280, DR-281 and DR-283 were decided on 2026-11-02, so the intent tables are settled: `order_code` and its ceiling (DR-27), `cancel_reason` with `charge_paid` (DR-28, DR-283), `ck_payment_intent_failed` in its `<=` form (DR-281), and the re-query columns (DR-30). A gateway whose limits differ changes the ceiling only (a migration of the sequence and of `ck_payment_intent_order_code`). Facts about a provider are verified by P2-21 (Stripe) and P3 (payOS), not decided here.
 
-- **DR-27 (order code and transfer content).** The sequence start, the ceiling and `uq_payment_intent_order_code` follow it. A gateway sandbox that allows a longer description or a different code range changes the ceiling only (a migration of the sequence and of `ck_payment_intent_order_code`).
-- **DR-28 (intent lifecycle).** `cancel_reason`, the supersede rule and the active states follow it. P2-06 builds `settle()` on these columns.
-- **DR-30 (re-query job).** `next_check_at`, `last_checked_at`, `check_count`, `check_failures` and `ix_payment_intent_building_requery` follow it.
-- **DR-25, DR-26 (payOS facts, fake driver).** `gateway_event.reference` is assumed unique per bank transaction; the sample payload is unverified; `fake_gateway_link` mirrors an assumed `getStatus`.
-- **DR-34, DR-35 (statements).** §9 follows the proposals. They are needed in P3 (P3-07); a real sample can change the profile and the counts, not the money columns.
-
-Proposal for the P2 gate (P2-00): approve §1–§8, §10–§16 for P2 once DR-27, DR-28 and DR-30 are decided (or accepted as defaults), and §9 for P3 with DR-34 and DR-35, the same split as DOC-17.
+§9 (bank-statement tables) is the only part that depends on a decision still proposed: DR-34 and DR-35 wait for the company's real statement sample (P0-05, needed at the start of P3). A sample can change the profile and the counts, never the money columns. §9 is therefore approved for P3, not for P2: the same split as DOC-17.

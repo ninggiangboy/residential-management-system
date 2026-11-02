@@ -139,6 +139,8 @@ The original SDD is strong on the hard part: the money invariant, the arbiter ro
 | 2026-11-01 | Owner | DR-327: a refund or a dispute at the provider is only recorded and attached to the related payment and invoice for cross-checking; the rule stays that an online payment is not voided in the system | DOC-24, DOC-22, DOC-15, DOC-66 |
 | 2026-11-01 | Claude (delegated) | Wrote DOC-45 (online payment flows), DOC-90 (EXP-01) and DOC-91 (EXP-02) and the webhook section of DOC-52 (P2-19, P2-20): DR-330 (sizes, hostile share, the poller, the exact release) | DOC-45, DOC-90, DOC-91, DOC-52 |
 | 2026-11-01 | Owner | Documents that touch no business rule may be checked and approved by Claude; business documents (requirements, use cases, features, money rules, screen content) stay with the Owner. Applied the same day to DOC-75, DOC-89, DOC-90, DOC-91, DOC-92, DOC-93, DOC-97 and DOC-100 after their SQL was run and their required content checked | README, the documents named |
+| 2026-11-01 | Claude (delegated) | Review of the P2-00 gate: DR-332 (E-170 refusals and the owed `reason_too_long` row); open questions of DOC-44 and DOC-52 closed | DOC-21, DOC-42, DOC-44, DOC-52 |
+| 2026-11-02 | Owner | Reviewed the open decisions of the P2-00 gate and accepted every one as Claude proposed: DR-25, 26, 27, 28, 30, 31 (the payOS-era defaults: Stripe made the sandbox dependency moot, DR-326), DR-280 (creation lock and holder rule), DR-281 (a late exact confirmation of a `failed` intent is posted), DR-283 (option 2: a payment of a held charge cancels the other intent), DR-287 (the SSE server in P2, the web in P4) and DR-292 (the owner's name stays on the fee notice). DR-34, 35, 284 (statements, P3) and DR-298 (report PDF cap, P6) stay proposed: they block no P2 document. DR-333 added (delegated) for the last open question of DOC-34 | DOC-08, 15, 21, 22, 23, 34, 44, 45, 52 |
 
 ---
 
@@ -743,9 +745,9 @@ flowchart TB
 
 ## F. Online payment (payOS)
 
-### DR-25 · payOS facts the design does not know, and the fallback
+### DR-25 · payOS facts the design does not know, and the fallback — **Decided (Owner, 2026-11-02)**
 - **Problem:** SDD §22 lists unknowns: webhook retry schedule, behaviour of a transfer to a cancelled/expired link, rate limits, the `orderCode` ceiling, fees, sandbox coverage. SDD §6.3 and §21 assume a "payOS sandbox" and a "sandbox bank" in the demo, but nothing in the SDD shows that one exists. The webhook shape, the status set of `GET /v2/payment-requests/{orderCode}` (including partially paid), whether `reference` is unique per transaction and what the dashboard's "confirm webhook" test sends are also unstated.
-- **Decision (proposed):** Facts to verify against the gateway sandbox **when the Owner reports that one is available** (open dependency; needs a merchant account, client dependency P0-04), with recorded real requests and responses saved as contract-test fixtures. The list below applies to payOS and, with the same questions, to a VietQR driver:
+- **Decision:** Facts to verify against the gateway sandbox **when the Owner reports that one is available** (open dependency; needs a merchant account, client dependency P0-04), with recorded real requests and responses saved as contract-test fixtures. The list below applies to payOS and, with the same questions, to a VietQR driver:
   1. webhook body and signature (data keys sorted, `key=value` joined by `&`, HMAC-SHA256 with the Checksum Key);
   2. which field is unique per bank transaction (assumed `data.reference`) and its relation to the statement's bank reference;
   3. what `GET` returns for pending, paid, cancelled, expired, partially paid, and whether it lists several transactions for one order; whether payOS sends a webhook for a transfer of a different amount, and whether it marks the link `PAID` for it (DR-84 needs the amount from the payload, not the status);
@@ -759,16 +761,16 @@ flowchart TB
 - **Write to:** DOC-24, DOC-11, ADR-0007.
   *Revised 2026-11-01 (DR-325, DR-326):* the first gateway is Stripe, not payOS. The list of unknown facts applies to the payOS driver when it is built; for Stripe the same questions are answered in DOC-24 §4.12 and checked in the Stripe sandbox (P2-21). The sandbox is no longer a dependency of the Owner.
 
-### DR-26 · Test double for the gateway and a webhook simulator
+### DR-26 · Test double for the gateway and a webhook simulator — **Decided (Owner, 2026-11-02)**
 - **Problem:** EXP-01…04 deliver confirmations 1–5 times in random order, late, simultaneously with re-queries; the demo (SDD §21) replays a webhook five times. None of that can be done against a live gateway.
-- **Decision (proposed):** `PaymentGateway` (SDD §6.6) has two drivers selected per gateway configuration: `payos` and `fake`. The fake driver stores links in a table, lets a test set a link `PAID`/`CANCELLED`/`EXPIRED`, and answers `getStatus`. A CLI `bun run payos:sim` signs payloads with a configured Checksum Key and POSTs them to the real webhook route (flags: `--repeat`, `--shuffle`, `--delay`, `--wrong-signature`, `--amount`). Rules: `fake` is allowed only for gateway configs of a building with `is_demo = true`, in `local` and in `staging`; production boot fails if a non-demo building has a `fake` config. Contract tests replay fixtures recorded in the gateway sandbox against the `payos` adapter when the Owner reports a sandbox; otherwise the fake driver is the contract (DR-25).
+- **Decision:** `PaymentGateway` (SDD §6.6) has two drivers selected per gateway configuration: `payos` and `fake`. The fake driver stores links in a table, lets a test set a link `PAID`/`CANCELLED`/`EXPIRED`, and answers `getStatus`. A CLI `bun run payos:sim` signs payloads with a configured Checksum Key and POSTs them to the real webhook route (flags: `--repeat`, `--shuffle`, `--delay`, `--wrong-signature`, `--amount`). Rules: `fake` is allowed only for gateway configs of a building with `is_demo = true`, in `local` and in `staging`; production boot fails if a non-demo building has a `fake` config. Contract tests replay fixtures recorded in the gateway sandbox against the `payos` adapter when the Owner reports a sandbox; otherwise the fake driver is the contract (DR-25).
 - **Consequences:** The demo building (DR-60) pays with the fake driver, so the demo needs no bank.
 - **Write to:** DOC-24, DOC-88, DOC-36, ADR-0007.
   *Revised 2026-11-01 (DR-326):* the drivers are `stripe` and `fake` in the first version (`payos` is described, not built); the simulator is `bun run pay:sim`; `fake` gains a `redirect` presentation.
 
-### DR-27 · Order code, transfer content and QR data — ⚠ resolves a contradiction in the original SDD
+### DR-27 · Order code, transfer content and QR data — ⚠ resolves a contradiction in the original SDD — **Decided (Owner, 2026-11-02)**
 - **Problem:** SDD §6.3 says the content is "`TT` plus the order code in base 32 (8 characters)" because payOS limits the description to 9 characters, and the example is `TT2DQ8XR` (`TT` + 6). "8 characters" is either the total or the base-32 part; with 8 base-32 characters the total is 10 and exceeds the limit.
-- **Decision (proposed):**
+- **Decision:**
   - `order_code` = `nextval('finance.order_code_seq')`, sequence starting at 1,000,000, positive integer far below the JavaScript safe limit; unique per payOS merchant (verified against the gateway when a sandbox is available).
   - Transfer content = `TT` + Crockford base-32 (alphabet without I, L, O, U) of the order code, upper case, no padding: at most 2 + 7 = **9 characters in total**; 32⁷ ≈ 3.4·10¹⁰ order codes before the limit.
   - The QR payload is payOS's `qrCode` string (EMVCo VietQR) stored on the intent and rendered locally; `checkoutUrl` is kept as a fallback link shown only if rendering fails. Bank name is looked up from the BIN in a static VietQR bank list shipped in `shared-types`.
@@ -777,9 +779,9 @@ flowchart TB
 - **Write to:** DOC-23, DOC-24, DOC-51, DOC-25.
   *Revised 2026-11-01 (DR-326):* `order_code` and the transfer content serve bank-transfer drivers. For Stripe the order code is the session's `client_reference_id` and the content is only the session description.
 
-### DR-28 · Payment-intent lifecycle details the state diagram leaves open
+### DR-28 · Payment-intent lifecycle details the state diagram leaves open — **Decided (Owner, 2026-11-02)**
 - **Problem:** SDD §6.2 gives the state machine but: a link shown for 30 min (`expiredAt`) holds its charges for 60 min, so a second household member can be blocked by a dead QR for half an hour; who may cancel; what happens when charges change during the intent; selection limits.
-- **Decision (proposed):**
+- **Decision:**
   1. The intent amount is `Σ outstanding` at creation; "full batch only" means the full **outstanding** of each selected charge. Charges are never selected or paid partially (DR-84). Limits: 1…10 charges, amount between the payOS minimum and maximum (verified when a sandbox is available, DR-25; defaults 2,000 and 500,000,000 đ).
   2. A charge's batch must be `published` or `closed` and the charge `open`, checked in the creation transaction.
   3. Holds: items stay held until the intent leaves the active states. **Supersede rule** ⚠: a creation request that conflicts only with an intent whose `display_until` has passed cancels that intent (→ `cancelling`, items released in the same transaction, cancel command queued) and creates the new one. The old intent still accepts a late confirmation (SDD §6.2 note).
@@ -802,9 +804,9 @@ flowchart TB
 - **Consequences:** `gateway_event` rows with a `statement` source are inserted only after payOS itself reported `PAID` (DR-35). *Changed 2026-10-18:* the old steps (payment with null `intent_id`, `excess` credit, partial allocation, `settled_amount`) are dropped.
 - **Write to:** DOC-23, DOC-45 (FL), ADR-0008.
 
-### DR-30 · The re-query and expiry job
+### DR-30 · The re-query and expiry job — **Decided (Owner, 2026-11-02)**
 - **Problem:** SDD §6.5 and FR-10 say "re-queried every 5 minutes for 60 minutes", "immediately when the resident presses 'I have transferred'" and a `creating` cleanup after 2 minutes, but not the claim query, concurrency, backoff or what a payOS outage does to the schedule.
-- **Decision (proposed):** A timer in the worker ticks every 30 s and claims up to 20 intents per tick:
+- **Decision:** A timer in the worker ticks every 30 s and claims up to 20 intents per tick:
 
   ```sql
   SELECT id FROM finance.payment_intent
@@ -817,9 +819,9 @@ flowchart TB
 - **Write to:** DOC-23, DOC-38, DOC-40, RB-02.
   *Revised 2026-11-01 (DR-326):* the re-query of the Stripe driver is a Checkout Session retrieve.
 
-### DR-31 · Cancelling a link at payOS
+### DR-31 · Cancelling a link at payOS — **Decided (Owner, 2026-11-02)**
 - **Problem:** SDD §6.2 and §5.8 queue "the outbox event that cancels them at payOS" but not what happens when the cancel fails, is rejected because the link is already paid, or never succeeds.
-- **Decision (proposed):** Command `finance.intent_cancel_requested.v1` handled by `CancelIntentLink`: success → `cancelled`; payOS reports the order already paid → run `getStatus` and `settle`; 4xx other → `cancelled` locally with a warning log (a link we cannot cancel will expire at `expiredAt`); 5xx/timeouts → retry with the outbox backoff (8 attempts, 5 s doubling to 15 min), then dead letter and the "dead letters" alert. An intent in `cancelling` for more than 15 minutes is re-queried by DR-30. A recalled batch cancels every intent that holds any of its charges, including the other batches in that intent (the resident is told to start again).
+- **Decision:** Command `finance.intent_cancel_requested.v1` handled by `CancelIntentLink`: success → `cancelled`; payOS reports the order already paid → run `getStatus` and `settle`; 4xx other → `cancelled` locally with a warning log (a link we cannot cancel will expire at `expiredAt`); 5xx/timeouts → retry with the outbox backoff (8 attempts, 5 s doubling to 15 min), then dead letter and the "dead letters" alert. An intent in `cancelling` for more than 15 minutes is re-queried by DR-30. A recalled batch cancels every intent that holds any of its charges, including the other batches in that intent (the resident is told to start again).
 - **Consequences:** Cancelling is best effort at payOS; correctness never depends on it, because a late confirmation is either posted (exact amount, charges still open) or written to the log (DR-16).
 - **Write to:** DOC-23, DOC-24, DOC-45.
   *Revised 2026-11-01 (DR-326):* the cancel of the Stripe driver is `checkout.sessions.expire`; an expired session cannot be paid.
@@ -852,16 +854,16 @@ flowchart TB
 - **Consequences:** One field, one message, no new screen. The Manager refunds outside the system as before.
 - **Write to:** DOC-23, DOC-51, DOC-58, DOC-68, DOC-03 (FR-09.1). Applied 2026-10-21 to DOC-03, DOC-04, DOC-51 and DOC-68; DOC-23 and DOC-58 are written from this DR.
 
-### DR-280 · Intent creation: the charge lock, the holder rule, a link without a QR, and a gateway `EXPIRED` before the window ends — refines DR-28 and DR-30 — **Proposed (Claude, 2026-10-28; money, for the Owner)**
+### DR-280 · Intent creation: the charge lock, the holder rule, a link without a QR, and a gateway `EXPIRED` before the window ends — refines DR-28 and DR-30 — **Decided (Owner, 2026-11-02; proposed by Claude, 2026-10-28)**
 - **Problem:** DR-28 and UC-03 leave four things to DOC-23: how the creation transaction keeps a recall, a void or a payment from changing a charge between the check and the insert (UC-03 race table); exactly when an existing holder is returned, superseded or refused, and what happens when two creations meet on the hold index; what the intent is when a timed-out link is found by `GET` but the gateway does not return its QR string (payOS's `GET` is not known to carry `qrCode`, DR-25 item 3); and what DR-30's "payOS says `EXPIRED` early → `expired`" means when the link is created with `expiredAt = display_until`, so that the gateway reports `EXPIRED` at minute 30 of a 60-minute window by construction.
-- **Decision (proposed):** (1) The creation transaction locks the selected charges `FOR SHARE` in ascending id order after reading the gateway configuration `FOR SHARE` (DR-126); a recall, a void or a payment of those charges waits for it, and a creation that waits sees their committed state. (2) Holders: one holder whose items are exactly the selection and which is `creating`, or `pending` with a QR before `display_until`, is returned (200, "started by"); holders that are all `pending` and past `display_until` or without a QR payload are superseded (DR-28 rule 3); anything else is 409 `payment_in_progress`; a unique violation on the hold index runs the decision once more. (3) A link found only by `GET` without a QR payload makes the intent `pending` with `qr_payload` null, the request answers 502 `gateway_unavailable`, and the next creation supersedes it at once. (4) A gateway `EXPIRED` before `expires_at` keeps the intent `pending` until `expires_at`; a gateway `CANCELLED` of a `pending` intent makes it `cancelled` with `cancel_reason = 'staff'`.
+- **Decision:** (1) The creation transaction locks the selected charges `FOR SHARE` in ascending id order after reading the gateway configuration `FOR SHARE` (DR-126); a recall, a void or a payment of those charges waits for it, and a creation that waits sees their committed state. (2) Holders: one holder whose items are exactly the selection and which is `creating`, or `pending` with a QR before `display_until`, is returned (200, "started by"); holders that are all `pending` and past `display_until` or without a QR payload are superseded (DR-28 rule 3); anything else is 409 `payment_in_progress`; a unique violation on the hold index runs the decision once more. (3) A link found only by `GET` without a QR payload makes the intent `pending` with `qr_payload` null, the request answers 502 `gateway_unavailable`, and the next creation supersedes it at once. (4) A gateway `EXPIRED` before `expires_at` keeps the intent `pending` until `expires_at`; a gateway `CANCELLED` of a `pending` intent makes it `cancelled` with `cancel_reason = 'staff'`.
 - **Consequences:** `FOR SHARE` adds one lock wait for a recall or payment that meets a creation (milliseconds; T1 makes no network call). Item 4 changes the reading of DR-30 only for an answer the design itself causes. Tested on PostgreSQL 18.6 on 2026-10-28 (DOC-23 §17).
 - **Write to:** DOC-23 §4, §8.2, DOC-45 (FL-10, FL-11, FL-13), DOC-58.
 
-### DR-281 · A late exact confirmation of a `failed` intent is posted — applies DR-29 — ⚠ original SDD §6.4 and ADR-0008 list five claimable statuses — **Proposed (Claude, 2026-10-28; money, for the Owner)**
+### DR-281 · A late exact confirmation of a `failed` intent is posted — applies DR-29 — ⚠ original SDD §6.4 and ADR-0008 list five claimable statuses — **Decided (Owner, 2026-11-02; proposed by Claude, 2026-10-28)**
 - **Problem:** DR-29 (decided) claims the intent in "any status that is not `paid`". Original SDD §6.4's SQL and ADR-0008 step 4 list `creating`, `pending`, `cancelling`, `expired`, `cancelled` and leave out `failed`; DOC-15 followed them and its `ck_payment_intent_failed` (`(status = 'failed') = (failed_at IS NOT NULL)`) refuses `failed → paid` (23514, run 2026-10-28). A `failed` intent is one whose `GET` found no link; a transfer for it means the `GET` was wrong, and the transfer is exact for open charges like that of an expired intent.
 - **Options:** (1) post it like any late confirmation, as DR-29 says; (2) log it, which needs a new outcome value because `unknown_order` means "no intent".
-- **Decision (proposed):** Option 1. The claim is `WHERE status <> 'paid'`; `ck_payment_intent_failed` becomes `(status = 'failed') <= (failed_at IS NOT NULL)`, the form the `expired` and `cancelled` checks already have so their timestamps survive the move to `paid`.
+- **Decision:** Option 1. The claim is `WHERE status <> 'paid'`; `ck_payment_intent_failed` becomes `(status = 'failed') <= (failed_at IS NOT NULL)`, the form the `expired` and `cancelled` checks already have so their timestamps survive the move to `paid`.
 - **Consequences:** One check rewritten in DOC-15 §6.1 (tested: `failed → paid` keeps `failed_at`; a `failed` row without `failed_at` is still refused). ADR-0008 is not edited; DOC-23 §3 records that DR-29 is the source. IN-32.
 - **Write to:** DOC-23 §3, §6.1, DOC-15 §6.1.
 
@@ -871,11 +873,11 @@ flowchart TB
 - **Consequences:** One endpoint (E-175), one audit action, one rule code, two metrics and one alert are added to DOC-51, DOC-35, DOC-42 and DOC-40 in the same change.
 - **Write to:** DOC-23, DOC-35 §4, DOC-40 §4.5, §5.3, DOC-42 §5, DOC-51 §2, DOC-45, DOC-66.
 
-### DR-283 · A payment of a charge held by another active intent cancels that intent — **Proposed (Claude, 2026-10-28; money, for the Owner)**
+### DR-283 · A payment of a charge held by another active intent cancels that intent — **Decided (Owner, 2026-11-02; proposed by Claude, 2026-10-28)**
 - **Problem:** DR-28 rule 5 and DR-23 item 6 leave an intent untouched when one of its charges is paid elsewhere (cash, or the late confirmation of a superseded intent). The household keeps a live QR for charges already paid; a member who pays it creates a `charge_already_paid` row that the Manager refunds by hand. DOC-09 already lists the command reason `charge_paid` ("a payment elsewhere") with no producer.
 - **Options:** (1) keep DR-28 rule 5 (today); (2) `RecordManualPayment` and `settle()` step 6 call `IntentCancellation.cancelHolding(…, 'charge_paid')` for the charges they paid, so any other intent holding them goes to `cancelling` in the same transaction.
-- **Decision (proposed):** Option 2.
-- **Consequences:** `ck_payment_intent_cancel_reason` gains `charge_paid` (DOC-15); DOC-22 §5.2 and DOC-23 §6.1 gain one call; the warning of FR-05.6 stays (the Manager still sees the open link before recording cash). Until decided, DOC-23 follows option 1.
+- **Decision (Owner, 2026-11-02):** Option 2.
+- **Consequences:** `ck_payment_intent_cancel_reason` gains `charge_paid` (DOC-15); DOC-22 §5.2 and DOC-23 §6.1 gain one call; the warning of FR-05.6 stays (the Manager still sees the open link before recording cash). Applied on 2026-11-02 in DOC-15 §6.1, DOC-21 §2.1, DOC-22 §5.2, DOC-23 §5.4, §6.1, DOC-44 FL-09 5a and DOC-45; tests IN-53 and IN-54.
 - **Write to:** DOC-23, DOC-22 §5.2, DOC-15 §6.1, DOC-09 §6 (the reason gets a producer).
 
 ## G. Reconciliation
@@ -1392,7 +1394,7 @@ flowchart TB
 - **Consequences:** Worker peak about 0.6 GiB on staging and 1.0 GiB on production (planned). This is the "child process" fallback DR-56 names, taken from the start. Three new keys, three metrics. EXP-08 confirms or changes the numbers.
 - **Write to:** DOC-34 §4, DOC-38 §4.2, DOC-41 §12, DOC-10 §6.1, DOC-40 §4, DOC-11 §7 (row 17).
 
-### DR-292 · What the fee notice prints: the owner's name, the basis, payment lines, the draft mark — **Decided (Claude, delegated by Owner, 2026-10-28; confirm: a person's name on paper)**
+### DR-292 · What the fee notice prints: the owner's name, the basis, payment lines, the draft mark — **Decided (Claude, delegated by Owner, 2026-10-28); confirmed by the Owner, 2026-11-02: the name stays**
 - **Problem:** The canvas `W-Fee-Notice` (accepted by the Owner) shows the owner's name and a "Basis" column with units of measure; `finance` holds no name and DR-13 has no unit of measure.
 - **Decision:** The unit's active owner's name is printed, read with a new `ResidencyApi.unitOwnerNames(buildingId, unitIds ≤ 500) → Array<{unitId, ownerName: string | null}>` from `resident_profile.full_name`. The Basis column is "quantity × unit price", or an adjustment line's note. The "how to pay" lines are printed only when the building has an active gateway and working hours are set. A draft prints "BẢN NHÁP · DRAFT".
 - **Consequences:** A person's name appears on a notice that may be left in a mailbox; DOC-35 §7.1 lists it. If the Owner prefers no name, the row disappears and the call is not added.
@@ -1930,7 +1932,7 @@ flowchart TB
 - **Write to:** DOC-52, DOC-70, ADR-0024.
   *Revised 2026-10-28 (DR-288, DR-289):* the limit of 3 streams is counted per `api` process and a stream ends when its access token expires; the replay buffer is `realtime.events` (DOC-52 §8). DR-287 (proposed) splits the build between P2 (server) and P4 (web).
 
-### DR-287 · The server side of the SSE stream is built in P2, the web side in P4 — reads DR-76 with DR-264 — **Proposed (Claude, 2026-10-28; for the Owner)**
+### DR-287 · The server side of the SSE stream is built in P2, the web side in P4 — reads DR-76 with DR-264 — **Decided (Owner, 2026-11-02; proposed by Claude, 2026-10-28)**
 - **Problem:** Found while writing DOC-52. DR-76 item 4 builds "the SSE module" in P2 and P2-12 lists the `realtime` module; DR-264 item 5 (an Owner direction) leaves "the stream, the bell and `session.revoked`" for P4; DOC-40 lists `sse_streams_open` as P4; DOC-17 §9 puts `realtime.events` in P5-09.
 - **Options:** (1) the server in P2-12, the web in P4; (2) everything in P4.
 - **Decision (proposed):** Option 1. `@mod/realtime`, E-75, `realtime.events`, `realtime_purge` and the `identity`, `notification` and `finance` mappings are built and tested over `app.handle` in P2-12; the web opens the stream, shows the bell and handles `session.revoked` in P4; the `tickets` mapping comes with tickets (P4), the `reporting` one with exports (P6).
@@ -2835,3 +2837,15 @@ Each DR is listed under the first phase it blocks. DRs that block P1 and P2 must
 Status on 2026-10-19: every DR is decided, changed or superseded except DR-25, 26, 27, 28, 30, 31, 34, 35 (waiting for the gateway sandbox or the bank statement sample). DR-17 and DR-42 were decided on 2026-10-19. DR-91, DR-92 and DR-96 were decided by the Owner on 2026-10-21, with DR-226, DR-227 and DR-228 (E-169, the DOC-69 dry run, Owner inputs as placeholders).
 
 ⚠ deviations from the original SDD: DR-02, DR-03, DR-09, DR-10, DR-12, DR-14, DR-16, DR-18, DR-19, DR-20, DR-21, DR-27, DR-29, DR-32, DR-39, DR-41, DR-44, DR-45, DR-48, DR-49, DR-51, DR-55, DR-57, DR-60, DR-61, DR-66, DR-72, DR-76, DR-80, DR-84, DR-181, DR-185, DR-194, DR-281.
+
+### DR-332 · The refusals of "add a charge to a draft", and when `reason_too_long` gets its row — refines DR-265 — **Decided (Claude, delegated by Owner, 2026-11-01)**
+- **Problem:** The review of the P2-00 gate found three questions left open in DOC-44. (1) DOC-21 §3.2 says the unit of E-170 is "looked up like an import row" and gives no HTTP answer. (2) The units without a charge on `W-Fee-Batch`: DOC-66 already answers it (`view=missing` of E-93, `missing = ownedUnitCount − chargedUnitCount`). (3) `reason_too_long` is used by DOC-21, DOC-22 and DOC-23 and has no row in DOC-42 §5 or copy in DOC-68.
+- **Decision:** (1) E-170: unknown unit 404 `unit_not_found`; unit without an active owner 422 `unit_without_owner`; a unit that already has a charge in the batch 409 `charge_exists` with `details: {chargeId}`; a batch that is not a draft 409 `invalid_transition`; nothing is written. (2) Closed as written in DOC-66; no change. (3) `reason_too_long` (422) and `charge_exists` (409) are reserved in DOC-42 §5.8 now; their rows in §5, the code lists and DOC-68's catalog are added together by the P2 task that writes the use case (P2-04, P2-07, P2-09), because UICP-03 compares DOC-42 with the code and a row without code would fail it.
+- **Consequences:** Two reserved codes. No endpoint, table or metric changes.
+- **Write to:** DOC-21 §3.2, DOC-42 §5.8, DOC-44, DOC-66.
+
+### DR-333 · The bulk fee-notice job shows no count of failed units on `W-Fee-Notice` in P2 — refines DR-294 — **Decided (Claude, delegated by Owner, 2026-11-02)**
+- **Problem:** DOC-34 asked whether `W-Fee-Notice` should show how many units failed in a `ready` bulk job. `ck_fee_notice_job_failed` forbids an `error` on a `ready` row, so a count would need a column `failed_units` on `finance.fee_notice_job` (DOC-15 §10.2).
+- **Decision:** No. In P2 the count is only in `manifest.csv` inside the ZIP (one line per unit with its result), and a job where every unit failed is `failed` with its error. EXP-08 reports the failed count of each run; if it is ever above zero on staging, a column `failed_units` is added by an expand migration and the screen shows it.
+- **Consequences:** No table or screen change. DOC-34's question is closed.
+- **Write to:** DOC-34, DOC-66 (`W-Fee-Notice`).
