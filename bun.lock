@@ -234,6 +234,24 @@
         "drizzle-kit": "0.31.11",
       },
     },
+    "modules/finance": {
+      "name": "@mod/finance",
+      "version": "0.0.0",
+      "dependencies": {
+        "@core/db": "workspace:*",
+        "@core/kernel": "workspace:*",
+        "@core/messaging": "workspace:*",
+        "@core/runtime": "workspace:*",
+        "@mod/building": "workspace:*",
+        "@rms/shared-types": "workspace:*",
+        "drizzle-orm": "0.45.4",
+      },
+      "devDependencies": {
+        "@rms/test-support": "workspace:*",
+        "@types/bun": "1.4.3",
+        "drizzle-kit": "0.31.11",
+      },
+    },
     "modules/identity": {
       "name": "@mod/identity",
       "version": "0.0.0",
@@ -1051,6 +1069,8 @@
     "@mod/audit": ["@mod/audit@workspace:modules/audit"],
 
     "@mod/building": ["@mod/building@workspace:modules/building"],
+
+    "@mod/finance": ["@mod/finance@workspace:modules/finance"],
 
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
