@@ -323,8 +323,18 @@ export function createContainer(
   })
   installed.push(residency)
 
-  // P2-01: the schema and the active-intent probe of `building`; its use cases, routes and jobs join with P2-02…P2-15.
-  const finance = installFinance({ logger, clock, ids, database })
+  // P2-01…P2-04: the schema, the active-intent probe of `building`, the draft batches and the fee import; routes and jobs join with
+  // P2-05…P2-15. Units are found through `ResidencyApi.findUnitsByCodes` (DOC-21 §2.1, DR-265).
+  const finance = installFinance({
+    logger,
+    clock,
+    ids,
+    database,
+    audited: audit.audited,
+    units: residency.api,
+    files: building.files,
+    metrics: metrics.port,
+  })
   installed.push(finance)
 
   // A leaf (DR-279): nothing calls it. It asks `building` whether the building of a batch is the demo one.

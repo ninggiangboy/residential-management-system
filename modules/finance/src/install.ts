@@ -1,8 +1,9 @@
 import type { ModuleHost } from '@core/runtime'
-import { createFinanceModule } from './finance.module'
+import { createFinanceModule, type FinanceModuleDeps } from './finance.module'
 
 /** The host narrowed to what `finance` needs: it states its dependencies in its signature (DOC-12 §4.2). */
-export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'database'>
+export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'database'> &
+  Pick<FinanceModuleDeps, 'audited' | 'units' | 'files' | 'metrics'>
 
 export function installFinance(host: FinanceHost) {
   return createFinanceModule({
@@ -10,5 +11,9 @@ export function installFinance(host: FinanceHost) {
     clock: host.clock,
     ids: host.ids,
     logger: host.logger,
+    audited: host.audited,
+    units: host.units,
+    files: host.files,
+    metrics: host.metrics,
   })
 }

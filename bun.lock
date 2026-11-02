@@ -243,9 +243,11 @@
         "@core/kernel": "workspace:*",
         "@core/messaging": "workspace:*",
         "@core/runtime": "workspace:*",
+        "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
         "@rms/shared-types": "workspace:*",
         "drizzle-orm": "0.45.4",
+        "exceljs": "4.4.0",
       },
       "devDependencies": {
         "@core/testing": "workspace:*",
