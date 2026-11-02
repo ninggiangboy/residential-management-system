@@ -55,8 +55,8 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
 })
 
 describe('the module catalog (DOC-12 §5.2)', () => {
-  test('audit comes before building, identity and residency, analytics comes last, and a module is installed for every manifest', () => {
-    const order = ['audit', 'building', 'identity', 'residency', 'analytics']
+  test('audit comes before building, identity, residency and finance, analytics comes last, and a module is installed for every manifest', () => {
+    const order = ['audit', 'building', 'identity', 'residency', 'finance', 'analytics']
     expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(order)
     expect(container.modules.map((module) => module.name)).toEqual(order)
   })

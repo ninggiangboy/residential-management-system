@@ -38,6 +38,7 @@
     "@mod/analytics": "workspace:*",
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
+    "@mod/finance": "workspace:*",
     "@mod/identity": "workspace:*",
     "@mod/residency": "workspace:*",
     "@elysiajs/openapi": "1.4.16",

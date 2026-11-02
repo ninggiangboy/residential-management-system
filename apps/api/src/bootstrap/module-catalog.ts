@@ -2,6 +2,7 @@ import type { ModuleManifest } from '@core/runtime'
 import { analyticsManifest } from '@mod/analytics/manifest'
 import { auditManifest } from '@mod/audit/manifest'
 import { buildingManifest } from '@mod/building/manifest'
+import { financeManifest } from '@mod/finance/manifest'
 import { identityManifest } from '@mod/identity/manifest'
 import { residencyManifest } from '@mod/residency/manifest'
 
@@ -19,6 +20,8 @@ export const MODULE_CATALOG: readonly ModuleManifest[] = [
   buildingManifest,
   identityManifest,
   residencyManifest,
+  // finance reads units and memberships through residency and settings through building (DOC-21 §2.1, DOC-22 §2.2).
+  financeManifest,
   // analytics is a leaf that asks building whether a building is a demo one (DR-279), so it comes after it.
   analyticsManifest,
 ]

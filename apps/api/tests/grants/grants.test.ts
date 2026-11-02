@@ -220,27 +220,27 @@ describe('the grants step fails closed and is idempotent (GRT-68…76)', () => {
 
   test('a table made by a migration is closed until the grants step runs, then open, and a second run changes nothing', async () => {
     await migrator.unsafe(`
-      CREATE SCHEMA IF NOT EXISTS drizzle_finance;
-      CREATE TABLE drizzle_finance.__migrations (id int);
-      CREATE TABLE finance.late_table (id int PRIMARY KEY, note text, token_hash text);
-      CREATE SEQUENCE finance.late_seq;`)
-    expect(await as('rms_app', 'SELECT * FROM finance.late_table')).toBe('42501') // GRT-68
-    expect(await as('rms_app', `SELECT nextval('finance.late_seq')`)).toBe('42501') // GRT-69
-    expect(await as('rms_readonly', 'SELECT * FROM finance.late_table')).toBe('42501') // GRT-70
+      CREATE SCHEMA IF NOT EXISTS drizzle_tickets;
+      CREATE TABLE drizzle_tickets.__migrations (id int);
+      CREATE TABLE tickets.late_table (id int PRIMARY KEY, note text, token_hash text);
+      CREATE SEQUENCE tickets.late_seq;`)
+    expect(await as('rms_app', 'SELECT * FROM tickets.late_table')).toBe('42501') // GRT-68
+    expect(await as('rms_app', `SELECT nextval('tickets.late_seq')`)).toBe('42501') // GRT-69
+    expect(await as('rms_readonly', 'SELECT * FROM tickets.late_table')).toBe('42501') // GRT-70
 
     await migrator.unsafe(GRANTS_SQL)
     const first = await aclHash()
     await migrator.unsafe(GRANTS_SQL)
     expect(await aclHash()).toBe(first)
 
-    expect(await as('rms_app', `INSERT INTO finance.late_table (id, note) VALUES (1, 'x')`)).toBe(
+    expect(await as('rms_app', `INSERT INTO tickets.late_table (id, note) VALUES (1, 'x')`)).toBe(
       'ok',
     ) // GRT-71
-    expect(await as('rms_app', `SELECT nextval('finance.late_seq')`)).toBe('ok') // GRT-72
-    expect(await as('rms_readonly', 'SELECT id, note FROM finance.late_table')).toBe('ok') // GRT-73
-    expect(await as('rms_readonly', 'SELECT token_hash FROM finance.late_table')).toBe('42501') // GRT-74
-    expect(await as('rms_app', 'SELECT * FROM drizzle_finance.__migrations')).toBe('42501') // GRT-75
-    expect(await as('rms_readonly', 'SELECT * FROM drizzle_finance.__migrations')).toBe('42501') // GRT-76
+    expect(await as('rms_app', `SELECT nextval('tickets.late_seq')`)).toBe('ok') // GRT-72
+    expect(await as('rms_readonly', 'SELECT id, note FROM tickets.late_table')).toBe('ok') // GRT-73
+    expect(await as('rms_readonly', 'SELECT token_hash FROM tickets.late_table')).toBe('42501') // GRT-74
+    expect(await as('rms_app', 'SELECT * FROM drizzle_tickets.__migrations')).toBe('42501') // GRT-75
+    expect(await as('rms_readonly', 'SELECT * FROM drizzle_tickets.__migrations')).toBe('42501') // GRT-76
   })
 })
 

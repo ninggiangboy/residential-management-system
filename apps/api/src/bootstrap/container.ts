@@ -18,6 +18,8 @@ import { installAnalytics } from '@mod/analytics'
 import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
+import { installFinance } from '@mod/finance'
+import { activeIntentProbe } from '@mod/finance/integrations/building'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
 import type { OpenTicketsProbe } from '@mod/identity/contracts'
 import { installResidency } from '@mod/residency'
@@ -65,11 +67,8 @@ export interface ContainerOverrides {
   tickets?: OpenTicketsProbe
 }
 
-/** Until `finance` is installed no intent can exist, so none is active. The boot guard refuses this stand-in in production (DOC-36 §10.1 check 5). */
-const noIntents: ActiveIntentProbe = { hasActive: async () => false }
-
 /**
- * Until `tickets` is installed (P3) no ticket exists, so no staff member holds one. Like `noIntents` this is a stand-in the boot
+ * Until `tickets` is installed (P3) no ticket exists, so no staff member holds one. Like the active-intent stand-in before `finance` existed, this is a stand-in the boot
  * guard must refuse in production once the module exists (DOC-26 §2.1).
  */
 const noTicketsYet: OpenTicketsProbe = {
@@ -174,7 +173,11 @@ export function createContainer(
     secretBox,
     // `identity` is installed after `building` (it reads the lockout settings), so the proof is forwarded to it (DOC-12 §4.4).
     stepUp: overrides.stepUp ?? { verifyStepUp: (...args) => identity.api.verifyStepUp(...args) },
-    probe: overrides.probe ?? noIntents,
+    // `finance` is installed after `building` (it reads the settings and the gateway configuration), so the probe is forwarded
+    // to it once it exists (DOC-36 §7.3, DOC-12 §4.4).
+    probe:
+      overrides.probe ??
+      activeIntentProbe({ hasActiveIntent: (...args) => finance.api.hasActiveIntent(...args) }),
     audited: audit.audited,
     guards,
     residentBuildings: {
@@ -320,6 +323,10 @@ export function createContainer(
   })
   installed.push(residency)
 
+  // P2-01: the schema and the active-intent probe of `building`; its use cases, routes and jobs join with P2-02…P2-15.
+  const finance = installFinance({ logger, clock, ids, database })
+  installed.push(finance)
+
   // A leaf (DR-279): nothing calls it. It asks `building` whether the building of a batch is the demo one.
   const { usage: usageConfig } = config
   const analytics = installAnalytics({
@@ -427,6 +434,7 @@ export function createContainer(
     building,
     identity,
     residency,
+    finance,
     analytics,
     /** The seed of the demo building (DOC-36 §9.1). */
     demoPlan,
@@ -447,9 +455,7 @@ export function createContainer(
       },
       // A stand-in is right until the module that answers for the port is installed (check 5, DOC-36 §10.1): then it must be bound.
       standIns: [
-        ...(overrides.probe === undefined && MODULE_NAMES.includes('finance')
-          ? ['ActiveIntentProbe']
-          : []),
+        // `ActiveIntentProbe` is no longer listed: `finance` is installed and answers it (P2-01).
         ...(overrides.tickets === undefined && MODULE_NAMES.includes('tickets')
           ? ['OpenTicketsProbe']
           : []),

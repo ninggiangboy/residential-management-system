@@ -6,9 +6,6 @@
  */
 export const STAND_INS = `
   CREATE TABLE notification.device_token (id uuid PRIMARY KEY, token text NOT NULL);
-  CREATE TABLE finance.outbox_messages (id uuid PRIMARY KEY, type text NOT NULL, payload jsonb NOT NULL);
-  CREATE TABLE finance.inbox (message_id uuid NOT NULL, handler text NOT NULL, PRIMARY KEY (message_id, handler));
-  CREATE SEQUENCE finance.order_code_seq;
 
 `
 
@@ -21,7 +18,8 @@ export const SEED = `
     VALUES ('00000000-0000-7000-8000-000000000003', '00000000-0000-7000-8000-000000000002', 'payos', 'fake', 'v1:k1:aa:bb', '{"accountNumber":"123"}', 'active');
   INSERT INTO residency.resident_profile (building_id, account_id, full_name, cccd_last4, cccd_enc, date_of_birth)
     VALUES ('00000000-0000-7000-8000-000000000002', '00000000-0000-7000-8000-000000000004', 'Nguyễn Văn An', '1234', 'v1:k1:cccd', '1990-01-01');
-  INSERT INTO finance.outbox_messages VALUES ('00000000-0000-7000-8000-000000000005', 'identity.sms_requested.v1', '{"secretEnc": "x"}');
+  INSERT INTO finance.outbox_messages (id, type, aggregate_id, payload, headers, occurred_at)
+    VALUES ('00000000-0000-7000-8000-000000000005', 'identity.sms_requested.v1', 'x', '{"secretEnc": "x"}', '{}', now());
   INSERT INTO audit.audit_log (id, building_id, actor_kind, action, object_type, object_id)
     VALUES ('00000000-0000-7000-8000-000000000006', '00000000-0000-7000-8000-000000000002', 'system', 'x.y.z', 'x', '00000000-0000-7000-8000-000000000002');
   INSERT INTO platform.maintenance (id, active) VALUES (true, false);`
