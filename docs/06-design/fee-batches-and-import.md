@@ -1,6 +1,6 @@
 # Fee batches and import
 
-> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-283: the reason `charge_paid`) · 2026-11-01 (P2-00 review: E-170 refusals, DR-332) · 2026-11-01 (P1-27: the rows of §4.2 have their `DQ-62…81` numbers, `import_missing_column`, a cap on a line amount, DR-317) · 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-03 (P2-04 as built: the rule code of §3.1, the measured cost of §4.6, the notes after §10) · 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-283: the reason `charge_paid`) · 2026-11-01 (P2-00 review: E-170 refusals, DR-332) · 2026-11-01 (P1-27: the rows of §4.2 have their `DQ-62…81` numbers, `import_missing_column`, a cap on a line amount, DR-317) · 2026-10-28 (P1-26: the fee-notice PDF endpoints E-99, E-176, E-177 in §1, DR-293) · 2026-10-26 (P1-24: first version, DR-265, DR-266) · DOC-21
 > Depends on: original SDD §5.1…5.3, §5.8, §11.2, [DR](../00-decision-register.md) (DR-09…12, 17, 19…22, 56, 74, 87, 97, 105, 109, 114, 149, 226, 243…245, DR-265, DR-266, DR-293, DR-317), [ADR-0005](../04-adr/0005-ledger-charges-and-allocations-paid-in-full.md), [ADR-0006](../04-adr/0006-allocation-write-path-all-or-nothing.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-01…04, FR-12.4, FR-44, FR-49), [DOC-04](../01-product/use-cases.md) (UC-01, UC-04, UC-13), [DOC-09](../03-architecture/messaging-contracts.md) §3.4, §6, §7, [DOC-12](../03-architecture/code-architecture.md) §4.5, §9.5, [DOC-14](../05-data/data-conventions.md) §10, [DOC-15](../05-data/finance-model.md) §4, §5, §10.1, §11, §12, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §4, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-07 (recall, single void), P2-12 (publish notification), P2-15 and P2-16 (fee screens), DOC-18 §2, DOC-22, DOC-23, DOC-34, DOC-44 (FL), DOC-51, DOC-58, DOC-66, EXP-04, EXP-10
 
@@ -101,7 +101,7 @@ The state machines are in DOC-15 §5.1 (batch) and §5.2 (charge). This section 
 { "name": { "vi": "Phí tháng 10/2026", "en": "October 2026 fees" }, "feeMonth": "2026-10-01", "dueDate": "2026-10-15" }
 ```
 
-1. `feeMonth` must be the first day of a month (`2026-10-15` is 400, as `ck_fee_batch_fee_month`). It is a `date`, never an instant (DR-09).
+1. `feeMonth` must be the first day of a month (`2026-10-15` is 400 `validation_failed` with the rule `pattern` on `feeMonth`, as `ck_fee_batch_fee_month`). It is a `date`, never an instant (DR-09).
 2. The code comes from the `batch` series with period `YYMM` of the **fee month** (not of today): `GaplessCounter.next(scope, 'batch', '2610')` gives 1 and the code is `PH-2610-01`; the second batch of the month is `PH-2610-02` (FR-03.4). A series that passes 99 prints `PH-2610-100`: the width is a minimum (DR-10).
 3. The counter increment and the insert are one transaction. A rolled-back create leaves no code behind; a **discarded draft's code is not issued again** because the counter only moves forward and a draft is deleted, not renumbered (FR-02.4, §3.8). Batch codes need not be gapless (DR-10); a discard leaves a hole by design.
 4. `status = 'draft'`, `version = 1`, `created_by` is the staff account. Nothing validates `dueDate` here: the publish check does (§3.3), so a Manager can start a draft before the date is settled.
@@ -367,7 +367,7 @@ Run on 2026-10-26: the commit of a validated job with 240 charges and 480 lines 
 
 ### 4.6 Cost
 
-Measured by NFR-12's definition on a developer machine: DOC-18 §1.4 measured the read and row checks of 2,000 rows at 77 to 83 ms. The fee file adds one `findUnitsByCodes` call (an index scan of at most 2,000 codes) and the `import_job` insert; nothing else touches the database before the commit. The commit's cost is the delete and the two bulk inserts. **P2-04 measures both** with the 2,000-row file of FR-01.7 (IM-77) against the 10 s target; until then the figures are plans (DOC-10).
+Measured by NFR-12's definition on a developer machine: DOC-18 §1.4 measured the read and row checks of 2,000 rows at 77 to 83 ms. The fee file adds one `findUnitsByCodes` call (an index scan of at most 2,000 codes) and the `import_job` insert; nothing else touches the database before the commit. The commit's cost is the delete and the two bulk inserts. **Measured by P2-04 on 2026-11-03** (IM-77, `modules/finance/test/fee-import.integration.test.ts`, PostgreSQL 18.6 on a developer machine, the unit directory in memory): the 2,000-row file of FR-01.7 (1,000 charges, 2,000 lines) validates in 66 to 68 ms, the file read and parse, the rules, the plan and the `import_job` insert included, and commits in 106 to 118 ms, the claim, the batch lock, the delete and the two bulk inserts included. Both are far inside the 10 s of NFR-12. `findUnitsByCodes` on the real `residency.unit` is exercised over HTTP in `apps/api/tests/integration/fee-import.integration.test.ts`.
 
 ## 5. Transactions and concurrency
 
@@ -502,6 +502,13 @@ Run on 2026-10-26 on `postgres:18.6` (x86_64, Docker, session zone UTC), on the 
 | DR-266 | The nightly check runs 19 queries, not 20: the 17 finance corruptions of DR-78 and the two table checks of DOC-15 §12.2; the three membership and notice corruptions belong to `integrity_weekly` and `integrity_notices` | DOC-22 §13 (decided there); listed here because DOC-21's tests rely on the same split |
 
 Both are recorded in the decision register (section C, after DR-245) as proposed by Claude under delegation and approved by the Owner on 2026-10-26.
+
+**As built (P2-04, 2026-11-03).** These details fill what the text above leaves to the code; none changes a rule.
+
+- The commit stores what it wrote (`{created, replaced}`) in the job's `result.committed` in its own transaction, so a second "Save" answers the first result (§4.5 step 1) without recounting.
+- DR-149's handler: `residency` owns `/staff/imports` and declares `ImportHandler` (template, validate, get, commit, list) in its contracts; `finance` serves `fee_batch` through its contract `FeeImportApi` and `integrations/residency`; `apps/api` hands the handler to `residency` (read per request, because `finance` is installed after `residency` and reads `ResidencyApi`). E-72 takes `params.batchId` (required for `fee_batch`, 400 `required` without it).
+- The template of E-71 is named `fee-batch-template-<lang>.xlsx`; its example rows are the A-1508 fee line and its adjustment.
+- DQ-67's collapsing of white space and refusal of control characters live in the shared line rules, so a draft edit (§3.2) applies them too.
 
 ## 11. Not in this document
 

@@ -1,6 +1,6 @@
 # Audit, privacy and terms
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-314: `residency.unit_type.create` and `.update`, §4.2, §8) · 2026-10-28 (P1-26: the owner's name on a printed fee notice, DR-292 to confirm; push tokens of a dead session, DR-300) · 2026-10-28 (DR-282: `finance.intent.cancel` in §4.1; DR-279: §7.2 rule 6, §8 and §9.4 for the usage record) · 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-03 (P2-04: the details of `finance.batch.import_commit` are `created` and `replaced`, as DOC-21 §2.3) · 2026-11-01 (DR-314: `residency.unit_type.create` and `.update`, §4.2, §8) · 2026-10-28 (P1-26: the owner's name on a printed fee notice, DR-292 to confirm; push tokens of a dead session, DR-300) · 2026-10-28 (DR-282: `finance.intent.cancel` in §4.1; DR-279: §7.2 rule 6, §8 and §9.4 for the usage record) · 2026-10-26 (DR-268: R2 leaves the cross-border list; DR-265: `finance.batch.discard`; earlier: P1-08: the module as built, `audited` returned by the module, `check:audit`, §13 run, DR-253; DOC-15: the payer's bank account in the money log; earlier DR-202: E-13 shows the cooling-off; DR-215: rule 6 of §6) · DOC-35
 > Depends on: original SDD §15, §19.1, §19.5, [DR](../00-decision-register.md) (DR-33, 36, 39, 40, 57, 58, 59, 74, 87, 90, 103, 108, 110, 111, 115, 124, 125, 202), [ADR-0018](../04-adr/0018-audit-in-the-mutation-transaction.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-37, FR-39, FR-41, FR-50, NFR-14), [DOC-09](../03-architecture/messaging-contracts.md) §7, [DOC-12](../03-architecture/code-architecture.md) §8.3, [DOC-16](../05-data/identity-and-residency-model.md) §4.2, §5.2, [DOC-17](../05-data/operations-model.md) §1.4, §2, [DOC-19](../05-data/db-roles-and-grants.md), [DOC-20](../05-data/data-lifecycle.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-08 (`audit` module), P1-11 (terms gate), P1-12, P6-04 (account deletion), DOC-26, DOC-27, DOC-33, DOC-36, DOC-39, DOC-42, DOC-46 (FL-19, FL-24), DOC-51, DOC-60, DOC-65, DOC-67
 
@@ -146,7 +146,7 @@ One row per action the design knows today. Each document that adds staff mutatio
 | Action | Object | Who | Changes | R | Source |
 | --- | --- | --- | --- | --- | --- |
 | `finance.batch.create` | `fee_batch` | Manager, Admin | — (counts in `details`) | | FR-01 |
-| `finance.batch.import_commit` | `import_job` | Manager, Admin | — (`created`, `updated`) | | FR-01.3 |
+| `finance.batch.import_commit` | `import_job` | Manager, Admin | — (`created`, `replaced`, as DOC-21 §2.3) | | FR-01.3 |
 | `finance.batch.update` | `fee_batch` | Manager, Admin | edited draft fields | | FR-02 |
 | `finance.batch.publish` | `fee_batch` | Manager, Admin | `status` | | FR-03 |
 | `finance.batch.extend_due` | `fee_batch` | Manager, Admin | `dueDate` | | FR-44 |
