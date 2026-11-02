@@ -3,6 +3,7 @@ import type { CAPABILITIES, MemberType } from '@rms/shared-types'
 import {
   type ActiveMembershipDto,
   can,
+  type FoundUnitDto,
   type MembershipDto,
   type NoticeRecipientDto,
   type Page,
@@ -22,6 +23,8 @@ import type {
 const MAX_MEMBERSHIPS = 500
 const DEFAULT_PAGE = 100
 const MAX_PAGE = 500
+/** The rows of one fee file (DR-21), so one call answers for a whole file (DOC-21 §4.3). */
+const MAX_CODES = 5000
 const MEMBER_TYPES: readonly MemberType[] = ['owner', 'family', 'tenant', 'helper']
 
 type Capability = (typeof CAPABILITIES)[number]
@@ -105,6 +108,19 @@ export class MembershipQueries {
       code: row.code,
       floor: row.floor,
       occupancy: row.occupancy,
+    }))
+  }
+
+  /** DR-265: codes are compared in lower case, so `a-1508` finds `A-1508` and the row carries the stored code (IM-63). */
+  async unitsByCodes(buildingId: string, codes: readonly string[]): Promise<FoundUnitDto[]> {
+    if (codes.length > MAX_CODES)
+      throw new InvariantError('findUnitsByCodes takes at most 5,000 codes')
+    const lower = [...new Set(codes.map((code) => code.trim().toLowerCase()))].filter(Boolean)
+    return (await this.reader.findUnitsByCodes(buildingId, lower)).map((row) => ({
+      unitId: row.id,
+      code: row.code,
+      occupancy: row.occupancy,
+      hasActiveOwner: row.hasActiveOwner,
     }))
   }
 

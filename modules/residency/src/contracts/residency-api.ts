@@ -64,6 +64,16 @@ export interface ScanMembershipDto {
   credentialVersion: number
 }
 
+/** A unit found by its code for the fee import (DOC-27 §2.1, DOC-21 §2.1, DR-265). */
+export interface FoundUnitDto {
+  unitId: string
+  /** The code as the unit stores it, whatever the case of the code asked for. */
+  code: string
+  occupancy: Occupancy
+  /** A non-removed owner membership exists: a charge needs someone to notify (DQ-78). */
+  hasActiveOwner: boolean
+}
+
 export interface UnitHitDto {
   unitId: string
   code: string
@@ -113,6 +123,11 @@ export interface ResidencyApi {
   activeUnitIds(accountId: string): Promise<string[]>
   /** Up to 500 ids. */
   getUnits(ids: string[]): Promise<UnitDto[]>
+  /**
+   * The units of the building whose `lower(code)` is one of `codes` (at most 5,000), one row per code that exists, none for a
+   * missing code: the `db` layer of the fee import in one call (DOC-21 §4.3, DR-265).
+   */
+  findUnitsByCodes(buildingId: string, codes: readonly string[]): Promise<FoundUnitDto[]>
   /** The membership by id with its `credentialVersion`, whatever its status. */
   getMembershipForScan(membershipId: string): Promise<ScanMembershipDto | null>
   /** The units whose active owner is the account (DOC-35 §10.1). */

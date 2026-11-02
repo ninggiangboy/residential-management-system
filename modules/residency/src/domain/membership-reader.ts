@@ -73,4 +73,9 @@ export interface MembershipReader {
     accountIds: readonly string[],
   ): Promise<Array<{ accountId: string; buildingId: string }>>
   findUnits(ids: readonly string[]): Promise<UnitView[]>
+  /** The units of the building by `lower(code)`, with whether a non-removed owner membership exists (DOC-27 §2.1). */
+  findUnitsByCodes(
+    buildingId: string,
+    codesLower: readonly string[],
+  ): Promise<Array<UnitView & { hasActiveOwner: boolean }>>
 }

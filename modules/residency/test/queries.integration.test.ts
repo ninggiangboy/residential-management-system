@@ -165,4 +165,36 @@ describe('recipients, scan and units', () => {
     ])
     expect(await api().getUnits([])).toEqual([])
   })
+
+  test('findUnitsByCodes (DR-265): lower-case match, the stored code, one row per code, an owner that is not removed', async () => {
+    const owned = await h.seedUnit(BUILDING, 'Q-1508')
+    await h.seedMembership({ unit: owned, memberType: 'owner' })
+    const lockedOwner = await h.seedUnit(BUILDING, 'Q-1509')
+    await h.seedMembership({ unit: lockedOwner, memberType: 'owner', status: 'locked' })
+    const tenantOnly = await h.seedUnit(BUILDING, 'Q-1510')
+    await h.seedMembership({ unit: tenantOnly, memberType: 'tenant' })
+    await h.seedMembership({ unit: tenantOnly, memberType: 'owner', status: 'removed' })
+    const elsewhere = await h.seedUnit(OTHER_BUILDING, 'Q-1511')
+    await h.seedMembership({ unit: elsewhere, memberType: 'owner' })
+    const found = await api().findUnitsByCodes(BUILDING, [
+      'q-1508',
+      'Q-1508',
+      ' Q-1509 ',
+      'q-1510',
+      'q-1511',
+      'q-9999',
+    ])
+    expect(found.sort((a, b) => a.code.localeCompare(b.code))).toEqual([
+      { unitId: owned.id, code: 'Q-1508', occupancy: 'occupied', hasActiveOwner: true },
+      { unitId: lockedOwner.id, code: 'Q-1509', occupancy: 'occupied', hasActiveOwner: true },
+      { unitId: tenantOnly.id, code: 'Q-1510', occupancy: 'occupied', hasActiveOwner: false },
+    ])
+    expect(await api().findUnitsByCodes(BUILDING, [])).toEqual([])
+    await expect(
+      api().findUnitsByCodes(
+        BUILDING,
+        Array.from({ length: 5001 }, (_, i) => `x-${i}`),
+      ),
+    ).rejects.toThrow('at most 5,000')
+  })
 })
