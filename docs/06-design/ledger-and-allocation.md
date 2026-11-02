@@ -156,7 +156,7 @@ The distinction comes from the fresh read after the failure: `paid` → `charge_
 | Evidence | Where | Status |
 | --- | --- | --- |
 | 8 sessions, 300 pairs of charges (A, B) and (B, A), 2,400 attempts: 300 won, 2,100 refused, 0 deadlocks, 0 charges with two live allocations, 600 receipts, the counter at 600 | DOC-15 §13.3 FNM-S12, 2026-10-22, `postgres:18.6` | **Measured** (statement level) |
-| The same through `RecordManualPayment` and `settle()`: 500 charges, 2…8 racing sessions, 10,000 attempts at READ COMMITTED | LG-14…LG-17 (P2-03) | *Planned* |
+| The same through `ChargeAllocator` with a manual caller (whole rollback) and an online caller (savepoint and a `charge_already_paid` log row): LG-14 500 charges released together, one winner each (2.6 s); LG-15 8 sessions, 10,000 attempts over 1,250 pairs (A, B)/(B, A), 0 deadlocks, I1…I8 clean (8.5 s); LG-16 2, 4, 8 sessions, one winner; LG-17 receipts gapless and equal to the counter | LG-14…LG-17 (P2-03), `modules/finance/test/allocation.integration.test.ts`, 2026-11-03, `postgres:18.6` | **Measured** (the callers are test harnesses until P2-06 and P2-08) |
 | The naive baseline: read the charge, decide in code, write without the predicate, on a copy without `uq_allocation_charge_live` | EXP-03 (P2-14, `apps/api/tests/exp/baseline.ts`, DR-78) | *Planned*: the experiment must show at least one charge with two live allocations in the baseline and none in the real path, 5 runs |
 
 The decision (option C, charges with allocations and a guarded status) and the three rejected options are in original SDD §5.9 and ADR-0005; they are not repeated here.

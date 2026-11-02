@@ -1801,7 +1801,7 @@ The fixture is one building with batch `PH-2610-01` and charges A-1508 (2,638,00
 | FNM-S11 | Two claims of `intent_requery` on 30 due intents, limit 20 | 20, then 10: disjoint rows by `SKIP LOCKED` and the lease |
 | FNM-S12 | Race: 8 sessions, each paying all 300 pairs of charges (A 100,000, B 250,000) in its own transactions, four naming each pair (A, B) and four (B, A); the use case locks in ascending id; 2 ms between the two charges | 2,400 attempts in 2.6 s: 300 won, 2,100 refused, 0 deadlocks, 0 charges with two live allocations, 600 of 600 charges paid, 300 payments, 600 receipts and the counter at 600; I1…I8 all 0 |
 
-The test scripts are not committed: P2-01 turns the two tables above into `bun test` cases against a template database, built from the blocks of this document, as DOC-14 §16 and DOC-16 §9 do.
+P2-01 turned the two tables above into `bun test` cases against the migrated template database (2026-11-03): `modules/finance/test/ddl.integration.test.ts` (FNM-01…123) and `statements.integration.test.ts` (FNM-S01…S12; FNM-S12 ran 2,400 attempts in 2.3 s, 300 won, 0 deadlocks). The migrations of `modules/finance` reproduce the blocks of §4–§11 exactly; a block edited here needs a new migration.
 
 ## 14. Index catalog
 
