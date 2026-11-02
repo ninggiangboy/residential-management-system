@@ -84,3 +84,4 @@ local-changes:
   - core-http: `requestLogPlugin` takes `observe(sample)`, called once per request with the route template, status, error code, the scope of a 429 and the app headers; `createIdempotent` takes `onOutcome(first|replay|reuse|in_progress)` (P1-18)
   - core-messaging: `InProcessMessageBus` takes `observe(handler, outcome)`; new `OutboxStats` (oldest unpublished age and dead letters per source) (P1-18)
   - core-runtime: `createRuntime` takes `onHandler`; `AppModule.gauges` (`ModuleGauge`): gauges a module reads from its own tables at a scrape (P1-18)
+  - core-db: `GaplessCounter` (`createGaplessCounter` / `SqlGaplessCounter.next`), the `document_counter` upsert of DOC-12 §9.5 in the caller's ambient transaction with `updated_at = now()`, refused outside a transaction (DR-10, DOC-14 §10) (P2-02)
