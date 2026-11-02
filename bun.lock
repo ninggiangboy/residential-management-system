@@ -36,6 +36,7 @@
         "@mod/analytics": "workspace:*",
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
+        "@mod/finance": "workspace:*",
         "@mod/identity": "workspace:*",
         "@mod/residency": "workspace:*",
         "@sinclair/typebox": "0.34.52",
@@ -247,6 +248,7 @@
         "drizzle-orm": "0.45.4",
       },
       "devDependencies": {
+        "@core/testing": "workspace:*",
         "@rms/test-support": "workspace:*",
         "@types/bun": "1.4.3",
         "drizzle-kit": "0.31.11",
