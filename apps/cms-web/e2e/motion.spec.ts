@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page, type Response, test } from '@playwright/test'
 import { signInAndWait } from './support/app'
 
 /**
@@ -28,17 +28,61 @@ const seen = (page: Page) =>
         .__seen,
   )
 
+/** A page change to the staff list, then its Admin filter: the two steps DS-09 watches. */
+async function staffPageThenFilter(page: Page) {
+  await page.getByRole('link', { name: 'Nhân viên', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Tài khoản nhân viên', level: 1 })).toBeVisible()
+  await page.getByRole('button', { name: /^Admin/ }).click()
+  await expect(page).toHaveURL(/role=admin/)
+}
+
 test.describe('Motion and loading at any API speed (DOC-54 §17)', () => {
   test('DS-09 a fast answer shows no skeleton, no loading bar and no spinner', async ({ page }) => {
+    // DS-09 starts from an API that answers in a few milliseconds. `DEV_LATENCY_MS=0` is not enough on a CI runner, where a list
+    // request alone can take more than 150 ms. So a first pass records the answers of the API, and the watched pass gets them
+    // back at once: the check is on the UI's timing, not the runner's.
+    const answers = new Map<
+      string,
+      { status: number; headers: Record<string, string>; body: Buffer }
+    >()
+    const recording: Promise<void>[] = []
+    const record = (response: Response) => {
+      const request = response.request()
+      const streamed = response.headers()['content-type']?.includes('text/event-stream')
+      if (request.method() !== 'GET' || !request.url().includes('/api/v1/') || streamed) return
+      recording.push(
+        response.body().then(
+          (body) => {
+            answers.set(request.url(), {
+              status: response.status(),
+              headers: response.headers(),
+              body,
+            })
+          },
+          () => undefined,
+        ),
+      )
+    }
+    page.on('response', record)
     await signInAndWait(page, 'admin')
     await expect(page.getByRole('heading', { name: 'Căn hộ', level: 1 })).toBeVisible()
+    await expect(page.locator('table[aria-busy]')).toHaveCount(0)
+    await staffPageThenFilter(page)
+    await expect(page.locator('table[aria-busy]')).toHaveCount(0)
+    page.off('response', record)
+    await Promise.all(recording)
 
-    // A page change and a filter, each answered well under 150 ms.
+    // A new document empties the query cache, so the watched pass fetches again, each answer served from the recording.
+    await page.route('**/api/v1/**', (route) => {
+      const answer = route.request().method() === 'GET' && answers.get(route.request().url())
+      return answer ? route.fulfill(answer) : route.continue()
+    })
+    await page.goto('/units')
+    await expect(page.getByRole('heading', { name: 'Căn hộ', level: 1 })).toBeVisible()
+    await expect(page.locator('table[aria-busy]')).toHaveCount(0)
+
     await watchIndicators(page, 1200)
-    await page.getByRole('link', { name: 'Nhân viên', exact: true }).click()
-    await expect(page.getByRole('heading', { name: 'Tài khoản nhân viên', level: 1 })).toBeVisible()
-    await page.getByRole('button', { name: /^Admin/ }).click()
-    await expect(page).toHaveURL(/role=admin/)
+    await staffPageThenFilter(page)
     await page.waitForTimeout(1300)
     expect(await seen(page)).toEqual({ skeleton: 0, bar: false, spinner: false })
   })
