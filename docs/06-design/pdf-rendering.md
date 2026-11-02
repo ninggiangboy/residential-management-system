@@ -1,12 +1,12 @@
 # PDF rendering
 
-> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02, for the fee notice, the receipt and the render hosts (P2); §11 and §12, the report and library PDFs, follow DR-298 in P6) · Updated: 2026-11-02 (DR-292 confirmed) · 2026-11-01 (DR-328: E-183, the resident fee-notice PDF) · 2026-10-28 (P1-26: first version, DR-291…298) · DOC-34
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02, for the fee notice, the receipt and the render hosts (P2); §11 and §12, the report and library PDFs, follow DR-298, decided by the Owner 2026-11-02, and are built in P6) · Updated: 2026-11-02 (DR-292 confirmed) · 2026-11-01 (DR-328: E-183, the resident fee-notice PDF) · 2026-10-28 (P1-26: first version, DR-291…298) · DOC-34
 > Depends on: original SDD §4.3, §5.6, §13, §14, [DR](../00-decision-register.md) (DR-06, 13, 17, 19, 40, 50, 54, 55, 56, 61, 71, 86, 115, 119, 120, 123, 180, 244, 245, 258), [DOC-03](../01-product/requirements.md) (FR-36, NFR-05), [DOC-04](../01-product/use-cases.md) (UC-01, UC-02, UC-03, UC-25), [DOC-09](../03-architecture/messaging-contracts.md) §4.3, §5, §7, [DOC-10](../03-architecture/quality-attributes.md) §6, [DOC-11](../03-architecture/tech-stack-and-versions.md) §3, §5, §7 (row 17), [DOC-12](../03-architecture/code-architecture.md) §4, [DOC-15](../05-data/finance-model.md) §5, §7.3, §10.2, [DOC-17](../05-data/operations-model.md) §1.1, §3.1, [DOC-21](fee-batches-and-import.md) §1, [DOC-22](ledger-and-allocation.md) §7, [DOC-36](building-configuration-and-demo.md) §4, §5, [DOC-37](files-and-uploads.md) §3, §4, §9, §10, [DOC-38](jobs-and-outbox-runtime.md) §3.2, §4, [DOC-40](observability.md) §4, [DOC-41](configuration-reference.md), [DOC-42](error-handling.md) §5, §7.2, [DOC-50](../07-api/api-guidelines.md) §12, [DOC-54](../08-ux-ui/design-system.md), [DOC-06](../02-glossary.md)
 > Main readers: P2-13 (PDF rendering), P2-16 (`W-Fee-Notice`, `W-Fee-Record`), P2-17 (receipt view and PDF in the resident app), P5-04 (library PDF), P6-02 (report PDF), EXP-08 (DOC-97), DOC-33, DOC-32, DOC-44, DOC-51, DOC-58, DOC-66
 
 This document says how the system makes its PDF documents: which documents exist, what each one shows and in which language, the fonts and the A4 layouts, where the renderer runs and how its memory is bounded, how a PDF is cached and found again, the bulk ZIP of fee notices, the void watermark of a receipt, and what EXP-08 measures. It does not hold the receipt snapshot or the receipt rules (DOC-15 §7.3, DOC-22 §7), the `fee_notice_job` table (DOC-15 §10.2), the file store, its purposes and `storeGenerated` (DOC-37), the job runtime (DOC-38), the report definitions (DOC-33) or the library pages (DOC-32).
 
-**Draft.** Eight decisions taken while writing are marked `DR-291…298` (§17); DR-298 is proposed for the Owner (P6, not a blocker of P2); DR-292 (the owner's name) was confirmed by the Owner on 2026-11-02; the others are delegated decisions. EXP-08 has not run (§15): every timing below is *planned* unless it says *measured*.
+Eight decisions taken while writing are marked `DR-291…298` (§17); DR-298 was decided by the Owner on 2026-11-02; DR-292 (the owner's name) was confirmed by the Owner on 2026-11-02; the others are delegated decisions. EXP-08 has not run (§15): every timing below is *planned* unless it says *measured*.
 
 **Measured on 2026-10-28 (first step of P2-13, not EXP-08).** A scratch script (not committed) rendered a 3-page bilingual fee notice of 60 lines with Be Vietnam Pro under Bun 1.4.3 and `@react-pdf/renderer` 4.9.0 on a developer machine (Intel i7-4790, 8 threads, 15 GiB). Diacritics render and extract correctly (`pdftotext` gives back "Thông báo phí tháng 10/2026", "Nguyễn Thị Ánh Nguyệt"). The renderer **keeps about 1.2 MiB per document** that a forced GC does not free, so one long-lived process cannot render 5,000 documents within 1 GiB (§4.3, DR-291). The figures are in §15.2.
 
@@ -444,7 +444,7 @@ None of these touches the ledger: a receipt exists and is valid without its PDF 
 | Header (first page) | logo, company name, building name; the report title in the requester's language; the filters as "Kỳ phí 07/2026 – 10/2026 · Đợt PH-2610-01"; "Lập lúc 28/10/2026 09:30" |
 | Table | the columns of the report kind (DOC-33), the header row repeated on every page (`fixed`), money right-aligned in the language's format, a totals row when the report has one |
 | Footer | report name and "Trang n/m" |
-| Rows | at most **5,000 rows** in a PDF (DR-298, proposed); a larger result is refused at the request with 422 `validation_failed` (rule code `too_many_rows_for_pdf`, `{max}`) and the screen offers Excel (50,000 rows, DR-55) |
+| Rows | at most **5,000 rows** in a PDF (DR-298); a larger result is refused at the request with 422 `validation_failed` (rule code `too_many_rows_for_pdf`, `{max}`) and the screen offers Excel (50,000 rows, DR-55) |
 | Language | one language, the requester's; no `both` |
 
 The renderer lays out the whole document in memory before writing, so a PDF of 50,000 rows (about 1,100 pages) would not fit a host's budget; 5,000 rows is about 110 pages. P6-02 measures the cap and DOC-33 owns the columns.
@@ -591,7 +591,7 @@ EXP-08 (§15) covers FR-36.4 and NFR-05.
 | DR-295 | Receipts: keys `receipt/<id>/issued.pdf` and `void.pdf`; the language is fixed at the first render; the handler stores first and swaps `pdf_file` in a conditional update (DOC-37 §9's "remove, then store" reversed); the title and the VAT statement are bilingual in every mode; the receipt prints the amount in words (`amountInWords` in `@rms/shared-types`) and the payer's member type | Decided (Claude, delegated) | §7, §8.2 |
 | DR-296 | A replaced logo is not removed: its `file_object` stays `attached`, because receipt snapshots name it by id (DR-17's "a later logo change never alters an old receipt"). Changes DOC-36 §4 ("the old logo goes through `FilesApi.remove`") and BD-10 | Decided (Claude, delegated) | §8.4 |
 | DR-297 | Fonts: a sixth file `BeVietnamPro-BoldItalic` (rich text uses bold and italic together; the renderer refuses an unregistered face), the subset ranges of §3, hyphenation off, colours from the design tokens | Decided (Claude, delegated) | §3, §5 |
-| DR-298 | Report PDFs are capped at 5,000 rows (Excel keeps 50,000, DR-55), refused with `validation_failed` / `too_many_rows_for_pdf`; library page PDFs are rendered on request and not stored | Proposed (narrows DR-55 for PDF; for the Owner, measured in P6-02) | §11, §12 |
+| DR-298 | Report PDFs are capped at 5,000 rows (Excel keeps 50,000, DR-55), refused with `validation_failed` / `too_many_rows_for_pdf`; library page PDFs are rendered on request and not stored | Decided by the Owner 2026-11-02 (narrows DR-55 for PDF; for the Owner, measured in P6-02) | §11, §12 |
 
 ## 18. Not in this document
 
@@ -622,6 +622,6 @@ EXP-08 (§15) covers FR-36.4 and NFR-05.
 
 ## Open questions
 
-1. **DR-298** (proposed, for the Owner, P6): may a report PDF be capped at 5,000 rows while Excel keeps 50,000? It concerns only §11 and §12 (report and library PDFs), which P6-02 measures; DOC-33 plans with the cap until then. The fee notice and the receipt (the P2 part of this document) do not depend on it.
+1. **Closed by DR-298 (decided by the Owner, 2026-11-02):** a report PDF is capped at 5,000 rows while Excel keeps 50,000. It concerns only §11 and §12 (report and library PDFs), which P6-02 measures; DOC-33 plans with the cap until then. The fee notice and the receipt (the P2 part of this document) do not depend on it.
 2. **Closed by DR-333 (2026-11-02):** `W-Fee-Notice` shows no count of failed units in P2; the count is in `manifest.csv` (a `failed_units` column follows only if EXP-08 finds failures).
 3. **DR-292** prints the owner's name on a notice that may be left in a mailbox: confirmed by the Owner on 2026-11-02, kept; DOC-35 §7.1 lists it.

@@ -23,7 +23,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-05 | [Feature catalog](01-product/feature-catalog.md) | Approved |
 | DOC-06 | [Glossary](02-glossary.md) | Approved |
 | DOC-07 | [System context and containers](03-architecture/system-context-and-containers.md) | Approved |
-| DOC-08 | [Data flows](03-architecture/data-flows.md) (12 flows and 6 failure flows; follows DOC-23; §3.7, the statement path, waits for DR-284, P3) | Approved (2026-11-02) |
+| DOC-08 | [Data flows](03-architecture/data-flows.md) (12 flows and 6 failure flows; follows DOC-23; §3.7, the statement path, follows DR-284, P3) | Approved (2026-11-02) |
 | DOC-09 | [Messaging contracts](03-architecture/messaging-contracts.md) | Approved |
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Approved |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Approved |
@@ -49,7 +49,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core approved 2026-11-02, DDL and statements run on PostgreSQL 18.6; notices owed to P4) | Approved (core) |
 | DOC-32 | Document library (`06-design/document-library.md`) | Not written |
 | DOC-33 | Reports and exports (`06-design/reports-and-exports.md`) | Not written |
-| DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; §11–12 report PDFs follow DR-298, P6) | Approved (2026-11-02, P2 part) |
+| DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; §11–12 report PDFs follow DR-298 (decided), P6) | Approved (2026-11-02, P2 part) |
 | DOC-35 | [Audit, privacy and terms](06-design/audit-privacy-and-terms.md) | Approved |
 | DOC-36 | [Building configuration and demo](06-design/building-configuration-and-demo.md) | Approved |
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Approved |
