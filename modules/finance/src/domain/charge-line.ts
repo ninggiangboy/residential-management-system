@@ -97,10 +97,16 @@ type Fail = (
   params?: Record<string, string | number>,
 ) => void
 
-const invalidAmount: ChargeLineResult = {
+/** The params of the `amount_invalid` text, which differs for an adjustment (DOC-18 §2.2 DQ-71). */
+const amountParams = (kind: ChargeLineKind | undefined) => ({
+  kind: kind ?? 'fee',
+  max: Number(MAX_AMOUNT),
+})
+
+const invalidAmount = (kind: ChargeLineKind): ChargeLineResult => ({
   ok: false,
-  issues: [{ column: 'amount', code: 'amount_invalid', params: {} }],
-}
+  issues: [{ column: 'amount', code: 'amount_invalid', params: amountParams(kind) }],
+})
 
 /** The fields each rule reads, parsed; a field that failed its own rule is reported through `fail`. */
 interface ParsedFields {
@@ -112,18 +118,28 @@ interface ParsedFields {
   readonly amount: Money | null
 }
 
+/** DQ-67: trimmed, runs of white space (a line break of a cell included) collapsed to one space. */
+const collapse = (text: string): string => text.trim().replace(/\s+/gu, ' ')
+const CONTROL = /\p{Cc}/u
+const NAME_LIMITS = { min: 1, max: MAX_ITEM_NAME }
+
 function parseNames(input: ChargeLineInput, fail: Fail): ParsedFields['itemName'] {
-  const vi = input.itemName.trim()
-  const en = input.itemNameEn?.trim() ?? ''
-  if (vi.length < 1 || vi.length > MAX_ITEM_NAME)
-    fail('item_name', 'item_name_invalid', { max: MAX_ITEM_NAME })
-  if (en.length > MAX_ITEM_NAME) fail('item_name_en', 'item_name_invalid', { max: MAX_ITEM_NAME })
+  const vi = collapse(input.itemName)
+  const en = collapse(input.itemNameEn ?? '')
+  if (vi.length < 1 || vi.length > MAX_ITEM_NAME || CONTROL.test(vi))
+    fail('item_name', 'item_name_invalid', NAME_LIMITS)
+  if (en.length > MAX_ITEM_NAME || CONTROL.test(en))
+    fail('item_name_en', 'item_name_invalid', NAME_LIMITS)
   return en === '' ? { vi } : { vi, en }
 }
 
-function parseKindAndNote(input: ChargeLineInput, fail: Fail) {
+function kindOf(input: ChargeLineInput): ChargeLineKind | undefined {
   const kindText = (input.kind ?? '').trim().toLowerCase()
-  const kind: ChargeLineKind | undefined = kindText === '' ? 'fee' : KIND_ALIASES[kindText]
+  return kindText === '' ? 'fee' : KIND_ALIASES[kindText]
+}
+
+function parseKindAndNote(input: ChargeLineInput, fail: Fail) {
+  const kind = kindOf(input)
   if (!kind) fail('kind', 'kind_invalid', { value: input.kind ?? '' })
   const note = blank(input.note) ? null : (input.note as string).trim()
   if (note !== null && note.length > MAX_NOTE) fail('note', 'note_too_long', { max: MAX_NOTE })
@@ -135,22 +151,22 @@ function parseNumbers(input: ChargeLineInput, fail: Fail) {
   const quantity = blank(input.quantity)
     ? 1000n
     : parseQuantityMilli(input.quantity as string | number)
-  if (quantity === null) fail('quantity', 'quantity_invalid')
+  if (quantity === null) fail('quantity', 'quantity_invalid', { max: '999999999.999' })
   const unitPrice = blank(input.unitPrice)
     ? null
     : parseWholeMoney(input.unitPrice as string | number, false)
   if (!blank(input.unitPrice) && (unitPrice === null || unitPrice > MAX_UNIT_PRICE))
-    fail('unit_price', 'unit_price_invalid')
+    fail('unit_price', 'unit_price_invalid', { max: Number(MAX_UNIT_PRICE) })
   const amount = blank(input.amount) ? null : parseWholeMoney(input.amount as string | number, true)
   if (!blank(input.amount) && (amount === null || abs(amount) > MAX_AMOUNT))
-    fail('amount', 'amount_invalid')
+    fail('amount', 'amount_invalid', amountParams(kindOf(input)))
   return { quantity, unitPrice, amount }
 }
 
 /** An adjustment is typed by the Manager: quantity 1, unit price 0, any non-zero amount (DOC-21 §4.2, DR-19). */
 function adjustment(fields: ParsedFields): ChargeLineResult {
   const { itemName, amount, note } = fields
-  if (amount === null || amount === 0n) return invalidAmount
+  if (amount === null || amount === 0n) return invalidAmount('adjustment')
   const line = {
     kind: 'adjustment' as const,
     itemName,
@@ -166,9 +182,9 @@ function adjustment(fields: ParsedFields): ChargeLineResult {
 function feeLine(fields: ParsedFields, quantity: QtyMilli): ChargeLineResult {
   const { itemName, unitPrice, amount, note } = fields
   // A typed fee amount of 0 or below breaks DQ-71 before it can mismatch (DOC-21 §4.2: 0.001 × 500 saying 0).
-  if (amount !== null && amount <= 0n) return invalidAmount
+  if (amount !== null && amount <= 0n) return invalidAmount('fee')
   if (unitPrice === null) {
-    if (amount === null) return invalidAmount
+    if (amount === null) return invalidAmount('fee')
     // Only the amount: quantity 1 and the unit price is the amount.
     return {
       ok: true,
@@ -182,7 +198,7 @@ function feeLine(fields: ParsedFields, quantity: QtyMilli): ChargeLineResult {
     return { ok: false, issues: [{ column: 'amount', code: 'amount_mismatch', params }] }
   }
   // A fee row of 0 is refused, not rounded up (DOC-21 §4.2: 0.001 × 499).
-  if (computed <= 0n || computed > MAX_AMOUNT) return invalidAmount
+  if (computed <= 0n || computed > MAX_AMOUNT) return invalidAmount('fee')
   return {
     ok: true,
     line: { kind: 'fee', itemName, quantityMilli: quantity, unitPrice, amount: computed, note },

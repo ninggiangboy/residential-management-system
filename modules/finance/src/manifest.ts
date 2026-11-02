@@ -19,5 +19,12 @@ export const financeManifest = {
     [FINANCE_EVENTS.receiptRenderRequested]: 'default',
   },
   config: undefined,
-  auditActions: [],
+  // DOC-21 §2.3, DOC-35 §4.1; the publish, recall, close, re-issue and void actions join with P2-05 and P2-07.
+  auditActions: [
+    'finance.batch.create',
+    'finance.batch.import_commit',
+    'finance.batch.update',
+    'finance.batch.discard',
+    'finance.charge.update',
+  ],
 } as const satisfies ModuleManifest
