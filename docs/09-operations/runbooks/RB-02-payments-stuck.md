@@ -1,6 +1,6 @@
 # RB-02: Payments are stuck
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-20: first version, DR-325) · DOC-76 / RB-02
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02; queries run on PostgreSQL 18.6) · Updated: 2026-11-02 (P2-00 review: the `pending` condition is the gauge's, the statement path named) · 2026-11-01 (P2-20: first version, DR-325) · DOC-76 / RB-02
 >
 > Alert: `PaymentsStuck` (critical, for 2m) and `GatewayErrors` (warning, for 5m) · Dashboard: RMS · Worker and jobs; Overview · Related: DOC-23 §8, DOC-24 §4.5
 > Depends on: [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-22](../../06-design/ledger-and-allocation.md) §9, [DOC-40](../../06-design/observability.md), [DOC-19](../../05-data/db-roles-and-grants.md) (`rms_readonly`), [DR](../../00-decision-register.md) (DR-28, 30, 31, 32, 33, 84, 325, 326, 327)
@@ -15,6 +15,8 @@
 - Impact is on residents trying to pay; nothing already posted is affected. Treat a payer who paid and is not posted as the urgent case.
 
 ## Checks
+
+*Run on 2026-11-02* on `postgres:18.6` against the schema of the local database plus the DDL of DOC-15 §3.1, §4–§11, with a fixture (one stuck `pending`, one stale `creating`, one fresh `pending`; six rejections from three IPs; one open and one `pending` money-log row): every query runs without error and returns exactly the rows it is named for. The `pending` condition is the gauge's (DOC-23 §14): 2 minutes past `expires_at`.
 
 Connect with the read-only role and set the building as in RB-01:
 
@@ -32,7 +34,7 @@ SELECT id AS b FROM building.building WHERE is_demo = false ORDER BY created_at 
 SELECT code, status, amount, created_at, display_until, expires_at, next_check_at, last_checked_at, check_count, check_failures
   FROM finance.payment_intent
  WHERE building_id = :'b'
-   AND ((status = 'pending' AND expires_at < now())
+   AND ((status = 'pending' AND expires_at < now() - interval '2 minutes')
      OR (status = 'creating' AND created_at < now() - interval '2 minutes'))
  ORDER BY created_at;
 ```
@@ -64,7 +66,8 @@ SELECT code, link_id, status, paid_at, gateway_reference FROM finance.payment_in
 3. **One intent is stuck and the payer says they paid.** In `W-Transactions` press "Truy vấn lại" (E-186). If the provider says paid, the intent is settled within seconds. If the provider says not paid, ask the payer to open the payment page again from the app; do not mark anything paid by hand.
 4. **A `creating` intent is stuck.** The job's `getStatus` decides after 2 minutes: found → `pending`, absent → `failed` and the charges are released. If the job cannot run, a Manager cancels the intent (E-175) so the household can pay again.
 5. **The payer paid but the intent expired.** A late exact confirmation is posted (DR-281). If it is not, it is in the money log (`W-Money-Log`, RB-11).
-6. **A payment is real but the system cannot post it** (the provider confirms it, the system refuses it for a reason in the log): record it by hand as a manual payment (cash or bank transfer, E-104) only after the Manager has refunded or accepted it outside; the log row stays and is reviewed with a note. Never `UPDATE` a table.
+6. **The money arrived by bank transfer, outside the provider.** With the card driver this cannot happen. With a bank-transfer driver (P3) the statement import matches it (DOC-25, `W-Statement`); until then it is a manual payment as in 7.
+7. **A payment is real but the system cannot post it** (the provider confirms it, the system refuses it for a reason in the log): record it by hand as a manual payment (cash or bank transfer, E-104) only after the Manager has refunded or accepted it outside; the log row stays and is reviewed with a note. Never `UPDATE` a table.
 
 ## On staging
 

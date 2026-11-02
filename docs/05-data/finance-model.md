@@ -642,7 +642,7 @@ CREATE TABLE finance.payment (
   amount            bigint      NOT NULL,                       -- = Σ live allocation.amount
   received_at       timestamptz NOT NULL,
   payer_name        text,                                       -- snapshot (DR-58)
-  provider          text,                                       -- 'payos' for online
+  provider          text,                                       -- the driver for online: 'stripe' (DR-326); null for manual
   gateway_reference text,                                       -- the gateway's unique transaction reference
   intent_id         uuid,
   bank_reference    text,                                       -- optional, typed by the Manager (DR-23)
@@ -949,7 +949,7 @@ CREATE INDEX ix_gateway_event_building_open ON finance.gateway_event (building_i
 | Column | Meaning |
 | --- | --- |
 | `provider`, `reference` | The gateway and its unique transaction reference (assumed `data.reference` for payOS until the sandbox confirms it, DR-25 item 2). The unique key is the arbiter of webhook vs re-query (original SDD §6.5, ADR-0008). |
-| `order_code`, `amount`, `paid_at` | As the gateway reported them; `paid_at` is payOS's `transactionDateTime` read as `Asia/Ho_Chi_Minh` local time (DR-29). `order_code` is null when the payload has none. |
+| `order_code`, `amount`, `paid_at` | As the gateway reported them; `paid_at` is the provider's time of payment: Stripe's charge `created` (DOC-24 §4.4); payOS's `transactionDateTime` read as `Asia/Ho_Chi_Minh` local time (DR-29). `order_code` is null when the payload has none. |
 | `source` | `webhook`, `requery` or `statement` (a statement line whose intent payOS then reported `PAID`, DR-35 step 2). |
 | `payload` | The authenticated data object as received: the webhook's `data`, or the transaction of the `GET` answer. It may hold the payer's bank account name and number (§2, personal data). DOC-24 owns the field mapping; the sample below is from the provider documentation and **unverified** (DR-25). |
 | `intent_id`, `unit_id` | Resolved from `order_code` in `settle()` step 2; null for `unknown_order`. |
@@ -1008,7 +1008,7 @@ stateDiagram-v2
 
 ```sql
 INSERT INTO finance.gateway_event (id, building_id, provider, reference, order_code, amount, paid_at, source, payload, outcome)
-VALUES (:id, :building_id, 'payos', :reference, :order_code, :amount, :paid_at, :source, :payload, 'pending')
+VALUES (:id, :building_id, :provider, :reference, :order_code, :amount, :paid_at, :source, :payload, 'pending')
 ON CONFLICT (provider, reference) DO NOTHING
 RETURNING id;
 -- 0 rows: already processed (or being processed: the second insert waits for the first to commit) -> COMMIT, answer 200
@@ -1328,7 +1328,7 @@ RETURNING id;
 
 ### 10.4 `fake_gateway_link`
 
-- **Grain:** one payment link created by the `fake` driver (DR-26, DR-87). Exists only for gateway configurations with driver `fake`: `local`, `staging` and the demo building (boot guard check 2, DOC-36 §10.1). **Written and read by:** `finance` (the fake driver; the simulator `payos:sim`, DOC-24).
+- **Grain:** one payment link created by the `fake` driver (DR-26, DR-87). Exists only for gateway configurations with driver `fake`: `local`, `staging` and the demo building (boot guard check 2, DOC-36 §10.1). **Written and read by:** `finance` (the fake driver; the simulator `pay:sim`, DOC-24, DR-26 as revised by DR-326).
 
 ```sql
 CREATE TABLE finance.fake_gateway_link (
@@ -1885,7 +1885,7 @@ Every "never deleted" row of a demo building is deleted by the demo reset under 
 
 ## 16. Decisions made while writing
 
-Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-10-22 and confirmed by the Owner on 2026-10-28. Items 4 and 8 of DR-244 (`cancel_reason`, the sequence ceiling) follow DR-28 and DR-27, which are still proposed.
+Every new decision is a DR, decided by Claude (delegated by the Owner) on 2026-10-22 and confirmed by the Owner on 2026-10-28. Items 4 and 8 of DR-244 (`cancel_reason`, the sequence ceiling) follow DR-28 and DR-27, which the Owner decided on 2026-11-02.
 
 | ID | Decision | Where used |
 | --- | --- | --- |

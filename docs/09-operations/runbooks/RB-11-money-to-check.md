@@ -1,6 +1,6 @@
 # RB-11: Money to check is waiting
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-20: first version, DR-325, DR-327) · DOC-85 / RB-11
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02; queries run on PostgreSQL 18.6) · Updated: 2026-11-01 (P2-20: first version, DR-325, DR-327) · DOC-85 / RB-11
 >
 > Alert: `MoneyLogOpen` (warning, for 24h) · Dashboard: RMS · Overview · Related: DOC-22 §9, DOC-24 §4.10, DOC-66 `W-Money-Log`
 > Depends on: [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-22](../../06-design/ledger-and-allocation.md) §9, [DOC-40](../../06-design/observability.md), [DOC-19](../../05-data/db-roles-and-grants.md) (`rms_readonly`), [DR](../../00-decision-register.md) (DR-28, 30, 31, 32, 33, 84, 325, 326, 327)
@@ -13,6 +13,8 @@
 `money_log_open` has been above 0 for 24 hours: a row of `gateway_event` (or, from P3, a statement line) is not reviewed. Nobody is harmed by the delay itself, but a payer may have paid and not been credited, or may be owed a refund.
 
 ## Checks
+
+*Run on 2026-11-02* on `postgres:18.6` against the schema of the local database plus the DDL of DOC-15 §3.1, §4–§11, with a fixture (one stuck `pending`, one stale `creating`, one fresh `pending`; six rejections from three IPs; one open and one `pending` money-log row): every query runs without error and returns exactly the rows it is named for.
 
 Connect with the read-only role and set the building as in RB-01:
 

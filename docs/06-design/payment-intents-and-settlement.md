@@ -40,11 +40,11 @@ The allocation inside `settle()` is DOC-22's `ChargeAllocator` (DR-267), so manu
 export interface Confirmation {
   buildingId: BuildingId            // from the gateway configuration (webhook), the intent (re-query, cancel) or the statement (DOC-25)
   gatewayConfigId: Uuid
-  provider: 'payos'
-  reference: string                 // unique per bank transaction (DR-25 item 2, unverified: payOS data.reference)
+  provider: string                  // the driver's word: 'stripe', 'fake'; later 'payos' (DOC-24 §2)
+  reference: string                 // unique per provider transaction: Stripe's PaymentIntent id (DOC-24 §4.4); payOS data.reference (DR-25 item 2)
   orderCode: number | null          // null when the payload has none
   amount: Money                     // đồng, integer
-  paidAt: Instant                   // payOS transactionDateTime read as Asia/Ho_Chi_Minh local time (DR-29)
+  paidAt: Instant                   // Stripe: the charge's created (DOC-24 §4.4); payOS: transactionDateTime read as Asia/Ho_Chi_Minh local time (DR-29)
   source: 'webhook' | 'requery' | 'statement'
   payload: Record<string, unknown>  // the authenticated data object, stored as received
 }
@@ -184,7 +184,7 @@ UPDATE finance.payment_intent_item SET released_at = now()
 
 `next_check_at` is the re-query schedule and the claim lease (DR-30): `created_at + 120 s` for a new `creating` intent (so a process that dies before the gateway answers leaves work for the job), `now() + 5 min + random(0…20 s)` for `pending`, `now() + 15 min` for `cancelling` (DR-31: an intent still `cancelling` after 15 minutes is re-queried), and `NULL` for the final states. A `paid`, `failed`, `expired` or `cancelled` intent is never claimed again; a late confirmation reaches it through the webhook or the statement path only.
 
-**`failed` accepts a late confirmation.** DR-29 (decided) claims "any status that is not `paid`"; original SDD §6.4 and ADR-0008 list five statuses and leave out `failed`, and DOC-15 followed them. A `failed` intent is one whose `GET` found no link; a transfer for it means the `GET` was wrong (DR-25 item 3), and the money is exact for open charges, so it is posted like an expired one. This needs `ck_payment_intent_failed` to read `<=` like the `expired` and `cancelled` checks, so that `failed_at` survives the move to `paid` (DR-281, *proposed*; DOC-15 §6.1 is revised with it).
+**`failed` accepts a late confirmation.** DR-29 (decided) claims "any status that is not `paid`"; original SDD §6.4 and ADR-0008 list five statuses and leave out `failed`, and DOC-15 followed them. A `failed` intent is one whose `GET` found no link; a transfer for it means the `GET` was wrong (DR-25 item 3), and the money is exact for open charges, so it is posted like an expired one. This needs `ck_payment_intent_failed` to read `<=` like the `expired` and `cancelled` checks, so that `failed_at` survives the move to `paid` (DR-281, decided 2026-11-02; DOC-15 §6.1 is revised with it).
 
 ## 4. Creating an intent
 
@@ -436,7 +436,7 @@ One transaction at READ COMMITTED. The numbers are DR-29's.
 
 **Retry.** On SQLSTATE `40001` or `40P01` the transaction wrapper runs the whole function again, at most 3 times, with 20–60 ms jitter (DOC-12 §8.1, FR-08.8). A retry starts at step 1, so a confirmation that a concurrent call recorded meanwhile ends as `already_processed`. A fourth failure, or any other database error, throws; the webhook answers 503 and the gateway retries (DOC-42 §6); the re-query leaves `next_check_at` for the next tick.
 
-**Registration test.** The payload the gateway sends when the webhook URL is registered is recognised by the route (DOC-24) and answered 200 without calling `settle()` (FR-09.6).
+**Registration test.** The payload the gateway sends when the webhook URL is registered is recognised by the route (DOC-24) and answered 200 without calling `settle()` (FR-09.6). *Revised 2026-11-02 (review of the P2-00 gate):* this applies to a driver whose provider sends such a payload (payOS). Stripe sends none: its test events are verified like any event (DOC-52 §12.4).
 
 ### 6.2 Outcomes
 
@@ -483,9 +483,9 @@ sequenceDiagram
   participant E as gateway_event
   participant I as payment_intent
   par
-    W->>E: INSERT (payos, FT2628273914) ON CONFLICT DO NOTHING
+    W->>E: INSERT (stripe, pi_3Test0001) ON CONFLICT DO NOTHING
   and
-    Q->>E: INSERT (payos, FT2628273914) ON CONFLICT DO NOTHING
+    Q->>E: INSERT (stripe, pi_3Test0001) ON CONFLICT DO NOTHING
   end
   alt the webhook inserted first
     E-->>W: 1 row
@@ -673,16 +673,16 @@ No new key. Used: `INTENT_TTL_MINUTES` (60), `INTENT_REQUERY_BATCH` (20), `INTEN
 | `payment_intents_creating_stale` | gauge | none | `status = 'creating' AND created_at < now() - INTENT_CREATING_STALE_SECONDS`; the same buildings |
 | `payment_settlements_total` (**new**) | counter | `source` (`webhook`, `requery`, `statement`), `outcome` (the nine of `SettleOutcome`) | one per `settle()` call that returned |
 | `payment_settle_duration_seconds` (**new**) | histogram | `source` | from the start of `settle()` to its commit: the server part of NFR-02 (DR-80), p95 ≤ 1 s; buckets 0.05, 0.1, 0.25, 0.5, 1, 2.5 |
-| `payos_requests_total` | counter | `outcome` | DOC-24; the source of the alert below |
+| `payment_gateway_requests_total` | counter | `provider`, `outcome` | DOC-24 §8, DOC-40 §4.5 (renamed from `payos_requests_total`, DR-326); the source of the alert below |
 
 **Alert** `GatewayErrors` (**new**, Warning, DR-30's "more than half of the calls in 10 minutes failed"; RB-02):
 
 ```yaml
 - alert: GatewayErrors
   expr: |
-    sum(increase(payos_requests_total{outcome=~"timeout|http_error"}[10m]))
-      > 0.5 * sum(increase(payos_requests_total[10m]))
-    and sum(increase(payos_requests_total[10m])) >= 10
+    sum(increase(payment_gateway_requests_total{outcome=~"timeout|http_error"}[10m]))
+      > 0.5 * sum(increase(payment_gateway_requests_total[10m]))
+    and sum(increase(payment_gateway_requests_total[10m])) >= 10
   for: 5m
   labels: { severity: warning }
 ```
@@ -830,7 +830,7 @@ Run on 2026-10-28 as a `psql` script that is **not committed**, on `postgres:18.
 | Tables, constraints, indexes, the order-code sequence | DOC-15 |
 | The allocation statement, receipts, the manual payment, the money-log viewer and review | DOC-22 |
 | Recall, void of one charge, re-issue | DOC-21 |
-| The gateway port, the payOS and fake drivers, the signature, the webhook route's checks, `payos:sim` | DOC-24 |
+| The gateway port, the Stripe and fake drivers (payOS described), the signature, the webhook route's checks, `pay:sim` | DOC-24 |
 | The statement path and its matching | DOC-25 |
 | The resident and staff flows step by step (FL-10…16), and FL-09 at ledger level | DOC-45, DOC-44 |
 | Endpoint numbering and samples | DOC-51 |

@@ -1,6 +1,6 @@
 # RB-03: Webhook calls are being rejected
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-20: first version, DR-325) · DOC-77 / RB-03
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02; queries run on PostgreSQL 18.6) · Updated: 2026-11-02 (P2-00 review: the reasons Stripe writes, the 16 KB limit) · 2026-11-01 (P2-20: first version, DR-325) · DOC-77 / RB-03
 >
 > Alert: `WebhookSignatures` (warning, more than 3 rejected calls in 10 minutes) · Dashboard: RMS · Overview · Related: DOC-24 §4.4, DOC-52 §12
 > Depends on: [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-22](../../06-design/ledger-and-allocation.md) §9, [DOC-40](../../06-design/observability.md), [DOC-19](../../05-data/db-roles-and-grants.md) (`rms_readonly`), [DR](../../00-decision-register.md) (DR-28, 30, 31, 32, 33, 84, 325, 326, 327)
@@ -11,6 +11,8 @@
 More than three rows were written to `finance.webhook_rejection` in ten minutes. Two causes look alike: **the signing secret is wrong or was rotated** (genuine confirmations are being refused, so payments are not posted until the re-query catches them) and **someone is sending forged calls** (nothing is posted; the rows are noise but worth knowing). A forged call never blocks a genuine one (FR-08.5).
 
 ## Checks
+
+*Run on 2026-11-02* on `postgres:18.6` against the schema of the local database plus the DDL of DOC-15 §3.1, §4–§11, with a fixture (one stuck `pending`, one stale `creating`, one fresh `pending`; six rejections from three IPs; one open and one `pending` money-log row): every query runs without error and returns exactly the rows it is named for.
 
 Connect with the read-only role and set the building as in RB-01:
 
@@ -31,7 +33,7 @@ SELECT date_trunc('minute', received_at) AS minute, reason, count(*) AS calls, c
  GROUP BY 1, 2 ORDER BY 1 DESC, 2;
 ```
 
-The reasons are `bad_signature`, `bad_account` (the configuration is not the building's or not active), `malformed`, `unknown_config` and `foreign_building` (DR-32).
+The reasons written with the Stripe driver are `bad_signature`, `malformed` and `foreign_building`. `bad_account` belongs to a bank-transfer driver (the payload's account is not the configured one). `unknown_config` is never written: a path with an unknown or inactive configuration is answered 404 with no row (DOC-15 §8.2, DR-32).
 
 **2. From whom.**
 
@@ -48,9 +50,9 @@ SELECT ip, count(*) AS calls, min(received_at) AS first, max(received_at) AS las
 
 1. **`bad_signature` from the provider's addresses and verified calls stopped.** The signing secret differs from the one the provider holds (rotated, or a different endpoint's secret). In the provider's dashboard open the webhook endpoint and copy its current signing secret; in `W-Gateway` replace "Khóa ký webhook" (a step-up is asked) and save. Press "Kiểm tra kết nối". Payments missed meanwhile are settled by the re-query within 6 minutes (FL-13), so there is no need to resend.
 2. **`bad_signature` from unknown addresses and genuine calls still verify.** It is forged traffic. Do nothing to the configuration. If it is heavy, ask the Admin to add the source to the host firewall; the optional `WEBHOOK_KNOWN_IPS` only counts. Never switch signature checking off.
-3. **`unknown_config` or `bad_account`.** The endpoint URL at the provider has a wrong configuration id (a copy of an old URL) or the gateway was disabled. Compare the URL on `W-Gateway` with the one registered at the provider and correct the provider's.
+3. **No rows, but the provider's dashboard shows deliveries failing with 404** (or `bad_account` with a bank-transfer driver). The endpoint URL at the provider has a wrong configuration id (a copy of an old URL) or the gateway was disabled. Compare the URL on `W-Gateway` with the one registered at the provider and correct the provider's.
 4. **`foreign_building`.** An order code of another building arrived at this endpoint: two buildings share a provider account, which this deployment does not do. Treat as a misconfiguration at the provider.
-5. **`malformed`.** The body was not JSON or exceeded the size limit (256 KB); usually a probe. No action.
+5. **`malformed`.** The body was not JSON or exceeded the size limit (`WEBHOOK_MAX_BODY_BYTES`, 16 KB); usually a probe. No action.
 
 ## On staging
 

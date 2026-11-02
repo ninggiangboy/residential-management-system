@@ -1,6 +1,6 @@
 # Payment gateway port and drivers
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-21: first version; Stripe first, DR-325, DR-326, DR-327; ADR-0029) · DOC-24
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02; the Stripe facts of §4.12 are recorded by P2-21) · Updated: 2026-11-02 (P2-00 review: the 16 KB body limit, `payment_customer` key, sample marked unverified, link to the signature vector, fact 9) · 2026-11-01 (P2-21: first version; Stripe first, DR-325, DR-326, DR-327; ADR-0029) · DOC-24
 > Depends on: original SDD §6, [DR](../00-decision-register.md) (DR-16, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 84, 96, 325, 326, 327), [ADR-0007](../04-adr/0007-payment-gateway-port-and-payment-link.md), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [ADR-0029](../04-adr/0029-stripe-as-the-first-payment-driver-behind-the-gateway-port.md), [DOC-23](payment-intents-and-settlement.md) §3, §4, §6, §8, [DOC-15](../05-data/finance-model.md) §6, [DOC-22](ledger-and-allocation.md) §9, [DOC-12](../03-architecture/code-architecture.md) §4.5, [DOC-39](security.md), [DOC-41](configuration-reference.md), [DOC-42](error-handling.md)
 > Main readers: P2-21 (port, drivers, simulator), P2-22…P2-24 (intents, webhook, re-query), P2-29 (end to end on staging), the writer of any later driver (VNPay, VietQR, payOS), DOC-52 (webhook contract), DOC-67 (`W-Gateway`)
 
@@ -123,7 +123,7 @@ The client is a `StripeClient` instance built per gateway configuration (never t
 
 ### 4.2 Create the session
 
-Called after the intent row is committed (DOC-23 §4.5). Example for the intent of DOC-23 §6.3 (`TT-261019-0001`, 2,838,000 đ); a sample, not recorded from a real call:
+Called after the intent row is committed (DOC-23 §4.5). Example for the intent of DOC-23 §6.3 (`TT-261019-0001`, 2,838,000 đ); a sample written from the Stripe API reference, **unverified** until P2-21 records a real call (§4.12):
 
 ```http
 POST /v1/checkout/sessions
@@ -163,8 +163,8 @@ One endpoint per gateway configuration: `POST /api/v1/payments/webhooks/stripe/{
 
 | Step | Rule |
 | --- | --- |
-| Size and content | The raw body is read once, at most 256 KB; the route keeps the bytes |
-| Signature | `StripeClient.webhooks.constructEvent(raw, header['stripe-signature'], secret)` with the default tolerance of 5 minutes. A failure is `SignatureError`: 401, one `webhook_rejection` row, nothing else (DR-32) |
+| Size and content | The raw body is read once, at most `WEBHOOK_MAX_BODY_BYTES` (16 KB, DR-32, DOC-41); a larger body is 400 `malformed_request` and one `webhook_rejection` `malformed` (DOC-42). The route keeps the bytes. A sample event is 451 bytes (DOC-52 §12.2); the size of a real one is fact 9 of §4.12 |
+| Signature | `StripeClient.webhooks.constructEvent(raw, header['stripe-signature'], secret)` with the default tolerance of 5 minutes. A failure is `SignatureError`: 401, one `webhook_rejection` row, nothing else (DR-32). The algorithm, a signed sample event and its test vector are DOC-52 §12.2 (`PX-01`) |
 | Idempotency | The event id is recorded in the inbox (`stripe:<evt_…>`); a repeat is 200 and nothing |
 | Answer | 200 after commit (FR-08.6); 503 on a database error so that Stripe retries |
 
@@ -199,7 +199,7 @@ The job of DOC-23 §8 runs it. A `paid` answer calls the same `settle()` as the 
 
 ### 4.7 Saved cards
 
-- **Customer.** One Stripe Customer per resident account, created at the first payment: `customers.create({ metadata: { accountId } })`, and recorded in `finance.payment_customer (account_id, provider, provider_customer_id, created_at)` (unique on `(account_id, provider)`). The Customer has no name, phone or e-mail (§4.9).
+- **Customer.** One Stripe Customer per resident account, created at the first payment: `customers.create({ metadata: { accountId } })`, and recorded in `finance.payment_customer (building_id, account_id, provider, provider_customer_id, created_at)` (unique on `(building_id, account_id, provider)`, DOC-15 §6.2). The Customer has no name, phone or e-mail (§4.9).
 - **Saving.** The session sets `customer` and `saved_payment_method_options.payment_method_save = enabled`; the resident ticks the box on the hosted page. Without the tick nothing is saved.
 - **Paying again.** The next session of the same Customer shows the saved cards on the page; the resident picks one and confirms (and passes 3-D Secure if asked). **There is no automatic or off-session charge** (DR-326 item 5).
 - **Listing and removing.** `listSavedMethods` returns `{id, brand, last4, expMonth, expYear}` from `paymentMethods.list({ customer, type: 'card' })`; `removeSavedMethod` calls `paymentMethods.detach`. Nothing about a card is stored on our side. The screen is `Cards` (DOC-58, E-184, E-185).
@@ -250,6 +250,7 @@ Non-secret fields: `limits.min`, `limits.max` (đồng), `statementDescriptor` (
 | 6 | The session's `payment_intent` is expandable and its id is stable | The reference becomes the charge id |
 | 7 | `locale: vi` is supported | The page is in English |
 | 8 | Webhook retry schedule and the 3-day window of Stripe | The re-query covers a longer gap |
+| 9 | A `checkout.session.completed` body is well under 16 KB (the sample of DOC-52 §12.2 is 451 bytes) | `WEBHOOK_MAX_BODY_BYTES` is raised in DOC-41 with a DR |
 
 ### 4.13 Test mode
 
@@ -355,4 +356,4 @@ Recorded as DR-326 (delegated) and DR-327 (the Owner; the register has them in f
 
 ## Open questions
 
-1. The Stripe facts of §4.12, above all VND support and its minimum. They are verified in the sandbox by P2-21, not by a decision.
+None. The Stripe facts of §4.12 are verifications, not decisions: each has its fallback in the table, and P2-21 records the answers there (DR-326). A fact whose fallback changes a decided rule (DR-28 limits, the body limit) gets a DR then.

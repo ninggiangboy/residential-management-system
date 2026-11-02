@@ -184,7 +184,7 @@ This document defines the words of the project, as the project uses them. Every 
 | `PaymentGateway` port | — | The interface (create, get status, cancel, verify webhook) implemented by the drivers `payos` and `fake`. | DR-26 |
 | driver | — | One implementation of a port, chosen by configuration: payment `payos` or `fake`; SMS and mail `console`, `allowlist`, `provider`. | DR-26, DR-37 |
 | fake driver | — | The test double of the gateway: stores links in a table, lets a test set a link `PAID`, `CANCELLED` or `EXPIRED`. Allowed only for a demo building in `local` and `staging`. | DR-26 |
-| payment simulator | — | The CLI `bun run payos:sim` that signs payloads and posts them to the real webhook route (repeat, shuffle, delay, wrong signature). | DR-26 |
+| payment simulator | — | The CLI `bun run pay:sim` that signs payloads and posts them to the real webhook route (repeat, shuffle, delay, wrong signature). | DR-26, DR-326 |
 | payment driver | — | The code behind the `PaymentGateway` port for one provider (`stripe`, `fake`; later `payos`, `vnpay`). It turns the provider's objects into a presentation, a status and a confirmation, and nothing else. | DR-326, DOC-24 |
 | presentation | — | What a payment session shows the payer: `redirect` (a URL to the provider's page) or `qr` (an EMVCo string and the receiving account). The apps render by presentation, never by provider. | DR-326, DOC-24 §2 |
 | saved card | — | A card the payer saved at the payment provider during a payment. The provider holds it; the system holds only a provider customer id per resident account and lists brand, last four digits and expiry on request. No automatic charge exists. | DR-326, DOC-24 §4.7 |

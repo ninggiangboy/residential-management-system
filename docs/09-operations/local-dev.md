@@ -151,7 +151,7 @@ Every target is a script of the root `package.json` that calls the workspace scr
 | `jobs:run` | `bun run --filter @app/api jobs:run -- --name <job>`: one run of one job now, `details.manual = true` (DOC-38 §7) | P1-05 (done) |
 | `seed:demo` | Creates the demo building `DEMO-A` when the database has none, then runs `resetDemo` and `seedDemo` of every module for it in one transaction (DOC-36 §10.2). Safe to run again: it deletes what the first run created and seeds it with the same ids | P1-21 (done) |
 | `db:reset` | Drops every object of the fourteen schemas and every `drizzle_<module>` history as `rms_migrator`, then runs `db:migrate` and `seed:demo`; refuses any profile but `local` and `test` (§11) | P1-06 (done), P1-21 |
-| `payos:sim` | Signs and POSTs a gateway webhook to the local API (§9.3) | P3-03 |
+| `pay:sim` | Signs and POSTs a gateway webhook to the local API (§9.3) | P2-21 |
 | `lint`, `typecheck`, `check:arch`, `check:scope`, `check:audit`, `check:layout`, `check:i18n` | Biome (with the color-literal plugin, DR-237); TypeScript; the three dependency-cruiser configs plus knip and jscpd; the building-scope lint (P1-07: `scripts/check-scope.ts` plus the fixtures of `tools/scope-lint`); the audit-action check (P1-08, AD-06: `scripts/check-audit.ts` plus `tools/audit-lint`); the module-layout check (DR-254: `scripts/check-layout.ts` plus the fixtures of `tools/layout-lint`); catalog parity and content tests (`bun test packages/i18n-catalog`, DOC-68 §9; run by `verify` too) (DOC-71 §4.1, stage `verify`) | P1-01, P1-07 (`check:scope`), P1-08 (`check:audit`), P1-09 (`check:i18n`) |
 | `tokens:build` | Writes `packages/design-tokens/generated/` from `tokens.json` (DOC-54 §2.1); `--check` only reports. A test fails when the committed files differ | P1-09 |
 | `check` | Every check of the `verify` stage in one go (`lint`, `typecheck`, `check:arch`, `check:arch:fixtures`, `quality:unused`, `quality:dup`, `check:scope`, `check:audit`, `check:layout`, `check:i18n`, `check:authz-metadata`, `check:dependabot`, `check:ops`, `check:deploy`, `check:test-ids`); it runs all of them, prints a table and reports a target that does not exist yet as skipped with its task (DR-240). It replaces P1-01's `verify` script | P1-19 |
@@ -277,11 +277,11 @@ A resident signs in with the phone and the code **`123456`**. The code is accept
 
 ### 9.3 The payment simulator
 
-`bun run payos:sim` (from P3-03) signs a payload with the checksum key of a gateway configuration and POSTs it to the real webhook route, so the whole path (HMAC, `gateway_event`, `settle`) runs without a bank. The demo building has a `fake`-driver configuration (DR-26, DR-60).
+`bun run pay:sim` (from P2-21) signs a payload with the configured secret of a gateway configuration and POSTs it to the real webhook route, so the whole path (signature, `gateway_event`, `settle`) runs without a bank or a card. The demo building has a `fake`-driver configuration (DR-26, DR-60). *Revised 2026-11-02 (DR-326):* the simulator was `payos:sim` of P3-03; Stripe is the first driver and the flags are DOC-24 §5.
 
 ```bash
-bun run payos:sim -- --config <gatewayConfigId> --order-code 1760000000123 --amount 2838000 --repeat 5 --shuffle --delay 200
-bun run payos:sim -- --config <gatewayConfigId> --order-code 1760000000123 --amount 2838000 --wrong-signature
+bun run pay:sim -- --config <gatewayConfigId> --order-code 2610153 --amount 2838000 --repeat 5 --shuffle --delay 200
+bun run pay:sim -- --config <gatewayConfigId> --order-code 2610153 --amount 2838000 --wrong-signature
 ```
 
 | Flag | Meaning |

@@ -1,13 +1,13 @@
 # ADR-0026: Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept
 
-- Status: Proposed
+- Status: Accepted (2026-11-02, DR-26 decided by the Owner) · The driver names and the simulator follow DR-326 for the first version: `stripe` and `fake`, `bun run pay:sim` (ADR-0029)
 - Date: 2026-10-19 · Related: DR-26, DR-60, DR-37, DR-36, DR-25, DR-62, ADR-0007, ADR-0010, DOC-07, DOC-12
 
 ## Context
 
 The demo building (original SDD §15) has to work in three places: app-store review needs a working login against the production backend, the demo script needs payments that can be replayed five times (original SDD §21), and local development and staging need to sign in and pay without SMS or a bank. A nightly reset that deletes rows by `building_id` is dangerous if it ever targets a real building, and a fixed OTP is a backdoor if it can reach a real account.
 
-Status is `Proposed` because part of this rests on DR-26, which stays open until the Owner reports a payOS sandbox (DR-25): the fake driver's exact surface, the simulator CLI and the environments where `fake` may run. The rest rests on decided entries: the demo building in staging and production, the `is_demo` flags, the fixed OTP and the boot guard (DR-60, DR-37, DR-36), and the guarded reset (DR-60). When DR-26 is decided, this ADR becomes `Accepted` without changing the rest.
+This ADR was `Proposed` until DR-26 (the fake driver's surface, the simulator CLI and the environments where `fake` may run) was decided; the Owner decided it on 2026-11-02. The rest rests on DR-60, DR-37 and DR-36: the demo building in staging and production, the `is_demo` flags, the fixed OTP, the boot guard and the guarded reset.
 
 ## Options considered
 
@@ -45,5 +45,5 @@ Option **3**.
 **Follow-up work**
 
 - DOC-36 (seed, reset guard, boot guard, `BD-` tests), DOC-24 (fake driver, simulator CLI), DOC-26 (OTP and the flag), DOC-102 (demo script and reset).
-- Decide DR-26 when the Owner reports a sandbox, then move this ADR to `Accepted`; record fixtures from the sandbox for the `payos` adapter (P3-01).
+- ~~Decide DR-26, then move this ADR to `Accepted`~~ (done 2026-11-02). Record fixtures from the Stripe sandbox for the `stripe` adapter (P2-21), and from a payOS sandbox when that driver is built.
 - Tests: the fixed OTP refused for a non-demo account, boot refused for a flagged account in a non-demo building, `resetDemo` refused on a real building.

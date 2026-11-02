@@ -434,7 +434,7 @@ On `ready` with `resumed: false` the web invalidates every key of its event map;
 | --- | --- |
 | `provider` | A word the driver registry knows (`stripe`, `fake`); another word is 404 and no row |
 | `gatewayConfigId` | An active `gateway_config` of that provider; another or unknown id is 404 and no row (DR-32 step 1: the existence check comes before any write) |
-| Body | The raw bytes, at most `WEBHOOK_MAX_BODY_BYTES` (256 KB, DOC-41); a larger body is 413 and one `webhook_rejection` |
+| Body | The raw bytes, at most `WEBHOOK_MAX_BODY_BYTES` (16 KB, DOC-41, DR-32); a larger body is 400 `malformed_request` and one `webhook_rejection` `malformed` (DOC-42). *Revised 2026-11-02 (review of the P2-00 gate):* was 256 KB and 413, which contradicted DOC-41 and DOC-42 |
 | Stripe header | `Stripe-Signature: t=<unix seconds>,v1=<hex>` (more than one `v1` is allowed; any matching one verifies) |
 | Content type | `application/json`; the route does not parse the body before the signature is checked |
 
@@ -449,12 +449,12 @@ Stripe's scheme (DOC-24 §4.4): the signed payload is `<t>.<raw body>`; the sign
 ```http
 POST /api/v1/payments/webhooks/stripe/0192f3c4-9b00-7000-8000-000000000f02
 Content-Type: application/json
-Stripe-Signature: t=1792543801,v1=0383945787be63ea08949e60dbb7db236477f672983239a0b03fbebaee05621e
+Stripe-Signature: t=1792543801,v1=cbb3c790094ff7a29612e13e72dd1da20aab385352be4fbe0a66e660d1dcd72e
 
-{"id":"evt_test_0001","object":"event","type":"checkout.session.completed","created":1792543800,"data":{"object":{"id":"cs_test_a1B2","object":"checkout.session","client_reference_id":"1000153","amount_total":2838000,"currency":"vnd","payment_status":"paid","status":"complete","payment_intent":"pi_3Test0001","metadata":{"intentId":"0192f3c4-8a10-7000-8000-000000000a01","buildingId":"0192f3c4-0000-7000-8000-000000000001","code":"TT-261019-0001"}}}}
+{"id":"evt_test_0001","object":"event","type":"checkout.session.completed","created":1792543800,"data":{"object":{"id":"cs_test_a1B2","object":"checkout.session","client_reference_id":"2610153","amount_total":2838000,"currency":"vnd","payment_status":"paid","status":"complete","payment_intent":"pi_3Test0001","metadata":{"intentId":"0192f3c4-8a10-7000-8000-000000000a01","buildingId":"0192f3c4-0000-7000-8000-000000000001","code":"TT-261019-0001"}}}}
 ```
 
-The sample's `client_reference_id` `1000153` is the order code of DOC-23 §6.3 and the amount is its 2,838,000 đ.
+The sample's `client_reference_id` `2610153` is the order code of DOC-23 §6.3 and the amount is its 2,838,000 đ. *Revised 2026-11-02 (review of the P2-00 gate):* the order code was `1000153`; the body and its `v1` were recomputed.
 
 ### 12.3 The answers
 
@@ -466,7 +466,7 @@ The sample's `client_reference_id` `1000153` is the order code of DOC-23 §6.3 a
 | An event type the driver ignores | 200 | the same | nothing | no |
 | `foreign_building` (the order code is another building's) | 400 | `{ "error": { "code": "foreign_building" } }` | one `webhook_rejection` | no (4xx) |
 | Signature, tolerance or JSON invalid | 401 | `{ "error": { "code": "invalid_signature" } }` | one `webhook_rejection` (reason, IP, hash of the body, no body) | no |
-| Body too large | 413 | | one `webhook_rejection` | no |
+| Body too large | 400 | `{ "error": { "code": "malformed_request" } }` | one `webhook_rejection` `malformed` | no (4xx) |
 | Too many calls from one IP | 429 | | none (the counter) | yes, later |
 | A transient failure (database, after the retries of `settle()`) | 503 | | nothing committed | **yes** |
 

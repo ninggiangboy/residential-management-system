@@ -1,6 +1,6 @@
 # ADR index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (ADR-0029, DR-325) · 2026-10-28 (ADR-0024 written, P1-26) · 2026-10-28 (ADR-0028, DR-279) · DOC-13
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-02 (ADR-0007 and ADR-0026 Accepted) · 2026-11-01 (ADR-0029, DR-325) · 2026-10-28 (ADR-0024 written, P1-26) · 2026-10-28 (ADR-0028, DR-279) · DOC-13
 > Depends on: [DR](../00-decision-register.md), [master plan](../00-master-plan.md) §3.2, [ADR-0001](0001-record-architecture-decisions.md)
 > Main readers: every task `Pn-00` (doc gate), reviewers of pull requests that touch an architecture decision
 
@@ -26,7 +26,7 @@ This index lists the 28 architecture decision records of the project. An ADR is 
 | [ADR-0004](0004-repository-layout-scopes-and-boundaries.md) | One Bun workspace with four package scopes, with module boundaries enforced by dependency-cruiser and a building-scope lint | Accepted | P1 | DR-04, DR-12 |
 | [ADR-0005](0005-ledger-charges-and-allocations-paid-in-full.md) | Ledger of charges and append-only allocations, paid in full only, with a money log for everything else | Accepted | P2 | original SDD §5.9, DR-13, DR-84 |
 | [ADR-0006](0006-allocation-write-path-all-or-nothing.md) | One conditional update per charge decides every payment race, all or nothing | Accepted | P2 | DR-14, DR-84 |
-| [ADR-0007](0007-payment-gateway-port-and-payment-link.md) | Take online payments through a gateway port with one payOS payment link per intent | Proposed | P3 | original SDD §6.6, DR-25, DR-26 |
+| [ADR-0007](0007-payment-gateway-port-and-payment-link.md) | Take online payments through a gateway port with one payOS payment link per intent (superseded in part by ADR-0029 for the first version) | Accepted (2026-11-02) | P2 | original SDD §6.6, DR-25, DR-26 |
 | [ADR-0008](0008-settlement-idempotency.md) | Settle each confirmation once through `gateway_event`, then the intent claim; failed calls go to a rejection log | Accepted | P2 | DR-29, DR-32 |
 | [ADR-0009](0009-transactional-outbox-inbox-and-contracts.md) | Deliver events through a per-module transactional outbox and inbox; modules talk through contracts only | Accepted | P1 | DR-42, DR-62 |
 | [ADR-0010](0010-two-account-kinds-membership-scoped-authorization.md) | Keep staff and resident accounts apart and authorize a resident by the active membership on every request | Accepted | P1 | original SDD §7, DR-36 |
@@ -45,7 +45,7 @@ This index lists the 28 architecture decision records of the project. An ADR is 
 | [ADR-0023](0023-api-conventions.md) | Keep the design's error shape, store idempotency keys in PostgreSQL for every create, and page with opaque cursors | Accepted | P1 | DR-74 |
 | [ADR-0024](0024-real-time-for-the-web-cms-with-the-reference-realtime-module.md) | Push changes to the web CMS over one authenticated SSE stream from the reference `realtime` module, fed by `LISTEN/NOTIFY` on a direct connection, with a 24-hour replay buffer in PostgreSQL | Accepted | P2 | DR-75, DR-287…290 |
 | ADR-0025 | Notice fan-out, heartbeat reclaim and single-source read state; allowed rich-text subset | Not written | P4 | DR-50, DR-51 |
-| [ADR-0026](0026-demo-building-and-fake-payment-driver.md) | Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept | Proposed | P1 | DR-26, DR-60 |
+| [ADR-0026](0026-demo-building-and-fake-payment-driver.md) | Run the demo as a flagged building in the same deployment, with a fake payment driver and a fixed OTP that only flagged accounts accept | Accepted (2026-11-02) | P1 | DR-26, DR-60 |
 | [ADR-0027](0027-seaweedfs-on-the-vps-for-files-and-backups-in-vietnam.md) | In Vietnam, keep files and backups in SeaweedFS on the VPS instead of Cloudflare R2, and keep the Cloudflare domain, HTTPS and Tunnel | Accepted | P1 | DR-268 |
 | [ADR-0028](0028-self-hosted-usage-analytics-without-an-identifier.md) | Record screen views, taps, opening and closing of the app as allowlisted events without an account or device identifier, in an `analytics` schema on the same PostgreSQL, and read them through a counter | Accepted | P1 | DR-279 |
 | [ADR-0029](0029-stripe-as-the-first-payment-driver-behind-the-gateway-port.md) | Take the first online payments through Stripe Checkout, behind a provider-neutral gateway port (a presentation is `redirect` or `qr`; settlement unchanged; payOS, VNPay and VietQR are later drivers) | Accepted | 2026-11-01 |
@@ -54,7 +54,7 @@ This index lists the 28 architecture decision records of the project. An ADR is 
 
 - A number is never reused. A changed decision gets a new DR and a new ADR; the old ADR is marked `Superseded by ADR-yyyy` and never edited in substance (ADR-0001).
 - Writing or superseding an ADR updates this table and the ADR table of the master plan in the same change.
-- An ADR whose source DR is still open stays `Proposed`: ADR-0007 waits for the gateway sandbox (DR-25, 26, 27, 28, 30, 31).
+- An ADR whose source DR is still open stays `Proposed`. None is Proposed on 2026-11-02: ADR-0007 and ADR-0026 were accepted when DR-25, 26, 27, 28, 30, 31 were decided.
 
 ## 4. Order of writing
 

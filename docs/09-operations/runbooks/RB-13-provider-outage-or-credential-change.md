@@ -1,8 +1,8 @@
 # RB-13: The payment provider is down, or its credentials changed
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-20: first version, DR-325, DR-326) · DOC-87 / RB-13
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02) · Updated: 2026-11-02 (P2-00 review: the alert is `GatewayCheckFailing`; staging and `gateway_in_use` corrected) · 2026-11-01 (P2-20: first version, DR-325, DR-326) · DOC-87 / RB-13
 >
-> Alert: `GatewayErrors` (warning, for 5m) · Dashboard: RMS · Overview · Related: DOC-24 §4.11, §4.12, DOC-67 `W-Gateway`, RB-02, RB-03, RB-12
+> Alert: `GatewayCheckFailing` (warning, for 1h, DOC-40 §5.3; built with the check job). `GatewayErrors` (RB-02) usually fires with it · Dashboard: RMS · Overview · Related: DOC-24 §4.11, §4.12, DOC-67 `W-Gateway`, RB-02, RB-03, RB-12
 > Depends on: [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-22](../../06-design/ledger-and-allocation.md) §9, [DOC-40](../../06-design/observability.md), [DOC-19](../../05-data/db-roles-and-grants.md) (`rms_readonly`), [DR](../../00-decision-register.md) (DR-28, 30, 31, 32, 33, 84, 325, 326, 327)
 > Main readers: the Admin and the operator, P2-28
 
@@ -27,7 +27,7 @@ docker compose logs --since 30m api worker | grep -E '"provider":"stripe"' | gre
 ## Remediation
 
 1. **The provider is down.** Do not change anything. Intents back off and resume; webhooks retry on the provider's side; the re-query settles whatever was paid meanwhile. Tell the Manager; if it lasts more than 30 minutes, the Manager tells residents that cash at the office works. The Admin may disable the gateway on `W-Gateway` ("Tắt cổng") so that residents see the office caption instead of failing buttons; re-enable it afterwards.
-2. **The restricted key was rotated or revoked.** In the provider's dashboard create or copy the current restricted key with the permissions of DOC-24 §4.12 (Checkout Sessions write, Customers write, PaymentMethods read and write, PaymentIntents read, Charges read). In `W-Gateway` replace "Khóa API hạn chế" (a step-up is asked) and save. `409 gateway_in_use` means a payment is open: wait for none to be open, or cancel the open ones (`W-Transactions`), then save. Press "Kiểm tra kết nối".
+2. **The restricted key was rotated or revoked.** In the provider's dashboard create or copy the current restricted key with the permissions of DOC-24 §4.12 (Checkout Sessions write, Customers write, PaymentMethods read and write, PaymentIntents read, Charges read). In `W-Gateway` replace "Khóa API hạn chế" (a step-up is asked) and save. Changing only the key does not ask for open payments to end (E-50: `gateway_in_use` is for a change of driver, receiving account or status). Press "Kiểm tra kết nối".
 3. **A permission is missing.** The check names the call that failed (for example `customers.create`); add the permission to the restricted key at the provider, then check again.
 4. **The webhook secret changed.** That is RB-03.
 5. **The account was suspended or restricted by the provider.** Residents cannot pay online. Disable the gateway, tell the Manager, and contact the provider. Nothing in the system is edited.
@@ -35,7 +35,7 @@ docker compose logs --since 30m api worker | grep -E '"provider":"stripe"' | gre
 
 ## On staging
 
-Use a Stripe **sandbox** key and the sandbox webhook secret; a live key on staging is refused by the `mode` banner of `W-Gateway`. If the sandbox is reset, create a new restricted key and endpoint.
+Use a Stripe **sandbox** key and the sandbox webhook secret; `W-Gateway` shows the `mode` read from the key; a live key on staging would take real money, so never save one there (DOC-24 §4.12 warns only about a test key in a production building). If the sandbox is reset, create a new restricted key and endpoint.
 
 ## Confirm it is resolved
 

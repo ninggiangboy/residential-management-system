@@ -1,13 +1,13 @@
 # ADR-0007: Take online payments through a gateway port with one payOS payment link per intent
 
-- Status: Proposed
+- Status: Accepted (2026-11-02, its source DRs decided by the Owner) · Superseded in part by [ADR-0029](0029-stripe-as-the-first-payment-driver-behind-the-gateway-port.md) for the first version: the first driver is Stripe, not payOS; the port, the three paths into one `settle()`, the fake driver and the boot rule stand (DR-325, DR-326)
 - Date: 2026-10-19 · Extended by ADR-0029 (2026-11-01: Stripe is the first driver; the port gains presentations) · Related: DR-25, DR-26, DR-27, DR-28, DR-30, DR-31, DR-32, DR-84, FR-07…10, NFR-01, NFR-02, EXP-01, EXP-02
 
 ## Context
 
 Residents pay fees by bank transfer. The system must learn exactly which unit paid which charges, at a cost per transaction that suits fees of a few million đồng a month, with a flow that works in every Vietnamese bank app (original SDD §6.6). A charge is paid whole or not at all (DR-84), so a confirmation is useful only when it can be tied to one intent with an exact amount.
 
-This ADR is **Proposed**, not Accepted, because six source decisions are still open until the Owner reports a payOS sandbox: DR-25 (the gateway facts the design does not know), DR-26 (fake driver and simulator), DR-27 (order code and transfer content), DR-28 (intent lifecycle), DR-30 (re-query job) and DR-31 (cancel at the gateway). The choice of option B and the port shape below do not depend on them; the defaults of original SDD §6.5 do. When the sandbox facts are verified (P3-01, P3-10) and the DRs are decided, this ADR moves to Accepted; a fact that overturns the choice needs a new ADR that supersedes this one.
+This ADR was **Proposed** until its source decisions were made: DR-25 (the gateway facts the design does not know), DR-26 (fake driver and simulator), DR-27 (order code and transfer content), DR-28 (intent lifecycle), DR-30 (re-query job) and DR-31 (cancel at the gateway). The Owner decided them on 2026-11-02, and it became Accepted. The payOS facts of DR-25 are still verified when a payOS driver is built; a fact that overturns the choice needs a new ADR that supersedes this one.
 
 ## Options considered
 

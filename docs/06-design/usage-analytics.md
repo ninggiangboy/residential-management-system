@@ -1,6 +1,6 @@
 # Usage analytics
 
-> Status: **Review** · Updated: 2026-10-28 (P1-29 built, §13.2; DR-279) · DOC-104
+> Status: **Approved** (Claude, delegated by the Owner, 2026-11-02: required content complete, keys, metrics, E-173/174 and `UA-` match DOC-41, DOC-40, DOC-51, DOC-88 and the code; UA unit tests green) · Updated: 2026-10-28 (P1-29 built, §13.2; DR-279) · DOC-104
 > Depends on: [DR](../00-decision-register.md) (DR-279, DR-103, DR-58, DR-64, DR-264, DR-265), [ADR-0028](../04-adr/0028-self-hosted-usage-analytics-without-an-identifier.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0013](../04-adr/0013-time-zones-and-calendar-day-semantics.md), [DOC-06](../02-glossary.md), [DOC-17](../05-data/operations-model.md) §9A, [DOC-20](../05-data/data-lifecycle.md) §2.5 and §5, [DOC-35](audit-privacy-and-terms.md) §7 to §9, [DOC-38](jobs-and-outbox-runtime.md) §4, [DOC-39](security.md) §6, [DOC-40](observability.md) §4.7, [DOC-41](configuration-reference.md) §13A, [DOC-42](error-handling.md) §10, [DOC-51](../07-api/api-endpoints.md) E-173, [DOC-55](../08-ux-ui/client-architecture.md) §15A, [DOC-56](../08-ux-ui/screens/README.md), [DOC-73](../09-operations/mobile-release.md) §10.2, §10.3
 > Main readers: P1-29 (the build), P6-10 (the store declarations), DOC-103 (go-live), every task that adds a screen or a control
 
