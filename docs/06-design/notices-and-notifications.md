@@ -1,6 +1,6 @@
 # Notices and notifications
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-26: the notification core, DR-299…303; the notices part is owed to P4) · DOC-31
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02, for the notification core; the notices part (§13) is owed to P4) · Updated: 2026-10-28 (P1-26: the notification core, DR-299…303; the notices part is owed to P4) · DOC-31
 > Depends on: original SDD §10.4, §16.2, §19.1, [DR](../00-decision-register.md) (DR-03, 16, 17, 19, 20, 39, 42, 50, 51, 52, 53, 62, 71, 75, 76, 84, 87, 96, 101, 115, 116, 117, 118, 146, 177, 193, 264, 265, 286), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [ADR-0022](../04-adr/0022-personal-data-protection.md), [DOC-03](../01-product/requirements.md) (FR-03, FR-12.4, FR-29, FR-50.4, NFR-04), [DOC-04](../01-product/use-cases.md) (UC-19), [DOC-09](../03-architecture/messaging-contracts.md) §3.4, §4, §5.2…§5.4, §6.7, §7, [DOC-12](../03-architecture/code-architecture.md) §4.4, §8.4, [DOC-14](../05-data/data-conventions.md) §5.3, §8, [DOC-17](../05-data/operations-model.md) §6, [DOC-19](../05-data/db-roles-and-grants.md) §5, [DOC-20](../05-data/data-lifecycle.md) §2, [DOC-26](identity-and-sessions.md) §3, [DOC-27](residency-and-memberships.md) §3, [DOC-35](audit-privacy-and-terms.md), [DOC-38](jobs-and-outbox-runtime.md) §3, §4, [DOC-40](observability.md) §4, [DOC-41](configuration-reference.md), [DOC-42](error-handling.md) §7, [DOC-50](../07-api/api-guidelines.md) §10, §11, [DOC-51](../07-api/api-endpoints.md) E-22, E-23, E-34, E-35, E-76…E-79, [DOC-53](../08-ux-ui/ux-principles-and-ia.md) §5, [DOC-55](../08-ux-ui/client-architecture.md) §10, §13, [DOC-68](../08-ux-ui/ui-states-and-copy.md) §1, [DOC-06](../02-glossary.md)
 > Main readers: P2-12 (the notification core), P2-15 and P2-17 (the fee screens that show the entries), P4-04 (ticket notifications), P4-05 (notices), P4-06 (EXP-06), DOC-52 (`inbox.created`), DOC-55, DOC-58, DOC-60, DOC-61, DOC-64, DOC-68, every task that adds an event that tells a person something
 
@@ -777,5 +777,4 @@ Applied in P1-26 (2026-10-28) together with the register entries DR-299…303: D
 
 ## Open questions
 
-1. **`IdentityApi.liveSessionIds`** (DR-300) is specified in DOC-09 §7.3 and DOC-26 §3.7 and built by P2-12; until then a push goes to every token of the account.
-2. **The notices part (§13)** is owed to P4; it decides how push failures per notice are counted from `push_ticket`.
+None for the notification core. `IdentityApi.liveSessionIds` (DR-300) is specified in DOC-09 §7.3 and DOC-26 §3.7 and built by P2-12 (until then a push goes to every token of the account). The notices part (§13) is owed to P4; it decides how push failures per notice are counted from `push_ticket`.

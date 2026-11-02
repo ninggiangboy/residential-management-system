@@ -1,12 +1,12 @@
 # Online payment flows
 
-> Status: **Draft** · Updated: 2026-11-01 (P2-20: first version; Stripe first, DR-325, DR-326, DR-327) · DOC-45
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-283: cash cancels the held intent) · 2026-11-01 (P2-20: first version; Stripe first, DR-325, DR-326, DR-327) · DOC-45
 > Depends on: [DOC-43](README.md), [DOC-04](../../01-product/use-cases.md) (UC-03, UC-18, UC-21), [DOC-03](../../01-product/requirements.md) (FR-07…10, FR-46, FR-47, NFR-01, NFR-02), [DR](../../00-decision-register.md) (DR-14, 16, 28, 29, 30, 31, 32, 84, 96, 280, 281, 282, 325, 326, 327), [DOC-23](../payment-intents-and-settlement.md), [DOC-24](../payment-gateway-drivers.md), [DOC-22](../ledger-and-allocation.md), [DOC-52](../../07-api/sse-and-webhooks.md) §12, [DOC-58](../../08-ux-ui/screens/resident-fees-payment.md), [DOC-66](../../08-ux-ui/screens/web-finance.md)
 > Main readers: P2-22 (intent creation), P2-23 (webhook), P2-24 (re-query, expiry, cancel), P2-25 (resident screens), P2-26 (staff screens), P2-27 (EXP-01, EXP-02), the reviewer of any change to the payment path
 
 This document holds the flows of an online payment from the resident's tap to the receipt, and what happens when it goes wrong. It is provider-neutral where it can be; where a step is different for a card, it says so, and the Stripe names are DOC-24's. The ledger side of a posted payment is FL-09 of DOC-44; the screens are DOC-58 and DOC-66; the rules are DOC-23. The flow of a bank-statement upload (FL-15) belongs to P3 and is not written here.
 
-The document makes no decision of its own; where it had to choose, it follows DR-326 and DOC-23. It stays **Draft** while DOC-23 and DOC-24 are Draft.
+The document makes no decision of its own; where it had to choose, it follows DR-326 and DOC-23. It is Approved with DOC-23; DOC-24 stays Draft until P2-21 verifies the Stripe facts, and a fact that differs changes this document in a revision.
 
 ## Flows in this file
 
@@ -254,6 +254,7 @@ sequenceDiagram
 | The cancel is best effort | correctness never depends on it: a late confirmation is posted or logged (DR-31) | — |
 | Cancel racing a payment | the intent row arbitrates; a payment that won makes the cancel 409 and the app moves to `Pay-Done` (UIRF-40) | — |
 | Recall or void of a held charge | `cancelHolding` cancels the intent as a whole, other charges included (FR-04.1); the household starts again | — |
+| Cash recorded, or a late confirmation, for a held charge | `cancelHolding(…, 'charge_paid')` in the payer's transaction cancels the other intent as a whole (DR-283); the session is expired at the provider by the outbox command | — |
 | Pay again | a new selection creates a new intent and a new session; the saved card is offered on the new page | — |
 
 ---
@@ -266,7 +267,7 @@ sequenceDiagram
 | Case | Cause | Outcome in the log | Resident sees | Manager does |
 | --- | --- | --- | --- | --- |
 | Late exact payment, charges open | the intent expired or was cancelled | **posted** (DR-281) | `Pay-Done` or the paid charge | nothing |
-| Late payment, a charge paid in cash meanwhile | FR-09.1 | `charge_already_paid` | nothing (card: the payer is charged and sees no receipt: the message of `Pay-Failed`) | refunds in the provider's dashboard; marks reviewed |
+| Late payment, a charge paid in cash meanwhile (only a payment already in flight when the link was cancelled, DR-283) | FR-09.1 | `charge_already_paid` | nothing (card: the payer is charged and sees no receipt: the message of `Pay-Failed`) | refunds in the provider's dashboard; marks reviewed |
 | Late payment, the batch was recalled | FR-09.5 | `charge_recalled` | as above | as above |
 | Two payments for one intent | two paid sessions (a second tab) | `duplicate_transfer` | the receipts of the first | refunds the second |
 | Unknown order code | a confirmation matching no intent | `unknown_order` | nothing | checks in the dashboard |

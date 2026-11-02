@@ -1,6 +1,6 @@
 # Fees and payments flows (ledger level)
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-26: the preview of FL-02 is E-176, DR-293) · 2026-10-28 (P1-25: first version) · DOC-44
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-02 (DR-283: a payment cancels the other holders, 5a) · 2026-11-01 (P2-00 review: open questions closed, DR-332) · 2026-10-28 (P1-26: the preview of FL-02 is E-176, DR-293) · 2026-10-28 (P1-25: first version) · DOC-44
 > Depends on: [DOC-43](README.md), [DOC-04](../../01-product/use-cases.md) (UC-01, UC-02, UC-04, UC-05, UC-18, UC-21), [DOC-03](../../01-product/requirements.md) (FR-01…06, FR-08, FR-09, FR-12, FR-44, FR-46, FR-47, FR-49), [DOC-21](../fee-batches-and-import.md), [DOC-22](../ledger-and-allocation.md), [DOC-23](../payment-intents-and-settlement.md), [DOC-15](../../05-data/finance-model.md), [DOC-09](../../03-architecture/messaging-contracts.md) §6, §7, [DOC-37](../files-and-uploads.md), [DOC-35](../audit-privacy-and-terms.md) §4, [DOC-42](../error-handling.md) §5, [DOC-68](../../08-ux-ui/ui-states-and-copy.md), [DOC-51](../../07-api/api-endpoints.md) §2, [DOC-50](../../07-api/api-guidelines.md) §8, §9, [DR](../../00-decision-register.md) (DR-10, 11, 14, 16, 18, 19, 20, 21, 22, 23, 24, 29, 72, 74, 84, 96, 97, 149, 265, 267, DR-280), [DOC-06](../../02-glossary.md)
 > Main readers: P2-04 (fee import and draft editing), P2-05 (publish, close, extend, re-issue), P2-06 (`settle()`), P2-07 (recall, single void), P2-08 (manual payment, receipts), P2-09 (void, money log), P2-10 (debt, reminders), P2-15 and P2-16 (fee screens), DOC-58, DOC-66, DOC-88, EXP-03, EXP-04
 
@@ -8,7 +8,7 @@ This document holds the ten flows of fees and payments at ledger level: how a Ma
 
 The online side (the resident's intent, the webhook route, the re-query, the statement) is DOC-45 (FL-10…16); FL-09 here is only what `settle()` does to the ledger once a confirmation is authenticated.
 
-The document stays **Draft** while DOC-21, DOC-22 and DOC-23 are Draft. It makes no decision of its own; the open points are in "Open questions".
+The document is Approved with DOC-21, DOC-22 and DOC-23. It makes no decision of its own; the open points are in "Open questions".
 
 ## Flows in this document
 
@@ -776,7 +776,7 @@ sequenceDiagram
 
 The receipt PDF is downloaded with E-106 `GET /staff/receipts/{id}/pdf`; a PDF not rendered yet is rendered on demand (DOC-22 §7). A payment recorded from an unmatched statement line carries `statementLineId` and the line becomes `matched` in the same transaction (DOC-22 §5.2 step 6); that entry starts on `W-Statement` and is FL-15.
 
-**5a. The online transfer arrives after the cash.** B was held by the intent `TT-261019-0001`. The entry above paid B; the intent is not edited (DR-28 rule 5). When the bank confirms the transfer for A + B, `settle()` claims the intent and finds B `paid`: outcome `charge_already_paid`, nothing posted, the Manager gets an inbox entry and refunds outside the system (FL-09.2, FL-07). The resident's `Pay-VietQR` shows the neutral mismatch message (DR-96).
+**5a. The online transfer arrives after the cash.** B was held by the intent `TT-261019-0001`. The entry above paid B and, in the same transaction, cancelled the intent that held it (`IntentCancellation.cancelHolding(…, 'charge_paid')`, DR-283): the intent is `cancelling`, its items are released and its link is cancelled by the outbox command. A transfer that was already on its way when the link was cancelled still reaches `settle()`, which claims the intent and finds B `paid`: outcome `charge_already_paid`, nothing posted, the Manager gets an inbox entry and refunds outside the system (FL-09.2, FL-07). The resident's `Pay-VietQR` shows the neutral mismatch message (DR-96).
 
 ### Transactions and concurrency
 
@@ -1490,6 +1490,4 @@ None. Every rule above comes from DOC-21, DOC-22, DOC-23 and their DRs. Two poin
 
 ## Open questions
 
-1. **The units without a charge on `W-Fee-Batch`** (UC-01 step 6): no endpoint returns the units of the building that have no charge in a draft. E-93 lists charges only. DOC-51 (the finance group, P2) and DOC-66 decide whether E-93 gains a `missing` view (finance reads `ResidencyApi` for the unit list) or the screen computes it from the unit list.
-2. **The refusals of E-170** (FL-44.2, FL-01): DOC-21 §3.2 says a unit is "looked up like an import row" but gives no HTTP status or code for an unknown unit, a unit without owner or a unit already charged in the draft. DOC-51 fixes them with the finance endpoint specifications (P2).
-3. **`reason_too_long`** is used by DOC-21 and DOC-22 (a void or recall reason over 500 characters) but has no row in DOC-42 §5 and no copy in DOC-68; it is owed there.
+None. The three questions of the first version are closed by DR-332 (2026-11-01): E-170 refuses with 404 `unit_not_found`, 422 `unit_without_owner` and 409 `charge_exists` (DOC-21 §3.2); the units without a charge are `view=missing` of E-93 (DOC-66); `reason_too_long` and `charge_exists` are reserved in DOC-42 §5.8 and get their rows with the P2 code that uses them.

@@ -1,6 +1,6 @@
 # Resident app: fees and payment
 
-> Status: **Draft** · Updated: 2026-11-01 (DR-325…328: online payment is in P2 with Stripe; `Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards` written; the pay buttons and the fee-notice PDF are back; DR-323 revised) · 2026-11-01 (P1-27: the four fee screens written; DR-323) · DOC-58
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325…328: online payment is in P2 with Stripe; `Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards` written; the pay buttons and the fee-notice PDF are back; DR-323 revised) · 2026-11-01 (P1-27: the four fee screens written; DR-323) · DOC-58
 > Depends on: original SDD §5.1, §18, [DR](../../00-decision-register.md) (DR-16, 18, 19, 40, 41…47, 72, 84, 174, 194, 196, 200, 323, 325, 326, 328), [DOC-56](README.md) (convention, notes N1, N4, N6, N10), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, §12, [DOC-54](../design-system.md) (components), [DOC-22](../../06-design/ledger-and-allocation.md) §8, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, §6.6, [DOC-34](../../06-design/pdf-rendering.md) §6.3, §8.2, [DOC-23](../../06-design/payment-intents-and-settlement.md) §3…§5, [DOC-24](../../06-design/payment-gateway-drivers.md) §2, §4, [DOC-51](../../07-api/api-endpoints.md) (E-80…E-84, E-15, E-13), [DOC-57](resident-signin-home.md) (the home card and tile)
 > Main readers: P2-17 (receipt view and PDF in the resident app), P2-15 (the resident fee API), P2-16, P2-25 (the payment screens; was P3-05), P1-09 (catalog keys), DOC-68, DOC-88 (`UIRF-`)
 
@@ -30,7 +30,7 @@ This document specifies the resident screens that show what a unit owes and has 
 
 ## Fees
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -163,7 +163,7 @@ None.
 
 ## Fees-NoPay
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -232,7 +232,7 @@ None.
 
 ## Fee-Detail
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -350,7 +350,7 @@ None. The collection account for manual transfers is not drawn (§3); it is an O
 
 ## Fee-History
 
-> Status: Draft · Prototype: designed · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -446,7 +446,7 @@ None.
 
 ## Pay-Select
 
-> Status: Draft · Prototype: designed (changed by N1, N4, DR-325) · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed (changed by N1, N4, DR-325) · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -540,7 +540,7 @@ None.
 
 ## Pay-Redirect
 
-> Status: Draft · Prototype: to design (a wireframe below; replaces `Pay-VietQR` for a redirect driver) · Phase: P2 · DOC-58
+> Status: Approved · Prototype: to design (a wireframe below; replaces `Pay-VietQR` for a redirect driver) · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -651,7 +651,7 @@ None.
 
 ## Pay-Done
 
-> Status: Draft · Prototype: designed (N1, N4) · Phase: P2 · DOC-58
+> Status: Approved · Prototype: designed (N1, N4) · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -724,7 +724,7 @@ None.
 
 ## Pay-Failed
 
-> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
+> Status: Approved · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 
@@ -811,7 +811,7 @@ None.
 
 ## Cards
 
-> Status: Draft · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
+> Status: Approved · Prototype: to design (a wireframe below) · Phase: P2 · DOC-58
 
 ### 1. Persona, use cases, permissions
 

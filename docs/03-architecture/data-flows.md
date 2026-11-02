@@ -1,12 +1,12 @@
 # Data flows
 
-> Status: **Draft** · Updated: 2026-10-28 (P1-25: first version) · DOC-08
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02; §3.7, the statement path, stays proposed with DR-284 (P3)) · Updated: 2026-11-02 (DR-27, 28, 30, 31, 280, 281, 283 decided) · 2026-10-28 (P1-25: first version) · DOC-08
 > Depends on: original SDD §5.2, §5.4, §5.8, §6.1…6.7, §7.3, §8.1, §8.2, §9.1, §10.2…10.4, §14, §19.3, [DR](../00-decision-register.md) (DR-14, 16, 20, 23, 27…35, 37, 42, 48, 51, 52, 55, 62, 74, 84, 96, 117, 118, 134, 143, 259, 272, DR-280…282), [ADR-0008](../04-adr/0008-settlement-idempotency.md), [ADR-0009](../04-adr/0009-transactional-outbox-inbox-and-contracts.md), [DOC-07](system-context-and-containers.md) §3, §5.3, [DOC-09](messaging-contracts.md) §4.2, §5, [DOC-21](../06-design/fee-batches-and-import.md) §3, [DOC-22](../06-design/ledger-and-allocation.md) §5, §10, [DOC-23](../06-design/payment-intents-and-settlement.md), [DOC-26](../06-design/identity-and-sessions.md) §5, [DOC-37](../06-design/files-and-uploads.md), [DOC-38](../06-design/jobs-and-outbox-runtime.md) §2, §3, §5.4, §7, [DOC-40](../06-design/observability.md) §5, [DOC-42](../06-design/error-handling.md) §6, §7, [DOC-43](../06-design/flows/README.md) §3, [DOC-50](../07-api/api-guidelines.md) §8, [DOC-51](../07-api/api-endpoints.md) §2, [DOC-06](../02-glossary.md)
 > Main readers: P2-03, P2-06…P2-09, P2-12, P3-02…P3-04, P3-07, P4-01…P4-05, P5-01, P6-01, the authors of DOC-44…49 (detailed flows), DOC-25, DOC-28, DOC-29, DOC-31, DOC-33, the runbook authors (RB-02…RB-06, RB-09), the experiment authors (EXP-01, EXP-02, EXP-04, EXP-06)
 
 This document shows how data moves between the containers of DOC-07 for the main flows of the system and for the failures that matter: which container calls which, where each transaction begins and commits, who acknowledges what to whom, and what a crash at each point leaves behind. It is the architecture view: one participant per container or store, not per class. The detailed flows with every screen, endpoint and class are the `FL-xx` of DOC-43 §3; the mechanisms (statements, state machines, retry classes) are in the design document named for each flow. This document repeats none of them.
 
-**Draft** because DOC-23 is Draft (it follows the proposed DR-27, 28, 30, 31) and the owners of five flows are not written yet: DOC-25 (statement), DOC-28 (tickets), DOC-29 (QR), DOC-31 (notices and push), DOC-33 (exports). For those flows the behaviour comes from the original SDD and the decided DRs; each such section says what the owner document will fix.
+**Draft** because DOC-23 is Draft (DR-27, 28, 30, 31, 280, 281 and 283 are decided, 2026-11-02) and the owners of five flows are not written yet: DOC-25 (statement), DOC-28 (tickets), DOC-29 (QR), DOC-31 (notices and push), DOC-33 (exports). For those flows the behaviour comes from the original SDD and the decided DRs; each such section says what the owner document will fix.
 
 ## 1. Conventions
 
@@ -729,7 +729,7 @@ sequenceDiagram
 | Alerts | `PaymentsStuck` when more than 5 intents are `creating` for more than 2 minutes (RB-02); `GatewayErrors` when more than half of the gateway calls in 10 minutes fail (DOC-23 §14) |
 | End state | `pending` with a link, or `failed` with the charges payable again |
 
-A link found by `GET` that carries no QR is `pending` and the next creation supersedes it (DOC-23 §4.5, DR-280, proposed).
+A link found by `GET` that carries no QR is `pending` and the next creation supersedes it (DOC-23 §4.5, DR-280).
 
 **Verification:** IN-11, IN-12, IN-13 (DOC-23), PX- tests (DOC-24).
 
@@ -850,6 +850,6 @@ Three choices were not answered by a document or a DR. They are recorded in the 
 
 ## Open questions
 
-1. **DR-284** (proposed, money): an interrupted statement upload is finished by uploading the file again. DR-285 and DR-286 are decided; DOC-25, DOC-33 and DOC-31 apply the three when they are written.
+1. **DR-284** (proposed, money, P3): an interrupted statement upload is finished by uploading the file again. It changes only the statement path of §3.7, which DOC-25 specifies in P3; no other flow depends on it. DR-285 and DR-286 are decided; DOC-25, DOC-33 and DOC-31 apply the three when they are written.
 2. The payOS webhook retry schedule (§4.1) and whether `GET` returns the QR of a link (§4.4) are facts to verify against a sandbox (DR-25).
-3. The flows of §3.3…3.7 follow DOC-23, which follows the proposed DR-27, DR-28, DR-30, DR-31, DR-280 and DR-281; this document changes with them.
+3. The flows of §3.3…3.7 follow DOC-23 (DR-27, 28, 30, 31, 280, 281 and 283, decided 2026-11-02); this document changes with it.

@@ -23,22 +23,22 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-05 | [Feature catalog](01-product/feature-catalog.md) | Approved |
 | DOC-06 | [Glossary](02-glossary.md) | Approved |
 | DOC-07 | [System context and containers](03-architecture/system-context-and-containers.md) | Approved |
-| DOC-08 | [Data flows](03-architecture/data-flows.md) (12 flows and 6 failure flows; follows DOC-23 and the proposed DR-284) | Draft |
+| DOC-08 | [Data flows](03-architecture/data-flows.md) (12 flows and 6 failure flows; follows DOC-23; §3.7, the statement path, waits for DR-284, P3) | Approved (2026-11-02) |
 | DOC-09 | [Messaging contracts](03-architecture/messaging-contracts.md) | Approved |
 | DOC-10 | [Quality attributes](03-architecture/quality-attributes.md) | Approved |
 | DOC-11 | [Tech stack and versions](03-architecture/tech-stack-and-versions.md) | Approved |
 | DOC-12 | [Code architecture](03-architecture/code-architecture.md) | Approved |
 | DOC-13 | [ADR index](04-adr/README.md) | Approved (28 ADRs; ADR-0024 written in P1-26; ADR-0028, DR-279: self-hosted usage analytics; ADR-0027, DR-268: files and backups in SeaweedFS on the VPS for `vn`, ADR-0016, 0017, 0020 superseded in part) |
 | DOC-14 | [Data conventions](05-data/data-conventions.md) | Approved |
-| DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; intent and statement tables follow proposed DR-27, 28, 30, 34, 35) | Draft |
+| DOC-15 | [Finance model](05-data/finance-model.md) (DDL tested; §9 statement tables wait for DR-34, 35, P3) | Approved (2026-11-02, §9 for P3) |
 | DOC-16 | [Identity and residency model](05-data/identity-and-residency-model.md) (`unit_type` §5.6, DR-314) | Approved |
-| DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written; §6.1–6.3 notification tables and §9.1 `realtime.events` Draft for P2; the rest of §4–9 owed) | Approved (§1–3) |
-| DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 Approved, §2 fee import Draft 2026-11-01, §3 owed) | Approved |
+| DOC-17 | [Operations model](05-data/operations-model.md) (§1–3 written; §6.1–6.3 notification tables and §9.1 `realtime.events` Approved for P2, 2026-11-02; the rest of §4–9 owed) | Approved (§1–3) |
+| DOC-18 | [Data quality rules](05-data/data-quality-rules.md) (§1 Approved, §2 fee import Approved 2026-11-02, §3 owed) | Approved |
 | DOC-19 | [DB roles and grants](05-data/db-roles-and-grants.md) | Approved |
 | DOC-20 | [Data lifecycle](05-data/data-lifecycle.md) (skeleton) | Approved |
-| DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes await DOC-18 §2) | Draft |
-| DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Draft |
-| DOC-23 | [Payment intents and settlement](06-design/payment-intents-and-settlement.md) (statements run on PostgreSQL 18.6; follows the proposed DR-27, 28, 30, 31, 280, 281, 283) | Draft |
+| DOC-21 | [Fee batches and import](06-design/fee-batches-and-import.md) (statements run on PostgreSQL 18.6; row codes from DOC-18 §2) | Approved (2026-11-02) |
+| DOC-22 | [Ledger, allocation and the money log](06-design/ledger-and-allocation.md) (19 nightly queries run; race and timing figures planned) | Approved (2026-11-02) |
+| DOC-23 | [Payment intents and settlement](06-design/payment-intents-and-settlement.md) (statements run on PostgreSQL 18.6; follows DR-27, 28, 30, 31, 280, 281, 283, decided 2026-11-02; gateway facts unverified until P2-21) | Approved (2026-11-02) |
 | DOC-24 | [Payment gateway port and drivers](06-design/payment-gateway-drivers.md) (Stripe first, fake, the checklist for a new driver; Draft 2026-11-01) | Draft |
 | DOC-25 | Bank-statement reconciliation (`06-design/bank-statement-reconciliation.md`) | Not written |
 | DOC-26 | [Identity and sessions](06-design/identity-and-sessions.md) | Approved |
@@ -46,10 +46,10 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-28 | Tickets (`06-design/tickets.md`) | Not written |
 | DOC-29 | Resident QR (`06-design/resident-qr.md`) | Not written |
 | DOC-30 | Vehicles (`06-design/vehicles.md`) | Not written |
-| DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core written, DDL and statements run on PostgreSQL 18.6; notices owed to P4) | Draft |
+| DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core approved 2026-11-02, DDL and statements run on PostgreSQL 18.6; notices owed to P4) | Approved (core) |
 | DOC-32 | Document library (`06-design/document-library.md`) | Not written |
 | DOC-33 | Reports and exports (`06-design/reports-and-exports.md`) | Not written |
-| DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; follows the proposed DR-298) | Draft |
+| DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; §11–12 report PDFs follow DR-298, P6) | Approved (2026-11-02, P2 part) |
 | DOC-35 | [Audit, privacy and terms](06-design/audit-privacy-and-terms.md) | Approved |
 | DOC-36 | [Building configuration and demo](06-design/building-configuration-and-demo.md) | Approved |
 | DOC-37 | [Files and uploads](06-design/files-and-uploads.md) | Approved |
@@ -59,21 +59,21 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-41 | [Configuration reference](06-design/configuration-reference.md) (skeleton) | Approved |
 | DOC-42 | [Error handling](06-design/error-handling.md) | Approved |
 | DOC-43 | [Flows index](06-design/flows/README.md) | Approved |
-| DOC-44 | [Fees and payments (ledger level)](06-design/flows/fees-and-payments.md) (FL-01…09, FL-44; follows DOC-21, DOC-22, DOC-23) | Draft |
-| DOC-45 | [Online payment](06-design/flows/online-payment.md) (FL-10…14, FL-16; FL-15 is P3; Draft 2026-11-01) | Draft |
+| DOC-44 | [Fees and payments (ledger level)](06-design/flows/fees-and-payments.md) (FL-01…09, FL-44; follows DOC-21, DOC-22, DOC-23) | Approved (2026-11-02) |
+| DOC-45 | [Online payment](06-design/flows/online-payment.md) (FL-10…14, FL-16; FL-15 is P3) | Approved (2026-11-02) |
 | DOC-46 | [Identity and household](06-design/flows/identity-and-household.md) | Approved |
 | DOC-47 | Tickets (`06-design/flows/tickets.md`) | Not written |
 | DOC-48 | Notices, access, vehicles (`06-design/flows/notices-access-vehicles.md`) | Not written |
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Approved |
 | DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74, E-169 and E-180…E-182 specified, E-75…E-168 numbered) | Approved |
-| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE written, statements run on PostgreSQL 18.6; follows the proposed DR-287; webhook section written 2026-11-01, DR-325) | Draft |
+| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE and the webhook section; statements run on PostgreSQL 18.6; DR-287 decided) | Approved (2026-11-02) |
 | DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Approved |
 | DOC-54 | [Design system](08-ux-ui/design-system.md) | Approved |
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |
 | DOC-56 | [Screens index](08-ux-ui/screens/README.md) | Approved |
 | DOC-57 | [Resident: sign-in and home](08-ux-ui/screens/resident-signin-home.md) (complete) | Approved |
-| DOC-58 | [Resident: fees and payment](08-ux-ui/screens/resident-fees-payment.md) (fees and payment screens, Draft 2026-11-01; `Pay-VietQR` and `Pay-Mismatch` wait for a QR driver) | Draft |
+| DOC-58 | [Resident: fees and payment](08-ux-ui/screens/resident-fees-payment.md) (fees and payment screens; `Pay-VietQR` and `Pay-Mismatch` wait for a QR driver) | Approved (2026-11-02) |
 | DOC-59 | Resident: requests, unit, members, vehicles (`08-ux-ui/screens/resident-requests-unit.md`) | Not written |
 | DOC-60 | [Resident: QR, notices, account](08-ux-ui/screens/resident-qr-notices-account.md) (account group P1; QR, notices, library owed) | Approved |
 | DOC-61 | [Staff app: shared and Manager](08-ux-ui/screens/staff-shared-and-manager.md) (§1 P1; B-screens owed) | Approved |
@@ -81,8 +81,8 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-63 | Staff app: Guard (`08-ux-ui/screens/staff-guard.md`) | Not written |
 | DOC-64 | [Web: sign-in, dashboard, operations](08-ux-ui/screens/web-auth-dashboard-operations.md) (§1 P1) | Approved |
 | DOC-65 | [Web: residents](08-ux-ui/screens/web-residents.md) (complete for P1, `W-Unit-Types` added by DR-314 for P1-30; W-Vehicles owed P5) | Approved |
-| DOC-66 | [Web: finance](08-ux-ui/screens/web-finance.md) (twelve P2 screens, Draft 2026-11-01; `W-Statement` P3, reports and exports P6) | Draft |
-| DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1; W-Gateway/W-Audit/W-System owed) | Approved |
+| DOC-66 | [Web: finance](08-ux-ui/screens/web-finance.md) (twelve P2 screens; `W-Statement` P3, reports and exports P6) | Approved (2026-11-02) |
+| DOC-67 | [Web: system](08-ux-ui/screens/web-system.md) (§1 P1 and `W-Gateway` P2; W-Audit/W-System owed) | Approved |
 | DOC-68 | [UI states and copy](08-ux-ui/ui-states-and-copy.md) (108 error codes and the P1 keys; grows per phase) | Approved |
 | DOC-69 | [Local development](09-operations/local-dev.md) (dry run is the acceptance of P1-03, DR-227) | Approved |
 | DOC-70 | [Deploy: staging and production](09-operations/deploy-staging-and-production.md) (first version: Owner inputs are placeholders until the task that needs them, DR-228; run by P1-20; final P6) | Approved |
