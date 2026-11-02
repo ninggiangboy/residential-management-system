@@ -20,6 +20,7 @@ import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
 import { installFinance } from '@mod/finance'
 import { activeIntentProbe } from '@mod/finance/integrations/building'
+import { feeImportHandler } from '@mod/finance/integrations/residency'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
 import type { OpenTicketsProbe } from '@mod/identity/contracts'
 import { installResidency } from '@mod/residency'
@@ -320,6 +321,8 @@ export function createContainer(
     audited: audit.audited,
     metrics: metrics.port,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+    // DR-149: `/staff/imports` dispatches `fee_batch` to `finance`, installed below (it reads `residency.api`); read per request.
+    importHandlers: () => [feeImportHandler(finance.feeImports)],
   })
   installed.push(residency)
 

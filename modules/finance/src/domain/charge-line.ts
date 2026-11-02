@@ -151,7 +151,7 @@ function parseNumbers(input: ChargeLineInput, fail: Fail) {
   const quantity = blank(input.quantity)
     ? 1000n
     : parseQuantityMilli(input.quantity as string | number)
-  if (quantity === null) fail('quantity', 'quantity_invalid', { max: '999999999.999' })
+  if (quantity === null) fail('quantity', 'quantity_invalid', { max: 999_999_999.999 })
   const unitPrice = blank(input.unitPrice)
     ? null
     : parseWholeMoney(input.unitPrice as string | number, false)

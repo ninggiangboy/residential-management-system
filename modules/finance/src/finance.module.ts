@@ -4,6 +4,7 @@ import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { FilesApi } from '@mod/building/contracts'
 import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { FeeImportApiImpl } from './application/api/fee-import-api-impl'
 import { FinanceApiImpl } from './application/api/finance-api-impl'
 import { FeeImportPlanner } from './application/fee-import-planner'
 import type { UnitDirectory } from './application/ports'
@@ -17,7 +18,8 @@ import { RemoveDraftCharge } from './application/use-cases/remove-draft-charge'
 import { ReplaceDraftCharge } from './application/use-cases/replace-draft-charge'
 import { UpdateFeeBatch } from './application/use-cases/update-fee-batch'
 import { ValidateFeeImport } from './application/use-cases/validate-fee-import'
-import type { FinanceApi } from './contracts'
+import type { FeeImportApi, FinanceApi } from './contracts'
+import { ExceljsFeeTemplateWriter } from './infrastructure/excel/exceljs-fee-template-writer'
 import { ExceljsFeeWorkbookReader } from './infrastructure/excel/exceljs-workbook-reader'
 import { DrizzleChargeRepository } from './infrastructure/persistence/drizzle-charge-repository'
 import { DrizzleFeeBatchRepository } from './infrastructure/persistence/drizzle-fee-batch-repository'
@@ -59,6 +61,8 @@ export interface FinanceQueries {
 export interface FinanceModule extends AppModule<'finance'> {
   /** `FinanceApi` (DOC-09 §7.2) for the other modules and `integrations/*`. */
   readonly api: FinanceApi
+  /** The fee import behind the host's `/staff/imports` routes (DR-149, `integrations/residency`). */
+  readonly feeImports: FeeImportApi
   readonly useCases: FinanceUseCases
   readonly queries: FinanceQueries
 }
@@ -75,9 +79,34 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const charges = new DrizzleChargeRepository(database)
   const imports = new DrizzleFeeImportRepository(database)
   const planner = new FeeImportPlanner(new ExceljsFeeWorkbookReader(), deps.units)
+  const validateFeeImport = new ValidateFeeImport(
+    deps.files,
+    planner,
+    imports,
+    batches,
+    database,
+    clock,
+    ids,
+    logger,
+    metrics,
+  )
+  const commitFeeImport = new CommitFeeImport(
+    deps.files,
+    planner,
+    imports,
+    batches,
+    audited,
+    database,
+    clock,
+    ids,
+    logger,
+    metrics,
+  )
+  const feeImportQueries = new FeeImportQueries(imports, new ExceljsFeeTemplateWriter(), clock)
   return {
     name: 'finance',
     api: new FinanceApiImpl(new DrizzleIntentReader(database)),
+    feeImports: new FeeImportApiImpl(validateFeeImport, commitFeeImport, feeImportQueries),
     useCases: {
       createFeeBatch: new CreateFeeBatch(database, batches, counter, audited, ids),
       updateFeeBatch: new UpdateFeeBatch(database, batches, audited),
@@ -85,33 +114,12 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       replaceDraftCharge: new ReplaceDraftCharge(database, charges, batches, audited, ids),
       addDraftCharge: new AddDraftCharge(database, charges, batches, deps.units, audited, ids),
       removeDraftCharge: new RemoveDraftCharge(database, charges, batches, audited),
-      validateFeeImport: new ValidateFeeImport(
-        deps.files,
-        planner,
-        imports,
-        batches,
-        database,
-        clock,
-        ids,
-        logger,
-        metrics,
-      ),
-      commitFeeImport: new CommitFeeImport(
-        deps.files,
-        planner,
-        imports,
-        batches,
-        audited,
-        database,
-        clock,
-        ids,
-        logger,
-        metrics,
-      ),
+      validateFeeImport,
+      commitFeeImport,
     },
     queries: {
       feeBatches: new FeeBatchQueries(batches),
-      feeImports: new FeeImportQueries(imports, clock),
+      feeImports: feeImportQueries,
     },
   }
 }

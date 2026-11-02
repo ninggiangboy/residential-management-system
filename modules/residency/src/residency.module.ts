@@ -33,7 +33,7 @@ import { UpdateProfile } from './application/use-cases/update-profile'
 import { UpdateUnit } from './application/use-cases/update-unit'
 import { UpdateUnitType } from './application/use-cases/update-unit-type'
 import { ValidateUnitOwnerImport } from './application/use-cases/validate-unit-owner-import'
-import type { ResidencyApi } from './contracts'
+import type { ImportHandler, ResidencyApi } from './contracts'
 import {
   ExceljsTemplateWriter,
   ExceljsWorkbookReader,
@@ -90,6 +90,8 @@ export interface ResidencyDeps {
   audited: Audited
   /** `OUTBOX_MAX_PAYLOAD_BYTES`. */
   outboxMaxPayloadBytes: number
+  /** The import kinds of other modules behind `/staff/imports` (DR-149); read at request time, none when absent. */
+  importHandlers?: () => readonly ImportHandler[]
 }
 
 export interface ResidencyModuleDeps extends ResidencyDeps {
@@ -348,6 +350,7 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       changeMembership,
       guards: deps.guards,
       idempotent: deps.idempotent,
+      importHandlers: deps.importHandlers ?? (() => []),
     }),
     handlers: [
       new ClearProfileOnAccountDeletionHandler(

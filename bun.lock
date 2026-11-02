@@ -245,6 +245,8 @@
         "@core/runtime": "workspace:*",
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
+        "@mod/residency": "workspace:*",
+        "@rms/i18n-catalog": "workspace:*",
         "@rms/shared-types": "workspace:*",
         "drizzle-orm": "0.45.4",
         "exceljs": "4.4.0",

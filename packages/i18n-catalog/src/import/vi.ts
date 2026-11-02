@@ -1,4 +1,4 @@
-/** Vietnamese texts of the units-and-owners import (DOC-18 §1.2); same keys and arguments as `en.ts`. */
+/** Vietnamese texts of the imports (DOC-18 §1.2, §2.2); same keys and arguments as `en.ts`. */
 export const importVi = {
   'common.import.import_file_type': 'Tệp phải là sổ làm việc Excel (.xlsx).',
   'common.import.import_no_header': 'Dòng đầu tiên phải có cột “Mã căn hộ”. Hãy dùng tệp mẫu.',
@@ -41,4 +41,26 @@ export const importVi = {
   'common.import.unit_type_defaults_applied':
     'Căn hộ {code} sẽ lấy {fields, select, bedrooms {số phòng ngủ} area {diện tích} other {số phòng ngủ và diện tích}} mặc định của loại “{type}”.',
   'common.import.profile_field_differs': '{field} khác với hồ sơ đã lưu nên không được thay đổi.',
+  // The fee file (DOC-18 §2.2, DQ-62…DQ-78).
+  'common.import.import_missing_column': 'Thiếu cột bắt buộc: {columns}. Hãy dùng tệp mẫu.',
+  'common.import.import_no_price': 'Cần có cột “Đơn giá” hoặc cột “Thành tiền”.',
+  'common.import.fee_month_invalid': 'Tháng phí phải theo dạng MM/YYYY hoặc YYYY-MM.',
+  'common.import.fee_month_mismatch':
+    'Tháng phí {got} khác với tháng phí của đợt thu ({expected}).',
+  'common.import.item_name_invalid': 'Tên khoản phải dài từ {min, number} đến {max, number} ký tự.',
+  'common.import.kind_invalid': 'Loại dòng phải là “phí” hoặc “điều chỉnh”.',
+  'common.import.quantity_invalid':
+    'Số lượng phải từ 0, tối đa 3 chữ số thập phân và không quá {max, number}.',
+  'common.import.unit_price_invalid': 'Đơn giá phải là số nguyên từ 0 đến {max, number} đ.',
+  'common.import.amount_invalid':
+    '{kind, select, adjustment {Số tiền điều chỉnh phải là số nguyên khác 0, tối đa {max, number} đ.} other {Thành tiền phải là số nguyên lớn hơn 0, tối đa {max, number} đ.}}',
+  'common.import.amount_mismatch':
+    'Thành tiền {got, number} đ không bằng số lượng × đơn giá ({expected, number} đ). Hãy sửa hoặc để trống cột thành tiền.',
+  'common.import.adjustment_note_required': 'Dòng điều chỉnh phải có ghi chú nêu lý do.',
+  'common.import.note_too_long': 'Ghi chú tối đa {max, number} ký tự.',
+  'common.import.charge_item_duplicate': 'Khoản “{item}” của căn hộ này đã có ở dòng {firstRow}.',
+  'common.import.charge_total_zero':
+    'Tổng các dòng của căn hộ {code} là {total, number} đ, không lớn hơn 0 nên không tạo khoản thu.',
+  'common.import.unit_not_found': 'Không có căn hộ {code} trong tòa nhà.',
+  'common.import.unit_without_owner': 'Căn hộ {code} chưa có chủ hộ nên không có ai để báo phí.',
 } as const

@@ -178,9 +178,8 @@ describe('the template (E-71)', () => {
     expect(book.worksheets[0]?.getRow(1).getCell(1).value).toBe('Unit code')
   })
 
-  test('an unknown kind, and the fee template that finance owns, are 404', async () => {
-    for (const kind of ['nothing', 'fee_batch'])
-      expect((await call(`/staff/imports/templates/${kind}`, { token: manager })).status).toBe(404)
+  test('an unknown kind is 404 (the fee template is `finance`’s, fee-import.integration.test.ts)', async () => {
+    expect((await call('/staff/imports/templates/nothing', { token: manager })).status).toBe(404)
   })
 })
 
@@ -232,13 +231,16 @@ describe('validate, read and commit (E-72, E-73, E-74)', () => {
     expect(again.preview.issues[0]?.message).toBe('Số điện thoại không hợp lệ.')
   })
 
-  test('the body refuses an unknown key, an unknown kind and the kind finance owns', async () => {
+  test('the body refuses an unknown key, an unknown kind, a batch for unit_owner and fee_batch without its batch', async () => {
     const fileId = await upload(manager, await workbook(rows('V2')))
     const post = (json: unknown) => call('/staff/imports', { method: 'POST', token: manager, json })
     expect((await post({ kind: 'unit_owner', fileId, extra: 1 })).status).toBe(400)
     expect((await post({ kind: 'nothing', fileId })).status).toBe(400)
     expect((await post({ kind: 'unit_owner' })).status).toBe(400)
     expect((await post({ kind: 'unit_owner', fileId, params: { batchId: 'x' } })).status).toBe(400)
+    expect(
+      (await post({ kind: 'unit_owner', fileId, params: { batchId: crypto.randomUUID() } })).status,
+    ).toBe(400)
     expect((await post({ kind: 'fee_batch', fileId })).status).toBe(400)
   })
 
@@ -412,7 +414,6 @@ describe('IM-42 the history (E-169)', () => {
       '?limit=101',
       '?limit=x',
       '?status=nope',
-      '?kind=fee_batch',
       '?kind=nope',
       '?other=1',
     ])
