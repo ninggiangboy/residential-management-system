@@ -1,32 +1,82 @@
 import { expect, type Page, type Response, test } from '@playwright/test'
 import { signInAndWait } from './support/app'
 
+interface Seen {
+  /** Indicators drawn before their 150 ms (DOC-54 §17.3), each with how long its table or skeleton had waited. */
+  early: string[]
+  skeleton: number
+  bar: boolean
+  spinner: boolean
+}
+
 /**
- * Records, frame by frame from now until `ms` later, the most opaque skeleton, and whether a table's loading bar or a button's
- * spinner was drawn (DOC-54 §17). The API of this run answers in a few milliseconds (`DEV_LATENCY_MS=0`).
+ * Watches from now until `ms` later. Every indicator of DOC-54 §17.3 waits 150 ms: a table's bar after the table turned busy, a
+ * skeleton after it was inserted. A `MutationObserver` stamps those starts as they happen, and every frame checks that nothing
+ * was drawn sooner. On a fast machine nothing waits that long, so nothing is drawn; on a slow CI runner the app itself can take
+ * more than 150 ms to render a page, and an indicator that waited its 150 ms is then the rule working, not a flash.
  */
 async function watchIndicators(page: Page, ms: number) {
   await page.evaluate((duration) => {
-    const w = window as unknown as { __seen: { skeleton: number; bar: boolean; spinner: boolean } }
-    w.__seen = { skeleton: 0, bar: false, spinner: false }
+    const seen: Seen = { early: [], skeleton: 0, bar: false, spinner: false }
+    ;(window as unknown as { __seen: Seen }).__seen = seen
+    const busySince = new WeakMap<Element, number>()
+    const insertedAt = new WeakMap<Element, number>()
+    const reported = new WeakSet<Element>()
+    const stamp = (root: Element, at: number) => {
+      for (const table of [root, ...root.querySelectorAll('table')])
+        if (table.matches('table[aria-busy]') && !busySince.has(table)) busySince.set(table, at)
+      for (const el of [root, ...root.querySelectorAll('.motion-skeleton')])
+        if (el.matches('.motion-skeleton') && !insertedAt.has(el)) insertedAt.set(el, at)
+      // The bar is judged as it is inserted: it outlives the busy state by its 300 ms minimum.
+      for (const bar of [root, ...root.querySelectorAll('.motion-progress')]) {
+        if (!bar.matches('.motion-progress')) continue
+        seen.bar = true
+        const table = bar.closest('.relative')?.querySelector('table')
+        const since = table ? busySince.get(table) : undefined
+        const wait = since === undefined ? 0 : at - since
+        if (wait < 145) seen.early.push(`bar after ${Math.round(wait)} ms of busy`)
+      }
+    }
+    const observer = new MutationObserver((records) => {
+      const at = performance.now()
+      for (const record of records) {
+        if (record.type === 'attributes' && record.target instanceof Element) {
+          if (record.target.hasAttribute('aria-busy')) stamp(record.target, at)
+          else busySince.delete(record.target)
+        }
+        for (const node of record.addedNodes) if (node instanceof Element) stamp(node, at)
+      }
+    })
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['aria-busy'],
+    })
+    // Timers are never early, but a stamp and a frame can land a millisecond apart.
+    const waited = (since: number | undefined, now: number) =>
+      since === undefined ? 0 : now - since
     const start = performance.now()
     const tick = () => {
-      for (const el of document.querySelectorAll('.motion-skeleton'))
-        w.__seen.skeleton = Math.max(w.__seen.skeleton, Number(getComputedStyle(el).opacity))
-      if (document.querySelector('.motion-progress')) w.__seen.bar = true
-      if (document.querySelector('button .animate-spin')) w.__seen.spinner = true
-      if (performance.now() - start < duration) requestAnimationFrame(tick)
+      const now = performance.now()
+      for (const el of document.querySelectorAll('.motion-skeleton')) {
+        const opacity = Number(getComputedStyle(el).opacity)
+        seen.skeleton = Math.max(seen.skeleton, opacity)
+        const wait = waited(insertedAt.get(el), now)
+        if (opacity > 0 && wait < 145 && !reported.has(el)) {
+          reported.add(el)
+          seen.early.push(`skeleton after ${Math.round(wait)} ms`)
+        }
+      }
+      if (document.querySelector('button .animate-spin')) seen.spinner = true
+      if (now - start < duration) requestAnimationFrame(tick)
+      else observer.disconnect()
     }
     requestAnimationFrame(tick)
   }, ms)
 }
 
-const seen = (page: Page) =>
-  page.evaluate(
-    () =>
-      (window as unknown as { __seen: { skeleton: number; bar: boolean; spinner: boolean } })
-        .__seen,
-  )
+const seen = (page: Page) => page.evaluate(() => (window as unknown as { __seen: Seen }).__seen)
 
 /** A page change to the staff list, then its Admin filter: the two steps DS-09 watches. */
 async function staffPageThenFilter(page: Page) {
@@ -84,7 +134,9 @@ test.describe('Motion and loading at any API speed (DOC-54 §17)', () => {
     await watchIndicators(page, 1200)
     await staffPageThenFilter(page)
     await page.waitForTimeout(1300)
-    expect(await seen(page)).toEqual({ skeleton: 0, bar: false, spinner: false })
+    // Nothing drawn before its 150 ms; on a machine that renders in time, that is nothing drawn at all.
+    const result = await seen(page)
+    expect({ early: result.early, spinner: result.spinner }).toEqual({ early: [], spinner: false })
   })
 
   test('DS-10 a side panel its route unmounts slides out before the route changes', async ({
