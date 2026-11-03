@@ -148,7 +148,7 @@ K01 and K04 must show the whole set of §3 (for K04 four queries); a query that 
 
 ## 11. Results
 
-None yet; the run is P2-11, with the second half (the outside jobs) when DOC-27 and DOC-31 have built `integrity_weekly` and `integrity_notices`. Until then C1 is reported for K01…K19 only and the experiment is `invalid` as a whole (DOC-89 §8).
+**P2-11 (2026-11-04), regression guard only, not a result of record.** `modules/finance/test/invariant-check.integration.test.ts` injects K01…K19 on copies of a seeded database (one clone each) and reads the queries per building: C1 and C2 hold for 19 of 19 (the fired set equals §3 in every case), building B returns 0 in every injection (C5), the job counts the rows (C7 for K08) and leaves the ledger digest unchanged (C4 on K08), and the clean building returns 0 (C3 on the small building). Not done: the staging run of record, the `bulk building` (C3 second control, C8 cost), C6 on the fake clock, the five-run JSON and the harness scripts under `apps/api/tests/exp/`. Next: the staging run, with the second half (the outside jobs) when DOC-27 and DOC-31 have built `integrity_weekly` and `integrity_notices`. Until then C1 is reported for K01…K19 only and the experiment is `invalid` as a whole (DOC-89 §8).
 
 ## 12. Open questions
 
