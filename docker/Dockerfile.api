@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.28.0
 # The `rms-api` image (DOC-71 §6.1): one image for both roles (`APP_ROLES`, DR-05), linux/amd64 only.
-FROM oven/bun:1.4.3 AS deps
+FROM oven/bun:1.4.4 AS deps
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 # The patches of `patchedDependencies`, which `bun install` applies (DR-278).
@@ -12,7 +12,7 @@ COPY --parents apps/*/package.json modules/*/package.json packages/*/package.jso
 # binary in the image; the peers Elysia needs at run time are direct dependencies of `@app/api`.
 RUN bun install --frozen-lockfile --production --omit=peer --filter @app/api
 
-FROM oven/bun:1.4.3 AS runtime
+FROM oven/bun:1.4.4 AS runtime
 RUN groupadd --gid 10001 rms && useradd --uid 10001 --gid rms --no-create-home --shell /usr/sbin/nologin rms
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
