@@ -16,8 +16,10 @@ import type {
   ReceiptBuildingSource,
   UnitDirectory,
 } from './application/ports'
+import { DebtQueries } from './application/queries/debt-queries'
 import { FeeBatchQueries } from './application/queries/fee-batch-queries'
 import { FeeImportQueries } from './application/queries/fee-import-queries'
+import { MoneyLogQueries } from './application/queries/money-log-queries'
 import { Settlement } from './application/settle'
 import { AddDraftCharge } from './application/use-cases/add-draft-charge'
 import { CloseFeeBatch } from './application/use-cases/close-fee-batch'
@@ -26,21 +28,28 @@ import { CreateFeeBatch } from './application/use-cases/create-fee-batch'
 import { DiscardFeeBatch } from './application/use-cases/discard-fee-batch'
 import { PublishFeeBatch } from './application/use-cases/publish-fee-batch'
 import { RecallFeeBatch } from './application/use-cases/recall-fee-batch'
+import { RecordManualPayment } from './application/use-cases/record-manual-payment'
 import { ReissueFeeBatch } from './application/use-cases/reissue-fee-batch'
 import { RemoveDraftCharge } from './application/use-cases/remove-draft-charge'
 import { ReplaceDraftCharge } from './application/use-cases/replace-draft-charge'
+import { ReviewMoneyLogRow } from './application/use-cases/review-money-log-row'
+import { SendDebtReminders } from './application/use-cases/send-debt-reminders'
 import { UpdateFeeBatch } from './application/use-cases/update-fee-batch'
 import { ValidateFeeImport } from './application/use-cases/validate-fee-import'
 import { VoidCharge } from './application/use-cases/void-charge'
+import { VoidPayment } from './application/use-cases/void-payment'
 import type { FeeImportApi, FinanceApi } from './contracts'
 import { ExceljsFeeTemplateWriter } from './infrastructure/excel/exceljs-fee-template-writer'
 import { ExceljsFeeWorkbookReader } from './infrastructure/excel/exceljs-workbook-reader'
 import { DrizzleChargeRepository } from './infrastructure/persistence/drizzle-charge-repository'
+import { DrizzleDebtRepository } from './infrastructure/persistence/drizzle-debt-repository'
 import { DrizzleFeeBatchRepository } from './infrastructure/persistence/drizzle-fee-batch-repository'
 import { DrizzleFeeImportRepository } from './infrastructure/persistence/drizzle-fee-import-repository'
 import { DrizzleIntentReader } from './infrastructure/persistence/drizzle-intent-reader'
 import { DrizzleIntentRepository } from './infrastructure/persistence/drizzle-intent-repository'
 import { DrizzleLedgerRepository } from './infrastructure/persistence/drizzle-ledger-repository'
+import { DrizzleMoneyLogRepository } from './infrastructure/persistence/drizzle-money-log-repository'
+import { DrizzlePaymentRepository } from './infrastructure/persistence/drizzle-payment-repository'
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
 import { financeOutbox } from './infrastructure/persistence/schema'
 import { financeManifest } from './manifest'
@@ -83,11 +92,17 @@ export interface FinanceUseCases {
   reissueFeeBatch: ReissueFeeBatch
   recallFeeBatch: RecallFeeBatch
   voidCharge: VoidCharge
+  recordManualPayment: RecordManualPayment
+  voidPayment: VoidPayment
+  reviewMoneyLogRow: ReviewMoneyLogRow
+  sendDebtReminders: SendDebtReminders
 }
 
 export interface FinanceQueries {
   feeBatches: FeeBatchQueries
   feeImports: FeeImportQueries
+  debts: DebtQueries
+  moneyLog: MoneyLogQueries
 }
 
 export interface FinanceModule extends AppModule<'finance'> {
@@ -103,7 +118,8 @@ export interface FinanceModule extends AppModule<'finance'> {
 
 /**
  * Builds the module from what it needs; `install.ts` narrows the host to this (DOC-12 §4.2, §4.3). The batch use cases of
- * DOC-21 §3 (P2-04, P2-05, P2-07) and `settle()` (P2-06) are here; the routes join with P2-15, manual payment with P2-08.
+ * DOC-21 §3 (P2-04, P2-05, P2-07), `settle()` (P2-06), the manual payment (P2-08), the payment void and money log (P2-09) and
+ * debt and reminders (P2-10) are here; the routes join with P2-15.
  */
 export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const { database, ids, audited, clock, logger } = deps
@@ -114,6 +130,9 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const imports = new DrizzleFeeImportRepository(database)
   const ledger = new DrizzleLedgerRepository(database)
   const intents = new DrizzleIntentRepository(database)
+  const payments = new DrizzlePaymentRepository(database)
+  const debts = new DrizzleDebtRepository(database)
+  const moneyLog = new DrizzleMoneyLogRepository(database)
   const outbox = new DrizzleOutboxWriter(database, financeOutbox, () => ids.next(), {
     source: 'finance',
     types: new Set(Object.keys(financeManifest.outboxPolicies)),
@@ -189,10 +208,37 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
         clock,
         logger,
       ),
+      recordManualPayment: new RecordManualPayment(
+        database,
+        payments,
+        ledger,
+        allocator,
+        cancellation,
+        deps.calendar,
+        deps.receiptBuildings,
+        outbox,
+        audited,
+        clock,
+        ids,
+        logger,
+      ),
+      voidPayment: new VoidPayment(database, payments, outbox, audited, clock, logger),
+      reviewMoneyLogRow: new ReviewMoneyLogRow(database, moneyLog, audited, logger),
+      sendDebtReminders: new SendDebtReminders(
+        database,
+        debts,
+        deps.calendar,
+        outbox,
+        clock,
+        ids,
+        logger,
+      ),
     },
     queries: {
       feeBatches: new FeeBatchQueries(batches),
       feeImports: feeImportQueries,
+      debts: new DebtQueries(debts, deps.calendar, clock),
+      moneyLog: new MoneyLogQueries(moneyLog),
     },
     settlement: new Settlement(
       database,

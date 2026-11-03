@@ -1,9 +1,19 @@
-import { ConflictError, NotFoundError, RuleViolationError, ValidationError } from '@core/kernel'
+import {
+  ConflictError,
+  DomainError,
+  NotFoundError,
+  RuleViolationError,
+  ValidationError,
+} from '@core/kernel'
 import type { ChargeLineIssue } from './charge-line'
 
 /** 409 `invalid_transition`: the batch or charge is not in the state the action needs (DOC-21 §8, DR-127). */
 export class InvalidTransitionError extends ConflictError {
-  constructor(entity: 'fee_batch' | 'charge', status: string, action: string) {
+  constructor(
+    entity: 'fee_batch' | 'charge' | 'payment' | 'gateway_event' | 'statement_line',
+    status: string,
+    action: string,
+  ) {
     super('invalid_transition', 'The resource is not in a state that allows this', {
       details: { entity, status, action },
     })
@@ -133,20 +143,68 @@ export class ChargeNotVoidableError extends ConflictError {
 const REASON_MIN = 5
 const REASON_MAX = 500
 
-/** The trimmed reason, or 422 `reason_too_short` / `reason_too_long` on `reason` (DOC-21 §3.5, §3.9, DR-332). */
-export function checkedReason(reason: string | undefined): string {
+/**
+ * The trimmed reason, or 422 `reason_too_short` / `reason_too_long` on `path` (DOC-21 §3.5, §3.9, DR-332). A money-log review note
+ * passes `max` 1,000 and `path` `note` (DOC-22 §9.2, §13 `MONEY_LOG_REVIEW_NOTE`).
+ */
+export function checkedReason(
+  reason: string | undefined,
+  { max = REASON_MAX, path = 'reason' }: { max?: number; path?: string } = {},
+): string {
   const trimmed = reason?.trim() ?? ''
   if (trimmed.length < REASON_MIN)
     throw new RuleViolationError(
       'reason_too_short',
       `A reason of at least ${REASON_MIN} characters`,
-      'reason',
+      path,
     )
-  if (trimmed.length > REASON_MAX)
-    throw new RuleViolationError(
-      'reason_too_long',
-      `A reason of at most ${REASON_MAX} characters`,
-      'reason',
-    )
+  if (trimmed.length > max)
+    throw new RuleViolationError('reason_too_long', `A reason of at most ${max} characters`, path)
   return trimmed
+}
+
+/** One selected charge as it is now, for the 409 `charge_changed` answer (DOC-22 §4.3, DOC-42 §5.5). */
+export interface ChangedCharge {
+  readonly chargeId: string
+  readonly status: string
+  readonly version: number
+}
+
+/** 409 `charge_changed {charges}`: a selected charge is no longer `open` (DOC-22 §4.3, §5.2, FR-05.3). */
+export class ChargeChangedError extends ConflictError {
+  constructor(charges: readonly ChangedCharge[]) {
+    super('charge_changed', 'A selected charge has changed', { details: { charges } })
+  }
+}
+
+/** 422 `allocation_mismatch {expected, got}`: a request `amount` that differs from the sum (DOC-22 §5.1, FR-05.2). */
+export class AllocationMismatchError extends DomainError {
+  constructor(expected: number, got: number) {
+    super('allocation_mismatch', 'The amount does not match the selected charges', 'validation', {
+      details: { expected, got },
+    })
+  }
+}
+
+/** 409 `payment_not_voidable`: only `cash` and `bank_transfer` payments are voided (DOC-22 §6, FR-06.3, DR-24). */
+export class PaymentNotVoidableError extends ConflictError {
+  constructor(source: string) {
+    super('payment_not_voidable', 'An online payment cannot be voided', { details: { source } })
+  }
+}
+
+/** 409 `money_log_already_reviewed {reviewedAt}`: a log row is reviewed once (DOC-22 §9.2, FR-46.1). */
+export class MoneyLogAlreadyReviewedError extends ConflictError {
+  constructor(reviewedAt: Date) {
+    super('money_log_already_reviewed', 'This row has already been reviewed', {
+      details: { reviewedAt: reviewedAt.toISOString() },
+    })
+  }
+}
+
+/** A 400 rule of a request body (DOC-42 §5.2): `too_many_charges`, `received_on_future`, `no_unit_selected`, … on `path`. */
+export class RequestRuleError extends ValidationError {
+  constructor(path: string, rule: string, message: string) {
+    super([{ path, code: rule, message }])
+  }
 }

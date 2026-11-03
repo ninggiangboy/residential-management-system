@@ -22,12 +22,14 @@ export const financeManifest = {
     [FINANCE_EVENTS.batchRecalled]: 'default',
     [FINANCE_EVENTS.chargeVoided]: 'default',
     [FINANCE_EVENTS.paymentPosted]: 'default',
+    [FINANCE_EVENTS.paymentVoided]: 'default',
+    [FINANCE_EVENTS.debtReminderSent]: 'default',
     [FINANCE_EVENTS.moneyUnposted]: 'default',
     // DOC-09 §4: its own retry class, 8 attempts (DR-31).
     [FINANCE_EVENTS.intentCancelRequested]: 'intent_cancel',
   },
   config: undefined,
-  // DOC-21 §2.3, DOC-22 §2.4, DOC-23 §2.4, DOC-35 §4.1; the payment void and money-log review join with P2-09.
+  // DOC-21 §2.3, DOC-22 §2.4, DOC-23 §2.4, DOC-35 §4.1.
   auditActions: [
     'finance.batch.create',
     'finance.batch.import_commit',
@@ -41,5 +43,7 @@ export const financeManifest = {
     'finance.charge.update',
     'finance.charge.void',
     'finance.payment.post',
+    'finance.payment.void',
+    'finance.money_log.review',
   ],
 } as const satisfies ModuleManifest
