@@ -85,3 +85,4 @@ local-changes:
   - core-messaging: `InProcessMessageBus` takes `observe(handler, outcome)`; new `OutboxStats` (oldest unpublished age and dead letters per source) (P1-18)
   - core-runtime: `createRuntime` takes `onHandler`; `AppModule.gauges` (`ModuleGauge`): gauges a module reads from its own tables at a scrape (P1-18)
   - core-db: `GaplessCounter` (`createGaplessCounter` / `SqlGaplessCounter.next`), the `document_counter` upsert of DOC-12 §9.5 in the caller's ambient transaction with `updated_at = now()`, refused outside a transaction (DR-10, DOC-14 §10) (P2-02)
+  - core-runtime: `SqlJobRunStore.lastSuccessDetails(name)`, the `details` of the latest succeeded run of a job, for the gauge `ledger_invariant_violations` (P2-11)

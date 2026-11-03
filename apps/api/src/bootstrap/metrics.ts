@@ -1,7 +1,7 @@
 import type { Database } from '@core/db'
 import type { RequestSample } from '@core/http'
 import type { OutboxStats } from '@core/messaging'
-import type { JobRunEvent } from '@core/runtime'
+import type { JobRunEvent, SqlJobRunStore } from '@core/runtime'
 import { Metrics } from '@core/telemetry'
 import type { AuditMetrics } from '@mod/audit'
 import type { UsageReporter } from '@mod/building'
@@ -261,6 +261,8 @@ export type AppMetrics = ReturnType<typeof createAppMetrics>
 
 export interface PulledSources {
   database: Database
+  /** `building.job_run`, for the gauges that are the result of a job. */
+  jobRuns: Pick<SqlJobRunStore, 'lastSuccessDetails'>
   /** The outboxes of the installed modules. */
   outboxes: OutboxStats
   /** Readiness as `/health/ready` answers it: the database, the relay of a worker, not stopping. */
@@ -280,7 +282,7 @@ const seconds = (date: Date) => date.getTime() / 1000
  */
 export function registerPulledMetrics(
   { metrics }: Pick<AppMetrics, 'metrics'>,
-  { database, outboxes, ready, worker }: PulledSources,
+  { database, jobRuns, outboxes, ready, worker }: PulledSources,
   settings: MetricsSettings,
 ) {
   metrics.pulled(
@@ -330,6 +332,18 @@ export function registerPulledMetrics(
         labels: { schema: source },
         value: count,
       })),
+  )
+
+  // DOC-22 §12, DOC-40 §4.2: the rows the last successful `invariant_check` found, read from its `job_run` row so that every
+  // process exports the same value, the worker down or not. The job skips demo buildings, so none is counted (DOC-40 §4 rule 4).
+  // A failed run does not move it (the alert `InvariantCheckStale` is for that); no run yet is 0.
+  metrics.pulled(
+    'ledger_invariant_violations',
+    'Rows over the 19 queries of the last successful nightly ledger check (demo buildings excluded).',
+    [],
+    async () => [
+      { value: Number((await jobRuns.lastSuccessDetails('invariant_check'))?.violations ?? 0) },
+    ],
   )
 
   if (!worker) return

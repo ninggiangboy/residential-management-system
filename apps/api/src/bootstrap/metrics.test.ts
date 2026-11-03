@@ -18,8 +18,8 @@ const DOC_40 = readFileSync(
   'utf8',
 )
 
-/** The phases whose metrics are registered: `P1`, the provider counters of P1-22 and the rows of P2-12 (counters only until `sse_streams_open`). */
-const BUILT_PHASE = /^(P1(?![-\d])|P1-22|P2-12)/
+/** The phases whose metrics are registered: `P1`, the provider counters of P1-22, the rows of P2-12 (counters only until `sse_streams_open`) and P2-11. */
+const BUILT_PHASE = /^(P1(?![-\d])|P1-22|P2-12|P2-11)/
 
 /** The rows of the tables of DOC-40 §4 that end in a phase: the metrics this task has to register (a `P1` first). */
 function catalogOfPhaseOne(): string[] {

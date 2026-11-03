@@ -29,4 +29,20 @@ export class SqlJobRunStore implements JobRunStore {
       throw err
     }
   }
+
+  /**
+   * The `details` of the latest succeeded run of a job, `undefined` when there is none: what a gauge reads when a job's result is
+   * a number (`invariant_check` → `ledger_invariant_violations`, DOC-40 §4.2).
+   */
+  async lastSuccessDetails(name: string): Promise<Record<string, unknown> | undefined> {
+    try {
+      const rows = await this.database.db.execute<{ details: Record<string, unknown> }>(
+        sql`select details from building.job_run where name = ${name} and status = 'succeeded' order by finished_at desc limit 1`,
+      )
+      return rows[0]?.details
+    } catch (err) {
+      if (isPgError(err, ...MISSING)) return undefined
+      throw err
+    }
+  }
 }
