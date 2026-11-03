@@ -128,7 +128,7 @@ An ES256 JWT, valid 15 minutes (`ACCESS_TOKEN_TTL_SECONDS`, FR-45.4). Header and
 
 A resident token is `{ "iss": "rms", "sub", "kind": "resident", "sid", "iat", "exp" }`: no building and no unit permission (a resident account can span buildings; the building comes from the selected membership, ADR-0010).
 
-Verification (`@core/auth`, the vendored `jose` 6.2.12, DOC-11 §3) accepts only `alg = ES256`, reads `kid`, verifies with the key of that id, checks `iss = "rms"` and `exp` with a tolerance of 5 seconds, and refuses `alg: none`, an unknown `kid` and a missing `kind`. Every failure is 401 `unauthenticated`. The `role` claim is **informational**: the staff guard reads role and status from the database on every request (DOC-12 §5.3), so a changed role or a lock applies at once (FR-14.4). The `sid` ties the token to its refresh family; no request checks the family, so a revoked session's access token lives until it expires (at most 15 minutes, ADR-0011 negative consequence).
+Verification (`@core/auth`, the vendored `jose` 6.2.13, DOC-11 §3) accepts only `alg = ES256`, reads `kid`, verifies with the key of that id, checks `iss = "rms"` and `exp` with a tolerance of 5 seconds, and refuses `alg: none`, an unknown `kid` and a missing `kind`. Every failure is 401 `unauthenticated`. The `role` claim is **informational**: the staff guard reads role and status from the database on every request (DOC-12 §5.3), so a changed role or a lock applies at once (FR-14.4). The `sid` ties the token to its refresh family; no request checks the family, so a revoked session's access token lives until it expires (at most 15 minutes, ADR-0011 negative consequence).
 
 ### 3.2 Signing keys and rotation
 
