@@ -462,23 +462,80 @@ describe('terms and privacy (DOC-35 §9, DOC-36 §8)', () => {
   })
 
   test('BD-45 two Admins publishing the next version at the same time: one wins, the other gets 409', async () => {
-    const results = await Promise.allSettled([
-      h.building.useCases.publishTerms.execute(h.staff('admin'), {
-        kind: 'privacy',
-        text: text('a'),
-      }),
-      h.building.useCases.publishTerms.execute(h.staff('admin'), {
-        kind: 'privacy',
-        text: text('b'),
-      }),
-    ])
-    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
-    expect(
-      (results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason,
-    ).toBeInstanceOf(VersionConflictError)
-    const versions = await h.db
-      .sql`SELECT version FROM building.terms_version WHERE kind = 'privacy' ORDER BY version`
-    expect(versions.map((v) => v.version)).toEqual([1, 2])
+    // Deterministic overlap (DOC-12 §14): a held transaction takes version 1, `publishTerms` computes the same version from its own
+    // snapshot, waits on the unique key, and loses once the holder commits. Two bare `Promise.all` calls overlapped only by luck.
+    const staff = h.staff('admin')
+    let commit!: () => void
+    const mayCommit = new Promise<void>((resolve) => {
+      commit = resolve
+    })
+    let taken!: () => void
+    const holderTookIt = new Promise<void>((resolve) => {
+      taken = resolve
+    })
+    const before = Number(
+      (
+        await h.db.sql`
+          SELECT coalesce(max(version), 0)::int AS v FROM building.terms_version
+           WHERE building_id = ${BUILDING} AND kind = 'privacy'`
+      )[0]?.v,
+    )
+    const holder = h.db.sql.begin(async (tx) => {
+      await tx`
+        INSERT INTO building.terms_version (id, building_id, kind, version, text, published_by)
+        VALUES (${crypto.randomUUID()}, ${BUILDING}, 'privacy', ${before + 1}, ${JSON.stringify(text('a'))}::text::jsonb, ${staff.staffId})`
+      taken()
+      await mayCommit
+    })
+    await holderTookIt
+    const loser = h.building.useCases.publishTerms
+      .execute(staff, { kind: 'privacy', text: text('b') })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      )
+    // The loser is blocked on the holder's uncommitted key once a lock wait shows in `pg_stat_activity`.
+    const deadline = Date.now() + 5000
+    for (;;) {
+      const waiting = await h.db.sql`
+        SELECT 1 FROM pg_stat_activity
+         WHERE wait_event_type = 'Lock' AND query LIKE '%building.terms_version%' AND pid <> pg_backend_pid()`
+      if (waiting.length > 0) break
+      if (Date.now() > deadline) throw new Error('publishTerms never reached the unique key')
+      await Bun.sleep(10)
+    }
+    commit()
+    await holder
+    expect(await loser).toBeInstanceOf(VersionConflictError)
+    const after = await h.db.sql`
+      SELECT version FROM building.terms_version
+       WHERE building_id = ${BUILDING} AND kind = 'privacy' AND version > ${before} ORDER BY version`
+    expect(after.map((v) => Number(v.version))).toEqual([before + 1])
+  })
+
+  test('BD-45b two Admins publishing at once never leave a gap or a duplicate; every loser is a 409', async () => {
+    const staff = h.staff('admin')
+    const before = Number(
+      (
+        await h.db
+          .sql`SELECT count(*)::int AS n FROM building.terms_version WHERE kind = 'terms' AND building_id = ${BUILDING}`
+      )[0]?.n,
+    )
+    const results = await Promise.allSettled(
+      [1, 2, 3, 4].map((i) =>
+        h.building.useCases.publishTerms.execute(staff, { kind: 'terms', text: text(`c${i}`) }),
+      ),
+    )
+    for (const r of results) {
+      if (r.status === 'rejected') expect(r.reason).toBeInstanceOf(VersionConflictError)
+    }
+    const won = results.filter((r) => r.status === 'fulfilled').length
+    expect(won).toBeGreaterThanOrEqual(1)
+    const versions = await h.db.sql`
+      SELECT version FROM building.terms_version WHERE kind = 'terms' AND building_id = ${BUILDING} ORDER BY version`
+    expect(versions.map((v) => Number(v.version))).toEqual(
+      Array.from({ length: before + won }, (_, i) => i + 1),
+    )
   })
 
   test('BD-46 both languages are required for a real building; the demo building may publish vi only', async () => {
