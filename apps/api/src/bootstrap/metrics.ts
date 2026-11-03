@@ -68,6 +68,31 @@ const COUNTERS: {
     help: 'Usage events discarded after validation, by reason (DR-279).',
     labels: ['reason'],
   },
+  inbox_entries_created_total: {
+    help: 'Inbox entries inserted, by template key (DOC-31 §10).',
+    labels: ['template_key'],
+  },
+  push_sent_total: { help: 'Push sends, by outcome (DOC-31 §10).', labels: ['outcome'] },
+  push_receipts_total: {
+    help: 'Push receipts read, by outcome (DOC-31 §10).',
+    labels: ['outcome'],
+  },
+  delivery_failed_total: {
+    help: 'Deliveries that failed at the provider, by channel and reason (DOC-42 §8.5).',
+    labels: ['channel', 'reason'],
+  },
+  provider_auth_failed_total: {
+    help: 'Provider answers that refused our credentials, by provider (DOC-42 §7.1).',
+    labels: ['provider'],
+  },
+  sse_stream_opens_total: {
+    help: 'Opens of the staff event stream, by outcome (DOC-52 §15).',
+    labels: ['outcome'],
+  },
+  sse_events_published_total: {
+    help: 'Events written to the replay buffer, by type (DOC-52 §15).',
+    labels: ['type'],
+  },
 }
 
 const HISTOGRAMS: {
