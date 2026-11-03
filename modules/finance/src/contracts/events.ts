@@ -2,7 +2,7 @@
  * The events `finance` writes to its own outbox (DOC-09 §6.1, DOC-21 §2.2, DOC-22 §2.3, DOC-23 §2.3). `receipt_issued` is the
  * e-invoice seam of DR-17; `receipt_render_requested` asks the worker for the PDF from the frozen snapshot (DOC-34 §8). The batch
  * events are chunked at 500 unit ids (DOC-09 §3.4). `intent_cancel_requested` is a command to `finance.cancel_intent_link` (P2-24).
- * `payment_voided` joins with P2-09.
+ * `payment_voided` and `debt_reminder_sent` are P2-09's and P2-10's (DOC-22 §2.3).
  */
 export const FINANCE_EVENTS = {
   receiptIssued: 'finance.receipt_issued.v1',
@@ -12,6 +12,8 @@ export const FINANCE_EVENTS = {
   batchRecalled: 'finance.batch_recalled.v1',
   chargeVoided: 'finance.charge_voided.v1',
   paymentPosted: 'finance.payment_posted.v1',
+  paymentVoided: 'finance.payment_voided.v1',
+  debtReminderSent: 'finance.debt_reminder_sent.v1',
   moneyUnposted: 'finance.money_unposted.v1',
   intentCancelRequested: 'finance.intent_cancel_requested.v1',
 } as const
@@ -114,4 +116,22 @@ export interface ReceiptRenderRequestedPayload {
   buildingId: string
   receiptId: string
   variant: 'issued' | 'void'
+}
+
+/** `finance.payment_voided.v1` (DOC-09 §6.1, DOC-22 §6): only a manual payment is voided. */
+export interface PaymentVoidedPayload {
+  buildingId: string
+  paymentId: string
+  unitId: string
+  source: 'cash' | 'bank_transfer'
+  voidedAt: string
+}
+
+/** `finance.debt_reminder_sent.v1` (DOC-09 §6.1, DOC-22 §8.5): the `debt_reminder` rows of one part, at most 500. */
+export interface DebtReminderSentPayload {
+  buildingId: string
+  reminderDate: string
+  part: number
+  parts: number
+  reminders: Array<{ reminderId: string; unitId: string }>
 }
