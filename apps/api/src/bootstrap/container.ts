@@ -427,6 +427,7 @@ export function createContainer(
   })
   installed.push(analytics)
 
+  const jobRunStore = new SqlJobRunStore(database)
   const runtime = createRuntime({
     modules: installed,
     manifests: MODULE_CATALOG,
@@ -452,7 +453,7 @@ export function createContainer(
       },
     },
     jobs: {
-      store: new SqlJobRunStore(database),
+      store: jobRunStore,
       buildings: async () =>
         (await building.api.listBuildings()).map(({ buildingId }) => ({ buildingId })),
       timeZone: core.JOBS_TIME_ZONE,
@@ -476,6 +477,7 @@ export function createContainer(
     metrics,
     {
       database,
+      jobRuns: jobRunStore,
       outboxes: new OutboxStats(database, outboxSourcesOf(MODULE_CATALOG)),
       // The same answer as `/health/ready` on the ops port, so `ReadinessFailing` and the probe never disagree.
       ready: async () => {
