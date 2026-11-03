@@ -261,6 +261,8 @@ SELECT id FROM identity.refresh_family
  WHERE id = ANY(:session_ids) AND revoked_at IS NULL AND absolute_expires_at > now();
 ```
 
+*Built (P2-12, 2026-11-03):* `SessionRepository.liveIds`, `SessionQueries.liveSessionIds` and `IdentityApi.liveSessionIds`; more than 500 ids is 400 `validation_failed` (rule `maximum`). Test in `modules/identity/test/sessions.integration.test.ts` (a live, a revoked, an expired and an unknown family).
+
 `client` (`web` | `app`) is the column of the family, written at sign-in from the request's `client` (DR-130; a resident is always `app`, DR-225); a client picks the icon from it. `device` is computed on read from `user_agent` (it is stored raw, at most 300 characters). The apps send `User-Agent: rms-resident/1.0.0 (iOS 19.1; iPhone17,1)` (the staff app `rms-staff/…`); the label is `"<model>, <os>"`. A browser agent becomes `"<browser> on <os>"` by five patterns (Chrome, Edge, Firefox, Safari; macOS, Windows, Linux, Android, iOS); anything else is `"Unknown device"`. No library is used.
 
 `DELETE /me/sessions/{id}` and `DELETE /staff/sessions/{id}` revoke one session with the conditional statement below and answer 204. Zero rows is 404 `not_found`: a session of another account looks like a missing one (UC-26 E3). Revoking the current session is allowed and equals a logout.
