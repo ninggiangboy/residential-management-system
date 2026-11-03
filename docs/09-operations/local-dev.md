@@ -193,8 +193,8 @@ A target that needs the stack and cannot find it says so and exits with code 2: 
 | --- | --- | --- | --- | --- |
 | `postgres` | `postgres:18.6` | 5432 | `rms-pg` (mounted at `/var/lib/postgresql`, the layout of the 18 image) | `pg_isready -h 127.0.0.1 -U postgres -d rms`. TCP on purpose: during the first start the image runs the provisioning script on a temporary server that listens on the socket only, so the check cannot pass before the roles exist |
 | `objectstore` | `chrislusf/seaweedfs:4.48` (DR-231), `weed server -s3` with a filer. It serves presigned `PUT`, `HEAD` and `DELETE` and bucket CORS (DOC-11 §1) | 9000 (S3), 9001 (the filer's file browser, where the objects of a bucket can be looked at) | `rms-s3` | `GET /healthz` on the S3 port |
-| `objectstore-init` | `amazon/aws-cli:2.38.3` (one-shot; SeaweedFS has no CLI that sets CORS) | none | none | Exits 0 after it has created the bucket `rms-local-files` and its CORS rule (`PUT`, `GET` and `HEAD` from `http://localhost:5173`); Compose reports it `Healthy` once it exited 0 |
-| `mailpit` | `axllent/mailpit:v1.31.6` | 1025 (SMTP), 8025 (web) | none | `/mailpit readyz` |
+| `objectstore-init` | `amazon/aws-cli:2.38.5` (one-shot; SeaweedFS has no CLI that sets CORS) | none | none | Exits 0 after it has created the bucket `rms-local-files` and its CORS rule (`PUT`, `GET` and `HEAD` from `http://localhost:5173`); Compose reports it `Healthy` once it exited 0 |
+| `mailpit` | `axllent/mailpit:v1.32.0` | 1025 (SMTP), 8025 (web) | none | `/mailpit readyz` |
 
 **Database provisioning.** The `postgres` container runs `docker/postgres/init/10-provision.sh` on its first start (an `initdb.d` script). It reads `RMS_MIGRATOR_PASSWORD`, `RMS_APP_PASSWORD`, `RMS_READONLY_PASSWORD` from the container environment (set by Compose from `.env.local`) and calls `psql -f /provision/0001-provision.sql`, which is `ops/postgres/0001-provision.sql` of the repository (the text of DOC-19 §3, the same file as production), with the four roles and the database `rms` (extensions `pg_trgm`, `unaccent`, `citext` come with the bootstrap step of `db:migrate`). The superuser `postgres` has its own generated password, `RMS_POSTGRES_PASSWORD`; a connection from the host is always password-checked (checked in P1-03: a wrong password for `rms_app` and for `postgres` is refused). The local roles are the same as production, so a permission error shows up on the laptop (DR-67). The role `rms_backup` is created and unused. The script runs once: `infra:down` keeps the data and does not run it again, `infra:reset` does.
 
@@ -402,7 +402,7 @@ Run on 2026-10-21 by Claude Code for the Owner, on macOS with OrbStack (Docker E
 | Step | Command | Result |
 | --- | --- | --- |
 | Clone | `git clone` into a temporary directory, no `.env.local`, no `node_modules` | Clean tree |
-| Prepare the machine | Removed the local tags of `chrislusf/seaweedfs:4.48`, `axllent/mailpit:v1.31.6`, `amazon/aws-cli:2.38.3`; `postgres:18.6` stayed | Images pulled by `up` |
+| Prepare the machine | Removed the local tags of `chrislusf/seaweedfs:4.48`, `axllent/mailpit:v1.31.6`, `amazon/aws-cli:2.38.5`; `postgres:18.6` stayed | Images pulled by `up` |
 | First run | `RMS_PG_PORT=5433 bun run setup` (port 5432 was taken by another project's container, so this also ran the §12 row) | Steps 1 to 4 pass; the three services `healthy` in 24 s, the whole command 26 s (limit 180 s); steps 5 and 6 `skipped` |
 | Second run | `bun run setup` | `kept .env.local`, `bun install` reports no changes, `bun.lock` unchanged, the services stay up (1 s) |
 | Persistence | `infra:down`, `infra:up`, read a row created before | The row is there; the provisioning script did not run again |
