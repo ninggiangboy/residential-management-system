@@ -1,6 +1,6 @@
 # UI states and copy
 
-> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-11-02 (copy of `amount_above_maximum` and `too_many_rows_for_pdf`) · 2026-11-01 (DR-314: copy for five error codes, built in P1-30, and `status.unit-type.*`) · 2026-10-28 (DR-306: §2 the refreshing state and layout-shaped skeletons) · 2026-10-28 (P1-26: the `notify.*` and `pdf.*` families owned by DOC-31 and DOC-34, §1) · 2026-10-28 (DR-279: §4.6 the usage switch) · 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
+> Status: **Approved** (Owner, 2026-10-21, as the skeleton and the P1 keys; it grows per phase) · Updated: 2026-11-03 (copy of `reason_too_long`, P2-05/P2-07) · 2026-11-02 (copy of `amount_above_maximum` and `too_many_rows_for_pdf`) · 2026-11-01 (DR-314: copy for five error codes, built in P1-30, and `status.unit-type.*`) · 2026-10-28 (DR-306: §2 the refreshing state and layout-shaped skeletons) · 2026-10-28 (P1-26: the `notify.*` and `pdf.*` families owned by DOC-31 and DOC-34, §1) · 2026-10-28 (DR-279: §4.6 the usage switch) · 2026-10-22 (P1-09: the catalog built from §3–§6, parity by argument kind, word formatters return a phrase, DR-235; DR-226: `status.import.*` labels; DR-96: `unmatchedTransfer` text) · DOC-68
 > Depends on: [DR](../00-decision-register.md) (DR-17, DR-45, DR-71, DR-74, DR-84, DR-127, DR-128, DR-174, DR-175, DR-183, DR-195, DR-197, DR-205, DR-206, DR-96, DR-226), [DOC-06](../02-glossary.md), [DOC-42](../06-design/error-handling.md) §5, §9, [DOC-50](../07-api/api-guidelines.md) §11, [DOC-53](ux-principles-and-ia.md) (UX-01…20), [DOC-54](design-system.md) §6, §9, [DOC-55](client-architecture.md) §6, §9, §11, [DOC-56](screens/README.md) §6.4, the screen documents DOC-57, 60, 61, 64, 65, 67
 > Main readers: P1-09 (`@rms/i18n-catalog`, the parity and formatter tests), P1-16, P1-17 (clients), the API error handler (P1-04: the server renders `error.<code>`), the writers of DOC-58, 59, 62, 63, 66
 
@@ -189,6 +189,7 @@ A rule code is the `details[].code` of a `validation_failed`. Its key is `error.
 | `unsafe_link` | 400 | Liên kết này không được phép. | This link is not allowed. | — | — | later |
 | `terms_text` | 400 | Văn bản dùng định dạng không được phép (dòng {line}). | The text uses formatting that is not allowed (line {line}). | line | DOC-67 | P1 |
 | `reason_too_short` | 422 | Nhập ít nhất {min} ký tự. | Write at least {min} characters. | min | DOC-65 | P1 |
+| `reason_too_long` | 422 | Nhập tối đa {max} ký tự. | Write at most {max} characters. | max | DOC-65 | P2 |
 | `same_assignee` | 422 | Phiếu này đang do người đó phụ trách. | This ticket is already assigned to that person. | — | — | later |
 | `assignee_locked` | 422 | Người này không nhận được việc. Hãy chọn người khác. | That person cannot take jobs. Choose someone else. | — | — | P1 |
 | `setting_invalid` | 422 | Giá trị cài đặt này chưa hợp lệ. | This setting value is not valid. | — | DOC-67 | P1 |
