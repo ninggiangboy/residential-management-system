@@ -832,6 +832,7 @@ Run on 2026-10-28 as a `psql` script that is **not committed**, on `postgres:18.
 - The receipt snapshot reads the payer through a `PayerDirectory` port (`IdentityApi.getResidentAccounts` for the name, `ResidencyApi.getMembership` for the member type) and the building through a `ReceiptBuildingSource` port. `apps/api` adapts both (`bootstrap/finance-ports.ts`). DOC-22 §7 takes the company block from the building settings, which have no company profile yet. Until DOC-36 adds one, the building's name and hotline stand in, with an empty address and no logo. This stays **open** with P2-13.
 - The metrics `payment_settlements_total` and `payment_settle_duration_seconds` of §14 are not registered yet. Their DOC-40 rows are phase P2, and OB-01 registers the P1 rows only, so they join with the payment alerts of P2-28 (IN-50 runs there). The log lines `settle.done` and `settle.retry` are written.
 
+## 19. Not in this document
 
 | Topic | Lives in |
 | --- | --- |
