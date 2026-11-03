@@ -68,7 +68,7 @@
     "test:authz": "bun run --cwd apps/api test:authz",
     "exp:10": "bun run --cwd apps/api exp:10",
     "config:example": "bun run --cwd apps/api config:example",
-    "test:integration": "bun run --filter './apps/*' --filter './modules/*' test:integration",
+    "test:integration": "bun scripts/test-integration.ts",
     "test:mobile": "maestro test apps/resident-app/.maestro && maestro test apps/staff-app/.maestro",
     "test:e2e": "bun run --filter @app/cms-web e2e",
     "test:db-clean": "bun --env-file=.env.local packages/test-support/src/db-clean.ts"
