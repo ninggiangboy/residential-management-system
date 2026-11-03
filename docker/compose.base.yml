@@ -156,7 +156,7 @@ services:
       - alertmanager-data:/alertmanager
   grafana:
     <<: *third
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     secrets: [grafana-admin-password]
     environment:
       GF_SECURITY_ADMIN_USER: admin
