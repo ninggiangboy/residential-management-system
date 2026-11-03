@@ -44,6 +44,27 @@ export function paramValue(
         missing(`${e} session`)
       )
     }
+    case 'E-23:id': // a device token that is nobody's: the answer is 204 for any id, so own and foreign are the same call
+    case 'E-35:id':
+      return '018f0000-0000-7000-8000-0000000000d1'
+    case 'E-178:id': {
+      const other = actor === 'res.owner' ? 'res.family' : 'res.owner'
+      // An actor refused at a gate never reaches the entry: any entry will do.
+      return (
+        (own ? world.inbox[actor] : world.inbox[other]) ??
+        world.inbox['res.owner'] ??
+        missing(`${e} inbox entry`)
+      )
+    }
+    case 'E-179:id': {
+      if (own)
+        return (
+          (inB2(actor) ? world.inbox['staff.admin'] : world.inbox[actor]) ??
+          world.inbox['staff.admin'] ??
+          missing(`${e} inbox entry`)
+        )
+      return world.inbox['staff.admin_b2'] ?? missing(`${e} inbox entry of B2`)
+    }
     case 'E-33:id': {
       if (own)
         return (
