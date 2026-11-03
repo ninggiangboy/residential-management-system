@@ -4,7 +4,7 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "files": {
     "includes": [
       "**",
@@ -17,7 +17,10 @@
       "!**/.expo",
       "!**/packages/design-tokens/generated",
       "!**/ops/grafana/dashboards",
-      "!**/docs"
+      "!**/docs",
+      "!**/*.md",
+      "!**/*.yml",
+      "!**/*.yaml"
     ]
   },
   "formatter": {
@@ -92,6 +95,31 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["apps/resident-app/**", "apps/staff-app/**", "packages/ui-native/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noReactNativeRawText": {
+              "level": "error",
+              "options": {
+                "skip": ["Button", "Banner"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/cms-web/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noReactNativeRawText": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/scripts/**"],
       "linter": {
