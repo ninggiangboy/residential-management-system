@@ -6,7 +6,7 @@ updates:
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
     cooldown: { default-days: 7 }
     open-pull-requests-limit: 10
-    commit-message: { prefix: chore, include: scope }
+    commit-message: { prefix: chore }
     groups:
       minor-and-patch:
         update-types: [minor, patch]
@@ -137,6 +137,8 @@ updates:
       - dependency-name: "sentry-expo"
       - dependency-name: "unimodules-app-loader"
       - dependency-name: "unimodules-image-loader-interface"
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
