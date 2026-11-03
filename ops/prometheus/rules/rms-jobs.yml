@@ -86,3 +86,11 @@ groups:
         annotations:
           summary: "Job {{ $labels.job_name }} has not succeeded for {{ $value | humanizeDuration }}"
           runbook: docs/09-operations/runbooks/RB-04-outbox-lag.md
+
+      # DOC-40 §5.3: its own Critical rule (36 h), so a night the check did not run is not hidden among the warnings (NFR-09).
+      - alert: InvariantCheckStale
+        expr: time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600
+        labels: { severity: critical }
+        annotations:
+          summary: "The ledger check has not succeeded for {{ $value | humanizeDuration }}"
+          runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md

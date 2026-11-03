@@ -4,6 +4,14 @@ groups:
   - name: rms-original-nine
     interval: 15s
     rules:
+      # DOC-40 §5.2, DOC-22 §12: the gauge is the rows of the nightly check (P2-11); no `for`, it is set once a day.
+      - alert: LedgerInvariantViolation
+        expr: max(ledger_invariant_violations) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "The nightly ledger check found {{ $value }} violating rows"
+          runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
+
       - alert: OutboxLag
         expr: max by (schema) (outbox_oldest_unpublished_age_seconds) > 120
         for: 1m
