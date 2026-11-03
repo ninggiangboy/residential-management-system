@@ -365,3 +365,53 @@ tests:
       - eval_time: 30s
         alertname: LockoutSpike
         exp_alerts: []
+
+  # --- LedgerInvariantViolation: the nightly check found a row (DOC-22 §12, RB-01)
+  - name: LedgerInvariantViolation fires at once on any row and not on a clean night
+    interval: 15s
+    input_series:
+      # two processes export the same gauge; the alert takes the max (DOC-40 §4 rule 3)
+      - series: 'ledger_invariant_violations{instance="api:3001"}'
+        values: '0 0 3x10'
+      - series: 'ledger_invariant_violations{instance="worker:3001"}'
+        values: '0 0 3x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: LedgerInvariantViolation
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "The nightly ledger check found 3 violating rows"
+              runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
+      - eval_time: 15s
+        alertname: LedgerInvariantViolation
+        exp_alerts: []
+
+  - name: LedgerInvariantViolation stays silent at 0
+    interval: 15s
+    input_series:
+      - series: 'ledger_invariant_violations{instance="api:3001"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: LedgerInvariantViolation
+        exp_alerts: []
+
+  # --- InvariantCheckStale: no success for 36 h
+  - name: InvariantCheckStale fires past 36 hours and not inside them
+    interval: 1h
+    input_series:
+      # last success at t=0 (the series keeps its value; the timestamp is the value, not the sample time)
+      - series: 'job_last_success_timestamp{job="rms-worker", job_name="invariant_check"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 37h
+        alertname: InvariantCheckStale
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "The ledger check has not succeeded for 1d 13h 0m 0s"
+              runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
+      - eval_time: 30h
+        alertname: InvariantCheckStale
+        exp_alerts: []
