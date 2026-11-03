@@ -103,7 +103,7 @@ services:
     depends_on: { api-1: { condition: service_healthy } }
   seaweedfs: # DR-268: files and the pgBackRest repository, no R2
     <<: *third
-    image: chrislusf/seaweedfs:4.48
+    image: chrislusf/seaweedfs:4.50
     # Not root: the entrypoint of the image would chown /data and drop to uid 1000, which the group-read secret files below do not allow
     # (verified with 4.48, DOC-70 §5.5). `/srv/rms-data/seaweedfs` is owned by 10001:10001. The certificate and the key must be in
     # the same directory (the server refuses otherwise), so the key is a bind mount here and not a Docker secret.
@@ -130,7 +130,7 @@ services:
       start_period: 30s
   cloudflared:
     <<: *third
-    image: cloudflare/cloudflared:2026.10.1
+    image: cloudflare/cloudflared:2026.10.4
     command: tunnel --no-autoupdate run --token-file /run/secrets/tunnel-token
     secrets: [tunnel-token]
     depends_on: [caddy, seaweedfs]
