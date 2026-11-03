@@ -1,6 +1,6 @@
 # SSE and webhooks
 
-> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02) · Updated: 2026-11-02 (DR-287 decided) · 2026-11-01 (P2-00 review: the webhook part is written, DR-332) · 2026-10-28 (P1-26: first version, the SSE part; DR-287…290) · DOC-52
+> Status: **Approved** (Claude, delegated by the Owner for technical documents, 2026-11-02) · Updated: 2026-11-03 (P2-12 as built: the notes after §20) · 2026-11-02 (DR-287 decided) · 2026-11-01 (P2-00 review: the webhook part is written, DR-332) · 2026-10-28 (P1-26: first version, the SSE part; DR-287…290) · DOC-52
 > Depends on: original SDD §6.1, §10.4, [DR](../00-decision-register.md) (DR-52, 64, 67, 75, 76, 83, 87, 104, 115, 116, 118, 120, 129, 263, 264), [ADR-0024](../04-adr/0024-real-time-for-the-web-cms-with-the-reference-realtime-module.md), [ADR-0011](../04-adr/0011-tokens-refresh-families-and-cookies.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-06](../02-glossary.md), [DOC-07](../03-architecture/system-context-and-containers.md) §3, §5.3, [DOC-09](../03-architecture/messaging-contracts.md) §4.3, §5.4, §6, [DOC-10](../03-architecture/quality-attributes.md) §6.3, [DOC-12](../03-architecture/code-architecture.md) §4.4, §6.2, [DOC-14](../05-data/data-conventions.md) §5, [DOC-17](../05-data/operations-model.md) §9, [DOC-20](../05-data/data-lifecycle.md), [DOC-26](../06-design/identity-and-sessions.md) §3.1, §3.8, [DOC-38](../06-design/jobs-and-outbox-runtime.md) §2, §4, §5.4, [DOC-39](../06-design/security.md) §5, §6, [DOC-40](../06-design/observability.md), [DOC-41](../06-design/configuration-reference.md), [DOC-42](../06-design/error-handling.md) §6, §8, [DOC-50](api-guidelines.md) §4, §5.3, §7, [DOC-51](api-endpoints.md) §2.2, [DOC-55](../08-ux-ui/client-architecture.md) §13, [DOC-70](../09-operations/deploy-staging-and-production.md) §7.1; DOC-31 (push, written in parallel by P1-26), DOC-23, DOC-24 (webhook)
 > Main readers: P2-12 (the `realtime` module and E-75), the P4 web task that opens the stream (DR-264), P3-03 (the webhook route, §12), DOC-31, DOC-55, DOC-64, DOC-70, DOC-88, EXP-10
 
@@ -626,6 +626,16 @@ On 2026-10-28, `postgres:18.6` (x86_64, Docker, the local stack), a scratch data
 | UX-17 live data | DOC-53 | §11 | SE-23 |
 | Webhook | DR-25, DR-32, DR-325, DR-326 | §12 | P2 |
 | Push contract | DR-52, DR-177 | §13 (summary) | DOC-31 `NT-` |
+
+**As built (P2-12, 2026-11-03).** These details fill what the text leaves to the code. None of them changes a rule.
+
+- **Layout.** `modules/realtime/src`: `contracts/` (the six types, `RealtimeMapping`, the payload types of §6), `application/` (`frames.ts`, `targeting.ts`, `staff-event-streams.ts`, `handlers/realtime-push-handler.ts`), `infrastructure/` (`pg-realtime-hub.ts`, `persistence/drizzle-realtime-store.ts`, `jobs/realtime-purge.ts`) and `presentation/staff-events-route.ts`. `StaffEventStreams.open` is the use case behind E-75 (not `execute`: the layout check reserves that name for `use-cases/`). The mappings are `modules/<producer>/src/integrations/realtime/index.ts` of finance (`money_log.opened`), identity (`session.revoked`, staff only) and notification (`inbox.created`); `ticket.*` and `export.ready` come with P4 and P6.
+- **Token expiry.** The route reads `exp` from the bearer token the staff guard has already verified (`AccessClaims` does not carry it); a token it cannot read closes the stream at once. The stream closes at `exp` with `token_expired`.
+- **Timers.** The heartbeat and the expiry go through a `Timers` port, so the unit tests fire them by hand; the real one is `setTimeout`. A stream that is closed while its replay is being written closes right after `ready`.
+- **The gauge.** `sse_streams_open` is a pulled gauge with `cacheSeconds: 0`, registered by the container from `StaffEventStreams.openCount()`; the counters `sse_stream_opens_total` and `sse_events_published_total` are in the typed `MetricsPort`.
+- **CORS.** `Last-Event-ID` is in `ALLOWED_HEADERS` of `apps/api/src/app.ts` (SE-20).
+- **Tests.** Unit (`modules/realtime/src/realtime.test.ts`, a fake store and hub): `SE-02`…`SE-06`, `SE-08`…`SE-13`, `SE-15`, `SE-16`, `SE-18`. Integration over `app.handle` with two containers on one database (`apps/api/tests/integration/realtime.integration.test.ts`): `SE-01`, `SE-02`, `SE-04`, `SE-05`, `SE-06`, `SE-08`…`SE-14` (the fan-out of `SE-14` and the reconnect of `SE-17` through real `LISTEN`/`NOTIFY`, the backend ended with `pg_terminate_backend`), `SE-16`, `SE-17`, `SE-20`, `SE-21`, `SE-24`.
+- **Open.** `SE-19` (maintenance), `SE-22` (the exact fields of every type; only `money_log.opened` is asserted end to end) and `SE-25` (the timing on staging) are not written; `SE-23` and `SE-26` run with the P4 web task.
 
 ## Open questions
 

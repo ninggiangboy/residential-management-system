@@ -46,7 +46,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-28 | Tickets (`06-design/tickets.md`) | Not written |
 | DOC-29 | Resident QR (`06-design/resident-qr.md`) | Not written |
 | DOC-30 | Vehicles (`06-design/vehicles.md`) | Not written |
-| DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core approved 2026-11-02, DDL and statements run on PostgreSQL 18.6; notices owed to P4) | Approved (core) |
+| DOC-31 | [Notices and notifications](06-design/notices-and-notifications.md) (notification core approved 2026-11-02, DDL and statements run on PostgreSQL 18.6, as built in P2-12 on 2026-11-03; notices owed to P4) | Approved (core) |
 | DOC-32 | Document library (`06-design/document-library.md`) | Not written |
 | DOC-33 | Reports and exports (`06-design/reports-and-exports.md`) | Not written |
 | DOC-34 | [PDF rendering](06-design/pdf-rendering.md) (render hosts measured under Bun; EXP-08 planned; §11–12 report PDFs follow DR-298 (decided), P6) | Approved (2026-11-02, P2 part) |
@@ -67,7 +67,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 | DOC-49 | Admin, reports, library (`06-design/flows/admin-reports-library.md`) | Not written |
 | DOC-50 | [API guidelines](07-api/api-guidelines.md) | Approved |
 | DOC-51 | [API endpoints](07-api/api-endpoints.md) (E-01…E-74, E-169 and E-180…E-182 specified, E-75…E-168 numbered) | Approved |
-| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE and the webhook section; statements run on PostgreSQL 18.6; DR-287 decided) | Approved (2026-11-02) |
+| DOC-52 | [SSE and webhooks](07-api/sse-and-webhooks.md) (SSE and the webhook section; statements run on PostgreSQL 18.6; DR-287 decided; the SSE side as built in P2-12 on 2026-11-03) | Approved (2026-11-02) |
 | DOC-53 | [UX principles and information architecture](08-ux-ui/ux-principles-and-ia.md) | Approved |
 | DOC-54 | [Design system](08-ux-ui/design-system.md) | Approved |
 | DOC-55 | [Client architecture](08-ux-ui/client-architecture.md) | Approved |
