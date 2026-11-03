@@ -76,6 +76,18 @@ const EXEMPT_FROM_TERMS = new Set<string>()
  * RM-03): DOC-39 §4.4 said 403 and is corrected with this task.
  */
 export function expected(route: RouteRecord, actor: Actor, scope: Scope): Expected {
+  const answer = expectedByMetadata(route, actor, scope)
+  return answer === '404 not_found' && NEVER_REVEALS.has(route.endpointId) ? 'ALLOW' : answer
+}
+
+/**
+ * Routes that answer 204 to an object of another account or building as to one that does not exist, so that nothing is revealed:
+ * removing a push token (E-23, E-35; DOC-31 §5). Their foreign cell is `ALLOW`; that the token of another account is left alone is
+ * tested in `tests/integration/notification.integration.test.ts`.
+ */
+const NEVER_REVEALS = new Set(['E-23', 'E-35'])
+
+function expectedByMetadata(route: RouteRecord, actor: Actor, scope: Scope): Expected {
   const { audience } = route
   if (audience.kind === 'public') return 'ALLOW'
   if (audience.kind === 'webhook') return '401 invalid_signature'

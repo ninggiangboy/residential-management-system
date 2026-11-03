@@ -171,6 +171,8 @@ export interface World {
   files: Partial<Record<Actor, string>>
   /** A pending `import` upload of each staff actor (the file of `POST /staff/imports`). */
   importFiles: Partial<Record<Actor, string>>
+  /** One unread inbox entry of each resident actor (in the unit) and of each staff actor (E-178, E-179: `POST …/inbox/{id}/read`). */
+  inbox: Partial<Record<Actor, string>>
   /** A second Admin of B1, who is not an actor: the step-up cases need another Admin's code and a notice for each Admin. */
   admin2: { id: string; email: string; token: string }
 }
@@ -344,6 +346,30 @@ export async function buildWorld(): Promise<World> {
                 ${`${module}/${IDS[s.building]}/${purpose}/2026/10/${id}.${ext}`}, ${mime}, 1000, 'staff', ${s.id})`
     }
 
+  const inbox: Partial<Record<Actor, string>> = {}
+  for (const who of [
+    ...STAFF.map((s) => ({
+      actor: s.actor,
+      id: s.id,
+      kind: 'staff',
+      building: IDS[s.building],
+      unit: null,
+    })),
+    ...residents.map((r) => ({
+      actor: r.actor,
+      id: r.id,
+      kind: 'resident',
+      building: IDS.B1,
+      unit: r.unitId,
+    })),
+  ]) {
+    const id = crypto.randomUUID()
+    inbox[who.actor] = id
+    await sql`
+      INSERT INTO notification.inbox_entry (id, building_id, account_kind, account_id, unit_id, template_key, source_kind, source_id, dedupe_id)
+      VALUES (${id}, ${who.building}, ${who.kind}, ${who.id}, ${who.unit}, 'fee.reminder', 'debt_reminder', ${crypto.randomUUID()}, ${crypto.randomUUID()})`
+  }
+
   const emptyResult = JSON.stringify({
     counts: { rows: 0, valid: 0, errors: 0, warnings: 0 },
     validRows: [],
@@ -434,6 +460,7 @@ export async function buildWorld(): Promise<World> {
     memberships,
     files,
     importFiles,
+    inbox,
     admin2: { ...ADMIN2, token: admin2Token },
   }
 }

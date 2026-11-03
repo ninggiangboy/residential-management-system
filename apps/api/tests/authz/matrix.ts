@@ -42,6 +42,12 @@ const allowedStatus = (status: number, route: RouteRecord) =>
   (route.audience.kind === 'public' && route.audience.credential !== undefined && status === 401)
 
 async function codeIn(res: Response): Promise<{ code: string | null; text: string }> {
+  // A server-sent events stream (E-75, DOC-52 §4) stays open until its token expires, so reading it to the end would block the
+  // run; the cell is judged on the status it opened with, and what the stream carries is tested in the realtime suite.
+  if (res.headers.get('content-type')?.startsWith('text/event-stream')) {
+    await res.body?.cancel()
+    return { code: null, text: '' }
+  }
   const text = await res.text()
   try {
     const parsed = JSON.parse(text) as { error?: { code?: string } }
