@@ -20,7 +20,7 @@ case "$env" in staging | production) ;; *) echo "unknown environment: $env"; exi
 [ "$(id -u)" = 0 ] || { echo "bootstrap.sh runs as root"; exit 1; }
 
 DOCKER_VERSION=29.9.1 # DOC-11 §1
-AWS_CLI_IMAGE=amazon/aws-cli:2.38.5 # the local stack's tag (DOC-70 §5.5 step 5)
+AWS_CLI_IMAGE=amazon/aws-cli:2.38.6 # the local stack's tag (DOC-70 §5.5 step 5)
 RMS_UID=10001
 log() { echo "bootstrap: $*"; }
 # install a file only when its content or mode differs, and set `changed` so the caller restarts the service only then
