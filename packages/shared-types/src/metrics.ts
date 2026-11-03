@@ -4,6 +4,7 @@
  * not list; the registry behind the port lives in `apps/api` (`bootstrap/metrics.ts`) and the test OB-01 keeps both equal to the
  * document. A label never holds a person: an email, a phone or an id of an account or unit is not a value here (DOC-40 §4 rule 2).
  */
+import type { TemplateKey } from './notification'
 import type { UsageApp, UsageAudience, UsageEventKind, UsageName } from './usage'
 
 /** The counters, with the labels of each (`undefined` = none). */
@@ -55,6 +56,42 @@ export interface CounterLabels {
     name: UsageName
   }
   usage_events_dropped_total: { reason: 'unknown_name' | 'disabled' | 'demo' }
+  /** DOC-40 §4.8, DOC-31 §10: rows inserted by `CreateInboxEntries`; `template_key` is the closed catalog of DOC-31 §3.2. */
+  inbox_entries_created_total: { template_key: TemplateKey }
+  /** DOC-31 §10 (DR-301): one count per recipient device or account at the sender. */
+  push_sent_total: {
+    outcome:
+      | 'accepted'
+      | 'ticket_error'
+      | 'skipped_off'
+      | 'skipped_no_device'
+      | 'skipped_session_dead'
+      | 'skipped_expired'
+  }
+  push_receipts_total: { outcome: 'ok' | 'failed' | 'unknown' }
+  /** DOC-42 §8.5, DOC-31 §10: the push reasons only; `sms` and `mail` join when their adapters report. */
+  delivery_failed_total: {
+    channel: 'push'
+    reason:
+      | 'device_not_registered'
+      | 'message_too_big'
+      | 'message_rate_exceeded'
+      | 'mismatch_sender_id'
+      | 'invalid_credentials'
+      | 'other'
+  }
+  provider_auth_failed_total: { provider: 'push' }
+  /** DOC-52 §15 (DR-289). */
+  sse_stream_opens_total: { outcome: 'resumed' | 'fresh' | 'limited' }
+  sse_events_published_total: {
+    type:
+      | 'inbox.created'
+      | 'ticket.created'
+      | 'ticket.changed'
+      | 'money_log.opened'
+      | 'export.ready'
+      | 'session.revoked'
+  }
 }
 
 /** The histograms, observed in seconds, with the labels of each (`undefined` = none). */

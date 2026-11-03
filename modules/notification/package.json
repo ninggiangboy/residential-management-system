@@ -49,6 +49,7 @@
     "elysia": "1.4.30"
   },
   "devDependencies": {
+    "@core/testing": "workspace:*",
     "@rms/test-support": "workspace:*",
     "@types/bun": "1.4.3",
     "drizzle-kit": "0.31.11"

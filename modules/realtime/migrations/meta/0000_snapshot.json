@@ -1,0 +1,151 @@
+{
+  "id": "c15f00a9-542a-48f4-8fa2-8251f1b1a2ef",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "realtime.events": {
+      "name": "events",
+      "schema": "realtime",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_message_id": {
+          "name": "source_message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_account_id": {
+          "name": "target_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_roles": {
+          "name": "target_roles",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "close_session_id": {
+          "name": "close_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ix_events_building_created": {
+          "name": "ix_events_building_created",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_events": {
+          "name": "pk_events",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_events_source": {
+          "name": "uq_events_source",
+          "nullsNotDistinct": false,
+          "columns": [
+            "source_message_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_events_id_v7": {
+          "name": "ck_events_id_v7",
+          "value": "uuid_extract_version(\"realtime\".\"events\".\"id\") = 7"
+        },
+        "ck_events_type": {
+          "name": "ck_events_type",
+          "value": "\"realtime\".\"events\".\"type\" IN ('inbox.created', 'ticket.created', 'ticket.changed', 'money_log.opened', 'export.ready', 'session.revoked')"
+        },
+        "ck_events_target": {
+          "name": "ck_events_target",
+          "value": "(\"realtime\".\"events\".\"target_account_id\" IS NULL) <> (\"realtime\".\"events\".\"target_roles\" IS NULL)"
+        },
+        "ck_events_roles": {
+          "name": "ck_events_roles",
+          "value": "\"realtime\".\"events\".\"target_roles\" IS NULL OR (cardinality(\"realtime\".\"events\".\"target_roles\") >= 1 AND \"realtime\".\"events\".\"target_roles\" <@ ARRAY['admin', 'manager', 'technician', 'guard'])"
+        },
+        "ck_events_close": {
+          "name": "ck_events_close",
+          "value": "(\"realtime\".\"events\".\"close_session_id\" IS NOT NULL) = (\"realtime\".\"events\".\"type\" = 'session.revoked')"
+        },
+        "ck_events_data": {
+          "name": "ck_events_data",
+          "value": "jsonb_typeof(\"realtime\".\"events\".\"data\") = 'object' AND octet_length(\"realtime\".\"events\".\"data\"::text) <= 2048"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "realtime": "realtime"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

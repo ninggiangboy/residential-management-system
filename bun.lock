@@ -305,6 +305,28 @@
         "elysia": "1.4.30",
       },
       "devDependencies": {
+        "@core/testing": "workspace:*",
+        "@rms/test-support": "workspace:*",
+        "@types/bun": "1.4.3",
+        "drizzle-kit": "0.31.11",
+      },
+    },
+    "modules/realtime": {
+      "name": "@mod/realtime",
+      "version": "0.0.0",
+      "dependencies": {
+        "@core/db": "workspace:*",
+        "@core/http": "workspace:*",
+        "@core/kernel": "workspace:*",
+        "@core/messaging": "workspace:*",
+        "@core/runtime": "workspace:*",
+        "@rms/shared-types": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
+        "drizzle-orm": "0.45.4",
+        "elysia": "1.4.30",
+      },
+      "devDependencies": {
+        "@core/testing": "workspace:*",
         "@rms/test-support": "workspace:*",
         "@types/bun": "1.4.3",
         "drizzle-kit": "0.31.11",
@@ -1109,6 +1131,8 @@
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
     "@mod/notification": ["@mod/notification@workspace:modules/notification"],
+
+    "@mod/realtime": ["@mod/realtime@workspace:modules/realtime"],
 
     "@mod/residency": ["@mod/residency@workspace:modules/residency"],
 
