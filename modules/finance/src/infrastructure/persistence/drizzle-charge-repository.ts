@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { type ChargeLine, quantityText } from '../../domain/charge-line'
 import type { ChargeRepository } from '../../domain/charge-repository'
 import type { ChargeRecord, DraftChargeInsert } from '../../domain/fee-batch'
-import { type ChargeRow, charge, chargeLine, feeBatch } from './schema'
+import { allocation, type ChargeRow, charge, chargeLine, feeBatch } from './schema'
 
 export const toCharge = (
   row: ChargeRow,
@@ -107,6 +107,52 @@ export class DrizzleChargeRepository implements ChargeRepository {
       )
       .returning({ id: charge.id })
     return rows.length === 1
+  }
+
+  async hasLiveAllocation(scope: BuildingScope, chargeId: string): Promise<boolean> {
+    const rows = await this.database.executor
+      .select({ id: allocation.id })
+      .from(allocation)
+      .where(
+        and(
+          inBuilding(allocation, scope),
+          eq(allocation.chargeId, chargeId),
+          eq(allocation.status, 'live'),
+        ),
+      )
+      .limit(1)
+    return rows.length > 0
+  }
+
+  async voidOpen(
+    scope: BuildingScope,
+    chargeId: string,
+    reason: string,
+    staffId: string,
+    expectedVersion: number,
+  ): Promise<ChargeRecord | null> {
+    const [row] = await this.database.executor
+      .update(charge)
+      .set({
+        status: 'void',
+        voidKind: 'single',
+        voidReason: reason,
+        voidedAt: sql`now()`,
+        voidedBy: staffId,
+        version: sql`${charge.version} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          inBuilding(charge, scope),
+          eq(charge.id, chargeId),
+          eq(charge.status, 'open'),
+          eq(charge.version, expectedVersion),
+        ),
+      )
+      .returning()
+    // The batch of an open charge is `published` or `closed`; the caller read it before the update.
+    return row ? toCharge(row, 'published') : null
   }
 
   private async insertLines(

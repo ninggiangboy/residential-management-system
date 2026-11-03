@@ -8,6 +8,7 @@ import { cloneTemplate, type TestDb } from '@rms/test-support'
 import { financeManifest } from '../src'
 import type { FoundUnitDto } from '../src/application/ports'
 import { createFinanceModule, type FinanceModule } from '../src/finance.module'
+import { testPorts } from './support/ports'
 
 /**
  * The draft use cases of DOC-21 §3.1, §3.2 and §3.8 (P2-04) on a clone of the migrated template, with the real audit module and
@@ -82,6 +83,8 @@ beforeAll(async () => {
       read: () => Promise.reject(new Error('no file is read by the draft use cases')),
       attach: () => Promise.reject(new Error('no file is attached by the draft use cases')),
     },
+
+    ...testPorts(),
   })
 })
 
@@ -192,7 +195,8 @@ describe('the draft header (DOC-21 §3.2)', () => {
                       WHERE id = ${batch.id}`
     expect(
       await codeOf(() =>
-        finance.useCases.updateFeeBatch.execute(manager, batch.id, { dueDate: due, version: 2 }),
+        // FR-44.2: only a later due date changes once published (P2-05); the name is refused.
+        finance.useCases.updateFeeBatch.execute(manager, batch.id, { name: NAME, version: 2 }),
       ),
     ).toBe('invalid_transition')
   })

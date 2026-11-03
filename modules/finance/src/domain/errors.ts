@@ -74,3 +74,79 @@ const FIELD_OF: Readonly<Record<ChargeLineIssue['column'], string>> = {
   amount: 'amount',
   note: 'note',
 }
+
+/** 400 rule `no_charges`: a batch with no charge cannot be published (DOC-21 §3.3, FR-03.1). */
+export class NoChargesError extends ValidationError {
+  constructor() {
+    super([{ path: '', code: 'no_charges', message: 'The batch has no charges' }])
+  }
+}
+
+/** 400 rule `charge_total_zero` at publish, one detail per unit code (DOC-21 §3.3); `ck_charge_amount` makes it a second net. */
+export class PublishChargeTotalZeroError extends ValidationError {
+  constructor(unitCodes: readonly string[]) {
+    super(
+      unitCodes.map((unitCode) => ({
+        path: unitCode,
+        code: 'charge_total_zero',
+        message: 'The charge total must be above zero',
+      })),
+    )
+  }
+}
+
+/** 400 rule `due_date_in_past`: the due date is before the building's today (DOC-21 §3.3, DR-09). */
+export class DueDateInPastError extends ValidationError {
+  constructor() {
+    super([{ path: 'dueDate', code: 'due_date_in_past', message: 'The due date is in the past' }])
+  }
+}
+
+/** 400 rule `due_date_not_later`: an extension must move the date later (DOC-21 §3.4, FR-44.1). */
+export class DueDateNotLaterError extends ValidationError {
+  constructor() {
+    super([
+      { path: 'dueDate', code: 'due_date_not_later', message: 'The new due date is not later' },
+    ])
+  }
+}
+
+/** 409 `batch_has_payments`: a charge of the batch is paid, so the recall changed nothing (DOC-21 §3.5, FR-04.2). */
+export class BatchHasPaymentsError extends ConflictError {
+  constructor(paidCount: number) {
+    super('batch_has_payments', 'The batch has payments and cannot be recalled', {
+      details: { paidCount },
+    })
+  }
+}
+
+/** 409 `charge_not_voidable`: the charge is paid or has a live allocation (DOC-21 §3.9, FR-49.2). */
+export class ChargeNotVoidableError extends ConflictError {
+  constructor(status: string) {
+    super('charge_not_voidable', 'The charge has been paid and cannot be voided', {
+      details: { status },
+    })
+  }
+}
+
+/** The bounds of a recall or void reason after trimming (DOC-21 §3.5, §3.9, DOC-35 §3.5). */
+const REASON_MIN = 5
+const REASON_MAX = 500
+
+/** The trimmed reason, or 422 `reason_too_short` / `reason_too_long` on `reason` (DOC-21 §3.5, §3.9, DR-332). */
+export function checkedReason(reason: string | undefined): string {
+  const trimmed = reason?.trim() ?? ''
+  if (trimmed.length < REASON_MIN)
+    throw new RuleViolationError(
+      'reason_too_short',
+      `A reason of at least ${REASON_MIN} characters`,
+      'reason',
+    )
+  if (trimmed.length > REASON_MAX)
+    throw new RuleViolationError(
+      'reason_too_long',
+      `A reason of at most ${REASON_MAX} characters`,
+      'reason',
+    )
+  return trimmed
+}
