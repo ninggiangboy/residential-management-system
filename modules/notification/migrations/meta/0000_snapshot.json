@@ -1,0 +1,675 @@
+{
+  "id": "29edccd7-41a9-4efa-a9a5-9f1aa8cab3d0",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "notification.device_token": {
+      "name": "device_token",
+      "schema": "notification",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_kind": {
+          "name": "account_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expo_push_token": {
+          "name": "expo_push_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "app_version": {
+          "name": "app_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ix_device_token_account": {
+          "name": "ix_device_token_account",
+          "columns": [
+            {
+              "expression": "account_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_device_token": {
+          "name": "pk_device_token",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_device_token_token": {
+          "name": "uq_device_token_token",
+          "nullsNotDistinct": false,
+          "columns": [
+            "expo_push_token"
+          ]
+        },
+        "uq_device_token_session": {
+          "name": "uq_device_token_session",
+          "nullsNotDistinct": false,
+          "columns": [
+            "session_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_device_token_account_kind": {
+          "name": "ck_device_token_account_kind",
+          "value": "\"notification\".\"device_token\".\"account_kind\" IN ('resident', 'staff')"
+        },
+        "ck_device_token_token": {
+          "name": "ck_device_token_token",
+          "value": "char_length(\"notification\".\"device_token\".\"expo_push_token\") <= 200 AND \"notification\".\"device_token\".\"expo_push_token\" ~ '^Expo(nent)?PushToken\\[[A-Za-z0-9_-]{1,180}\\]$'"
+        },
+        "ck_device_token_platform": {
+          "name": "ck_device_token_platform",
+          "value": "\"notification\".\"device_token\".\"platform\" IN ('ios', 'android')"
+        },
+        "ck_device_token_version": {
+          "name": "ck_device_token_version",
+          "value": "\"notification\".\"device_token\".\"app_version\" ~ '^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "notification.inbox_entry": {
+      "name": "inbox_entry",
+      "schema": "notification",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_kind": {
+          "name": "account_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_id": {
+          "name": "unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "template_key": {
+          "name": "template_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "params": {
+          "name": "params",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dedupe_id": {
+          "name": "dedupe_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "read_at": {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ix_inbox_entry_building_account": {
+          "name": "ix_inbox_entry_building_account",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ix_inbox_entry_building_account_unread": {
+          "name": "ix_inbox_entry_building_account_unread",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"notification\".\"inbox_entry\".\"read_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ix_inbox_entry_building_created": {
+          "name": "ix_inbox_entry_building_created",
+          "columns": [
+            {
+              "expression": "building_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_inbox_entry": {
+          "name": "pk_inbox_entry",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_inbox_entry_dedupe": {
+          "name": "uq_inbox_entry_dedupe",
+          "nullsNotDistinct": true,
+          "columns": [
+            "building_id",
+            "account_kind",
+            "account_id",
+            "source_kind",
+            "dedupe_id",
+            "template_key",
+            "unit_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_inbox_entry_account_kind": {
+          "name": "ck_inbox_entry_account_kind",
+          "value": "\"notification\".\"inbox_entry\".\"account_kind\" IN ('resident', 'staff')"
+        },
+        "ck_inbox_entry_staff_unit": {
+          "name": "ck_inbox_entry_staff_unit",
+          "value": "\"notification\".\"inbox_entry\".\"account_kind\" = 'resident' OR \"notification\".\"inbox_entry\".\"unit_id\" IS NULL"
+        },
+        "ck_inbox_entry_template_key": {
+          "name": "ck_inbox_entry_template_key",
+          "value": "\"notification\".\"inbox_entry\".\"template_key\" ~ '^[a-z]+\\.[a-z_]+$' AND char_length(\"notification\".\"inbox_entry\".\"template_key\") <= 40"
+        },
+        "ck_inbox_entry_params": {
+          "name": "ck_inbox_entry_params",
+          "value": "jsonb_typeof(\"notification\".\"inbox_entry\".\"params\") = 'object' AND octet_length(\"notification\".\"inbox_entry\".\"params\"::text) <= 2048"
+        },
+        "ck_inbox_entry_source_kind": {
+          "name": "ck_inbox_entry_source_kind",
+          "value": "\"notification\".\"inbox_entry\".\"source_kind\" IN ('batch', 'charge', 'debt_reminder', 'payment', 'gateway_event', 'statement_line', 'ticket', 'vehicle', 'notice', 'membership', 'unit', 'export', 'step_up')"
+        },
+        "ck_inbox_entry_read_at": {
+          "name": "ck_inbox_entry_read_at",
+          "value": "\"notification\".\"inbox_entry\".\"read_at\" IS NULL OR \"notification\".\"inbox_entry\".\"read_at\" >= \"notification\".\"inbox_entry\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "notification.inbox": {
+      "name": "inbox",
+      "schema": "notification",
+      "columns": {
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handler": {
+          "name": "handler",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "inbox_message_id_handler_pk": {
+          "name": "inbox_message_id_handler_pk",
+          "columns": [
+            "message_id",
+            "handler"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "notification.outbox_messages": {
+      "name": "outbox_messages",
+      "schema": "notification",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "headers": {
+          "name": "headers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dead_at": {
+          "name": "dead_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outbox_pending_idx": {
+          "name": "outbox_pending_idx",
+          "columns": [
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"notification\".\"outbox_messages\".\"published_at\" is null and \"notification\".\"outbox_messages\".\"dead_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "notification.push_ticket": {
+      "name": "push_ticket",
+      "schema": "notification",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "device_token_id": {
+          "name": "device_token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_kind": {
+          "name": "account_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_key": {
+          "name": "template_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_kind": {
+          "name": "source_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_check_at": {
+          "name": "next_check_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ix_push_ticket_pending": {
+          "name": "ix_push_ticket_pending",
+          "columns": [
+            {
+              "expression": "next_check_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"notification\".\"push_ticket\".\"status\" = 'pending'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ix_push_ticket_created": {
+          "name": "ix_push_ticket_created",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pk_push_ticket": {
+          "name": "pk_push_ticket",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "uq_push_ticket_message_device": {
+          "name": "uq_push_ticket_message_device",
+          "nullsNotDistinct": false,
+          "columns": [
+            "message_id",
+            "device_token_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ck_push_ticket_account_kind": {
+          "name": "ck_push_ticket_account_kind",
+          "value": "\"notification\".\"push_ticket\".\"account_kind\" IN ('resident', 'staff')"
+        },
+        "ck_push_ticket_status": {
+          "name": "ck_push_ticket_status",
+          "value": "\"notification\".\"push_ticket\".\"status\" IN ('pending', 'ok', 'failed', 'unknown')"
+        },
+        "ck_push_ticket_receipt": {
+          "name": "ck_push_ticket_receipt",
+          "value": "\"notification\".\"push_ticket\".\"receipt_id\" IS NULL OR char_length(\"notification\".\"push_ticket\".\"receipt_id\") BETWEEN 1 AND 100"
+        },
+        "ck_push_ticket_shape": {
+          "name": "ck_push_ticket_shape",
+          "value": "(\"notification\".\"push_ticket\".\"status\" = 'pending' AND \"notification\".\"push_ticket\".\"receipt_id\" IS NOT NULL AND \"notification\".\"push_ticket\".\"next_check_at\" IS NOT NULL AND \"notification\".\"push_ticket\".\"error\" IS NULL AND \"notification\".\"push_ticket\".\"checked_at\" IS NULL) OR (\"notification\".\"push_ticket\".\"status\" = 'ok' AND \"notification\".\"push_ticket\".\"receipt_id\" IS NOT NULL AND \"notification\".\"push_ticket\".\"error\" IS NULL AND \"notification\".\"push_ticket\".\"checked_at\" IS NOT NULL) OR (\"notification\".\"push_ticket\".\"status\" = 'unknown' AND \"notification\".\"push_ticket\".\"receipt_id\" IS NOT NULL AND \"notification\".\"push_ticket\".\"error\" IS NULL AND \"notification\".\"push_ticket\".\"checked_at\" IS NOT NULL) OR (\"notification\".\"push_ticket\".\"status\" = 'failed' AND \"notification\".\"push_ticket\".\"error\" IS NOT NULL AND (\"notification\".\"push_ticket\".\"receipt_id\" IS NULL OR \"notification\".\"push_ticket\".\"checked_at\" IS NOT NULL))"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "notification": "notification"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

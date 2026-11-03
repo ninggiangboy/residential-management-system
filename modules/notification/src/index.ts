@@ -1,0 +1,1 @@
+export { notificationManifest } from './manifest'
