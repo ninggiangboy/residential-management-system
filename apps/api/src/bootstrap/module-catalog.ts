@@ -4,6 +4,8 @@ import { auditManifest } from '@mod/audit/manifest'
 import { buildingManifest } from '@mod/building/manifest'
 import { financeManifest } from '@mod/finance/manifest'
 import { identityManifest } from '@mod/identity/manifest'
+import { notificationManifest } from '@mod/notification/manifest'
+import { realtimeManifest } from '@mod/realtime/manifest'
 import { residencyManifest } from '@mod/residency/manifest'
 
 /**
@@ -22,6 +24,9 @@ export const MODULE_CATALOG: readonly ModuleManifest[] = [
   residencyManifest,
   // finance reads units and memberships through residency and settings through building (DOC-21 §2.1, DOC-22 §2.2).
   financeManifest,
+  // notification asks residency and identity for recipients and devices (DOC-31 §2.3); realtime is a strict leaf (ADR-0024).
+  notificationManifest,
+  realtimeManifest,
   // analytics is a leaf that asks building whether a building is a demo one (DR-279), so it comes after it.
   analyticsManifest,
 ]

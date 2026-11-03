@@ -33,6 +33,16 @@
       "bun": "./src/integrations/residency/index.ts",
       "types": "./src/integrations/residency/index.ts",
       "default": "./src/integrations/residency/index.ts"
+    },
+    "./integrations/notification": {
+      "bun": "./src/integrations/notification/index.ts",
+      "types": "./src/integrations/notification/index.ts",
+      "default": "./src/integrations/notification/index.ts"
+    },
+    "./integrations/realtime": {
+      "bun": "./src/integrations/realtime/index.ts",
+      "types": "./src/integrations/realtime/index.ts",
+      "default": "./src/integrations/realtime/index.ts"
     }
   },
   "scripts": {
@@ -47,6 +57,8 @@
     "@core/runtime": "workspace:*",
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
+    "@mod/notification": "workspace:*",
+    "@mod/realtime": "workspace:*",
     "@mod/residency": "workspace:*",
     "@rms/i18n-catalog": "workspace:*",
     "@rms/shared-types": "workspace:*",

@@ -12,6 +12,7 @@ export function installRealtime(host: RealtimeHost) {
     logger: host.logger,
     mappings: host.mappings,
     config: host.config,
+    guards: host.guards,
     metrics: host.metrics,
   })
 }

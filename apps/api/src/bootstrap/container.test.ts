@@ -25,7 +25,10 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       'demo_reset',
       'import_expire',
       'import_purge',
+      'inbox_purge',
       'orphan_uploads',
+      'push_receipts',
+      'realtime_purge',
       'storage_quota',
       'usage_rollup',
     ])
@@ -50,13 +53,25 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       import_expire: 0,
       import_purge: 1_440,
       usage_rollup: 720,
+      inbox_purge: 1_440,
+      push_receipts: 0,
+      realtime_purge: 0,
     })
   })
 })
 
 describe('the module catalog (DOC-12 §5.2)', () => {
   test('audit comes before building, identity, residency and finance, analytics comes last, and a module is installed for every manifest', () => {
-    const order = ['audit', 'building', 'identity', 'residency', 'finance', 'analytics']
+    const order = [
+      'audit',
+      'building',
+      'identity',
+      'residency',
+      'finance',
+      'notification',
+      'realtime',
+      'analytics',
+    ]
     expect(MODULE_CATALOG.map((manifest) => manifest.name)).toEqual(order)
     expect(container.modules.map((module) => module.name)).toEqual(order)
   })

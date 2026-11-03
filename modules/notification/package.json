@@ -28,6 +28,11 @@
       "bun": "./src/contracts/notification-integration.ts",
       "types": "./src/contracts/notification-integration.ts",
       "default": "./src/contracts/notification-integration.ts"
+    },
+    "./integrations/realtime": {
+      "bun": "./src/integrations/realtime/index.ts",
+      "types": "./src/integrations/realtime/index.ts",
+      "default": "./src/integrations/realtime/index.ts"
     }
   },
   "scripts": {
@@ -41,6 +46,7 @@
     "@core/messaging": "workspace:*",
     "@core/runtime": "workspace:*",
     "@mod/identity": "workspace:*",
+    "@mod/realtime": "workspace:*",
     "@mod/residency": "workspace:*",
     "@rms/i18n-catalog": "workspace:*",
     "@rms/shared-types": "workspace:*",
