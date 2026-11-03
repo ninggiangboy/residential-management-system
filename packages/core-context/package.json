@@ -19,6 +19,6 @@
   },
   "devDependencies": {
     "@opentelemetry/api": "1.9.1",
-    "@types/bun": "1.4.3"
+    "@types/bun": "1.4.4"
   }
 }

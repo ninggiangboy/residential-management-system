@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@core/http": "workspace:*",
-    "@types/bun": "1.4.3",
+    "@types/bun": "1.4.4",
     "elysia": "1.4.30",
     "zod": "4.6.7"
   }
