@@ -1,14 +1,3 @@
-/**
- * Stand-ins for the tables the grants step names (DOC-19 §4): until a module's migration creates its real table, a table with
- * the same schema, name and sensitive columns lets the matrix of DOC-19 §9 run against `0900-grants.sql`, which is the thing
- * under test. When a module lands, its tables are created by its migration and its stand-in is deleted from here; the catalog
- * checks (GRT-89…97) already run over every real table.
- */
-export const STAND_INS = `
-  CREATE TABLE notification.device_token (id uuid PRIMARY KEY, token text NOT NULL);
-
-`
-
 /** The rows the statements touch, inserted by the superuser first (DOC-19 §9.1). */
 export const SEED = `
   INSERT INTO identity.staff_account (id, building_id, email, full_name, role, status, password_hash)

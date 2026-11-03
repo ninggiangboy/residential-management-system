@@ -14,7 +14,7 @@ import type { MarkInboxEntryRead } from '../application/use-cases/mark-inbox-ent
 import type { ReadAllInbox } from '../application/use-cases/read-all-inbox'
 import type { RegisterDevice } from '../application/use-cases/register-device'
 import type { RemoveDevice } from '../application/use-cases/remove-device'
-import { InboxQuery, ReadAllBody, RegisterDeviceBody } from './inbox-http'
+import { InboxQuery, inboxPage, ReadAllBody, RegisterDeviceBody } from './inbox-http'
 
 export interface ResidentNotificationRouteDeps {
   registerDevice: RegisterDevice
@@ -48,7 +48,7 @@ export function residentNotificationRoutes(d: ResidentNotificationRouteDeps) {
   }
   const list = async (context: { query: Static<typeof InboxQuery>; set: RouteSet }) => {
     context.set.headers['cache-control'] = 'no-store'
-    return d.inboxQueries.list(residentReader(unitOf(context)), context.query)
+    return d.inboxQueries.list(residentReader(unitOf(context)), inboxPage(context.query))
   }
   const readAll = async (context: { body: Static<typeof ReadAllBody>; set: RouteSet }) => {
     context.set.headers['cache-control'] = 'no-store'

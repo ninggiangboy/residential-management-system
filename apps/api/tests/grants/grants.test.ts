@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { adminUrl, cloneTemplate, type TestDb, withDatabase } from '@rms/test-support'
 import postgres, { type Sql } from 'postgres'
-import { SEED, STAND_INS } from './fixtures'
+import { SEED } from './fixtures'
 
 /**
  * The permission tests of DOC-19 §9: the matrix of roles × schemas, as data. Statement tests run one statement as a role
@@ -42,7 +42,6 @@ beforeAll(async () => {
   db = await cloneTemplate('empty')
   su = postgres(withDatabase(adminUrl(), db.name), { max: 2, prepare: false, onnotice: () => {} })
   migrator = db.admin(1)
-  await migrator.unsafe(STAND_INS)
   await migrator.unsafe(SEED)
   await migrator.unsafe(GRANTS_SQL)
   await su`DROP ROLE IF EXISTS rms_stranger`

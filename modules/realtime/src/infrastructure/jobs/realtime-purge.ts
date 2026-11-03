@@ -2,7 +2,7 @@ import type { JobDefinition } from '@core/runtime'
 import type { RealtimeStore } from '../../application/ports'
 
 /** The retention of the replay buffer (DR-115, DOC-17 §9.1). */
-export const REALTIME_RETENTION_HOURS = 24
+const REALTIME_RETENTION_HOURS = 24
 const BATCH = 1000
 
 /**

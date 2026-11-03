@@ -41,7 +41,7 @@ export type OpenResult =
  * hub so live events queue, mint the cursor, replay, then `ready`, the replayed events, the queued ones and direct delivery.
  */
 export class StaffEventStreams {
-  private readonly open = new Map<string, Set<LiveStream>>()
+  private readonly byAccount = new Map<string, Set<LiveStream>>()
 
   constructor(
     private readonly store: RealtimeStore,
@@ -56,12 +56,12 @@ export class StaffEventStreams {
   /** `sse_streams_open` (DOC-52 §15): the gauge reads it at the scrape. */
   openCount(): number {
     let n = 0
-    for (const set of this.open.values()) n += set.size
+    for (const set of this.byAccount.values()) n += set.size
     return n
   }
 
-  async execute(params: OpenStream): Promise<OpenResult> {
-    const mine = this.open.get(params.accountId)
+  async open(params: OpenStream): Promise<OpenResult> {
+    const mine = this.byAccount.get(params.accountId)
     if ((mine?.size ?? 0) >= this.settings.maxStreamsPerAccount) {
       this.metrics.inc('sse_stream_opens_total', { outcome: 'limited' })
       return { rejected: 'limit' }
@@ -71,7 +71,7 @@ export class StaffEventStreams {
     )
     const set = mine ?? new Set<LiveStream>()
     set.add(live)
-    this.open.set(params.accountId, set)
+    this.byAccount.set(params.accountId, set)
     try {
       const unregister = await this.hub.register(live)
       live.onClose(unregister)
@@ -111,14 +111,14 @@ export class StaffEventStreams {
 
   /** Closes every local stream before the HTTP server stops (DOC-52 §10.2, SE-16). */
   closeLive(): void {
-    for (const set of [...this.open.values()])
+    for (const set of [...this.byAccount.values()])
       for (const stream of [...set]) stream.close('shutdown')
   }
 
   private forget(stream: LiveStream): void {
-    const set = this.open.get(stream.accountId)
+    const set = this.byAccount.get(stream.accountId)
     set?.delete(stream)
-    if (set?.size === 0) this.open.delete(stream.accountId)
+    if (set?.size === 0) this.byAccount.delete(stream.accountId)
   }
 }
 

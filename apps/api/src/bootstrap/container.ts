@@ -242,7 +242,7 @@ export function createContainer(
     // The seed is data (DOC-36 §9.1); the modules that own demo rows are installed after `building`, hence the function.
     demo: {
       source: { plan: demoPlan, password: secrets.DEMO_STAFF_PASSWORD },
-      modules: () => [identity.demo, residency.demo],
+      modules: () => [identity.demo, residency.demo, notification.demo],
       graceMinutes: jobsConfig.JOB_DEMO_RESET_GRACE_MINUTES,
     },
   })
@@ -359,6 +359,7 @@ export function createContainer(
     clock,
     ids,
     database,
+    building: building.api,
     guards,
     integrations: [financeNotifications, identityNotifications, residencyNotifications],
     residency: residency.api,

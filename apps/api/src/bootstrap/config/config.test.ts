@@ -181,11 +181,13 @@ describe('the boot rules of DOC-41 §17', () => {
     expect(ruleOf(problemsOf(localEnv({ OTP_HMAC_KEY: base64Key(8) })), 'OTP_HMAC_KEY')).toBe(4)
   })
 
-  test('CF-08 production refuses the console SMS driver, the allowlist mail driver and OpenAPI', () => {
+  test('CF-08 production refuses the console SMS driver, the allowlist mail driver, OpenAPI and the console push driver', () => {
     const cases: [Record<string, string>, string, number][] = [
       [{ SMS_DRIVER: 'console' }, 'SMS_DRIVER', 9],
       [{ MAIL_DRIVER: 'allowlist' }, 'MAIL_DRIVER', 9],
       [{ OPENAPI_ENABLED: 'true' }, 'OPENAPI_ENABLED', 10],
+      // NT-60 (DOC-31 §14.5, DOC-41 §17 rule 14): a console push would tell no one anything.
+      [{ PUSH_DRIVER: 'console' }, 'PUSH_DRIVER', 14],
     ]
     for (const [override, key, rule] of cases) {
       const { env, io } = hostEnv('production', override)

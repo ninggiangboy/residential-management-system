@@ -7,7 +7,7 @@ import { scopeOf } from '../scope-of'
  * account read, from the database clock and never from the event's `readAt`. The notices module is built in P4, so the payload
  * type is declared here (structural, as the consumer). A second delivery changes nothing (NT-37, OPM-S18).
  */
-export interface NoticeReadPayload {
+interface NoticeReadPayload {
   buildingId: string
   noticeId: string
   accountKind: 'resident' | 'staff'

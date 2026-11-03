@@ -14,6 +14,7 @@ export function installNotification(host: NotificationHost) {
     integrations: host.integrations,
     residency: host.residency,
     identity: host.identity,
+    building: host.building,
     guards: host.guards,
     config: host.config,
     metrics: host.metrics,

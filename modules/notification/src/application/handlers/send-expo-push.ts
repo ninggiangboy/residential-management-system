@@ -1,5 +1,10 @@
-import type { Database } from '@core/db'
-import { type Clock, type IdGenerator, InvariantError, type Log } from '@core/kernel'
+import {
+  type Clock,
+  type IdGenerator,
+  InvariantError,
+  type Log,
+  type UnitOfWork,
+} from '@core/kernel'
 import {
   type Envelope,
   type InboxGuard,
@@ -51,7 +56,7 @@ export class SendExpoPush implements IntegrationEventHandler {
     >,
     private readonly sender: PushSender,
     private readonly inbox: InboxGuard,
-    private readonly database: Database,
+    private readonly uow: UnitOfWork,
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
     private readonly logger: Log,
@@ -248,7 +253,7 @@ export class SendExpoPush implements IntegrationEventHandler {
     })
 
     // The tickets and the token deletes of one chunk commit together, with no network call inside (DOC-31 §8).
-    await this.database.transaction(async () => {
+    await this.uow.run(async () => {
       if (rows.length) await this.tickets.recordMany(rows)
       if (deadTokens.length) await this.devices.deleteByIds(deadTokens)
     })

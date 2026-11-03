@@ -25,10 +25,10 @@ import type { RecipientResolver } from '../recipient-resolver'
 import { scopeOf } from '../scope-of'
 
 /** DOC-31 §4.1 step 4: the insert page of OPM-S13 (`ON CONFLICT … DO NOTHING RETURNING`). */
-export const INBOX_INSERT_PAGE = 500
+const INBOX_INSERT_PAGE = 500
 
 /** DOC-31 §9: the `PUSH_CHUNK_SIZE` cap is 100 recipients per message (DR-52, DR-301). */
-export const PUSH_CHUNK_DEFAULT = PUSH_CHUNK_SIZE_MAX
+const PUSH_CHUNK_DEFAULT = PUSH_CHUNK_SIZE_MAX
 
 interface ResolvedPlan {
   readonly plan: InboxPlan

@@ -1,5 +1,4 @@
-CREATE SCHEMA "realtime";
---> statement-breakpoint
+-- The schema `realtime` is created by ops/postgres/0000-bootstrap.sql before any module migration (DOC-14 §2.2).
 CREATE TABLE "realtime"."events" (
 	"id" uuid NOT NULL,
 	"building_id" uuid NOT NULL,

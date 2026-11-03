@@ -1,5 +1,6 @@
 import { describedEnum, strictObject } from '@core/http'
-import { Type } from '@sinclair/typebox'
+import { ValidationError } from '@core/kernel'
+import { type Static, Type } from '@sinclair/typebox'
 
 /** The body of E-22 and E-34 (DOC-31 §5.1, DR-300): the token pattern is the one the table enforces. */
 export const RegisterDeviceBody = strictObject({
@@ -18,11 +19,28 @@ export const RegisterDeviceBody = strictObject({
   }),
 })
 
-/** The query of E-76 and E-78: keyset pages (DOC-50 §9). */
+/** The query of E-76 and E-78: keyset pages (DOC-50 §9). The limit is a string here and checked by `inboxPage`. */
 export const InboxQuery = Type.Object({
   cursor: Type.Optional(Type.String({ description: 'Opaque, from `nextCursor`' })),
-  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  limit: Type.Optional(
+    Type.String({ pattern: '^[0-9]{1,4}$', description: 'Entries per page, 1…100 (default 20)' }),
+  ),
 })
+
+/** `limit` 1…100 or 400 `validation_failed` with the rule `minimum` or `maximum` (DOC-31 §4.4). */
+export function inboxPage(query: Static<typeof InboxQuery>): { cursor?: string; limit?: number } {
+  if (query.limit === undefined) return query.cursor === undefined ? {} : { cursor: query.cursor }
+  const limit = Number(query.limit)
+  if (limit < 1 || limit > 100)
+    throw new ValidationError([
+      {
+        path: 'limit',
+        code: limit < 1 ? 'minimum' : 'maximum',
+        message: 'limit is 1 to 100',
+      },
+    ])
+  return query.cursor === undefined ? { limit } : { cursor: query.cursor, limit }
+}
 
 /** The body of E-77 and E-79 (DOC-31 §4.4). */
 export const ReadAllBody = strictObject({

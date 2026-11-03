@@ -27,9 +27,3 @@ export function assertIntegrations(integrations: readonly NotificationIntegratio
           throw new Error(`notification: template ${key} has no ${language} ${part}`)
   }
 }
-
-/** The key a rule's plans may use is checked when they are built (NT-03): `staff.invited` or an unknown key never reaches a row. */
-export function assertTemplateKey(key: string): void {
-  if (!(key in NOTIFICATION_TEMPLATES))
-    throw new Error(`notification: template ${key} is not in the catalog`)
-}

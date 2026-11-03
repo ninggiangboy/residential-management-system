@@ -36,6 +36,8 @@ const ALLOWED_UNSCOPED: ReadonlyArray<RegExp> = [
   /^building\.job_run$/,
   /^[a-z]+\.(outbox_messages|inbox)$/,
   /^identity\.(rate_bucket|otp_challenge|refresh_family|refresh_token|resident_account|password_token|staff_account)$/,
+  // A device belongs to an account that spans buildings, a ticket to a device (DOC-14 §5.3, DOC-31 §5, DR-300).
+  /^notification\.(device_token|push_ticket)$/,
 ]
 
 const EXEMPT = /scope-ok:/
