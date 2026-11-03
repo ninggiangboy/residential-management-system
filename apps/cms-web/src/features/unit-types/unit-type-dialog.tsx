@@ -210,7 +210,7 @@ export function UnitTypeDialog({
     )
   })
 
-  const useTheirs = () => {
+  const applyTheirs = () => {
     if (conflict) form.reset(valuesOf(conflict))
     setConflict(null)
   }
@@ -241,7 +241,7 @@ export function UnitTypeDialog({
             tone="warning"
             actions={
               <>
-                <Button size="sm" variant="outline" disabled={pending} onClick={useTheirs}>
+                <Button size="sm" variant="outline" disabled={pending} onClick={applyTheirs}>
                   {t('web.unit-types.action.use-theirs')}
                 </Button>
                 <Button size="sm" loading={pending} onClick={() => void submit()}>
