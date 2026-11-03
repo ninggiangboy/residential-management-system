@@ -40,6 +40,7 @@ export function hostEnv(profile: 'staging' | 'production', overrides: Env = {}) 
     OPENAPI_ENABLED: profile === 'production' ? 'false' : 'true',
     SMS_DRIVER: profile === 'production' ? 'provider' : 'allowlist',
     MAIL_DRIVER: profile === 'production' ? 'smtp' : 'allowlist',
+    PUSH_DRIVER: 'expo',
     ...(profile === 'production'
       ? {
           SMS_BRAND: 'RMS',

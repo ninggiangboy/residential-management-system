@@ -195,6 +195,8 @@ function productionRules(config: Parsed, fail: Fail) {
     fail('SMS_DRIVER', 9, 'must be provider in production')
   if (config.drivers.MAIL_DRIVER !== 'smtp') fail('MAIL_DRIVER', 9, 'must be smtp in production')
   if (config.http.OPENAPI_ENABLED) fail('OPENAPI_ENABLED', 10, 'must be false in production')
+  // DOC-41 §17 rule 14, added with the sender (P2-12, DR-301): a console push would tell no one anything.
+  if (config.later.PUSH_DRIVER !== 'expo') fail('PUSH_DRIVER', 14, 'must be expo in production')
 }
 
 /** An origin is `scheme://host[:port]` with no path and no wildcard. */

@@ -1,18 +1,20 @@
 import type { Database } from '@core/db'
 import type { Clock, IdGenerator, Log } from '@core/kernel'
 import type { AppModule } from '@core/runtime'
-import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { assertMappings, RealtimePushHandler } from './application/handlers/realtime-push-handler'
 import { StaffEventStreams, type StreamSettings } from './application/staff-event-streams'
 import type { RealtimeMapping } from './contracts'
 import { realtimePurgeJob } from './infrastructure/jobs/realtime-purge'
 import { DrizzleRealtimeStore } from './infrastructure/persistence/drizzle-realtime-store'
 import { PgRealtimeHub } from './infrastructure/pg-realtime-hub'
+import { staffEventsRoutes } from './presentation/staff-events-route'
 
 export interface RealtimeDeps {
   /** The producers' `integrations/realtime.ts` mappings, handed in by `apps/api` (DOC-12 §4.4). */
   mappings: readonly RealtimeMapping<never>[]
   config: StreamSettings
+  guards: Guards
   metrics?: MetricsPort
 }
 
@@ -26,6 +28,7 @@ export interface RealtimeModuleDeps extends RealtimeDeps {
 export interface RealtimeModule extends AppModule<'realtime'> {
   /** E-75 opens a stream through this (DOC-52 §4). */
   readonly streams: StaffEventStreams
+  readonly routes: ReturnType<typeof staffEventsRoutes>
 }
 
 /** Builds the module from what it needs; `install.ts` narrows the host to this (DOC-12 §4.2, §4.3). */
@@ -46,6 +49,7 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
       },
     ],
     streams,
+    routes: staffEventsRoutes({ streams, guards: deps.guards }),
     handlers: deps.mappings.map(
       (mapping) => new RealtimePushHandler(mapping, store, ids, logger, metrics),
     ),

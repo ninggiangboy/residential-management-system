@@ -20,10 +20,18 @@ import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
 import { installFinance } from '@mod/finance'
 import { activeIntentProbe } from '@mod/finance/integrations/building'
+import { financeNotifications } from '@mod/finance/integrations/notification'
+import { financeRealtime } from '@mod/finance/integrations/realtime'
 import { feeImportHandler } from '@mod/finance/integrations/residency'
 import { type ActiveMemberships, installIdentity, type SmsSender } from '@mod/identity'
 import type { OpenTicketsProbe } from '@mod/identity/contracts'
+import { identityNotifications } from '@mod/identity/integrations/notification'
+import { identityRealtime } from '@mod/identity/integrations/realtime'
+import { installNotification } from '@mod/notification'
+import { notificationRealtime } from '@mod/notification/integrations/realtime'
+import { installRealtime } from '@mod/realtime'
 import { installResidency } from '@mod/residency'
+import { residencyNotifications } from '@mod/residency/integrations/notification'
 import type { Guards } from '@rms/shared-types'
 import { buildDemoPlan } from '../demo/plan'
 import type { AccountBuildings } from './boot-guard'
@@ -343,6 +351,58 @@ export function createContainer(
   })
   installed.push(finance)
 
+  // P2-12 (DOC-31, DOC-52): the inbox, the push and the staff event stream. Both are consumers: the producers hand them their
+  // `integrations/*` definitions here, and neither imports a producer (DOC-12 §4.4).
+  const { later } = config
+  const notification = installNotification({
+    logger,
+    clock,
+    ids,
+    database,
+    guards,
+    integrations: [financeNotifications, identityNotifications, residencyNotifications],
+    residency: residency.api,
+    identity: identity.api,
+    config: {
+      pushDriver: later.PUSH_DRIVER,
+      expoPushBaseUrl: later.EXPO_PUSH_BASE_URL,
+      expoAccessToken: secrets.EXPO_ACCESS_TOKEN ?? null,
+      chunkSize: later.PUSH_CHUNK_SIZE,
+      requestTimeoutMs: later.PUSH_REQUEST_TIMEOUT_MS,
+      maxAgeMinutes: later.PUSH_MAX_AGE_MINUTES,
+      receiptDelayMinutes: later.PUSH_RECEIPT_DELAY_MINUTES,
+      ticketRetentionDays: later.PUSH_TICKET_RETENTION_DAYS,
+      inboxRetentionDays: later.INBOX_RETENTION_DAYS,
+      inboxPurgeGraceMinutes: jobsConfig.JOB_INBOX_PURGE_GRACE_MINUTES,
+      outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+    },
+    metrics: metrics.port,
+  })
+  installed.push(notification)
+
+  const realtime = installRealtime({
+    logger,
+    clock,
+    ids,
+    database,
+    guards,
+    mappings: [...financeRealtime, ...identityRealtime, ...notificationRealtime],
+    config: {
+      maxStreamsPerAccount: later.SSE_MAX_STREAMS_PER_ACCOUNT,
+      heartbeatSeconds: later.SSE_HEARTBEAT_SECONDS,
+    },
+    metrics: metrics.port,
+  })
+  installed.push(realtime)
+  // `sse_streams_open` (DOC-40 §4.1, SE-24): read at every scrape, so a stream that closed is not counted for a cache period.
+  metrics.metrics.pulled(
+    'sse_streams_open',
+    'Open streams of the staff event stream on this process.',
+    [],
+    async () => [{ labels: {}, value: realtime.streams.openCount() }],
+    { cacheSeconds: 0 },
+  )
+
   // A leaf (DR-279): nothing calls it. It asks `building` whether the building of a batch is the demo one.
   const { usage: usageConfig } = config
   const analytics = installAnalytics({
@@ -451,6 +511,8 @@ export function createContainer(
     identity,
     residency,
     finance,
+    notification,
+    realtime,
     analytics,
     /** The seed of the demo building (DOC-36 §9.1). */
     demoPlan,

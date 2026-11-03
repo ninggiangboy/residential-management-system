@@ -40,6 +40,8 @@
     "@mod/building": "workspace:*",
     "@mod/finance": "workspace:*",
     "@mod/identity": "workspace:*",
+    "@mod/notification": "workspace:*",
+    "@mod/realtime": "workspace:*",
     "@mod/residency": "workspace:*",
     "@elysiajs/openapi": "1.4.16",
     "@sinclair/typebox": "0.34.52",
