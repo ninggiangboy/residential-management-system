@@ -58,6 +58,22 @@
     { "schema": "audit", "table": "audit_log", "column": "ip", "class": "personal" },
     { "schema": "audit", "table": "audit_log", "column": "user_agent", "class": "personal" },
     { "schema": "building", "table": "terms_acceptance", "column": "ip", "class": "personal" },
-    { "schema": "building", "table": "building", "column": "email", "class": "operational" }
+    { "schema": "building", "table": "building", "column": "email", "class": "operational" },
+    { "schema": "finance", "table": "payment", "column": "note", "class": "personal" },
+    { "schema": "finance", "table": "statement_line", "column": "note", "class": "personal" },
+    { "schema": "finance", "table": "webhook_rejection", "column": "ip", "class": "personal" },
+    { "schema": "finance", "table": "charge_line", "column": "note", "class": "operational" },
+    {
+      "schema": "finance",
+      "table": "statement_line",
+      "column": "review_note",
+      "class": "operational"
+    },
+    {
+      "schema": "finance",
+      "table": "gateway_event",
+      "column": "review_note",
+      "class": "operational"
+    }
   ]
 }
