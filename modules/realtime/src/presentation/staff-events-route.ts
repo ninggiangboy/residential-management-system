@@ -29,7 +29,7 @@ function tokenExpiry(authorization: string | null): Date {
 export function staffEventsRoutes(d: StaffEventsRouteDeps) {
   const open = async (context: { request: Request; set: RouteSet }) => {
     const staff = staffOf(context)
-    const result = await d.streams.execute({
+    const result = await d.streams.open({
       buildingId: staff.buildingId,
       accountId: staff.staffId,
       role: staff.role,

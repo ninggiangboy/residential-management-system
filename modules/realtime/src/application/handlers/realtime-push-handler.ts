@@ -7,7 +7,7 @@ import type { RealtimeMapping } from '../../contracts'
 import type { RealtimeStore } from '../ports'
 
 /** `pg_notify` refuses 8,000 bytes; the hub refuses 7,500 before it calls it (DOC-52 §9.2, SE-18). */
-export const MAX_WIRE_BYTES = 7500
+const MAX_WIRE_BYTES = 7500
 
 /**
  * The generic handler of DOC-52 §9.1: one per mapping of a producer's `integrations/realtime.ts`. It has no inbox row (DOC-09

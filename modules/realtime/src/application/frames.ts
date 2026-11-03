@@ -27,11 +27,11 @@ export function parseLastEventId(raw: string | null | undefined): string | undef
 }
 
 /** The time a UUIDv7 was minted: its first 48 bits, in milliseconds. */
-export function uuidV7Time(id: string): number {
+function uuidV7Time(id: string): number {
   return Number.parseInt(id.replace(/-/g, '').slice(0, 12), 16)
 }
 
-export const REPLAY_WINDOW_MS = 23 * 3_600_000
+const REPLAY_WINDOW_MS = 23 * 3_600_000
 export const REPLAY_LIMIT = 200
 
 /** Replay only when the id is no older than 23 hours, one hour below the retention (DOC-52 §8.2 step 4). */

@@ -16,7 +16,7 @@ export interface SessionDto {
 }
 
 /** The most ids one `liveSessionIds` call takes (DOC-09 §7.3). */
-export const LIVE_SESSION_IDS_MAX = 500
+const LIVE_SESSION_IDS_MAX = 500
 
 /** Every staff role lists its own sessions (DOC-26 §7). */
 export const LIST_STAFF_SESSIONS_ROLES = [

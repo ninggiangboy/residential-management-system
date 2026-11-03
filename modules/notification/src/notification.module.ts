@@ -2,9 +2,12 @@ import type { Database } from '@core/db'
 import type { Clock, IdGenerator, Log } from '@core/kernel'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '@core/messaging'
 import type { AppModule } from '@core/runtime'
+import type { BuildingApi } from '@mod/building/contracts'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { ResidencyApi } from '@mod/residency/contracts'
+import type { DemoResettable } from '@rms/shared-types'
 import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { NotificationDemo } from './application/demo-notification'
 import { CreateInboxEntries } from './application/handlers/create-inbox-entries'
 import { DropDeviceTokenOnSessionRevokedHandler } from './application/handlers/drop-device-token-on-session-revoked'
 import { DropTokensOnAccountDeletionHandler } from './application/handlers/drop-tokens-on-account-deletion'
@@ -19,7 +22,7 @@ import { MarkInboxEntryRead } from './application/use-cases/mark-inbox-entry-rea
 import { ReadAllInbox } from './application/use-cases/read-all-inbox'
 import { RegisterDevice } from './application/use-cases/register-device'
 import { RemoveDevice } from './application/use-cases/remove-device'
-import { NOTIFICATION_EVENTS, type NotificationIntegration } from './contracts'
+import type { NotificationIntegration } from './contracts'
 import { inboxPurgeJob } from './infrastructure/jobs/inbox-purge'
 import { pushReceiptsJob } from './infrastructure/jobs/push-receipts'
 import { DrizzleDeviceTokenRepository } from './infrastructure/persistence/drizzle-device-token-repository'
@@ -54,6 +57,8 @@ export interface NotificationDeps {
     IdentityApi,
     'listActiveStaff' | 'getStaff' | 'getResidentAccounts' | 'liveSessionIds'
   >
+  /** The demo reset asserts that a building is a demo one first (DOC-36 §10.2). */
+  building: Pick<BuildingApi, 'assertDemo'>
   guards: Guards
   config: NotificationConfig
   metrics?: MetricsPort
@@ -80,6 +85,8 @@ export interface NotificationModule extends AppModule<'notification'> {
   readonly queries: { inbox: InboxQueries }
   /** The demo reset and seed of DOC-31 §12 read the repository through this. */
   readonly inboxEntries: DrizzleInboxEntryRepository
+  /** `notification`'s part of the demo reset, which the host hands to `building` (DOC-31 §12, DOC-36 §10.2). */
+  readonly demo: DemoResettable
   readonly residentRoutes: ReturnType<typeof residentNotificationRoutes>
   readonly staffRoutes: ReturnType<typeof staffNotificationRoutes>
 }
@@ -149,6 +156,7 @@ export function createNotificationModule(deps: NotificationModuleDeps): Notifica
     useCases: { registerDevice, removeDevice, readAllInbox, markInboxEntryRead },
     queries: { inbox: inboxQueries },
     inboxEntries: entries,
+    demo: new NotificationDemo(deps.building, entries, ids),
     residentRoutes: residentNotificationRoutes({
       registerDevice,
       removeDevice,
@@ -176,7 +184,7 @@ export function createNotificationModule(deps: NotificationModuleDeps): Notifica
         deps.identity,
         sender,
         inbox,
-        database,
+        { run: (fn) => database.transaction(fn) },
         clock,
         ids,
         logger,
@@ -191,5 +199,3 @@ export function createNotificationModule(deps: NotificationModuleDeps): Notifica
     ],
   }
 }
-
-export { NOTIFICATION_EVENTS }

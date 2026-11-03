@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { Database } from '@core/db'
-import type { Log } from '@core/kernel'
+import type { Log, UnitOfWork } from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { FakeClock, InMemoryInbox, SequentialIds } from '@core/testing'
 import type { IdentityApi, ResidentAccountDto, StaffDto } from '@mod/identity/contracts'
@@ -196,7 +195,7 @@ function build(
     tickets: options.tickets,
   })
   const metrics = recordingMetrics()
-  const database = { transaction: (fn: () => Promise<unknown>) => fn() } as unknown as Database
+  const database: UnitOfWork = { run: (fn) => fn() }
   const handler = new SendExpoPush(
     devices.repo,
     tickets.repo,

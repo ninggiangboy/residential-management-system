@@ -2,7 +2,7 @@ import type { SourceKind, TemplateKey } from '@rms/shared-types'
 import type { AccountKind } from './inbox-entry'
 
 /** The states of `push_ticket.status` (DOC-17 §6.3). */
-export type PushTicketStatus = 'pending' | 'ok' | 'failed' | 'unknown'
+type PushTicketStatus = 'pending' | 'ok' | 'failed' | 'unknown'
 
 /** One ticket `SendExpoPush` writes after an Expo answer (DOC-31 §6.2 step 7). */
 export interface NewPushTicket {

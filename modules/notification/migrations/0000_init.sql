@@ -1,5 +1,4 @@
-CREATE SCHEMA "notification";
---> statement-breakpoint
+-- The schema `notification` is created by ops/postgres/0000-bootstrap.sql before any module migration (DOC-14 §2.2).
 CREATE TABLE "notification"."device_token" (
 	"id" uuid NOT NULL,
 	"account_kind" text NOT NULL,

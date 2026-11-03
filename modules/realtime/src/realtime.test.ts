@@ -154,7 +154,7 @@ const open = (
   lastEventId?: string,
   ttlMs = 15 * 60_000,
 ) =>
-  s.streams.execute({
+  s.streams.open({
     buildingId: who.buildingId ?? B1,
     accountId: who.accountId,
     role: who.role,

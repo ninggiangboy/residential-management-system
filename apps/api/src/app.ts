@@ -27,6 +27,7 @@ const ALLOWED_HEADERS = [
   'X-Request-Id',
   'X-Requested-With',
   'Accept-Language',
+  'Last-Event-ID',
 ]
 const EXPOSED_HEADERS = [
   'X-Request-Id',

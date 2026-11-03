@@ -12,7 +12,7 @@ import { decodeInboxCursor, encodeInboxCursor } from '../inbox-cursor'
 import type { InboxReader } from '../inbox-reader'
 
 /** One item of E-76 and E-78: the key and params, never rendered text (DOC-50 §11, DOC-31 §4.4). */
-export interface InboxItemDto {
+interface InboxItemDto {
   id: string
   templateKey: TemplateKey
   params: Params
@@ -33,8 +33,8 @@ export interface InboxPageDto {
   unreadCount: number
 }
 
-export const INBOX_PAGE_DEFAULT = 20
-export const INBOX_PAGE_MAX = 100
+const INBOX_PAGE_DEFAULT = 20
+const INBOX_PAGE_MAX = 100
 
 /** The reads of E-76 and E-78 (DOC-31 §4.4): the unit filter applies to a resident only (§4.2). */
 export class InboxQueries {

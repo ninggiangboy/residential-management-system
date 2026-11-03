@@ -1,4 +1,4 @@
-import type { Database } from '@core/db'
+import { type Database, isUniqueViolation } from '@core/db'
 import { InvariantError } from '@core/kernel'
 import { sql } from 'drizzle-orm'
 import type { NewDeviceToken, PushDevice } from '../../domain/device-token'
@@ -20,6 +20,17 @@ export class DrizzleDeviceTokenRepository implements DeviceTokenRepository {
 
   /** The two statements of DOC-31 §5.1 in one transaction (OPM-S19). */
   async register(token: NewDeviceToken): Promise<RegisteredDevice> {
+    try {
+      return await this.upsert(token)
+    } catch (error) {
+      // Two registrations of one session with different tokens race on `uq_device_token_session`: the loser runs once more
+      // and then replaces the winner's row (DOC-31 §5.1).
+      if (!isUniqueViolation(error)) throw error
+      return this.upsert(token)
+    }
+  }
+
+  private async upsert(token: NewDeviceToken): Promise<RegisteredDevice> {
     return this.database.transaction(async () => {
       await this.database.executor.execute(sql`
         DELETE FROM notification.device_token

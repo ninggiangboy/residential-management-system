@@ -422,7 +422,7 @@ describe('the purge (DR-110, DOC-17 §2)', () => {
 
 describe('the inventory of personal columns (DOC-35 §7.3)', () => {
   const PERSONAL =
-    /phone|email|cccd|birth|full_name|display_name|payer_name|plate|(^|_)ip$|user_agent|avatar|note/
+    /phone|email|cccd|birth|full_name|display_name|payer_name|(^|_)plate|(^|_)ip$|user_agent|avatar|note/
   const key = (schema: string, table: string, column: string) => `${schema}.${table}.${column}`
   const listed = new Set(inventory.columns.map((c) => key(c.schema, c.table, c.column)))
 
