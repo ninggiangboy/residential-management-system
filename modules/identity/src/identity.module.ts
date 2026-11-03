@@ -474,6 +474,7 @@ export function createIdentityModule(deps: IdentityModuleDeps): IdentityModule {
       new ChangeResidentPhone(new LibphonenumberPhones(), residents, sessions, events, clock),
       new QueueMemberInvitation(residents, limiter, sms, clock, config, metrics),
       new ApproveResidentDeletion(residents, clock, deps.audited),
+      sessionQueries,
     ),
     useCases,
     queries: { staff: staffQueries, sessions: sessionQueries, residents: residentQueries },

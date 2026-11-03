@@ -77,4 +77,6 @@ export interface SessionRepository {
   revokeFamily(transition: FamilyTransition, now: Date): Promise<boolean>
   applyFamily(transition: FamilyTransition): Promise<boolean>
   listLive(kind: AccountKind, accountId: string, now: Date): Promise<SessionRow[]>
+  /** The ids among `ids` (any kind, any account) whose family is live: not revoked and not past its absolute limit (DOC-26 §3.7, DR-300). */
+  liveIds(ids: readonly string[], now: Date): Promise<string[]>
 }

@@ -1,5 +1,5 @@
 import type { Clock } from '@core/kernel'
-import { requireRole } from '@core/kernel'
+import { requireRole, ValidationError } from '@core/kernel'
 import type { ResidentSession, StaffContext, StaffRole } from '@rms/shared-types'
 import { deviceLabel } from '../../domain/device-label'
 import type { AccountKind, Client } from '../../domain/refresh-family'
@@ -14,6 +14,9 @@ export interface SessionDto {
   lastUsedAt: string
   current: boolean
 }
+
+/** The most ids one `liveSessionIds` call takes (DOC-09 §7.3). */
+export const LIVE_SESSION_IDS_MAX = 500
 
 /** Every staff role lists its own sessions (DOC-26 §7). */
 export const LIST_STAFF_SESSIONS_ROLES = [
@@ -38,6 +41,20 @@ export class SessionQueries {
   /** The resident's own sessions; the route is token-only, so no role applies. */
   listResident(resident: ResidentSession): Promise<SessionDto[]> {
     return this.list('resident', resident.accountId, resident.sessionId)
+  }
+
+  /** `IdentityApi.liveSessionIds` (DOC-26 §3.7, DR-300): at most 500 ids; an unknown id is absent. */
+  async liveSessionIds(ids: readonly string[]): Promise<string[]> {
+    if (ids.length > LIVE_SESSION_IDS_MAX) {
+      throw new ValidationError([
+        {
+          path: 'sessionIds',
+          code: 'maximum',
+          message: `at most ${LIVE_SESSION_IDS_MAX} session ids`,
+        },
+      ])
+    }
+    return this.sessions.liveIds(ids, this.clock.now())
   }
 
   private async list(

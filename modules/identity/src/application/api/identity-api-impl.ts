@@ -9,6 +9,7 @@ import type {
   StepUpAction,
 } from '../../contracts'
 import type { ResidentQueries } from '../queries/resident-queries'
+import type { SessionQueries } from '../queries/session-queries'
 import type { StaffQueries } from '../queries/staff-queries'
 import type { ApproveResidentDeletion } from '../use-cases/approve-resident-deletion'
 import type { ChangeResidentPhone } from '../use-cases/change-resident-phone'
@@ -26,6 +27,7 @@ export class IdentityApiImpl implements IdentityApi {
     private readonly changePhone: ChangeResidentPhone,
     private readonly queueInvitation: QueueMemberInvitation,
     private readonly approveDeletion: ApproveResidentDeletion,
+    private readonly sessionQueries: SessionQueries,
   ) {}
 
   getStaff(ids: string[]): Promise<StaffDto[]> {
@@ -42,6 +44,10 @@ export class IdentityApiImpl implements IdentityApi {
 
   listDemoAccountIds(): Promise<string[]> {
     return this.residentQueries.listDemoAccountIds()
+  }
+
+  liveSessionIds(sessionIds: string[]): Promise<string[]> {
+    return this.sessionQueries.liveSessionIds(sessionIds)
   }
 
   getResidentAccounts(ids: string[]): Promise<ResidentAccountDto[]> {

@@ -169,6 +169,22 @@ export class DrizzleSessionRepository implements SessionRepository {
     return families
   }
 
+  // scope-ok: ids come from device tokens the caller holds; the same predicate as the session list (DOC-26 §3.7)
+  async liveIds(ids: readonly string[], now: Date): Promise<string[]> {
+    if (ids.length === 0) return []
+    const rows = await this.database.executor
+      .select({ id: refreshFamily.id })
+      .from(refreshFamily)
+      .where(
+        and(
+          inArray(refreshFamily.id, [...ids]),
+          isNull(refreshFamily.revokedAt),
+          gt(refreshFamily.absoluteExpiresAt, now),
+        ),
+      )
+    return rows.map((row) => row.id)
+  }
+
   // scope-ok: the sessions of one account
   async listLive(kind: AccountKind, accountId: string, now: Date): Promise<SessionRow[]> {
     const rows = await this.database.executor

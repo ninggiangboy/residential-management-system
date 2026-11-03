@@ -229,4 +229,24 @@ describe('sessions (DOC-26 §3.6, §3.7)', () => {
     expect(items[0]).toMatchObject({ client: 'app', device: 'iPhone17,1, iOS 19.1', current: true })
     expect(items[1]).toMatchObject({ client: 'web', device: 'Chrome on macOS', current: false })
   })
+
+  test('liveSessionIds (DOC-26 §3.7, DR-300): a live family is returned; a revoked, an expired and an unknown one are absent', async () => {
+    const staff = await h.seedStaff()
+    const live = await h.signIn(staff.email, PASSWORD, { ip: nextIp() })
+    const revoked = await h.signIn(staff.email, PASSWORD, { ip: nextIp() })
+    const expired = await h.signIn(staff.email, PASSWORD, { ip: nextIp() })
+    const sidLive = await h.sidOf(live.session.accessToken)
+    const sidRevoked = await h.sidOf(revoked.session.accessToken)
+    const sidExpired = await h.sidOf(expired.session.accessToken)
+    await h.identity.useCases.revokeStaffSession.execute(staff.context, sidRevoked)
+    const past = new Date(h.clock.now().getTime() - 1000)
+    await h.admin`UPDATE identity.refresh_family SET absolute_expires_at = ${past} WHERE id = ${sidExpired}`
+    const unknown = '0192f3c4-5a1e-7000-8000-00000000dead'
+    const found = await h.identity.api.liveSessionIds([sidLive, sidRevoked, sidExpired, unknown])
+    expect(found).toEqual([sidLive])
+    expect(await h.identity.api.liveSessionIds([])).toEqual([])
+    await expect(
+      h.identity.api.liveSessionIds(Array.from({ length: 501 }, () => sidLive)),
+    ).rejects.toMatchObject({ code: 'validation_failed' })
+  })
 })

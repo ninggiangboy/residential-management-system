@@ -75,6 +75,12 @@ export interface IdentityApi {
    * guard asks it to prove that none of them belongs to a building that is not a demo building (DOC-36 §10.1 check 1).
    */
   listDemoAccountIds(): Promise<string[]>
+  /**
+   * The ids among up to 500 session ids (any kind, any account) whose refresh family is live, with the predicate of the session
+   * list (`revoked_at IS NULL AND absolute_expires_at > now()`); an unknown id is absent. The push sender uses it to skip and delete
+   * the device tokens of sessions that ended by expiry, which writes no event (DOC-31 §6.2 step 4, DOC-26 §3.7, DR-300).
+   */
+  liveSessionIds(sessionIds: string[]): Promise<string[]>
   /** Up to 500 ids; a `deleted` account is returned with its `deleted:<id>` phone so a caller can tell. */
   getResidentAccounts(ids: string[]): Promise<ResidentAccountDto[]>
   /**
