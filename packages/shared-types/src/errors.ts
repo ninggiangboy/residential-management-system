@@ -115,6 +115,7 @@ export const RULE_CODES = [
   'terms_text',
   'too_many_rows_for_pdf',
   'reason_too_short',
+  'reason_too_long',
   'same_assignee',
   'assignee_locked',
   'setting_invalid',
