@@ -55,7 +55,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | Prometheus | 3.15.1 | Scrape every 15 s, evaluate rules every 15 s, keep 15 days (about 2 GB reserved, DOC-10 §6.4) | inside the 1 GB monitoring ceiling of DR-06 with the others |
 | Alertmanager | 0.34.1 | Group, route, repeat, silence | |
-| Grafana | 13.2.4 | Dashboards from files in the repository (provisioned, not clicked together) | |
+| Grafana | 13.3.0 | Dashboards from files in the repository (provisioned, not clicked together) | |
 | Loki | 3.7.9 | Logs, 14 days (up to 3 GB reserved in production) | |
 | Grafana Alloy | 1.21.2 (verified on 2026-10-27, P1-18) | Reads Docker container logs, ships to Loki | |
 | `postgres_exporter` | 0.20.1 | PostgreSQL basics; connects as `rms_readonly` (DR-113) | |

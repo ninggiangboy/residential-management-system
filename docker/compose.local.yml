@@ -48,7 +48,7 @@ services:
 
   # One-shot: creates the bucket and its CORS rule, then exits 0. Safe to run again.
   objectstore-init:
-    image: amazon/aws-cli:2.38.5
+    image: amazon/aws-cli:2.38.6
     depends_on:
       objectstore:
         condition: service_healthy
@@ -167,7 +167,7 @@ services:
 
   grafana:
     profiles: [monitoring]
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     environment:
       # Local only: no sign-in. Staging and production keep the sign-in behind Cloudflare Access (DR-88).
       GF_AUTH_ANONYMOUS_ENABLED: 'true'
