@@ -34,6 +34,9 @@ test.skipIf(!uv)(
         'run',
         '--no-project',
         '--quiet',
+        // fonttools 4.67 needs Python 3.11 or later; without this uv may pick an older interpreter on the machine.
+        '--python',
+        '>=3.11',
         '--with',
         'fonttools==4.67.0',
         '--with',
