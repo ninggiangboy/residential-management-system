@@ -257,7 +257,7 @@ Linked to the runbooks RB-01…09 (master plan §3.2). `Ready` is the task after
 
 | Alert | Level | Condition (original SDD §19.2) | Runbook | Ready |
 | --- | --- | --- | --- | --- |
-| `LedgerInvariantViolation` | Critical | The nightly check returns any row | RB-01 | P2-11 |
+| `LedgerInvariantViolation` | Critical | The nightly check returns any row | RB-01 | live (P2-11) |
 | `PaymentsStuck` | Critical | `pending` older than 60 min not moving to `expired`, or more than 5 `creating` older than 2 min | RB-02 | P2-28 (was P3-09) |
 | `WebhookSignatures` | Warning | More than 3 rows in `webhook_rejection` in 10 min | RB-03 | P2-28 (was P3-09) |
 | `OutboxLag` | Warning | The oldest unpublished message is older than 2 min | RB-04 | live (P1-18) |
@@ -359,7 +359,7 @@ groups:
 | `BackupMetricMissing` | Warning | `absent(backup_last_success_timestamp)`: `BackupMissing` is silent when its series does not exist (an unreadable textfile, a first backup that never ran) | 26h | RB-07 | DR-271 · live (P1-20) |
 | `WorkerDown` | Warning | `up{job="rms-worker"} == 0` | 2m | RB-04 | SDD §19.3 · live (P1-18) |
 | `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · live (P1-18) |
-| `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · P2-11 |
+| `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · live (P2-11) |
 | `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
 | `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P2-28 (was P3-09) |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |

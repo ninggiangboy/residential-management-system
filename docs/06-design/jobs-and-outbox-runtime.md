@@ -350,7 +350,7 @@ The backup at 02:00 is a host cron job outside the application. The relay cleanu
 | `import_expire` | Turns `validated` import jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove` (built in P1-13, one batch of 500 per transaction) | `{"expired": n}` | DOC-18, DOC-20 §5 |
 | `export_purge` | Deletes export rows and files older than 7 days | `{"deleted": n}` | DOC-33, DOC-20 §2.5 |
 | `realtime_purge` | Deletes `realtime.events` older than 24 hours | `{"deleted": n}` | DOC-17 §9, DOC-20 |
-| `invariant_check` | The 19 queries of DOC-22 §12 (the 17 ledger corruptions of DR-78 and two table checks, DR-266) in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 19, "violations": n}` | DOC-22 (EXP-11) |
+| `invariant_check` | The 19 queries of DOC-22 §12 (the 17 ledger corruptions of DR-78 and two table checks, DR-266) in one snapshot; any row sets `ledger_invariant_violations`; the job itself succeeds, and the alert is Critical (it reports, never repairs) | `{"queries": 19, "violations": n, "buildings": b, "perQuery": {"Q08": 1}}`; one snapshot over all real buildings (demo skipped); the gauge reads `violations` of the latest succeeded run (P2-11 as built) | DOC-22 (EXP-11) |
 | `qr_scan_purge` | Deletes `qr_scan` and `lookup_log` rows older than 90 days | `{"deleted": n}` | DOC-20 §5 |
 | `otp_purge` | Deletes OTP challenges older than 24 hours | `{"deleted": n}` | DOC-20 §5 |
 | `token_purge` | Deletes consumed or expired tokens, expired or revoked families, idle buckets (identity and platform), expired idempotency keys, `job_run` rows older than 30 days | `{"deleted": {"password_token": n, …}}` | DOC-20 §5 |
