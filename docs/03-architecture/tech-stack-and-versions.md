@@ -43,8 +43,8 @@ This document pins every runtime, library, tool, CI action, image and font the s
 
 | Item | Pin | Why | Licence | Verified on | Source |
 | --- | --- | --- | --- | --- | --- |
-| Bun | **1.4.3** (2026-10-09) | Runtime, package manager, test runner, `Bun.password`, `Bun.randomUUIDv7()` (DR-01, DR-10, DR-39). SDD "≥ 1.4" holds | MIT, with bundled third-party components listed in the project's licensing file | 2026-10-19 | [GitHub releases](https://github.com/oven-sh/bun/releases), [endoflife.date/bun](https://endoflife.date/bun) |
-| Docker base image `oven/bun` | **1.4.3** (tag exists) | Same exact version as `.tool-versions` | as Bun | 2026-10-19 | [Docker Hub](https://hub.docker.com/r/oven/bun/tags) |
+| Bun | **1.4.4** (2026-10-22) | Runtime, package manager, test runner, `Bun.password`, `Bun.randomUUIDv7()` (DR-01, DR-10, DR-39). SDD "≥ 1.4" holds | MIT, with bundled third-party components listed in the project's licensing file | 2026-10-19 | [GitHub releases](https://github.com/oven-sh/bun/releases), [endoflife.date/bun](https://endoflife.date/bun) |
+| Docker base image `oven/bun` | **1.4.4** (tag exists) | Same exact version as `.tool-versions` | as Bun | 2026-11-03 | [Docker Hub](https://hub.docker.com/r/oven/bun/tags) |
 | Node.js (tooling only: Expo CLI, EAS, Metro) | **24.22.0** LTS (2026-10-14). Node 26 becomes LTS on 2026-10-28 (26.12.0 today) | Expo SDK 58 accepts 22.13+, 24.3+, 26+; odd lines are unsupported. Replaces the SDD's "Node 22" (DR-82). Revisit 26 at the first refresh after 2026-10-28 | MIT | 2026-10-19 | [endoflife.date/nodejs](https://endoflife.date/nodejs), [Expo SDK 58 changelog](https://expo.dev/changelog/sdk-58) |
 | PostgreSQL | **18.6** (supported to 2030-11-14). 19 is not available. PGDG apt for Ubuntu 26.04 (`resolute-pgdg`) carries `postgresql-18` 18.6-1.pgdg26.04+2 | Replaces the SDD's PostgreSQL 17 (DR-82). Installed natively on the VPS (DR-83, DR-67) | PostgreSQL Licence | 2026-10-19 | [endoflife.date/postgresql](https://endoflife.date/postgresql), [apt.postgresql.org](https://apt.postgresql.org/pub/repos/apt/dists/resolute-pgdg/18/binary-amd64/Packages) |
 | PostgreSQL extensions | `pg_trgm`, `unaccent`, `citext` (contrib modules; P1-20 confirms the apt package carries them); `uuid` is generated in the application (UUIDv7, DR-10) | Plate and name search (DR-41), library search (DR-54), case-insensitive email (DR-36). P1-20 runs `CREATE EXTENSION` on the host | PostgreSQL Licence | not yet run on a host (P1-20) | PostgreSQL docs for [contrib modules](https://www.postgresql.org/docs/18/contrib.html) |
@@ -240,7 +240,7 @@ Third-party images are pinned to an exact tag in the Compose files (DR-95).
 
 | Item | Pin | Why | Licence | Verified on | Source |
 | --- | --- | --- | --- | --- | --- |
-| `bun test` | Part of Bun 1.4.3 | Unit and integration tests; PostgreSQL service container in CI (DR-08) | MIT | 2026-10-19 | [Bun](https://github.com/oven-sh/bun/releases) |
+| `bun test` | Part of Bun 1.4.4 | Unit and integration tests; PostgreSQL service container in CI (DR-08) | MIT | 2026-10-19 | [Bun](https://github.com/oven-sh/bun/releases) |
 | `@playwright/test` | **1.64.1** | Web CMS end to end, path-gated (DR-08) | Apache-2.0 | 2026-10-19 | [npm](https://www.npmjs.com/package/@playwright/test) |
 | `@axe-core/playwright` | **4.14.0** (2026-10-15) | Accessibility audit of the web pages in both themes: 0 serious or critical violations (DR-184, DS-07, DOC-54 §12) | MPL-2.0 | 2026-10-20 | [npm](https://www.npmjs.com/package/@axe-core/playwright) |
 | fontTools | **4.67.0** (PyPI, 2026-10-14), with `brotli` **1.2.0** (2025-11-05) to read `woff2` | DS-05 glyph check of the shipped fonts and the static `ttf` instances (DR-237, DOC-54 §4.1); run with `uv run --with`, never installed in the repository | MIT, MIT | 2026-10-22 | [PyPI fonttools](https://pypi.org/project/fonttools/), [PyPI brotli](https://pypi.org/project/Brotli/) |

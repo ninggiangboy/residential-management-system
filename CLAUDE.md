@@ -13,7 +13,7 @@ A residential (apartment building) management system: an Elysia API, a web CMS f
 
 ## Commands
 
-The toolchain is pinned in `.tool-versions` (bun 1.4.3, node 24.22.0). Run every command from the repository root.
+The toolchain is pinned in `.tool-versions` (bun 1.4.4, node 24.22.0). Run every command from the repository root.
 
 ```sh
 bun run setup              # fresh clone → running local stack (tools, install, keys, infra, migrate, demo seed)
