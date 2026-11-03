@@ -418,12 +418,12 @@ The key pairs are random and made on the host: `keys:generate --out` makes the a
 
 **4. The Tunnel route.** `files-staging.<domain>` → HTTPS `seaweedfs:8333` (§5.2). The DNS record is the Tunnel's own. The client-visible settings follow from it: `S3_PUBLIC_ENDPOINT=https://files-staging.<domain>` (§9.2), the web CMS's CSP and CORS name that host (DOC-39 §5.1 owes the line, DR-268), and the signed `Content-Type` of the presigned `PUT` is unchanged (DR-61, DR-268 item 6). Presigned POST is not relied on.
 
-**5. Buckets and CORS**, after the first deploy has started the `seaweedfs` container (§11). The local stack does the same with the AWS CLI because SeaweedFS has no CLI for CORS (DOC-69 §6); on the host the one-shot runs on the `rms` network and trusts the private CA (the `aws-cli` image tag is the local stack's, `amazon/aws-cli:2.38.3`):
+**5. Buckets and CORS**, after the first deploy has started the `seaweedfs` container (§11). The local stack does the same with the AWS CLI because SeaweedFS has no CLI for CORS (DOC-69 §6); on the host the one-shot runs on the `rms` network and trusts the private CA (the `aws-cli` image tag is the local stack's, `amazon/aws-cli:2.38.5`):
 
 ```bash
 aws() { docker run --rm --network rms -v /etc/rms/tls/ca.pem:/ca.pem:ro -v /tmp/cors-files.json:/cors.json:ro \
   -e AWS_ACCESS_KEY_ID="$ADMIN_KEY" -e AWS_SECRET_ACCESS_KEY="$ADMIN_SECRET" -e AWS_DEFAULT_REGION=auto -e AWS_CA_BUNDLE=/ca.pem \
-  amazon/aws-cli:2.38.3 --endpoint-url https://seaweedfs:8333 "$@"; }
+  amazon/aws-cli:2.38.5 --endpoint-url https://seaweedfs:8333 "$@"; }
 aws s3api create-bucket --bucket rms-staging-files
 aws s3api create-bucket --bucket rms-staging-backup
 cat > /tmp/cors-files.json <<'EOF'
