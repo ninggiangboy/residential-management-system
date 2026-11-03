@@ -15,10 +15,10 @@
     "test": "bun test --pass-with-no-tests"
   },
   "peerDependencies": {
-    "@opentelemetry/api": "1.9.1"
+    "@opentelemetry/api": "1.10.0"
   },
   "devDependencies": {
-    "@opentelemetry/api": "1.9.1",
-    "@types/bun": "1.4.3"
+    "@opentelemetry/api": "1.10.0",
+    "@types/bun": "1.4.4"
   }
 }

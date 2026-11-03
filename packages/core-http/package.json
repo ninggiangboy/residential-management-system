@@ -20,13 +20,13 @@
     "@core/telemetry": "workspace:*"
   },
   "peerDependencies": {
-    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/api": "1.10.0",
     "elysia": "1.4.30",
     "@sinclair/typebox": "0.34.52"
   },
   "devDependencies": {
-    "@opentelemetry/api": "1.9.1",
-    "@types/bun": "1.4.3",
+    "@opentelemetry/api": "1.10.0",
+    "@types/bun": "1.4.4",
     "elysia": "1.4.30",
     "@sinclair/typebox": "0.34.52"
   }
