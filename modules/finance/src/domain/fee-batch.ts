@@ -22,6 +22,8 @@ export interface FeeBatchRecord {
   readonly version: number
   readonly createdBy: string
   readonly createdAt: Date
+  /** The recalled batch a re-issued draft corrects (DOC-21 §3.7); absent or `null` otherwise. */
+  readonly replacesBatchId?: string | null
 }
 
 /** What one unit owes in one batch (DOC-15 §5.2), with the status of its batch for the draft checks of DOC-21 §3.2. */

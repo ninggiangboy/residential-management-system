@@ -10,6 +10,7 @@ import ExcelJS from 'exceljs'
 import { financeManifest } from '../src'
 import type { FoundUnitDto } from '../src/application/ports'
 import { createFinanceModule, type FinanceModule } from '../src/finance.module'
+import { testPorts } from './support/ports'
 
 /**
  * The fee import of DOC-21 §4 (P2-04) on a clone of the migrated template: validation to a stored preview, the commit in one
@@ -99,6 +100,8 @@ beforeAll(async () => {
         }),
     },
     files,
+
+    ...testPorts(),
   })
 })
 

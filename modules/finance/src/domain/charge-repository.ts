@@ -20,4 +20,17 @@ export interface ChargeRepository {
   insertDraft(scope: BuildingScope, charge: DraftChargeInsert): Promise<ChargeRecord>
   /** `DELETE … WHERE status = 'draft' AND version = :expected` (the lines cascade); `false` on 0 rows. */
   deleteDraft(scope: BuildingScope, chargeId: string, expectedVersion: number): Promise<boolean>
+  /** A `live` allocation of the charge exists (DOC-21 §3.9: such a charge is not voidable). */
+  hasLiveAllocation(scope: BuildingScope, chargeId: string): Promise<boolean>
+  /**
+   * The single void of DOC-21 §3.9: `open → void`, `void_kind = 'single'`, the reason, `… WHERE status = 'open' AND version = :v`;
+   * `null` on 0 rows (paid meanwhile, already void, or stale).
+   */
+  voidOpen(
+    scope: BuildingScope,
+    chargeId: string,
+    reason: string,
+    staffId: string,
+    expectedVersion: number,
+  ): Promise<ChargeRecord | null>
 }

@@ -27,7 +27,7 @@ export interface ReceiptContext {
   readonly timeZone: string
   readonly company: CompanyProfile
   readonly building: { readonly name: BilingualText }
-  readonly payer: { readonly name: string; readonly memberType: MemberType | null }
+  readonly payer: { readonly name: string | null; readonly memberType: MemberType | null }
 }
 
 /** One line of the charge, frozen as DOC-15 §7.3 prints it; `quantity` is a decimal string so `12.345` survives JSON. */
@@ -63,7 +63,7 @@ export interface ReceiptSnapshot {
   readonly company: CompanyProfile
   readonly building: { readonly name: BilingualText }
   readonly unitCode: string
-  readonly payer: { readonly name: string; readonly memberType: MemberType | null }
+  readonly payer: { readonly name: string | null; readonly memberType: MemberType | null }
   readonly batch: { readonly code: string; readonly name: BilingualText; readonly feeMonth: string }
   readonly lines: readonly ReceiptLine[]
   readonly amount: number

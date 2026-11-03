@@ -3,7 +3,17 @@ import { createFinanceModule, type FinanceModuleDeps } from './finance.module'
 
 /** The host narrowed to what `finance` needs: it states its dependencies in its signature (DOC-12 §4.2). */
 export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'database'> &
-  Pick<FinanceModuleDeps, 'audited' | 'units' | 'files' | 'metrics'>
+  Pick<
+    FinanceModuleDeps,
+    | 'audited'
+    | 'units'
+    | 'files'
+    | 'metrics'
+    | 'calendar'
+    | 'receiptBuildings'
+    | 'payers'
+    | 'outboxMaxPayloadBytes'
+  >
 
 export function installFinance(host: FinanceHost) {
   return createFinanceModule({
@@ -15,5 +25,9 @@ export function installFinance(host: FinanceHost) {
     units: host.units,
     files: host.files,
     metrics: host.metrics,
+    calendar: host.calendar,
+    receiptBuildings: host.receiptBuildings,
+    payers: host.payers,
+    outboxMaxPayloadBytes: host.outboxMaxPayloadBytes,
   })
 }

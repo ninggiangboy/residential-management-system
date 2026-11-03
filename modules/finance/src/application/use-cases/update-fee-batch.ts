@@ -1,15 +1,25 @@
 import {
+  type Clock,
+  type Log,
   NotFoundError,
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
+  ValidationError,
   VersionConflictError,
 } from '@core/kernel'
+import type { OutboxWriter } from '@core/messaging'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
 import type { LocalDate, StaffContext, StaffRole } from '@rms/shared-types'
-import { BatchNameInvalidError, InvalidTransitionError } from '../../domain/errors'
+import { type BatchDueExtendedPayload, FINANCE_EVENTS } from '../../contracts'
+import {
+  BatchNameInvalidError,
+  DueDateNotLaterError,
+  InvalidTransitionError,
+} from '../../domain/errors'
 import { type BilingualName, type FeeBatchRecord, normalizeBatchName } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
+import { unitChunks } from '../fan-out'
 
 /** The Manager's and the Admin's (DOC-21 §2.3, DOC-35 §4.1). */
 export const UPDATE_FEE_BATCH_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
@@ -22,19 +32,27 @@ export interface UpdateFeeBatchInput {
 }
 
 /**
- * `PATCH /staff/fee-batches/{id}` on a draft (DOC-21 §3.2): the name and the due date; the fee month never changes (DR-265). One
- * guarded `UPDATE … WHERE status = 'draft' AND version = :v`; on 0 rows the row is read to answer 409 `version_conflict` with the
- * fresh batch or 409 `invalid_transition`. The extension of a published batch's due date is the published path of P2-05.
+ * `PATCH /staff/fee-batches/{id}` (DOC-21 §3.2, §3.4). On a draft: the name and the due date; the fee month never changes
+ * (DR-265); one guarded `UPDATE … WHERE status = 'draft' AND version = :v`, and on 0 rows the row is read to answer 409
+ * `version_conflict` with the fresh batch or 409 `invalid_transition`. On a published batch: only a later `dueDate` (FR-44, DR-20),
+ * `… AND due_date < :new` in the statement so racing Managers never move it back; another field is 409 `invalid_transition`
+ * (FR-44.2), the same or an earlier date 400 `due_date_not_later`. The extension writes `finance.batch_due_extended.v1` to the
+ * units that still have an open charge and the audit row `finance.batch.extend_due`. A closed or recalled batch is 409.
  */
 export class UpdateFeeBatch {
   private readonly auditedUpdate: ReturnType<UpdateFeeBatch['buildAudited']>
+  private readonly auditedExtend: ReturnType<UpdateFeeBatch['buildExtend']>
 
   constructor(
     private readonly uow: UnitOfWork,
     private readonly batches: FeeBatchRepository,
     audited: Audited,
+    private readonly outbox: OutboxWriter,
+    private readonly clock: Clock,
+    private readonly logger: Log,
   ) {
     this.auditedUpdate = this.buildAudited(audited)
+    this.auditedExtend = this.buildExtend(audited)
   }
 
   async execute(
@@ -47,8 +65,86 @@ export class UpdateFeeBatch {
     const name = input.name === undefined ? undefined : normalizeBatchName(input.name)
     if (name === null) throw new BatchNameInvalidError()
     const version = input.version
-    return this.uow.run(() =>
-      this.auditedUpdate(staff, batchId, { name, dueDate: input.dueDate }, version),
+    const out = await this.uow.run(async () => {
+      const stored = await this.batches.find(staff.scope, batchId)
+      if (stored?.status === 'published') {
+        if (input.name !== undefined)
+          throw new InvalidTransitionError('fee_batch', stored.status, 'update')
+        if (input.dueDate === undefined)
+          throw new ValidationError([
+            { path: 'dueDate', code: 'required', message: 'the new due date' },
+          ])
+        const dueDate = input.dueDate
+        return { batch: await this.auditedExtend(staff, batchId, dueDate, version), extended: true }
+      }
+      const batch = await this.auditedUpdate(
+        staff,
+        batchId,
+        { name, dueDate: input.dueDate },
+        version,
+      )
+      return { batch, extended: false }
+    })
+    if (out.extended)
+      this.logger.info(
+        {
+          event: 'fee_batch.due_extended',
+          buildingId: staff.scope.buildingId,
+          batchId,
+          actor: staff.staffId,
+        },
+        'fee batch due date extended',
+      )
+    return out.batch
+  }
+
+  /** A concurrent extension won between the read and the statement (DOC-21 §3.4): tell which rule it broke. */
+  private async extendRefusal(staff: StaffContext, batchId: string, version: number) {
+    const fresh = await this.batches.find(staff.scope, batchId)
+    if (!fresh) return new NotFoundError()
+    if (fresh.status !== 'published')
+      return new InvalidTransitionError('fee_batch', fresh.status, 'extend_due')
+    if (fresh.version !== version) return new VersionConflictError(fresh)
+    return new DueDateNotLaterError()
+  }
+
+  private buildExtend(audited: Audited) {
+    return audited(
+      {
+        action: 'finance.batch.extend_due',
+        object: (batch: FeeBatchRecord) => ({ type: 'fee_batch', id: batch.id }),
+      },
+      async (staff: StaffContext, batchId: string, dueDate: LocalDate, version: number) => {
+        const stored = await this.batches.find(staff.scope, batchId)
+        if (!stored) throw new NotFoundError()
+        if (stored.status !== 'published')
+          throw new InvalidTransitionError('fee_batch', stored.status, 'extend_due')
+        if (stored.version !== version) throw new VersionConflictError(stored)
+        if (dueDate <= stored.dueDate) throw new DueDateNotLaterError()
+        const after = await this.batches.extendDueDate(staff.scope, batchId, dueDate, version)
+        if (!after) throw await this.extendRefusal(staff, batchId, version)
+        const unitIds = await this.batches.openChargeUnits(staff.scope, batchId)
+        const now = this.clock.now()
+        await this.outbox.add(
+          unitChunks(unitIds).map((chunk) => ({
+            type: FINANCE_EVENTS.batchDueExtended,
+            aggregateId: after.id,
+            payload: {
+              buildingId: staff.scope.buildingId,
+              batchId: after.id,
+              code: after.code,
+              previousDueDate: stored.dueDate,
+              dueDate: after.dueDate,
+              ...chunk,
+            } satisfies BatchDueExtendedPayload,
+            occurredAt: now,
+          })),
+        )
+        return {
+          result: after,
+          changes: [{ field: 'dueDate', before: stored.dueDate, after: after.dueDate }],
+        }
+      },
     )
   }
 
