@@ -48,5 +48,18 @@ export function startMain(env: Record<string, string | undefined>) {
         return undefined
       }
     },
+    /**
+     * Polls readiness until 200 or the deadline. A cold `bun src/main.ts` loads every module first; on a busy machine (the
+     * finance race suites running beside it) that takes longer than a few seconds, so the wait is a deadline, not a count.
+     */
+    async waitReady(opsPort: number, deadlineMs = 20_000): Promise<number | undefined> {
+      const until = Date.now() + deadlineMs
+      let status: number | undefined
+      while (status !== 200 && Date.now() < until) {
+        status = await this.readyStatus(opsPort)
+        if (status !== 200) await Bun.sleep(100)
+      }
+      return status
+    },
   }
 }

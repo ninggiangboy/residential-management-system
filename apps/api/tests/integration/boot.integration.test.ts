@@ -78,12 +78,7 @@ describe('the process (`bun src/main.ts`)', () => {
       LOG_LEVEL: 'info',
     })
     try {
-      let status: number | undefined
-      for (let i = 0; i < 50 && status !== 200; i++) {
-        status = await main.readyStatus(opsPort)
-        if (status !== 200) await Bun.sleep(100)
-      }
-      expect(status).toBe(200)
+      expect(await main.waitReady(opsPort)).toBe(200)
       const publicReady = await fetch(`http://127.0.0.1:${port}/api/v1/health/ready`)
       expect(publicReady.status).toBe(200)
     } finally {
@@ -108,12 +103,7 @@ describe('the process (`bun src/main.ts`)', () => {
       SHUTDOWN_DRAIN_SECONDS: '1',
       LOG_LEVEL: 'info',
     })
-    let status: number | undefined
-    for (let i = 0; i < 50 && status !== 200; i++) {
-      status = await main.readyStatus(opsPort)
-      if (status !== 200) await Bun.sleep(100)
-    }
-    expect(status).toBe(200)
+    expect(await main.waitReady(opsPort)).toBe(200)
 
     // A request whose body is still on its way: the server has the connection open and is waiting for the rest.
     const body = JSON.stringify({ email: 'nobody@example.com', password: 'not-a-password-1' })
