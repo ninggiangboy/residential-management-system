@@ -139,6 +139,7 @@ updates:
       - dependency-name: "unimodules-image-loader-interface"
       - dependency-name: "tailwindcss"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/*"
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday, time: "02:00", timezone: Asia/Ho_Chi_Minh }
@@ -163,3 +164,6 @@ updates:
     groups:
       images:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "chrislusf/seaweedfs"
+      - dependency-name: "cloudflare/cloudflared"

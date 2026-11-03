@@ -95,7 +95,7 @@ Versions are pinned in DOC-11 §8 and §9 (exact pins, DR-95); this table repeat
 | `@playwright/test` | 1.64.1 | Web end to end |
 | Maestro CLI | 2.11.0 | Mobile flows |
 | k6 | 2.3.0 | EXP-07 and the payment-burst profile |
-| Mailpit | v1.31.6 | Reads mail sent by `nodemailer` in `local` and in web end-to-end runs |
+| Mailpit | v1.32.0 | Reads mail sent by `nodemailer` in `local` and in web end-to-end runs |
 | Local S3-compatible store | chosen and pinned by P1-03 | Presigned `PUT`, `HEAD`, `DELETE` in integration tests (`FS-`) |
 
 **Commands.** These are the test-related root scripts; DOC-69 §5 lists every root script and owns the full table. `test:grants`, `test:mobile`, `test:load`, `test:db-clean` and `check:test-ids` are added by this document and are owed to DOC-69 §5.
