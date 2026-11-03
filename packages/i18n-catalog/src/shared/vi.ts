@@ -107,6 +107,7 @@ export const vi: Record<keyof typeof en, string> = {
   'error.too_many_rows_for_pdf':
     'Báo cáo có hơn {max} dòng, quá nhiều để xuất PDF. Hãy xuất Excel hoặc thu hẹp bộ lọc.',
   'error.reason_too_short': 'Nhập ít nhất {min} ký tự.',
+  'error.reason_too_long': 'Nhập tối đa {max} ký tự.',
   'error.same_assignee': 'Phiếu này đang do người đó phụ trách.',
   'error.assignee_locked': 'Người này không nhận được việc. Hãy chọn người khác.',
   'error.setting_invalid': 'Giá trị cài đặt này chưa hợp lệ.',

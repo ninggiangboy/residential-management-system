@@ -109,6 +109,7 @@ export const en = {
   'error.too_many_rows_for_pdf':
     'The report has more than {max} rows, too many for a PDF. Export to Excel or narrow the filter.',
   'error.reason_too_short': 'Write at least {min} characters.',
+  'error.reason_too_long': 'Write at most {max} characters.',
   'error.same_assignee': 'This ticket is already assigned to that person.',
   'error.assignee_locked': 'That person cannot take jobs. Choose someone else.',
   'error.setting_invalid': 'This setting value is not valid.',
