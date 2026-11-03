@@ -347,6 +347,7 @@ export function createContainer(
     files: building.files,
     metrics: metrics.port,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+    invariantCheckGraceMinutes: jobsConfig.JOB_INVARIANT_CHECK_GRACE_MINUTES,
     ...financePorts({ building: building.api, identity: identity.api, residency: residency.api }),
   })
   installed.push(finance)
