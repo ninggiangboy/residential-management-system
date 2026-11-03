@@ -34,7 +34,7 @@ test('UICP-03: every code of DOC-42 §5 has error.<code>, and no error key lacks
   expect(errorKeys.sort()).toEqual([...codes].sort())
 })
 
-test('UICP-06: the catalog holds only the eight shared families and the screen families, each key once', () => {
+test('UICP-06: the catalog holds only the nine shared families and the screen families, each key once', () => {
   const families = new Set<string>([...SHARED_FAMILIES, ...SCREEN_FAMILIES])
   expect(keys.filter((k) => !families.has(k.split('.')[0]!))).toEqual([])
   expect(new Set(keys).size).toBe(keys.length)
