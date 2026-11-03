@@ -9,16 +9,21 @@ import type { ResidencyApi } from '@mod/residency/contracts'
  * module states its needs without importing them (DOC-12 §4.2).
  */
 export function financePorts(apis: {
-  building: Pick<BuildingApi, 'getBuilding'>
+  building: Pick<BuildingApi, 'getBuilding' | 'listBuildings'>
   identity: Pick<IdentityApi, 'getResidentAccounts'>
   residency: Pick<ResidencyApi, 'getMembership'>
-}): Pick<FinanceModuleDeps, 'calendar' | 'receiptBuildings' | 'payers'> {
+}): Pick<FinanceModuleDeps, 'calendar' | 'receiptBuildings' | 'payers' | 'ledgerCheckBuildings'> {
   const buildingOf = async (buildingId: string) => {
     const building = await apis.building.getBuilding(buildingId)
     if (!building) throw new NotFoundError()
     return building
   }
   return {
+    // DOC-22 §12, DOC-40 §4 rule 4: the nightly ledger check covers the real buildings only.
+    ledgerCheckBuildings: {
+      liveBuildingIds: async () =>
+        (await apis.building.listBuildings()).filter((b) => !b.isDemo).map((b) => b.buildingId),
+    },
     calendar: { timeZone: async (buildingId) => (await buildingOf(buildingId)).timeZone },
     receiptBuildings: {
       // DOC-22 §7 reads the company block from the building settings, which hold none yet: the building's own name and

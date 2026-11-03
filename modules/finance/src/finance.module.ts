@@ -41,12 +41,14 @@ import { VoidPayment } from './application/use-cases/void-payment'
 import type { FeeImportApi, FinanceApi } from './contracts'
 import { ExceljsFeeTemplateWriter } from './infrastructure/excel/exceljs-fee-template-writer'
 import { ExceljsFeeWorkbookReader } from './infrastructure/excel/exceljs-workbook-reader'
+import { invariantCheckJob, type LedgerCheckBuildings } from './infrastructure/jobs/invariant-check'
 import { DrizzleChargeRepository } from './infrastructure/persistence/drizzle-charge-repository'
 import { DrizzleDebtRepository } from './infrastructure/persistence/drizzle-debt-repository'
 import { DrizzleFeeBatchRepository } from './infrastructure/persistence/drizzle-fee-batch-repository'
 import { DrizzleFeeImportRepository } from './infrastructure/persistence/drizzle-fee-import-repository'
 import { DrizzleIntentReader } from './infrastructure/persistence/drizzle-intent-reader'
 import { DrizzleIntentRepository } from './infrastructure/persistence/drizzle-intent-repository'
+import { DrizzleInvariantReader } from './infrastructure/persistence/drizzle-invariant-reader'
 import { DrizzleLedgerRepository } from './infrastructure/persistence/drizzle-ledger-repository'
 import { DrizzleMoneyLogRepository } from './infrastructure/persistence/drizzle-money-log-repository'
 import { DrizzlePaymentRepository } from './infrastructure/persistence/drizzle-payment-repository'
@@ -73,6 +75,13 @@ export interface FinanceModuleDeps {
   payers: PayerDirectory
   /** `OUTBOX_MAX_PAYLOAD_BYTES` (DOC-41). */
   outboxMaxPayloadBytes: number
+  /**
+   * The buildings `invariant_check` covers: real ones only, from `BuildingApi.listBuildings` (DOC-22 §12, DR-244). Optional here so
+   * a test builds the module without the job; `install.ts` requires both of the host, so the app cannot forget them.
+   */
+  ledgerCheckBuildings?: LedgerCheckBuildings
+  /** `JOB_INVARIANT_CHECK_GRACE_MINUTES` (DOC-41 §11). */
+  invariantCheckGraceMinutes?: number
   /** DOC-40: `import_validate_duration_seconds`, `import_commits_total` (DOC-21 §7). */
   metrics?: MetricsPort
 }
@@ -255,5 +264,15 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       ids,
       logger,
     ),
+    // DOC-38 §4.1: the nightly ledger check (P2-11); the gauge `ledger_invariant_violations` reads its `job_run` row.
+    jobs: deps.ledgerCheckBuildings
+      ? [
+          invariantCheckJob(
+            new DrizzleInvariantReader(database),
+            deps.ledgerCheckBuildings,
+            deps.invariantCheckGraceMinutes ?? 0,
+          ),
+        ]
+      : [],
   }
 }
