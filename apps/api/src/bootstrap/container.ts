@@ -28,6 +28,7 @@ import type { Guards } from '@rms/shared-types'
 import { buildDemoPlan } from '../demo/plan'
 import type { AccountBuildings } from './boot-guard'
 import type { Config } from './config'
+import { financePorts } from './finance-ports'
 import { createGuards, type GuardDeps } from './guards'
 import { createMailerFor } from './mailer'
 import { createAppMetrics, registerPulledMetrics } from './metrics'
@@ -337,6 +338,8 @@ export function createContainer(
     units: residency.api,
     files: building.files,
     metrics: metrics.port,
+    outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+    ...financePorts({ building: building.api, identity: identity.api, residency: residency.api }),
   })
   installed.push(finance)
 
