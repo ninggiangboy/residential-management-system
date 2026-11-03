@@ -564,7 +564,7 @@ The experiments that need the real host (EXP-09 first, DOC-98; EXP-01, 02, 05, 0
 | PostgreSQL | `host.docker.internal`, which a container on this network must map explicitly: `--add-host host.docker.internal:172.30.0.1` (the value `host-gateway` would resolve to the default bridge, where PostgreSQL does not listen) |
 | Secret files an experiment may mount read-only | `/etc/rms/secrets/db-app-url` (a read-only `SELECT` as `rms_app`); a per-experiment file such as `/etc/rms/secrets/exp-manager`, made for the run and deleted after it |
 | Source of the commit under test | `/opt/rms/src/<commit>`, copied from a checkout over the Tunnel with `git archive <commit> \| ssh ops@ssh-staging.<domain> 'mkdir -p /opt/rms/src/<commit> && tar -x -C /opt/rms/src/<commit>'` (the host holds no Git credentials and no clone); the experiment container installs its dependencies with `bun install --frozen-lockfile` and runs `bun run exp:NN` |
-| Image | `oven/bun:1.4.3` (the exact tag of DOC-11 §1); never the production `rms-api` image, which has no test code |
+| Image | `oven/bun:1.4.4` (the exact tag of DOC-11 §1); never the production `rms-api` image, which has no test code |
 
 An experiment never runs while a deploy is in progress and EXP-07 and EXP-08 never run together (DR-102). The run does not change the compose project: a one-shot container is `docker run --rm`, not a service.
 

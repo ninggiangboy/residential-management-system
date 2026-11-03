@@ -2,7 +2,7 @@
 
 A platform for a property management company to run an apartment building in Vietnam: units and residents, fees and online payment, support tickets, notices, vehicles, resident access codes and a document library, for both the management board and the people who live there.
 
-![Bun](https://img.shields.io/badge/Bun-1.4.3-black?logo=bun)
+![Bun](https://img.shields.io/badge/Bun-1.4.4-black?logo=bun)
 ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18.6-4169E1?logo=postgresql&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-SDK%2058-000020?logo=expo)
@@ -131,7 +131,7 @@ The [master plan](docs/00-master-plan.md) §5 tracks every task (`Pn-xx`) with i
 - macOS 14+ or Linux (Windows through WSL 2)
 - Docker with Compose v2
 - Git 2.40+
-- [mise](https://mise.jdx.dev) or [asdf](https://asdf-vm.com) for the versions pinned in `.tool-versions` (Bun 1.4.3, Node 24.22.0)
+- [mise](https://mise.jdx.dev) or [asdf](https://asdf-vm.com) for the versions pinned in `.tool-versions` (Bun 1.4.4, Node 24.22.0)
 - Optional: [uv](https://docs.astral.sh/uv/) for the design-token font test, [Maestro](https://maestro.mobile.dev) for mobile flows
 
 ### Install and run
