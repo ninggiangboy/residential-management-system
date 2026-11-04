@@ -1,4 +1,34 @@
 import type { finFeesEn } from './fin-fees-en'
 
 /** DOC-66 `fees` microcopy (Vietnamese). */
-export const finFeesVi: Record<keyof typeof finFeesEn, string> = {}
+export const finFeesVi: Record<keyof typeof finFeesEn, string> = {
+  'web.fees.action.import': 'Nhập đợt phí',
+  'web.fees.action.template': 'Tải file mẫu',
+  'web.fees.col.code': 'Mã đợt',
+  'web.fees.col.collected': 'Đã thu',
+  'web.fees.col.createdBy': 'Người tạo',
+  'web.fees.col.due': 'Hạn thanh toán',
+  'web.fees.col.name': 'Tên đợt',
+  'web.fees.col.open': 'Mở đợt phí',
+  'web.fees.col.status': 'Trạng thái',
+  'web.fees.col.total': 'Tổng tiền',
+  'web.fees.col.units': 'Số căn',
+  'web.fees.empty.filtered': 'Không có đợt phí khớp bộ lọc',
+  'web.fees.empty.title': 'Chưa có đợt phí nào',
+  'web.fees.filter.clear': 'Xóa bộ lọc',
+  'web.fees.footer': '{from}–{to} trên {total} đợt phí',
+  'web.fees.month.all': 'Mọi tháng',
+  'web.fees.month.label': 'Phí của tháng',
+  'web.fees.row.month': 'Phí của tháng {month}/{year}',
+  'web.fees.row.unissued': 'Chưa phát hành',
+  'web.fees.search': 'Tìm theo mã hoặc tên đợt',
+  'web.fees.search.label': 'Tìm đợt phí',
+  'web.fees.subtitle': 'Không có kỳ cố định, mỗi đợt gắn nhãn phí của tháng nào',
+  'web.fees.tab.all': 'Tất cả',
+  'web.fees.tab.closed': 'Đã đóng',
+  'web.fees.tab.draft': 'Nháp',
+  'web.fees.tab.published': 'Đã phát hành',
+  'web.fees.tab.recalled': 'Đã thu hồi',
+  'web.fees.tabs.label': 'Trạng thái đợt phí',
+  'web.fees.title': 'Đợt phí',
+}
