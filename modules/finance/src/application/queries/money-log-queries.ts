@@ -7,9 +7,13 @@ import type {
   MoneyLogRepository,
   MoneyLogRow,
 } from '../../domain/money-log-repository'
+import type { DebtUnitDirectory } from '../ports'
 
 /** The Manager's and the Admin's: the money log is staff only (DOC-22 §9.4, FR-47.3). */
 export const MONEY_LOG_READ_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
+
+/** No directory wired (a unit test): no unit belongs to the building. */
+const NO_UNITS: DebtUnitDirectory = { units: async () => [] }
 
 /** The page size of the viewer when the caller does not ask (DOC-22 §9.4, FR-47.1). */
 const DEFAULT_PAGE_LIMIT = 50
@@ -30,7 +34,11 @@ export interface MoneyLogList {
  * read. Nothing here links a row to a charge, period or payment (DR-84, DR-16).
  */
 export class MoneyLogQueries {
-  constructor(private readonly log: MoneyLogRepository) {}
+  constructor(
+    private readonly log: MoneyLogRepository,
+    /** Tells whether a unit belongs to the building: `finance` has no unit table (DOC-66 §5). */
+    private readonly units: DebtUnitDirectory = NO_UNITS,
+  ) {}
 
   /** E-108: the union of §9.4, newest first, keyset paged at most 100 rows (FR-47.1). */
   async list(scope: BuildingScope, filter: MoneyLogListFilter): Promise<MoneyLogList> {
@@ -44,12 +52,17 @@ export class MoneyLogQueries {
     }
   }
 
-  /** E-110 `UnitMoneyPanel`: the unit's `gateway_event` rows, newest first (DOC-22 §9.4). */
-  byUnit(
+  /**
+   * E-110 `UnitMoneyPanel`: the unit's `gateway_event` rows, newest first (DOC-22 §9.4). An unknown unit, or one of another
+   * building, is 404 and not an empty list (DOC-39 §4.4).
+   */
+  async byUnit(
     scope: BuildingScope,
     unitId: string,
     limit = DEFAULT_PAGE_LIMIT,
   ): Promise<readonly MoneyLogRow[]> {
+    const [unit] = await this.units.units(scope.buildingId, [unitId])
+    if (!unit) throw new NotFoundError()
     return this.log.byUnit(scope, unitId, limit)
   }
 

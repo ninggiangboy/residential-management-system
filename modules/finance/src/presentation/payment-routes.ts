@@ -1,4 +1,5 @@
 import {
+  describedEnum,
   type Idempotent,
   IdParams,
   type RouteSet,
@@ -43,9 +44,13 @@ const RecordBody = strictObject(
         Type.Null(),
       ]),
     ),
-    method: Type.Union([Type.Literal('cash'), Type.Literal('bank_transfer')], {
-      description: '`cash` or `bank_transfer`',
-    }),
+    method: describedEnum(
+      {
+        cash: 'Cash handed over at the office',
+        bank_transfer: 'A bank transfer checked by the staff',
+      },
+      'How the money was paid',
+    ),
     payerName: Type.String({
       maxLength: 200,
       description: 'Who handed over the money, 1 to 120 characters',

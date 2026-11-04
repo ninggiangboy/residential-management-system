@@ -273,7 +273,8 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
 
 /** `state=open` keeps the rows nobody reviewed, `state=reviewed` the others (E-108); neither is every row. */
 function reviewPredicate(alias: 'g' | 'l', filter: MoneyLogFilter) {
-  const column = sql.raw(`${alias}.reviewed_at`)
+  // Two literal fragments and no `sql.raw()`: the alias never reaches the SQL text as a value (CWE-89, `rms-sql-raw-dynamic`).
+  const column = alias === 'g' ? sql`g.reviewed_at` : sql`l.reviewed_at`
   if (filter.openOnly === true) return sql`${column} IS NULL`
   if (filter.reviewedOnly === true) return sql`${column} IS NOT NULL`
   return null

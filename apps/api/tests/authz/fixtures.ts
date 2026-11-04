@@ -17,6 +17,20 @@ const missing = (what: string): never => {
 /** The staff actors that belong to B2: their objects are B2's, and B1's are foreign to them. */
 const inB2 = (actor: Actor) => actor === 'staff.admin_b2'
 
+/** The finance objects of the building a cell names: `own` objects are B1's and `foreign` ones B2's, for every actor. */
+const financeOf = (scope: Scope, world: World) =>
+  scope === 'own' ? world.finance.b1 : world.finance.b2
+
+/** The batch routes whose object is a published batch (recall, close, reissue, the PDF job); the others take the draft. */
+const PUBLISHED_BATCH_ROUTES = new Set(['E-96', 'E-97', 'E-98', 'E-99', 'E-177'])
+
+/** The charge routes whose object is an open charge (void, the charge PDF); the others (replace, remove) take the draft one. */
+const OPEN_CHARGE_ROUTES = new Set(['E-100', 'E-176'])
+
+/** The routes that delete their object: the Manager's cell runs after the Admin's, so it gets a draft of its own. */
+const spareFor = (endpoint: string, actor: Actor) =>
+  (endpoint === 'E-171' || endpoint === 'E-172') && actor === 'staff.manager'
+
 /**
  * The value of a path parameter. `own` objects are B1's (and U1's), `foreign` ones B2's (U3's); a session or an upload belongs to
  * a person, so its `own` value is the actor's and its `foreign` value is another person's.
@@ -33,6 +47,8 @@ export function paramValue(
   switch (`${e}:${name}`) {
     case 'E-71:kind':
       return 'unit_owner'
+    case 'E-109:kind':
+      return 'gateway_event'
     case 'T-01:id': // the probe route of mutant M4 names a unit
       return own ? IDS.U1 : IDS.U3
     case 'E-21:id': {
@@ -84,6 +100,24 @@ export function paramValue(
       return world.files['staff.admin_b2'] ?? missing(`${e} file of B2`)
     }
   }
+  const finance = () => financeOf(scope, world)
+  if (route.path.startsWith('/staff/fee-batches/') && name === 'id')
+    return PUBLISHED_BATCH_ROUTES.has(e)
+      ? finance().publishedBatch
+      : spareFor(e, actor)
+        ? finance().spareDraftBatch
+        : finance().draftBatch
+  if (route.path.startsWith('/staff/charges/') && name === 'id')
+    return OPEN_CHARGE_ROUTES.has(e)
+      ? finance().openCharge
+      : spareFor(e, actor)
+        ? finance().spareDraftCharge
+        : finance().draftCharge
+  if (route.path.startsWith('/staff/payments/') && name === 'id') return finance().paymentId
+  if (route.path.startsWith('/staff/receipts/') && name === 'id') return finance().receiptId
+  if (route.path.startsWith('/staff/money-log/') && name === 'id') return finance().gatewayEvent
+  if (route.path.startsWith('/me/receipts/') && name === 'id') return finance().receiptId
+  if (route.path.startsWith('/me/fees/') && name === 'chargeId') return finance().openCharge
   if (route.path.startsWith('/staff/accounts/') && name === 'id')
     return own ? IDS.staffTarget : IDS.staffTargetB2
   if (route.path.startsWith('/staff/units/') && name === 'id') return own ? IDS.U1 : IDS.U3
@@ -99,6 +133,13 @@ export function paramValue(
 }
 
 type Json = Record<string, unknown>
+
+const CHARGE_LINE = {
+  itemName: { vi: 'Phí quản lý' },
+  quantity: 1,
+  unitPrice: 100000,
+  amount: 100000,
+}
 
 /** The minimal valid body of a route, where it takes one (the examples of DOC-51). `{}` is the body of a route that validates a shape. */
 const BODIES: Record<string, (actor: Actor, scope: Scope, world: World) => Json> = {
@@ -120,6 +161,14 @@ const BODIES: Record<string, (actor: Actor, scope: Scope, world: World) => Json>
   }),
   'E-58': () => ({ code: `Z-${Math.floor(Math.random() * 90000) + 10000}` }),
   'E-60': () => ({ note: 'Edited by the matrix' }),
+  'E-92': () => ({ name: { vi: 'Phí đổi tên' } }),
+  'E-94': () => ({ lines: [CHARGE_LINE] }),
+  'E-96': () => ({ reason: 'Recalled by the matrix' }),
+  'E-100': () => ({ reason: 'Voided by the matrix' }),
+  'E-105': () => ({ reason: 'Voided by the matrix' }),
+  'E-109': () => ({ note: 'Reviewed by the matrix' }),
+  // A unit of the actor's own building with an owner: the unit is read before the batch, so a code of the other building is a 404 `unit_not_found`.
+  'E-170': (actor) => ({ unitCode: inB2(actor) ? 'B-0101' : 'A-1508', lines: [CHARGE_LINE] }),
   'E-181': () => ({
     code: `matrix_${Math.floor(Math.random() * 90000) + 10000}`,
     name: { vi: `Loại ${Math.floor(Math.random() * 90000) + 10000}` },
@@ -157,7 +206,7 @@ export function foreignIds(actor: Actor, world: World): string[] {
     const others = Object.entries(world.accounts)
       .filter(([a]) => a !== actor && isResident(a as Actor))
       .map(([, id]) => id as string)
-    return [IDS.U3, IDS.residentB2, IDS.membershipB2, ...others]
+    return [IDS.U3, IDS.residentB2, IDS.membershipB2, ...others, ...Object.values(world.finance.b2)]
   }
   if (inB2(actor))
     return [
@@ -167,8 +216,16 @@ export function foreignIds(actor: Actor, world: World): string[] {
       IDS.importB1,
       world.accounts['res.owner'] as string,
       world.memberships['res.owner'] as string,
+      ...Object.values(world.finance.b1),
     ]
-  return [IDS.U3, IDS.staffTargetB2, IDS.importB2, IDS.residentB2, IDS.membershipB2]
+  return [
+    IDS.U3,
+    IDS.staffTargetB2,
+    IDS.importB2,
+    IDS.residentB2,
+    IDS.membershipB2,
+    ...Object.values(world.finance.b2),
+  ]
 }
 
 /** Builds the request of one cell. */
@@ -186,9 +243,7 @@ export function requestOf(route: RouteRecord, actor: Actor, scope: Scope, world:
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(isResident(actor) ? { 'x-unit-id': IDS.U1 } : {}),
       ...(route.idempotent ? { 'idempotency-key': crypto.randomUUID() } : {}),
-      ...(route.method !== 'GET' && route.method !== 'DELETE' && route.pathParams.length > 0
-        ? { 'if-match': '"1"' }
-        : {}),
+      ...(route.method !== 'GET' && route.pathParams.length > 0 ? { 'if-match': '"1"' } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
