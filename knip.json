@@ -90,8 +90,22 @@
       "project": ["src/**/*.ts"]
     },
     "modules/*": {
-      "entry": ["src/**/*.test.ts", "test/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"]
+      "entry": [
+        "src/**/*.test.{ts,tsx}",
+        "test/**/*.test.ts",
+        "src/infrastructure/pdf/templates.ts",
+        "src/infrastructure/pdf/*.fixture.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
+    },
+    "packages/pdf-assets": {
+      "entry": [
+        "src/**/*.test.{ts,tsx}",
+        "scripts/*.ts",
+        "src/host/main.ts",
+        "src/host/fixture-templates.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.ts"]
     },
     "packages/mobile-core": {
       "entry": ["src/**/*.test.ts"],

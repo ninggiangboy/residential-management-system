@@ -250,6 +250,7 @@
         "@mod/notification": "workspace:*",
         "@mod/realtime": "workspace:*",
         "@mod/residency": "workspace:*",
+        "@react-pdf/renderer": "4.9.0",
         "@rms/i18n-catalog": "workspace:*",
         "@rms/pdf-assets": "workspace:*",
         "@rms/shared-types": "workspace:*",
