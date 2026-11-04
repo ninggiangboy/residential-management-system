@@ -236,6 +236,9 @@ beforeAll(async () => {
       read: () => Promise.reject(new Error('no file is read by the recall or void use cases')),
       attach: () =>
         Promise.reject(new Error('no file is attached by the recall or void use cases')),
+      remove: () => Promise.reject(new Error('no file is removed by this test')),
+      storeGenerated: () => Promise.reject(new Error('no file is stored by this test')),
+      findByOwnerRef: () => Promise.reject(new Error('no file is looked up by this test')),
     },
     ...testPorts(),
   })

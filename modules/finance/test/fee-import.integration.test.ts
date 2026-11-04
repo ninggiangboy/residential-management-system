@@ -46,7 +46,9 @@ type Stored = {
 }
 
 /** `FilesApi.read` and `attach` in memory, with the rules of DOC-37 §6.4 that the import relies on. */
-class MemoryFiles implements Pick<FilesApi, 'read' | 'attach'> {
+class MemoryFiles
+  implements Pick<FilesApi, 'read' | 'attach' | 'remove' | 'storeGenerated' | 'findByOwnerRef'>
+{
   readonly stored = new Map<string, Stored>()
 
   put(accountId: string, bytes: Uint8Array): string {
@@ -72,6 +74,17 @@ class MemoryFiles implements Pick<FilesApi, 'read' | 'attach'> {
       throw new Error('file_not_verified')
     file.status = 'attached'
     file.ownerRef = ownerRef
+  }
+  async remove(): Promise<void> {
+    throw new Error('no file is removed by the fee import')
+  }
+
+  async storeGenerated(): Promise<never> {
+    throw new Error('no file is stored by the fee import')
+  }
+
+  async findByOwnerRef(): Promise<never> {
+    throw new Error('no file is looked up by the fee import')
   }
 }
 const files = new MemoryFiles()

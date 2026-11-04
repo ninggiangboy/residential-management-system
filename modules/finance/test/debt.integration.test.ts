@@ -107,6 +107,9 @@ function buildModule(): FinanceModule {
     files: {
       read: () => Promise.reject(new Error('no file is read by the debt reads')),
       attach: () => Promise.reject(new Error('no file is attached by the debt reads')),
+      remove: () => Promise.reject(new Error('no file is removed by this test')),
+      storeGenerated: () => Promise.reject(new Error('no file is stored by this test')),
+      findByOwnerRef: () => Promise.reject(new Error('no file is looked up by this test')),
     },
     ...testPorts(),
   })
