@@ -1,6 +1,10 @@
 import { createGaplessCounter, type Database } from '@core/db'
 import type { Clock, IdGenerator, Log } from '@core/kernel'
-import { DrizzleOutboxWriter } from '@core/messaging'
+import {
+  DrizzleInboxGuard,
+  DrizzleOutboxWriter,
+  type IntegrationEventHandler,
+} from '@core/messaging'
 import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { FilesApi } from '@mod/building/contracts'
@@ -9,10 +13,12 @@ import { ChargeAllocator } from './application/allocation/charge-allocator'
 import { FeeImportApiImpl } from './application/api/fee-import-api-impl'
 import { FinanceApiImpl } from './application/api/finance-api-impl'
 import { FeeImportPlanner } from './application/fee-import-planner'
+import { RenderReceiptPdfHandler } from './application/handlers/render-receipt-pdf'
 import { IntentCancellation } from './application/intent-cancellation'
 import type { PdfRenderer } from './application/pdf-renderer'
 import type {
   BuildingCalendar,
+  NoticeLanguageSource,
   PayerDirectory,
   ReceiptBuildingSource,
   UnitDirectory,
@@ -32,6 +38,7 @@ import { RecallFeeBatch } from './application/use-cases/recall-fee-batch'
 import { RecordManualPayment } from './application/use-cases/record-manual-payment'
 import { ReissueFeeBatch } from './application/use-cases/reissue-fee-batch'
 import { RemoveDraftCharge } from './application/use-cases/remove-draft-charge'
+import { RenderReceiptPdf } from './application/use-cases/render-receipt-pdf'
 import { ReplaceDraftCharge } from './application/use-cases/replace-draft-charge'
 import { ReviewMoneyLogRow } from './application/use-cases/review-money-log-row'
 import { SendDebtReminders } from './application/use-cases/send-debt-reminders'
@@ -42,7 +49,9 @@ import { VoidPayment } from './application/use-cases/void-payment'
 import type { FeeImportApi, FinanceApi } from './contracts'
 import { ExceljsFeeTemplateWriter } from './infrastructure/excel/exceljs-fee-template-writer'
 import { ExceljsFeeWorkbookReader } from './infrastructure/excel/exceljs-workbook-reader'
+import { FilesLogoSource } from './infrastructure/files-logo-source'
 import { invariantCheckJob, type LedgerCheckBuildings } from './infrastructure/jobs/invariant-check'
+import { HostPdfRenderer } from './infrastructure/pdf/host-pdf-renderer'
 import { DrizzleChargeRepository } from './infrastructure/persistence/drizzle-charge-repository'
 import { DrizzleDebtRepository } from './infrastructure/persistence/drizzle-debt-repository'
 import { DrizzleFeeBatchRepository } from './infrastructure/persistence/drizzle-fee-batch-repository'
@@ -53,8 +62,9 @@ import { DrizzleInvariantReader } from './infrastructure/persistence/drizzle-inv
 import { DrizzleLedgerRepository } from './infrastructure/persistence/drizzle-ledger-repository'
 import { DrizzleMoneyLogRepository } from './infrastructure/persistence/drizzle-money-log-repository'
 import { DrizzlePaymentRepository } from './infrastructure/persistence/drizzle-payment-repository'
+import { DrizzleReceiptPdfRepository } from './infrastructure/persistence/drizzle-receipt-pdf-repository'
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
-import { financeOutbox } from './infrastructure/persistence/schema'
+import { financeInbox, financeOutbox } from './infrastructure/persistence/schema'
 import { financeManifest } from './manifest'
 
 export interface FinanceModuleDeps {
@@ -90,6 +100,18 @@ export interface FinanceModuleDeps {
   metrics?: MetricsPort
   /** The PDF renderer of DOC-34 §2 (P2-13): built by the container over the render host pool, or a test's fake. */
   pdfRenderer?: PdfRenderer
+  /**
+   * The render host pool of DOC-34 §4 (DR-291) the module builds when no `pdfRenderer` is injected: the process role and
+   * the `PDF_*` values of DOC-41 §12, §14. The container passes it; a test injects its own `pdfRenderer` instead.
+   */
+  pdf?: {
+    role: 'api' | 'worker'
+    concurrency: number
+    maxDocuments?: number
+    maxRssMb?: number
+  }
+  /** The building's fee-notice language at a receipt's first render (DOC-34 §7.3, DOC-36 §5.2). */
+  noticeLanguage?: NoticeLanguageSource
 }
 
 /** What the routes of P2-15 call (DOC-12 §4.5). */
@@ -111,6 +133,8 @@ export interface FinanceUseCases {
   voidPayment: VoidPayment
   reviewMoneyLogRow: ReviewMoneyLogRow
   sendDebtReminders: SendDebtReminders
+  /** The worker handler and the on-demand route E-84/E-106 render one receipt's PDF (DOC-34 §8.2, P2-13). */
+  renderReceiptPdf: RenderReceiptPdf
 }
 
 export interface FinanceQueries {
@@ -155,6 +179,37 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     types: new Set(Object.keys(financeManifest.outboxPolicies)),
     maxPayloadBytes: deps.outboxMaxPayloadBytes,
   })
+  const receiptPdf = new DrizzleReceiptPdfRepository(database)
+  const logo = new FilesLogoSource(deps.files, logger)
+  const inbox = new DrizzleInboxGuard(database, financeInbox)
+  // DOC-34 §4, §13 (DR-291): a test injects a fake; otherwise the module owns the render host pool and closes it in `close`.
+  const hostRenderer = deps.pdfRenderer
+    ? null
+    : new HostPdfRenderer({
+        role: deps.pdf?.role ?? 'worker',
+        size: deps.pdf?.concurrency ?? 1,
+        maxDocuments: deps.pdf?.maxDocuments,
+        maxRssMb: deps.pdf?.maxRssMb,
+        metrics,
+        logger,
+      })
+  const pdfRenderer: PdfRenderer = deps.pdfRenderer ?? (hostRenderer as HostPdfRenderer)
+  const ownedRenderer = hostRenderer
+  // DOC-34 §7.3: the language of a receipt's first render; its default matches DOC-36 §5.2's `feeNoticeLanguage`.
+  const noticeLanguage: NoticeLanguageSource = deps.noticeLanguage ?? {
+    language: async () => 'vi',
+  }
+  const renderReceiptPdf = new RenderReceiptPdf(
+    database,
+    receiptPdf,
+    deps.files,
+    logo,
+    pdfRenderer,
+    noticeLanguage,
+    logger,
+    metrics,
+  )
+  const handlers: IntegrationEventHandler[] = [new RenderReceiptPdfHandler(renderReceiptPdf, inbox)]
   const allocator = new ChargeAllocator(ledger, counter, outbox, clock, ids)
   const cancellation = new IntentCancellation(intents, outbox, clock)
   const planner = new FeeImportPlanner(new ExceljsFeeWorkbookReader(), deps.units)
@@ -250,6 +305,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
         ids,
         logger,
       ),
+      renderReceiptPdf,
     },
     queries: {
       feeBatches: new FeeBatchQueries(batches),
@@ -272,7 +328,10 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       ids,
       logger,
     ),
-    pdfRenderer: deps.pdfRenderer,
+    pdfRenderer,
+    // DOC-09 §6.1 (DOC-34 §8.2): the command `finance.render_receipt_pdf` renders one receipt's PDF (P2-13).
+    handlers,
+    outbox: { name: 'finance', table: financeOutbox, inboxTable: financeInbox },
     // DOC-38 §4.1: the nightly ledger check (P2-11); the gauge `ledger_invariant_violations` reads its `job_run` row.
     jobs: deps.ledgerCheckBuildings
       ? [
@@ -283,5 +342,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
           ),
         ]
       : [],
+    // DOC-34 §4.1 (DR-291): the module releases its own render host pool at shutdown; an injected fake is the caller's.
+    close: ownedRenderer ? () => ownedRenderer.close() : undefined,
   }
 }

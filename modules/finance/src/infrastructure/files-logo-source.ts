@@ -11,7 +11,7 @@ import { systemFileActor } from '../application/system-file-actor'
  */
 export class FilesLogoSource implements LogoSource {
   constructor(
-    private readonly files: FilesApi,
+    private readonly files: Pick<FilesApi, 'read'>,
     private readonly logger: Log,
   ) {}
 

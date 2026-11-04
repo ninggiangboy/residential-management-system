@@ -122,6 +122,8 @@ export function createContainer(
   })
 
   const { jobs: jobsConfig, db, core } = config
+  // DOC-34 §4.1 (DR-291): the role picks the render host pool, the worker's bulk one or the api's inline one.
+  const isWorker = core.APP_ROLES.includes('worker')
 
   /** Modules in install order. A module that needs others takes them from the `modules` of its own install call. */
   const installed: AppModule[] = []
@@ -348,6 +350,15 @@ export function createContainer(
     metrics: metrics.port,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
     invariantCheckGraceMinutes: jobsConfig.JOB_INVARIANT_CHECK_GRACE_MINUTES,
+    // DOC-34 §4.1, §13 (DR-291): the worker renders with PDF_CONCURRENCY, the api's inline pool with PDF_INLINE_CONCURRENCY.
+    pdf: {
+      role: isWorker ? 'worker' : 'api',
+      concurrency: isWorker
+        ? config.concurrency.PDF_CONCURRENCY
+        : config.later.PDF_INLINE_CONCURRENCY,
+      maxDocuments: config.later.PDF_RENDERER_MAX_DOCUMENTS,
+      maxRssMb: config.later.PDF_RENDERER_MAX_RSS_MB,
+    },
     ...financePorts({ building: building.api, identity: identity.api, residency: residency.api }),
   })
   installed.push(finance)
@@ -469,7 +480,6 @@ export function createContainer(
   })
   const lifecycle: Lifecycle = { stopping: false }
 
-  const isWorker = core.APP_ROLES.includes('worker')
   // The gauges the modules define from their own tables (`otp_challenges_24h`, `units_without_owner`, …).
   for (const gauge of installed.flatMap((module) => module.gauges ?? []))
     metrics.metrics.pulled(gauge.name, gauge.help, gauge.labelNames ?? [], gauge.read)
