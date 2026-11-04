@@ -31,6 +31,7 @@ import { FeeBatchQueries } from './application/queries/fee-batch-queries'
 import { FeeImportQueries } from './application/queries/fee-import-queries'
 import { FeeNoticeQueries } from './application/queries/fee-notice-queries'
 import { MoneyLogQueries } from './application/queries/money-log-queries'
+import { ReceiptPdfQueries } from './application/queries/receipt-pdf-queries'
 import { ResidentFeeQueries } from './application/queries/resident-fee-queries'
 import { Settlement } from './application/settle'
 import { AddDraftCharge } from './application/use-cases/add-draft-charge'
@@ -173,8 +174,10 @@ export interface FinanceQueries {
   moneyLog: MoneyLogQueries
   /** The resident reads of E-80…E-83 (DOC-22 §8.4, DR-40; P2-15). */
   residentFees: ResidentFeeQueries
-  /** The latest bulk job of a batch (E-177, DOC-34 §9.1; P2-13). */
+  /** The latest bulk job of a batch (E-177, DOC-34 §9.1; P2-13) and one charge's notice (E-176). */
   feeNotice: FeeNoticeQueries
+  /** The receipt PDF downloads E-84 and E-106 (DOC-34 §8.2; P2-15). */
+  receiptPdf: ReceiptPdfQueries
 }
 
 export interface FinanceModule extends AppModule<'finance'> {
@@ -281,6 +284,8 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       findByOwnerRef: deps.files.findByOwnerRef,
     },
     clock,
+    renderFeeNoticePdf,
+    noticeLanguage,
   )
   const renderReceiptPdf = new RenderReceiptPdf(
     database,
@@ -399,6 +404,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       clock,
     ),
     feeNotice: feeNoticeQueries,
+    receiptPdf: new ReceiptPdfQueries(receiptPdf, deps.files, renderReceiptPdf),
   }
   // `install.ts` requires the guards and the key wrapper of the host; a test that builds the module to call its use cases leaves
   // them out and gets no routes, never unguarded ones (see `guards`).
