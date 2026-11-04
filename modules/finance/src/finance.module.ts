@@ -18,6 +18,7 @@ import { IntentCancellation } from './application/intent-cancellation'
 import type { PdfRenderer } from './application/pdf-renderer'
 import type {
   BuildingCalendar,
+  NoticeContextSource,
   NoticeLanguageSource,
   PayerDirectory,
   ReceiptBuildingSource,
@@ -38,6 +39,7 @@ import { RecallFeeBatch } from './application/use-cases/recall-fee-batch'
 import { RecordManualPayment } from './application/use-cases/record-manual-payment'
 import { ReissueFeeBatch } from './application/use-cases/reissue-fee-batch'
 import { RemoveDraftCharge } from './application/use-cases/remove-draft-charge'
+import { RenderFeeNoticePdf } from './application/use-cases/render-fee-notice-pdf'
 import { RenderReceiptPdf } from './application/use-cases/render-receipt-pdf'
 import { ReplaceDraftCharge } from './application/use-cases/replace-draft-charge'
 import { ReviewMoneyLogRow } from './application/use-cases/review-money-log-row'
@@ -112,6 +114,8 @@ export interface FinanceModuleDeps {
   }
   /** The building's fee-notice language at a receipt's first render (DOC-34 §7.3, DOC-36 §5.2). */
   noticeLanguage?: NoticeLanguageSource
+  /** The building block and the owner names a fee notice prints (DOC-34 §6.1, §8.1; DR-292); a test injects its own. */
+  noticeContext?: NoticeContextSource
 }
 
 /** What the routes of P2-15 call (DOC-12 §4.5). */
@@ -135,6 +139,8 @@ export interface FinanceUseCases {
   sendDebtReminders: SendDebtReminders
   /** The worker handler and the on-demand route E-84/E-106 render one receipt's PDF (DOC-34 §8.2, P2-13). */
   renderReceiptPdf: RenderReceiptPdf
+  /** The staff route E-176 and the bulk job E-99 render one fee notice (DOC-34 §6.3, §8.1; P2-13). */
+  renderFeeNoticePdf: RenderFeeNoticePdf
 }
 
 export interface FinanceQueries {
@@ -199,6 +205,32 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const noticeLanguage: NoticeLanguageSource = deps.noticeLanguage ?? {
     language: async () => 'vi',
   }
+  // DOC-34 §6.1, §8.1: the building block and the owner names a fee notice prints; a test injects its own (DR-292).
+  const noticeContext: NoticeContextSource = deps.noticeContext ?? {
+    building: async () => ({
+      name: { vi: '' },
+      company: { name: { vi: '' }, address: null },
+      address: '',
+      hotline: null,
+      email: null,
+      workingHours: null,
+      logoFile: null,
+      gatewayActive: false,
+    }),
+    ownerNames: async (_buildingId, unitIds) =>
+      new Map(unitIds.map((unitId) => [unitId, null] as const)),
+  }
+  const renderFeeNoticePdf = new RenderFeeNoticePdf(
+    charges,
+    deps.files,
+    logo,
+    pdfRenderer,
+    noticeContext,
+    deps.calendar,
+    clock,
+    logger,
+    metrics,
+  )
   const renderReceiptPdf = new RenderReceiptPdf(
     database,
     receiptPdf,
@@ -306,6 +338,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
         logger,
       ),
       renderReceiptPdf,
+      renderFeeNoticePdf,
     },
     queries: {
       feeBatches: new FeeBatchQueries(batches),

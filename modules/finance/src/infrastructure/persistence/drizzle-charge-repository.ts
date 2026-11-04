@@ -1,9 +1,15 @@
 import { type Database, inBuilding } from '@core/db'
-import { type BuildingScope, type Money, money } from '@rms/shared-types'
-import { and, eq, sql } from 'drizzle-orm'
+import { type BuildingScope, type LocalDate, type Money, money } from '@rms/shared-types'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { type ChargeLine, quantityText } from '../../domain/charge-line'
-import type { ChargeRepository } from '../../domain/charge-repository'
-import type { ChargeRecord, DraftChargeInsert } from '../../domain/fee-batch'
+import type { ChargeNoticeRow, ChargeRepository } from '../../domain/charge-repository'
+import type {
+  BilingualName,
+  ChargeRecord,
+  ChargeStatus,
+  DraftChargeInsert,
+  FeeBatchStatus,
+} from '../../domain/fee-batch'
 import { allocation, type ChargeRow, charge, chargeLine, feeBatch } from './schema'
 
 export const toCharge = (
@@ -42,6 +48,49 @@ export class DrizzleChargeRepository implements ChargeRepository {
 
   findInBatch(scope: BuildingScope, batchId: string, unitId: string): Promise<ChargeRecord | null> {
     return this.withBatch(scope, and(eq(charge.batchId, batchId), eq(charge.unitId, unitId)))
+  }
+
+  /** The one read of the fee notice (DOC-34 §8.1, DR-292): the charge of the scope, its batch and its lines in `position` order. */
+  async findForNotice(scope: BuildingScope, chargeId: string): Promise<ChargeNoticeRow | null> {
+    const [row] = await this.database.executor
+      .select({ charge, batch: feeBatch })
+      .from(charge)
+      .innerJoin(feeBatch, eq(feeBatch.id, charge.batchId))
+      .where(and(inBuilding(charge, scope), eq(charge.id, chargeId)))
+      .limit(1)
+    if (!row) return null
+    const lines = await this.database.executor
+      .select()
+      .from(chargeLine)
+      .where(and(inBuilding(chargeLine, scope), eq(chargeLine.chargeId, chargeId)))
+      .orderBy(asc(chargeLine.position))
+    return {
+      charge: {
+        id: row.charge.id,
+        unitId: row.charge.unitId,
+        unitCode: row.charge.unitCode,
+        amount: money(row.charge.amount),
+        status: row.charge.status as ChargeStatus,
+      },
+      batch: {
+        id: row.batch.id,
+        code: row.batch.code,
+        name: row.batch.name as BilingualName,
+        feeMonth: row.batch.feeMonth as LocalDate,
+        dueDate: row.batch.dueDate as LocalDate,
+        publishedAt: row.batch.publishedAt,
+        status: row.batch.status as FeeBatchStatus,
+      },
+      lines: lines.map((line) => ({
+        position: line.position,
+        kind: line.kind as 'fee' | 'adjustment',
+        itemName: line.itemName as BilingualName,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        amount: line.amount,
+        note: line.note,
+      })),
+    }
   }
 
   async replaceDraftLines(

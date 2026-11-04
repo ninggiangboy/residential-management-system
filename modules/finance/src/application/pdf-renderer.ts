@@ -44,6 +44,8 @@ export interface FeeNoticeInput {
     readonly workingHours: Bilingual | null
     readonly logo: Uint8Array | null
   }
+  /** The `building.logo_file` id the bytes came from (DOC-34 §8.1, DR-293): the cache key covers it, never the bytes. */
+  readonly logoFile?: string | null
   readonly gatewayActive: boolean
   readonly unit: { readonly code: string; readonly ownerName: string | null }
   readonly batch: {
