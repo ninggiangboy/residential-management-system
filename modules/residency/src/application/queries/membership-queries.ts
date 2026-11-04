@@ -12,12 +12,14 @@ import {
   type ScanMembershipDto,
   type UnitContext,
   type UnitDto,
+  type UnitOwnerNameDto,
 } from '../../contracts'
 import type {
   MembershipReader,
   MembershipView,
   RecipientFilter,
 } from '../../domain/membership-reader'
+import { scopeOf } from '../scope-of'
 
 /** A resident has a handful of memberships: more than this is a data defect, and the call says so instead of truncating (DOC-27 §2.1). */
 const MAX_MEMBERSHIPS = 500
@@ -122,6 +124,20 @@ export class MembershipQueries {
       occupancy: row.occupancy,
       hasActiveOwner: row.hasActiveOwner,
     }))
+  }
+
+  /**
+   * DR-292, DOC-34 §6.1: the fee notice prints the active owner's name of each unit. One entry per requested unit, in the input
+   * order and once each; `ownerName` is null when the unit has no active owner or belongs to another building. The name is for
+   * the caller alone: it never goes into a log line or an error message.
+   */
+  async unitOwnerNames(buildingId: string, unitIds: string[]): Promise<UnitOwnerNameDto[]> {
+    if (unitIds.length > MAX_PAGE) throw new InvariantError('unitOwnerNames takes at most 500 ids')
+    const ids = [...new Set(unitIds)]
+    if (ids.length === 0) return []
+    const rows = await this.reader.unitOwnerNames(scopeOf(buildingId), ids)
+    const ownerName = new Map(rows.map((row) => [row.unitId, row.ownerName]))
+    return ids.map((unitId) => ({ unitId, ownerName: ownerName.get(unitId) ?? null }))
   }
 
   async forScan(membershipId: string): Promise<ScanMembershipDto | null> {

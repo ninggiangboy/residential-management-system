@@ -22,6 +22,8 @@ export class ResidencyApiImpl implements ResidencyApi {
   getUnits: ResidencyApi['getUnits'] = (ids) => this.queries.units(ids)
   findUnitsByCodes: ResidencyApi['findUnitsByCodes'] = (buildingId, codes) =>
     this.queries.unitsByCodes(buildingId, codes)
+  unitOwnerNames: ResidencyApi['unitOwnerNames'] = (buildingId, unitIds) =>
+    this.queries.unitOwnerNames(buildingId, unitIds)
   getMembershipForScan: ResidencyApi['getMembershipForScan'] = (membershipId) =>
     this.queries.forScan(membershipId)
   ownedUnitIds: ResidencyApi['ownedUnitIds'] = (accountId) => this.queries.ownedUnitIds(accountId)

@@ -198,3 +198,58 @@ describe('recipients, scan and units', () => {
     ).rejects.toThrow('at most 5,000')
   })
 })
+
+describe('unitOwnerNames', () => {
+  test('DR-292, DOC-34 §6.1: the active owner full name of a unit of the building', async () => {
+    const unit = await h.seedUnit(BUILDING, 'OW-1')
+    const owner = await h.seedMembership({ unit, memberType: 'owner' })
+    await h.seedProfile(owner.accountId, BUILDING, 'Trần Minh Anh')
+    expect(await api().unitOwnerNames(BUILDING, [unit.id])).toEqual([
+      { unitId: unit.id, ownerName: 'Trần Minh Anh' },
+    ])
+    expect(await api().unitOwnerNames(BUILDING, [])).toEqual([])
+  })
+
+  test('a unit with no active owner, or only an ended one, answers null', async () => {
+    const vacant = await h.seedUnit(BUILDING, 'OW-2')
+    await h.seedMembership({ unit: vacant, memberType: 'tenant' })
+    const ended = await h.seedUnit(BUILDING, 'OW-3')
+    const former = await h.seedMembership({ unit: ended, memberType: 'owner', status: 'removed' })
+    await h.seedProfile(former.accountId, BUILDING, 'Former Owner')
+    expect(await api().unitOwnerNames(BUILDING, [vacant.id, ended.id])).toEqual([
+      { unitId: vacant.id, ownerName: null },
+      { unitId: ended.id, ownerName: null },
+    ])
+  })
+
+  test('a unit of another building never leaks its owner: the name is null', async () => {
+    const foreign = await h.seedUnit(OTHER_BUILDING, 'OW-4')
+    const owner = await h.seedMembership({ unit: foreign, memberType: 'owner' })
+    await h.seedProfile(owner.accountId, OTHER_BUILDING, 'Other Owner')
+    expect(await api().unitOwnerNames(BUILDING, [foreign.id])).toEqual([
+      { unitId: foreign.id, ownerName: null },
+    ])
+  })
+
+  test('one row per requested unit, in the input order, a duplicate once, a missing id null', async () => {
+    const a = await h.seedUnit(BUILDING, 'OW-5')
+    const ownerA = await h.seedMembership({ unit: a, memberType: 'owner' })
+    await h.seedProfile(ownerA.accountId, BUILDING, 'Owner A')
+    const b = await h.seedUnit(BUILDING, 'OW-6')
+    const missing = crypto.randomUUID()
+    expect(await api().unitOwnerNames(BUILDING, [b.id, a.id, b.id, missing])).toEqual([
+      { unitId: b.id, ownerName: null },
+      { unitId: a.id, ownerName: 'Owner A' },
+      { unitId: missing, ownerName: null },
+    ])
+  })
+
+  test('more than 500 ids is refused', async () => {
+    await expect(
+      api().unitOwnerNames(
+        BUILDING,
+        Array.from({ length: 501 }, () => crypto.randomUUID()),
+      ),
+    ).rejects.toThrow('at most 500')
+  })
+})

@@ -1,4 +1,5 @@
-import type { Database } from '@core/db'
+import { type Database, inBuilding } from '@core/db'
+import type { BuildingScope } from '@rms/shared-types'
 import { and, asc, eq, exists, gt, inArray, ne, or, sql } from 'drizzle-orm'
 import type {
   ActiveMembershipView,
@@ -6,9 +7,10 @@ import type {
   MembershipView,
   RecipientFilter,
   RecipientView,
+  UnitOwnerNameView,
   UnitView,
 } from '../../domain/membership-reader'
-import { membership, unit } from './schema'
+import { membership, residentProfile, unit } from './schema'
 
 const toView = (row: typeof membership.$inferSelect): MembershipView => ({
   id: row.id,
@@ -23,8 +25,9 @@ const toView = (row: typeof membership.$inferSelect): MembershipView => ({
 })
 
 /**
- * The reads of `ResidencyApi` and the request guard. They carry no building scope because the key identifies the row by itself
+ * The reads of `ResidencyApi` and the request guard. Most carry no building scope because the key identifies the row by itself
  * (an account and a unit, a membership id): the guard runs before the building is known and the row gives it (DOC-27 §3.1).
+ * `unitOwnerNames` is the exception: it lists the units of a building, so it takes the scope (DR-292).
  */
 // scope-ok: see above; the calls are authorised by the token, the event or the contract caller
 export class DrizzleMembershipReader implements MembershipReader {
@@ -217,5 +220,34 @@ export class DrizzleMembershipReader implements MembershipReader {
         and(eq(unit.buildingId, buildingId), inArray(sql`lower(${unit.code})`, [...codesLower])),
       )
     return rows.map((row) => ({ ...row, occupancy: row.occupancy as UnitView['occupancy'] }))
+  }
+
+  /**
+   * The full name of the active owner of each of these units of the building (DR-292, DOC-34 §6.1). One row per unit that has an
+   * active owner; the caller fills the rest with `null` and keeps the order it asked in. A unit of another building is not here.
+   */
+  async unitOwnerNames(
+    scope: BuildingScope,
+    unitIds: readonly string[],
+  ): Promise<UnitOwnerNameView[]> {
+    if (unitIds.length === 0) return []
+    return this.database.executor
+      .select({ unitId: membership.unitId, ownerName: residentProfile.fullName })
+      .from(membership)
+      .innerJoin(
+        residentProfile,
+        and(
+          eq(residentProfile.buildingId, membership.buildingId),
+          eq(residentProfile.accountId, membership.accountId),
+        ),
+      )
+      .where(
+        and(
+          inBuilding(membership, scope),
+          inArray(membership.unitId, [...unitIds]),
+          eq(membership.memberType, 'owner'),
+          eq(membership.status, 'active'),
+        ),
+      )
   }
 }
