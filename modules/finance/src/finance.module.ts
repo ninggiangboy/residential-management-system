@@ -10,6 +10,7 @@ import { FeeImportApiImpl } from './application/api/fee-import-api-impl'
 import { FinanceApiImpl } from './application/api/finance-api-impl'
 import { FeeImportPlanner } from './application/fee-import-planner'
 import { IntentCancellation } from './application/intent-cancellation'
+import type { PdfRenderer } from './application/pdf-renderer'
 import type {
   BuildingCalendar,
   PayerDirectory,
@@ -84,6 +85,8 @@ export interface FinanceModuleDeps {
   invariantCheckGraceMinutes?: number
   /** DOC-40: `import_validate_duration_seconds`, `import_commits_total` (DOC-21 §7). */
   metrics?: MetricsPort
+  /** The PDF renderer of DOC-34 §2 (P2-13): built by the container over the render host pool, or a test's fake. */
+  pdfRenderer?: PdfRenderer
 }
 
 /** What the routes of P2-15 call (DOC-12 §4.5). */
@@ -123,6 +126,8 @@ export interface FinanceModule extends AppModule<'finance'> {
   readonly queries: FinanceQueries
   /** `settle()` for the webhook (P2-23), the re-query and cancel handler (P2-24) and the statement path (DOC-23 §6, P2-06). */
   readonly settlement: Settlement
+  /** `HostPdfRenderer` over the render host pool (DOC-34 §4, DR-291); the container wires it when the routes land (8b). */
+  readonly pdfRenderer?: PdfRenderer
 }
 
 /**
@@ -264,6 +269,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       ids,
       logger,
     ),
+    pdfRenderer: deps.pdfRenderer,
     // DOC-38 §4.1: the nightly ledger check (P2-11); the gauge `ledger_invariant_violations` reads its `job_run` row.
     jobs: deps.ledgerCheckBuildings
       ? [
