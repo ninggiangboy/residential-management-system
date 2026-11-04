@@ -13,7 +13,6 @@ import { toast } from '../../components/ui/toaster'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { AddChargeRow } from './add-charge-row'
-import type { FeeBatchSearch } from './fee-batch-page'
 import {
   type BatchChargeFilters,
   type BatchChargeItem,
@@ -22,6 +21,7 @@ import {
   useFeeBatchMutations,
 } from './hooks'
 import { ChargeEditor } from './line-editor'
+import type { FeeBatchSearch } from './search'
 
 /** E-93's page size (DOC-66 §5). */
 const LIMIT = 50

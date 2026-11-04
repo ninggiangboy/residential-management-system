@@ -28,16 +28,9 @@ import { FeeRecallDialog } from './fee-recall-dialog'
 import { FeeReissueDialog } from './fee-reissue-dialog'
 import { type BatchChargeItem, batchChargesQuery, type FeeBatchView, feeBatchQuery } from './hooks'
 import { PublishDialog } from './publish-dialog'
+import type { FeeBatchSearch } from './search'
 
-/** DOC-66 `W-Fee-Batch`: the dialogs are kept in the URL (`dialog`, with `charge` for a single void) and unmounted through `useExit`. */
-export interface FeeBatchSearch {
-  view: 'all' | 'missing'
-  q?: string
-  unit?: string
-  dialog?: 'recall' | 'void' | 'reissue' | 'extend' | 'publish' | 'discard' | 'close'
-  charge?: string
-  cursor?: string
-}
+export type { FeeBatchSearch } from './search'
 
 /** The name in the UI language (DOC-21 §3.1). */
 const bilingual = (name: { vi: string; en?: string }, lang: string) =>
