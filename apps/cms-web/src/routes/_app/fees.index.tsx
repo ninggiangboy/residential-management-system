@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { FeesPage } from '../../features/fees/fees-page'
+import { loadFinanceText } from '../../lib/i18n'
 import { f, searchParser } from '../../lib/search'
 
 const SearchShape = {
@@ -20,6 +21,7 @@ export const Route = createFileRoute('/_app/fees/')({
     ],
   },
   validateSearch: searchParser(SearchShape, { status: 'all', limit: 20 }),
+  loader: loadFinanceText,
   component: Page,
 })
 
