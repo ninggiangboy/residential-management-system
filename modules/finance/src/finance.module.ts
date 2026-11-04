@@ -66,8 +66,11 @@ export interface FinanceModuleDeps {
   audited: Audited
   /** `ResidencyApi.findUnitsByCodes` (DOC-21 §2.1, DR-265). */
   units: UnitDirectory
-  /** The import file: bytes at validation and commit, attached to its job (DOC-21 §2.1, DOC-37 §3). */
-  files: Pick<FilesApi, 'read' | 'attach'>
+  /**
+   * The import file (DOC-21 §2.1) and, for the receipt PDF handler, the rendered PDFs, their removal and the logo
+   * (DOC-34 §8.2, §8.4; DR-295).
+   */
+  files: Pick<FilesApi, 'read' | 'attach' | 'remove' | 'storeGenerated' | 'findByOwnerRef'>
   /** The building's zone for `buildingToday` (DOC-21 §2.1, DR-09). */
   calendar: BuildingCalendar
   /** The company block and the building name a receipt freezes (DOC-22 §7). */

@@ -84,6 +84,9 @@ beforeAll(async () => {
     files: {
       read: () => Promise.reject(new Error('no file is read by the lifecycle use cases')),
       attach: () => Promise.reject(new Error('no file is attached by the lifecycle use cases')),
+      remove: () => Promise.reject(new Error('no file is removed by this test')),
+      storeGenerated: () => Promise.reject(new Error('no file is stored by this test')),
+      findByOwnerRef: () => Promise.reject(new Error('no file is looked up by this test')),
     },
 
     ...testPorts(),
