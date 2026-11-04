@@ -1,6 +1,7 @@
 import type { RenderTemplates } from '@rms/pdf-assets'
-import type { FeeNoticeInput } from '../../application/pdf-renderer'
+import type { FeeNoticeInput, ReceiptInput } from '../../application/pdf-renderer'
 import { FeeNoticeDocument } from './fee-notice'
+import { ReceiptDocument } from './receipt'
 
 /**
  * The `finance` templates module the render host loads (DOC-34 §2, §4.1, DR-291): one factory per document
@@ -8,7 +9,7 @@ import { FeeNoticeDocument } from './fee-notice'
  */
 const templates: RenderTemplates = {
   fee_notice: (input) => FeeNoticeDocument({ input: input as FeeNoticeInput }),
-  // The `receipt` entry of DOC-34 §7 is added by the next slice.
+  receipt: (input) => ReceiptDocument({ input: input as ReceiptInput }),
 }
 
 export default templates
