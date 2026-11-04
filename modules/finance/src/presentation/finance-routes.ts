@@ -2,6 +2,7 @@ import { routePlugin } from '@core/http'
 import { type BatchReadRouteDeps, batchReadRoutes } from './batch-read-routes'
 import { type BatchRouteDeps, batchRoutes } from './batch-routes'
 import { type ChargeRouteDeps, chargeRoutes } from './charge-routes'
+import { type DebtRouteDeps, debtRoutes } from './debt-routes'
 import { type MoneyLogRouteDeps, moneyLogRoutes } from './money-log-routes'
 import { type PaymentRouteDeps, paymentRoutes } from './payment-routes'
 import { type PdfRouteDeps, pdfRoutes } from './pdf-routes'
@@ -11,6 +12,7 @@ import { type ResidentRouteDeps, residentRoutes } from './resident-routes'
 export type FinanceRouteDeps = PaymentRouteDeps &
   MoneyLogRouteDeps &
   ResidentRouteDeps &
+  DebtRouteDeps &
   BatchReadRouteDeps &
   PdfRouteDeps &
   BatchRouteDeps &
@@ -26,4 +28,5 @@ export function financeRoutes(d: FinanceRouteDeps) {
     .use(paymentRoutes(d))
     .use(moneyLogRoutes(d))
     .use(residentRoutes(d))
+    .use(debtRoutes(d))
 }

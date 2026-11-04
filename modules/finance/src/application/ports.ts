@@ -85,3 +85,27 @@ export interface NoticeContextSource {
   /** The active owner's name of each unit, `null` when it has none (DR-292); a missing id is absent from the map. */
   ownerNames(buildingId: string, unitIds: string[]): Promise<Map<string, string | null>>
 }
+
+/**
+ * One unit as the staff debt screens read it (DOC-66 §5, E-101 and E-102): the code and floor from `ResidencyApi.getUnits` and
+ * the active owner's name from `ResidencyApi.unitOwnerNames`. `areaM2` and `ownerPhone` are `null` because `ResidencyApi` exposes
+ * neither the unit area nor a unit→owner-phone read; the fields stay so a later contract read fills them without a shape change.
+ */
+export interface DebtUnitProfile {
+  readonly unitId: string
+  readonly code: string
+  readonly floor: number | null
+  readonly areaM2: string | null
+  readonly ownerName: string | null
+  readonly ownerPhone: string | null
+}
+
+/**
+ * The unit and owner read of E-101 and E-102 (DOC-66 §5): a port in `application/`; the `apps/api` adapter is
+ * `debtUnitDirectory` in `modules/finance/src/integrations/residency` (it reads `ResidencyApi.getUnits` and `unitOwnerNames` and
+ * keeps only the units of the building). `finance` has no unit table, so a unit's code and owner are never a cross-schema join.
+ */
+export interface DebtUnitDirectory {
+  /** One entry per requested id that belongs to the building, in the input order; an unknown or foreign id is absent. */
+  units(buildingId: string, unitIds: readonly string[]): Promise<readonly DebtUnitProfile[]>
+}

@@ -20,6 +20,7 @@ import { IntentCancellation } from './application/intent-cancellation'
 import type { PdfRenderer } from './application/pdf-renderer'
 import type {
   BuildingCalendar,
+  DebtUnitDirectory,
   NoticeContextSource,
   NoticeLanguageSource,
   PayerDirectory,
@@ -76,6 +77,7 @@ import { DrizzlePaymentRepository } from './infrastructure/persistence/drizzle-p
 import { DrizzleReceiptPdfRepository } from './infrastructure/persistence/drizzle-receipt-pdf-repository'
 import { DrizzleResidentFeeReader } from './infrastructure/persistence/drizzle-resident-fee-reader'
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
+import { DrizzleUnitPaymentsReader } from './infrastructure/persistence/drizzle-unit-payments-reader'
 import { financeInbox, financeOutbox } from './infrastructure/persistence/schema'
 import { SqlReminderRateLimiter } from './infrastructure/persistence/sql-reminder-rate-limiter'
 import { financeManifest } from './manifest'
@@ -113,6 +115,8 @@ export interface FinanceModuleDeps {
   ledgerCheckBuildings?: LedgerCheckBuildings
   /** `JOB_INVARIANT_CHECK_GRACE_MINUTES` (DOC-41 §11). */
   invariantCheckGraceMinutes?: number
+  /** The unit code, floor and owner of E-101/E-102 (DOC-66 §5): `debtUnitDirectory(residency.api)` of `integrations/residency`. */
+  debtUnits?: DebtUnitDirectory
   /** `DEBT_REMINDER_PER_HOUR` (DOC-41): the bucket of E-103 per account; a test that leaves it out has no limit (LG-40). */
   reminderRatePerHour?: number
   /** DOC-40: `import_validate_duration_seconds`, `import_commits_total` (DOC-21 §7). */
@@ -402,7 +406,13 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const queries: FinanceQueries = {
     feeBatches: new FeeBatchQueries(batches, noticeContext),
     feeImports: feeImportQueries,
-    debts: new DebtQueries(debts, deps.calendar, clock),
+    debts: new DebtQueries(
+      debts,
+      deps.calendar,
+      clock,
+      deps.debtUnits,
+      new DrizzleUnitPaymentsReader(database),
+    ),
     moneyLog: new MoneyLogQueries(moneyLog),
     residentFees: new ResidentFeeQueries(
       new DrizzleResidentFeeReader(database),
@@ -422,6 +432,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
           moneyLog: queries.moneyLog,
           residentFees: queries.residentFees,
           feeBatches: queries.feeBatches,
+          debts: queries.debts,
           feeNotice: queries.feeNotice,
           receiptPdf: queries.receiptPdf,
           guards,

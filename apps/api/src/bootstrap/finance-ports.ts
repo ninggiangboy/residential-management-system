@@ -1,6 +1,7 @@
 import { NotFoundError } from '@core/kernel'
 import type { BuildingApi } from '@mod/building/contracts'
 import type { FinanceModuleDeps } from '@mod/finance'
+import { debtUnitDirectory } from '@mod/finance/integrations/residency'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { ResidencyApi } from '@mod/residency/contracts'
 
@@ -11,7 +12,10 @@ import type { ResidencyApi } from '@mod/residency/contracts'
 export function financePorts(apis: {
   building: Pick<BuildingApi, 'getBuilding' | 'listBuildings' | 'getSettings' | 'getGatewayConfig'>
   identity: Pick<IdentityApi, 'getResidentAccounts'>
-  residency: Pick<ResidencyApi, 'getMembership' | 'unitOwnerNames'>
+  residency: Pick<
+    ResidencyApi,
+    'getMembership' | 'unitOwnerNames' | 'getUnits' | 'findUnitsByCodes'
+  >
 }): Pick<
   FinanceModuleDeps,
   | 'calendar'
@@ -20,6 +24,7 @@ export function financePorts(apis: {
   | 'ledgerCheckBuildings'
   | 'noticeLanguage'
   | 'noticeContext'
+  | 'debtUnits'
 > {
   const buildingOf = async (buildingId: string) => {
     const building = await apis.building.getBuilding(buildingId)
@@ -47,6 +52,8 @@ export function financePorts(apis: {
     return names
   }
   return {
+    // DOC-66 §5: the unit code, floor and owner of the debt screens.
+    debtUnits: debtUnitDirectory(apis.residency),
     // DOC-22 §12, DOC-40 §4 rule 4: the nightly ledger check covers the real buildings only.
     ledgerCheckBuildings: {
       liveBuildingIds: async () =>
