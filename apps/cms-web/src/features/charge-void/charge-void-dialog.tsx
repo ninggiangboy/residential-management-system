@@ -7,6 +7,8 @@ export interface VoidTarget {
   unitCode: string
   amount: number
   batchCode?: string
+  /** The unit of the charge, when the host knows it: its debt query is refreshed after the void. */
+  unitId?: string
   hasActiveIntent: boolean
 }
 
