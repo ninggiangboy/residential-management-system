@@ -165,6 +165,7 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
     if (filter.to !== undefined)
       gateway.push(sql`g.received_at < ${filter.to.toISOString()}::timestamptz`)
     if (filter.openOnly === true) gateway.push(sql`g.reviewed_at IS NULL`)
+    if (filter.reviewedOnly === true) gateway.push(sql`g.reviewed_at IS NOT NULL`)
 
     const gatewayHalf = sql`
       SELECT 'gateway_event' AS kind, g.id, g.received_at AS at, g.amount, g.outcome AS status,
@@ -179,6 +180,7 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
     if (filter.to !== undefined)
       statement.push(sql`l.booked_on::timestamptz < ${filter.to.toISOString()}::timestamptz`)
     if (filter.openOnly === true) statement.push(sql`l.reviewed_at IS NULL`)
+    if (filter.reviewedOnly === true) statement.push(sql`l.reviewed_at IS NOT NULL`)
 
     const statementHalf = sql`
       SELECT 'statement_line' AS kind, l.id, l.booked_on::timestamptz AS at, l.amount,

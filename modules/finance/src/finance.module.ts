@@ -1,4 +1,5 @@
 import { createGaplessCounter, type Database } from '@core/db'
+import type { Idempotent } from '@core/http'
 import type { Clock, IdGenerator, Log } from '@core/kernel'
 import {
   DrizzleInboxGuard,
@@ -8,7 +9,7 @@ import {
 import type { AppModule } from '@core/runtime'
 import type { Audited } from '@mod/audit/contracts'
 import type { FilesApi } from '@mod/building/contracts'
-import { type MetricsPort, NO_METRICS } from '@rms/shared-types'
+import { type Guards, type MetricsPort, NO_METRICS } from '@rms/shared-types'
 import { ChargeAllocator } from './application/allocation/charge-allocator'
 import { FeeImportApiImpl } from './application/api/fee-import-api-impl'
 import { FinanceApiImpl } from './application/api/finance-api-impl'
@@ -74,6 +75,7 @@ import { DrizzleReceiptPdfRepository } from './infrastructure/persistence/drizzl
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
 import { financeInbox, financeOutbox } from './infrastructure/persistence/schema'
 import { financeManifest } from './manifest'
+import { financeRoutes } from './presentation/finance-routes'
 
 export interface FinanceModuleDeps {
   database: Database
@@ -125,6 +127,14 @@ export interface FinanceModuleDeps {
   noticeLanguage?: NoticeLanguageSource
   /** The building block and the owner names a fee notice prints (DOC-34 §6.1, §8.1; DR-292); a test injects its own. */
   noticeContext?: NoticeContextSource
+  /**
+   * The guards of the routes (DOC-12 §5.3): the token, the role and the membership. Optional here so a test builds the module
+   * and calls its use cases without mounting the routes (as `residency`'s tests do); `install.ts` requires both of the host, so
+   * the app cannot forget them.
+   */
+  guards?: Guards
+  /** The `Idempotency-Key` wrapper of the `R` routes (DOC-50 §8); see `guards`. */
+  idempotent?: Idempotent
 }
 
 /** What the routes of P2-15 call (DOC-12 §4.5). */
@@ -174,6 +184,8 @@ export interface FinanceModule extends AppModule<'finance'> {
   readonly settlement: Settlement
   /** `HostPdfRenderer` over the render host pool (DOC-34 §4, DR-291); the container wires it when the routes land (8b). */
   readonly pdfRenderer?: PdfRenderer
+  /** The routes of `finance` (DOC-51 §2.2, P2-15), mounted by `apps/api` with one static `.use()`. */
+  readonly routes: ReturnType<typeof financeRoutes>
 }
 
 /**
@@ -304,85 +316,104 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     metrics,
   )
   const feeImportQueries = new FeeImportQueries(imports, new ExceljsFeeTemplateWriter(), clock)
+  const useCases: FinanceUseCases = {
+    createFeeBatch: new CreateFeeBatch(database, batches, counter, audited, ids),
+    updateFeeBatch: new UpdateFeeBatch(database, batches, audited, outbox, clock, logger),
+    discardFeeBatch: new DiscardFeeBatch(database, batches, audited),
+    replaceDraftCharge: new ReplaceDraftCharge(database, charges, batches, audited, ids),
+    addDraftCharge: new AddDraftCharge(database, charges, batches, deps.units, audited, ids),
+    removeDraftCharge: new RemoveDraftCharge(database, charges, batches, audited),
+    validateFeeImport,
+    commitFeeImport,
+    publishFeeBatch: new PublishFeeBatch(
+      database,
+      batches,
+      deps.calendar,
+      outbox,
+      audited,
+      clock,
+      logger,
+    ),
+    closeFeeBatch: new CloseFeeBatch(database, batches, audited, logger),
+    reissueFeeBatch: new ReissueFeeBatch(database, batches, counter, audited, ids, logger),
+    recallFeeBatch: new RecallFeeBatch(
+      database,
+      batches,
+      cancellation,
+      outbox,
+      audited,
+      clock,
+      logger,
+    ),
+    voidCharge: new VoidCharge(
+      database,
+      charges,
+      batches,
+      cancellation,
+      outbox,
+      audited,
+      clock,
+      logger,
+    ),
+    recordManualPayment: new RecordManualPayment(
+      database,
+      payments,
+      ledger,
+      allocator,
+      cancellation,
+      deps.calendar,
+      deps.receiptBuildings,
+      outbox,
+      audited,
+      clock,
+      ids,
+      logger,
+    ),
+    voidPayment: new VoidPayment(database, payments, outbox, audited, clock, logger),
+    reviewMoneyLogRow: new ReviewMoneyLogRow(database, moneyLog, audited, logger),
+    sendDebtReminders: new SendDebtReminders(
+      database,
+      debts,
+      deps.calendar,
+      outbox,
+      clock,
+      ids,
+      logger,
+    ),
+    renderReceiptPdf,
+    renderFeeNoticePdf,
+    requestFeeNoticeZip,
+  }
+  const queries: FinanceQueries = {
+    feeBatches: new FeeBatchQueries(batches),
+    feeImports: feeImportQueries,
+    debts: new DebtQueries(debts, deps.calendar, clock),
+    moneyLog: new MoneyLogQueries(moneyLog),
+    feeNotice: feeNoticeQueries,
+  }
+  const routes = financeRoutes({
+    recordManualPayment: useCases.recordManualPayment,
+    voidPayment: useCases.voidPayment,
+    moneyLog: queries.moneyLog,
+    reviewMoneyLogRow: useCases.reviewMoneyLogRow,
+    // `install.ts` requires both of the host; a test that does not mount the routes leaves them out (see `guards`).
+    guards: deps.guards as Guards,
+    idempotent: deps.idempotent as Idempotent,
+  })
   return {
     name: 'finance',
+    docs: [
+      {
+        name: 'finance',
+        description:
+          'Fee batches and charges, manual payments, voids, receipts, debts, the money log and the resident fee views (DOC-21, DOC-22).',
+      },
+    ],
     api: new FinanceApiImpl(new DrizzleIntentReader(database)),
     feeImports: new FeeImportApiImpl(validateFeeImport, commitFeeImport, feeImportQueries),
-    useCases: {
-      createFeeBatch: new CreateFeeBatch(database, batches, counter, audited, ids),
-      updateFeeBatch: new UpdateFeeBatch(database, batches, audited, outbox, clock, logger),
-      discardFeeBatch: new DiscardFeeBatch(database, batches, audited),
-      replaceDraftCharge: new ReplaceDraftCharge(database, charges, batches, audited, ids),
-      addDraftCharge: new AddDraftCharge(database, charges, batches, deps.units, audited, ids),
-      removeDraftCharge: new RemoveDraftCharge(database, charges, batches, audited),
-      validateFeeImport,
-      commitFeeImport,
-      publishFeeBatch: new PublishFeeBatch(
-        database,
-        batches,
-        deps.calendar,
-        outbox,
-        audited,
-        clock,
-        logger,
-      ),
-      closeFeeBatch: new CloseFeeBatch(database, batches, audited, logger),
-      reissueFeeBatch: new ReissueFeeBatch(database, batches, counter, audited, ids, logger),
-      recallFeeBatch: new RecallFeeBatch(
-        database,
-        batches,
-        cancellation,
-        outbox,
-        audited,
-        clock,
-        logger,
-      ),
-      voidCharge: new VoidCharge(
-        database,
-        charges,
-        batches,
-        cancellation,
-        outbox,
-        audited,
-        clock,
-        logger,
-      ),
-      recordManualPayment: new RecordManualPayment(
-        database,
-        payments,
-        ledger,
-        allocator,
-        cancellation,
-        deps.calendar,
-        deps.receiptBuildings,
-        outbox,
-        audited,
-        clock,
-        ids,
-        logger,
-      ),
-      voidPayment: new VoidPayment(database, payments, outbox, audited, clock, logger),
-      reviewMoneyLogRow: new ReviewMoneyLogRow(database, moneyLog, audited, logger),
-      sendDebtReminders: new SendDebtReminders(
-        database,
-        debts,
-        deps.calendar,
-        outbox,
-        clock,
-        ids,
-        logger,
-      ),
-      renderReceiptPdf,
-      renderFeeNoticePdf,
-      requestFeeNoticeZip,
-    },
-    queries: {
-      feeBatches: new FeeBatchQueries(batches),
-      feeImports: feeImportQueries,
-      debts: new DebtQueries(debts, deps.calendar, clock),
-      moneyLog: new MoneyLogQueries(moneyLog),
-      feeNotice: feeNoticeQueries,
-    },
+    useCases,
+    queries,
+    routes,
     settlement: new Settlement(
       database,
       new DrizzleSettlementRepository(database),

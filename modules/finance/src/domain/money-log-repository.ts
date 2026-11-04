@@ -25,6 +25,8 @@ export interface MoneyLogFilter {
   readonly from?: Date
   readonly to?: Date
   readonly openOnly?: boolean
+  /** Only rows already reviewed (`state=reviewed` of E-108). */
+  readonly reviewedOnly?: boolean
   readonly includePosted?: boolean
   readonly after?: { readonly at: Date; readonly id: string }
   readonly limit: number

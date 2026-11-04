@@ -1,5 +1,5 @@
 import { NotFoundError } from '@core/kernel'
-import type { BuildingScope } from '@rms/shared-types'
+import type { BuildingScope, StaffRole } from '@rms/shared-types'
 import type {
   MoneyLogDetail,
   MoneyLogFilter,
@@ -7,6 +7,9 @@ import type {
   MoneyLogRepository,
   MoneyLogRow,
 } from '../../domain/money-log-repository'
+
+/** The Manager's and the Admin's: the money log is staff only (DOC-22 §9.4, FR-47.3). */
+export const MONEY_LOG_READ_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
 
 /** The page size of the viewer when the caller does not ask (DOC-22 §9.4, FR-47.1). */
 const DEFAULT_PAGE_LIMIT = 50
