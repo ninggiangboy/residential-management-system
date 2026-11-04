@@ -28,6 +28,7 @@ import type {
 import { DebtQueries } from './application/queries/debt-queries'
 import { FeeBatchQueries } from './application/queries/fee-batch-queries'
 import { FeeImportQueries } from './application/queries/fee-import-queries'
+import { FeeNoticeQueries } from './application/queries/fee-notice-queries'
 import { MoneyLogQueries } from './application/queries/money-log-queries'
 import { Settlement } from './application/settle'
 import { AddDraftCharge } from './application/use-cases/add-draft-charge'
@@ -43,7 +44,9 @@ import { RemoveDraftCharge } from './application/use-cases/remove-draft-charge'
 import { RenderFeeNoticePdf } from './application/use-cases/render-fee-notice-pdf'
 import { RenderReceiptPdf } from './application/use-cases/render-receipt-pdf'
 import { ReplaceDraftCharge } from './application/use-cases/replace-draft-charge'
+import { RequestFeeNoticeZip } from './application/use-cases/request-fee-notice-zip'
 import { ReviewMoneyLogRow } from './application/use-cases/review-money-log-row'
+import { RunFeeNoticeJob } from './application/use-cases/run-fee-notice-job'
 import { SendDebtReminders } from './application/use-cases/send-debt-reminders'
 import { UpdateFeeBatch } from './application/use-cases/update-fee-batch'
 import { ValidateFeeImport } from './application/use-cases/validate-fee-import'
@@ -53,12 +56,14 @@ import type { FeeImportApi, FinanceApi } from './contracts'
 import { ExceljsFeeTemplateWriter } from './infrastructure/excel/exceljs-fee-template-writer'
 import { ExceljsFeeWorkbookReader } from './infrastructure/excel/exceljs-workbook-reader'
 import { FilesLogoSource } from './infrastructure/files-logo-source'
+import { feeNoticeRunJob } from './infrastructure/jobs/fee-notice-run'
 import { invariantCheckJob, type LedgerCheckBuildings } from './infrastructure/jobs/invariant-check'
 import { HostPdfRenderer } from './infrastructure/pdf/host-pdf-renderer'
 import { DrizzleChargeRepository } from './infrastructure/persistence/drizzle-charge-repository'
 import { DrizzleDebtRepository } from './infrastructure/persistence/drizzle-debt-repository'
 import { DrizzleFeeBatchRepository } from './infrastructure/persistence/drizzle-fee-batch-repository'
 import { DrizzleFeeImportRepository } from './infrastructure/persistence/drizzle-fee-import-repository'
+import { DrizzleFeeNoticeJobRepository } from './infrastructure/persistence/drizzle-fee-notice-job-repository'
 import { DrizzleIntentReader } from './infrastructure/persistence/drizzle-intent-reader'
 import { DrizzleIntentRepository } from './infrastructure/persistence/drizzle-intent-repository'
 import { DrizzleInvariantReader } from './infrastructure/persistence/drizzle-invariant-reader'
@@ -83,7 +88,10 @@ export interface FinanceModuleDeps {
    * The import file (DOC-21 §2.1) and, for the receipt PDF handler, the rendered PDFs, their removal and the logo
    * (DOC-34 §8.2, §8.4; DR-295).
    */
-  files: Pick<FilesApi, 'read' | 'attach' | 'remove' | 'storeGenerated' | 'findByOwnerRef'>
+  files: Pick<FilesApi, 'read' | 'attach' | 'remove' | 'storeGenerated' | 'findByOwnerRef'> & {
+    /** The signed GET of E-177's ready ZIP (DOC-37 §8, DR-123); a unit test may leave it out. */
+    signedUrl?: FilesApi['signedUrl']
+  }
   /** The building's zone for `buildingToday` (DOC-21 §2.1, DR-09). */
   calendar: BuildingCalendar
   /** The company block and the building name a receipt freezes (DOC-22 §7). */
@@ -142,6 +150,8 @@ export interface FinanceUseCases {
   renderReceiptPdf: RenderReceiptPdf
   /** The staff route E-176 and the bulk job E-99 render one fee notice (DOC-34 §6.3, §8.1; P2-13). */
   renderFeeNoticePdf: RenderFeeNoticePdf
+  /** The bulk request E-99 over a batch's open and paid charges (DOC-34 §9.1, DR-293; P2-13). */
+  requestFeeNoticeZip: RequestFeeNoticeZip
 }
 
 export interface FinanceQueries {
@@ -149,6 +159,8 @@ export interface FinanceQueries {
   feeImports: FeeImportQueries
   debts: DebtQueries
   moneyLog: MoneyLogQueries
+  /** The latest bulk job of a batch (E-177, DOC-34 §9.1; P2-13). */
+  feeNotice: FeeNoticeQueries
 }
 
 export interface FinanceModule extends AppModule<'finance'> {
@@ -230,6 +242,29 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     deps.calendar,
     clock,
     logger,
+  )
+  // DOC-34 §9.1, §9.2 (DR-293, DR-294): the bulk job E-99's persistence, its work loop (P2-13) and the E-177 read.
+  const feeNoticeJobs = new DrizzleFeeNoticeJobRepository(database)
+  const runFeeNoticeJob = new RunFeeNoticeJob(
+    charges,
+    feeNoticeJobs,
+    feeNoticeCache,
+    deps.files,
+    noticeContext,
+    deps.calendar,
+    clock,
+    logger,
+    deps.pdf?.concurrency ?? 1,
+  )
+  const requestFeeNoticeZip = new RequestFeeNoticeZip(batches, feeNoticeJobs, noticeLanguage, ids)
+  const feeNoticeQueries = new FeeNoticeQueries(
+    feeNoticeJobs,
+    batches,
+    {
+      signedUrl: deps.files.signedUrl ?? (async () => null),
+      findByOwnerRef: deps.files.findByOwnerRef,
+    },
+    clock,
   )
   const renderReceiptPdf = new RenderReceiptPdf(
     database,
@@ -339,12 +374,14 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       ),
       renderReceiptPdf,
       renderFeeNoticePdf,
+      requestFeeNoticeZip,
     },
     queries: {
       feeBatches: new FeeBatchQueries(batches),
       feeImports: feeImportQueries,
       debts: new DebtQueries(debts, deps.calendar, clock),
       moneyLog: new MoneyLogQueries(moneyLog),
+      feeNotice: feeNoticeQueries,
     },
     settlement: new Settlement(
       database,
@@ -373,6 +410,8 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
             deps.ledgerCheckBuildings,
             deps.invariantCheckGraceMinutes ?? 0,
           ),
+          // DOC-34 §9.2 (DR-294): the bulk fee notices, every 5 s in `claim` mode.
+          feeNoticeRunJob(runFeeNoticeJob, deps.ledgerCheckBuildings),
         ]
       : [],
     // DOC-34 §4.1 (DR-291): the module releases its own render host pool at shutdown; an injected fake is the caller's.
