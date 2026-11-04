@@ -462,7 +462,7 @@ function PaymentForm({
         onChange={(event) => setNote(event.target.value)}
       />
 
-      <p
+      <div
         className="flex h-5 items-center text-secondary text-ink-muted"
         data-testid="payment-receipts"
       >
@@ -471,7 +471,7 @@ function PaymentForm({
         ) : (
           plan && t('web.fee-record.pay.receipts', { count: plan.receiptCount })
         )}
-      </p>
+      </div>
 
       <p className="text-secondary text-ink-muted">{t('web.fee-record.pay.hint')}</p>
     </form>

@@ -14,6 +14,7 @@ import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../compone
 import { TabList, Tabs } from '../../components/ui/tabs'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
+import { day } from '../../lib/day'
 import { useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
@@ -40,8 +41,8 @@ const batchName = (name: { vi: string; en?: string | null }, lang: string) =>
 /** The two whole-building counts the tabs read, as E-89 answers them on its first page (DOC-66 §5). */
 type Counts = { draft: number; published: number; closed: number; recalled: number }
 
-const monthOf = (feeMonth: string) => Number(feeMonth.slice(5, 7))
-const yearOf = (feeMonth: string) => feeMonth.slice(0, 4)
+const monthOf = (feeMonth: string | Date) => Number(day(feeMonth).slice(5, 7))
+const yearOf = (feeMonth: string | Date) => day(feeMonth).slice(0, 4)
 
 /** The "Đã thu" cell (DOC-66 §4): a draft is not published and a recalled batch has only void charges, so neither shows a bar. */
 function Collected({ item }: { item: FeeBatchListItem }) {
@@ -259,7 +260,7 @@ export function FeesPage({ search }: { search: FeesSearch }): ReactElement {
   // No months endpoint in P2: the select offers the fee months of the rows seen, newest first, plus the one in the URL.
   const months = useMemo(() => {
     const seen = new Set<string>()
-    for (const item of data?.items ?? []) seen.add(item.feeMonth.slice(0, 7))
+    for (const item of data?.items ?? []) seen.add(day(item.feeMonth).slice(0, 7))
     if (search.month) seen.add(search.month)
     return [...seen].sort().reverse()
   }, [data, search.month])

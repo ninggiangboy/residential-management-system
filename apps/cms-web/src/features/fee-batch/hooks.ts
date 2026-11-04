@@ -86,16 +86,14 @@ export const feeNoticeJobQuery = (batchId: string) =>
   })
 
 /** One item of E-89 (DOC-66 §5). */
-export type FeeBatchListPage = NonNullable<Awaited<ReturnType<FeeBatchesRoute['get']>>['data']>
+type FeeBatchListPage = NonNullable<Awaited<ReturnType<FeeBatchesRoute['get']>>['data']>
 export type FeeBatchListItem = FeeBatchListPage['items'][number]
 
 /** The body of E-91 (DOC-66 §5). */
 export type FeeBatchView = NonNullable<Awaited<ReturnType<FeeBatchRoute['get']>>['data']>
 
 /** One page of E-93 (DOC-66 §5). */
-export type BatchChargesPage = NonNullable<
-  Awaited<ReturnType<FeeBatchRoute['charges']['get']>>['data']
->
+type BatchChargesPage = NonNullable<Awaited<ReturnType<FeeBatchRoute['charges']['get']>>['data']>
 export type BatchChargeItem = BatchChargesPage['items'][number]
 
 /** The body of E-177 (DOC-34 §9.1). */

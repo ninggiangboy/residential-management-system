@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { errorText, useI18n } from '../../lib/i18n'
 import { type FeeBatchView, useFeeBatchMutations } from './hooks'
 
@@ -55,7 +56,7 @@ export function EditBatchDialog({
   const { update } = useFeeBatchMutations(batch.id)
   const [nameVi, setNameVi] = useState(batch.name.vi)
   const [nameEn, setNameEn] = useState(batch.name.en ?? '')
-  const [dueDate, setDueDate] = useState<string>(batch.dueDate)
+  const [dueDate, setDueDate] = useState<string>(day(batch.dueDate))
   const [errors, setErrors] = useState<FieldErrors>({})
   const [banner, setBanner] = useState<string | null>(null)
 
@@ -63,7 +64,7 @@ export function EditBatchDialog({
     if (!open) return
     setNameVi(batch.name.vi)
     setNameEn(batch.name.en ?? '')
-    setDueDate(batch.dueDate)
+    setDueDate(day(batch.dueDate))
     setErrors({})
     setBanner(null)
   }, [open, batch.name.vi, batch.name.en, batch.dueDate])

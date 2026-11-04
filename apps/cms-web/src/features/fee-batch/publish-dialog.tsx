@@ -5,6 +5,7 @@ import { Banner } from '../../components/ui/banner'
 import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { errorText, useI18n } from '../../lib/i18n'
 import { type FeeBatchView, useFeeBatchMutations } from './hooks'
 
@@ -15,11 +16,15 @@ const today = () => {
 }
 
 /** The same checks E-95 makes, as inline lines before the press; the server stays the arbiter (DOC-66 §6, UIWF-18). */
-function checksOf(counts: FeeBatchView['counts'], total: number, dueDate: string): MessageKey[] {
+function checksOf(
+  counts: FeeBatchView['counts'],
+  total: number,
+  dueDate: string | Date,
+): MessageKey[] {
   const checks: MessageKey[] = []
   if (counts.charges === 0) checks.push('error.no_charges')
   else if (total === 0) checks.push('error.charge_total_zero')
-  if (dueDate < today()) checks.push('error.due_date_in_past')
+  if (day(dueDate) < today()) checks.push('error.due_date_in_past')
   return checks
 }
 
@@ -111,8 +116,8 @@ export function PublishDialog({
         </p>
         <p className="text-secondary text-ink-muted">
           {t('web.fee-batch.meta', {
-            month: Number(batch.feeMonth.slice(5, 7)),
-            year: batch.feeMonth.slice(0, 4),
+            month: Number(day(batch.feeMonth).slice(5, 7)),
+            year: day(batch.feeMonth).slice(0, 4),
             date: formatDate(batch.dueDate),
           })}
         </p>

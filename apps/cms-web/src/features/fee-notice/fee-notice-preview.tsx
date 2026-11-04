@@ -9,6 +9,7 @@ import { formatDate, formatMoney } from '@rms/shared-types'
 import { type ReactElement, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Card } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
+import { day } from '../../lib/day'
 import { useI18n } from '../../lib/i18n'
 import { cn } from '../../lib/utils'
 import type { BuildingDocument } from '../building/model'
@@ -52,8 +53,8 @@ const MONTHS_EN = [
 const MINUS = '\u2212'
 
 /** `10/2026` in `vi`, `October 2026` in `en` (DOC-34 §6.1). */
-function formatMonth(feeMonth: string, lang: 'vi' | 'en'): string {
-  const [year = '', month = ''] = feeMonth.split('-')
+function formatMonth(feeMonth: string | Date, lang: 'vi' | 'en'): string {
+  const [year = '', month = ''] = day(feeMonth).split('-')
   return lang === 'vi' ? `${month}/${year}` : `${MONTHS_EN[Number(month) - 1] ?? month} ${year}`
 }
 
@@ -121,7 +122,7 @@ function usePhrases(lang: FeeNoticeLanguage): Phrases {
 }
 
 /** The title of DOC-34 §6.1; §6.2 prints the primary line upper case, and `both` adds the English line under it (§5). */
-function titleLine(feeMonth: string, lang: FeeNoticeLanguage, p: Phrases): NoticeLine {
+function titleLine(feeMonth: string | Date, lang: FeeNoticeLanguage, p: Phrases): NoticeLine {
   const viText = p.vi('web.fee-notice.preview.title', { month: formatMonth(feeMonth, 'vi') })
   const enText = (p.en ?? p.vi)('web.fee-notice.preview.title', {
     month: formatMonth(feeMonth, 'en'),
@@ -301,7 +302,7 @@ function PreviewTotal({ total, p }: { total: number; p: Phrases }): ReactElement
   )
 }
 
-function PreviewDue({ dueDate, p }: { dueDate: string; p: Phrases }): ReactElement {
+function PreviewDue({ dueDate, p }: { dueDate: string | Date; p: Phrases }): ReactElement {
   return (
     <div className="flex items-center justify-end gap-4">
       <LineText
