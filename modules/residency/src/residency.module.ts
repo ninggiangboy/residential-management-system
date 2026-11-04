@@ -39,9 +39,11 @@ import {
   ExceljsWorkbookReader,
 } from './infrastructure/excel/exceljs-workbook'
 import { importExpireJob, importPurgeJob } from './infrastructure/jobs/import-jobs'
+import { integrityWeeklyJob } from './infrastructure/jobs/integrity-weekly'
 import { DrizzleAccountDeletionRepository } from './infrastructure/persistence/drizzle-account-deletion-repository'
 import { DrizzleDemoRepository } from './infrastructure/persistence/drizzle-demo-repository'
 import { DrizzleImportJobRepository } from './infrastructure/persistence/drizzle-import-job-repository'
+import { DrizzleIntegrityReader } from './infrastructure/persistence/drizzle-integrity-reader'
 import { DrizzleMembershipReader } from './infrastructure/persistence/drizzle-membership-reader'
 import { DrizzleMembershipRepository } from './infrastructure/persistence/drizzle-membership-repository'
 import { DrizzlePiiKeyReader } from './infrastructure/persistence/drizzle-pii-key-reader'
@@ -60,7 +62,7 @@ import { residencyRoutes } from './presentation/residency-routes'
 
 export interface ResidencyDeps {
   /** The time zone of the building for "today" (DR-09). */
-  building: Pick<BuildingApi, 'getBuilding' | 'getSettings' | 'assertDemo'>
+  building: Pick<BuildingApi, 'getBuilding' | 'getSettings' | 'assertDemo' | 'listBuildings'>
   /** The files of an import: the upload is read, attached to its job and removed at the commit (DOC-37 §3). */
   files: Pick<FilesApi, 'read' | 'attach' | 'remove'>
   /**
@@ -90,6 +92,8 @@ export interface ResidencyDeps {
   audited: Audited
   /** `OUTBOX_MAX_PAYLOAD_BYTES`. */
   outboxMaxPayloadBytes: number
+  /** `JOB_INTEGRITY_WEEKLY_GRACE_MINUTES`: the catch-up window of `integrity_weekly` (DOC-38 §4.1); 0 = none. */
+  integrityWeeklyGraceMinutes?: number
   /** The import kinds of other modules behind `/staff/imports` (DR-149); read at request time, none when absent. */
   importHandlers?: () => readonly ImportHandler[]
 }
@@ -364,7 +368,20 @@ export function createResidencyModule(deps: ResidencyModuleDeps): ResidencyModul
       ),
     ],
     outbox: { name: 'residency', table: residencyOutbox, inboxTable: residencyInbox },
-    jobs: [importExpireJob(expireImports), importPurgeJob(purgeImports)],
+    jobs: [
+      importExpireJob(expireImports),
+      importPurgeJob(purgeImports),
+      // DOC-38 §4.1, DR-321: the weekly membership check; the gauge `integrity_findings` reads its `job_run` row.
+      integrityWeeklyJob(
+        new DrizzleIntegrityReader(database),
+        {
+          liveBuildingIds: async () =>
+            (await deps.building.listBuildings()).filter((b) => !b.isDemo).map((b) => b.buildingId),
+        },
+        deps.identity,
+        deps.integrityWeeklyGraceMinutes ?? 0,
+      ),
+    ],
     gauges: [
       {
         name: 'units_without_owner',
