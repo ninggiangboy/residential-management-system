@@ -31,8 +31,17 @@ const RecordBody = strictObject(
       Type.String({ format: 'uuid', description: 'An open charge of the unit' }),
       {
         description:
-          'The whole charges the payment covers, 1 to 50, all of the unit. There is no amount field: the payment is the sum of the charges (DR-267)',
+          'The whole charges the payment covers, 1 to 50, all of the unit. The payment is the sum of the charges (DR-267)',
       },
+    ),
+    amount: Type.Optional(
+      Type.Union([
+        Type.Integer({
+          description:
+            'Only a check: it must equal the sum of the charges, else 422 `allocation_mismatch`',
+        }),
+        Type.Null(),
+      ]),
     ),
     method: Type.Union([Type.Literal('cash'), Type.Literal('bank_transfer')], {
       description: '`cash` or `bank_transfer`',
@@ -48,7 +57,7 @@ const RecordBody = strictObject(
     }),
     bankReference: Type.Optional(
       Type.Union([
-        Type.String({ maxLength: 200, description: 'The reference of the transfer' }),
+        Type.String({ maxLength: 100, description: 'The reference of the transfer' }),
         Type.Null(),
       ]),
     ),
