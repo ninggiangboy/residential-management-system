@@ -2,7 +2,7 @@
  * Rules for apps/* (DOC-12 §6.1). Run with `bun run check:arch`.
  */
 const SERVER_ONLY =
-  '^(modules|packages/core-(db|messaging|http|auth|runtime|storage|mail|telemetry|config|testing))/'
+  '^(modules|packages/core-(db|messaging|http|auth|runtime|storage|mail|telemetry|config|testing)|packages/pdf-assets)/'
 
 module.exports = {
   forbidden: [
