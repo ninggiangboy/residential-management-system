@@ -507,7 +507,7 @@ export class DrizzleFeeBatchRepository implements FeeBatchRepository, FeeBatchRe
       dueDate: row.dueDate as LocalDate,
       status: row.status as FeeBatchStatus,
       version: row.version,
-      createdBy: { id: row.createdBy },
+      createdBy: { id: row.createdBy, name: null },
       publishedAt: row.publishedAt,
       replaces,
       replacedBy,
@@ -691,7 +691,7 @@ const toListItem = (row: FeeBatchListRow): FeeBatchListItem => {
     collected: money(collected),
     collectedRate: total > 0 ? collected / total : null,
     dueDate: row.due_date as LocalDate,
-    createdBy: { id: row.created_by },
+    createdBy: { id: row.created_by, name: null },
     version: Number(row.version),
   }
 }

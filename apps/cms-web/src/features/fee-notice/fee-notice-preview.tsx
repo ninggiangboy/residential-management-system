@@ -206,24 +206,19 @@ function PreviewHeader({
     .filter(Boolean)
     .join(' · ')
   return (
-    <header className="flex items-start justify-between gap-4 border-b border-line pb-3">
-      <div className="flex min-w-0 items-start gap-3">
-        {building?.logoUrl ? (
-          <img src={building.logoUrl} alt="" className="h-12 w-12 rounded-control object-contain" />
-        ) : null}
-        <div className="min-w-0">
-          {company ? (
-            <LineText line={p.data(company.name)} className="block text-body-strong" />
-          ) : (
-            <Skeleton className="h-4 w-40" />
-          )}
-          {address ? <p className="text-caption text-ink-muted">{address}</p> : null}
-          {contact ? <p className="text-caption text-ink-muted">{contact}</p> : null}
-        </div>
-      </div>
-      {building ? (
-        <LineText line={p.data(building.name)} className="max-w-48 text-right text-body-strong" />
+    <header className="flex items-start gap-3 border-b border-line pb-3">
+      {building?.logoUrl ? (
+        <img src={building.logoUrl} alt="" className="h-12 w-12 rounded-control object-contain" />
       ) : null}
+      <div className="min-w-0">
+        {company ? (
+          <LineText line={p.data(company.name)} className="block text-body-strong" />
+        ) : (
+          <Skeleton className="h-4 w-40" />
+        )}
+        {address ? <p className="text-caption text-ink-muted">{address}</p> : null}
+        {contact ? <p className="text-caption text-ink-muted">{contact}</p> : null}
+      </div>
     </header>
   )
 }
@@ -247,10 +242,7 @@ function PreviewInfo({
         label={p.line('web.fee-notice.preview.owner')}
         value={{ text: charge.ownerName ?? p.t('common.table.empty-cell') }}
       />
-      <InfoCell
-        label={p.line('web.fee-notice.preview.batch')}
-        value={{ text: batch.code, secondary: p.data(batch.name).text }}
-      />
+      <InfoCell label={p.line('web.fee-notice.preview.batch')} value={p.data(batch.name)} />
       <InfoCell label={p.line('web.fee-notice.preview.issue-date')} value={{ text: issueDate }} />
     </div>
   )

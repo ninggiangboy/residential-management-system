@@ -26,7 +26,7 @@ export function paymentBody(payment: PaymentView) {
 }
 
 /** A batch as the write routes answer it; `E-91` adds the counts and the links (DOC-21 §3.1). */
-export function batchBody(batch: FeeBatchRecord) {
+export function batchBody(batch: FeeBatchRecord, createdByName: string | null) {
   return {
     id: batch.id,
     code: batch.code,
@@ -35,7 +35,7 @@ export function batchBody(batch: FeeBatchRecord) {
     dueDate: batch.dueDate,
     status: batch.status,
     version: batch.version,
-    createdBy: batch.createdBy,
+    createdBy: { id: batch.createdBy, name: createdByName },
     createdAt: batch.createdAt.toISOString(),
     replacesBatchId: batch.replacesBatchId ?? null,
   }

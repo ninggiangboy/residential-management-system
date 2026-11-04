@@ -48,7 +48,6 @@ export const finFeeRecordVi: Record<keyof typeof finFeeRecordEn, string> = {
   'web.fee-record.receipt.void': 'Hủy phiếu thu',
   'web.fee-record.receipts.col.actions': 'Thao tác',
   'web.fee-record.receipts.col.amount': 'Số tiền',
-  'web.fee-record.receipts.col.batch': 'Đợt',
   'web.fee-record.receipts.col.date': 'Ngày',
   'web.fee-record.receipts.col.method': 'Hình thức',
   'web.fee-record.receipts.col.number': 'Phiếu thu',

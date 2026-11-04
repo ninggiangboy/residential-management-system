@@ -28,6 +28,11 @@ let queries: FeeBatchQueries
 /** The owner name behind a unit id, read by the fake owner port (DOC-34 §6.1, DR-292). */
 const owners = new Map<string, string>()
 
+/** The creator of every seeded batch and the fake staff port's answer (E-89, E-91; DOC-66 §5, DOC-07 §11A). */
+const CREATOR = ids.next()
+const CREATOR_NAME = 'Lê Văn Quản'
+const staff = new Map<string, string>([[CREATOR, CREATOR_NAME]])
+
 const BUILDING_A = ids.next()
 const BUILDING_B = ids.next()
 
@@ -79,7 +84,7 @@ async function insertBatch(buildingId: string, seed: BatchSeed): Promise<string>
     feeMonth: seed.feeMonth,
     dueDate: '2026-10-15',
     status: seed.status,
-    createdBy: ids.next(),
+    createdBy: CREATOR,
     replacesBatchId: seed.replacesBatchId ?? null,
     publishedAt: published ? AT : null,
     publishedBy: published ? ids.next() : null,
@@ -202,10 +207,17 @@ const fixture = {
 beforeAll(async () => {
   db = await cloneTemplate('empty')
   database = new Database({ url: db.url, poolMax: 10, prepare: false })
-  queries = new FeeBatchQueries(new DrizzleFeeBatchRepository(database), {
-    ownerNames: async (_buildingId, unitIds) =>
-      new Map(unitIds.map((unitId) => [unitId, owners.get(unitId) ?? null])),
-  })
+  queries = new FeeBatchQueries(
+    new DrizzleFeeBatchRepository(database),
+    {
+      ownerNames: async (_buildingId, unitIds) =>
+        new Map(unitIds.map((unitId) => [unitId, owners.get(unitId) ?? null])),
+    },
+    {
+      names: async (staffIds) =>
+        new Map(staffIds.map((staffId) => [staffId, staff.get(staffId) ?? null] as const)),
+    },
+  )
 
   fixture.units = {
     a1: unit('A-1001', 'Trần Minh Anh'),
@@ -314,6 +326,8 @@ describe('E-89 the batch list (DOC-66 §5)', () => {
   test('filters, keyset over three pages with no duplicate, whole-building counts on the first page', async () => {
     const page1 = await queries.list(managerA(), { limit: 2 })
     expect(page1.items.map((item) => item.code)).toEqual(['PH-2610-01', 'PH-2609-01'])
+    // The creator's name from `IdentityApi.getStaff`, not the id alone (E-89; DOC-66 §5, DOC-07 §11A).
+    expect(page1.items[0]?.createdBy).toEqual({ id: CREATOR, name: CREATOR_NAME })
     expect(page1.next).not.toBeNull()
     expect(page1.counts).toEqual({ draft: 2, published: 1, closed: 1, recalled: 1 })
     expect(page1.totalCount).toBe(5)
@@ -393,7 +407,8 @@ describe('E-91 the batch view (DOC-66 §5)', () => {
     const view = await queries.view(staffOf('manager', BUILDING_A), fixture.a.published!)
     expect(view.status).toBe('published')
     expect(view.version).toBe(1)
-    expect(view.createdBy.id).toBeTruthy()
+    // The creator's name from `IdentityApi.getStaff`, not the id alone (E-91; DOC-66 §5, DOC-07 §11A).
+    expect(view.createdBy).toEqual({ id: CREATOR, name: CREATOR_NAME })
     expect(view.publishedAt).toBeInstanceOf(Date)
     expect(view.counts).toEqual({ charges: 2, lines: 3, open: 1, paid: 1, void: 0, missing: null })
     expect(Number(view.total)).toBe(500_000)

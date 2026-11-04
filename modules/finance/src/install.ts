@@ -20,6 +20,7 @@ export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'databas
     | 'noticeLanguage'
     | 'noticeContext'
     | 'debtUnits'
+    | 'staffDirectory'
   > & {
     // The routes need both (DOC-12 §5.3, DOC-50 §8): required here, optional only for a test of the use cases.
     guards: NonNullable<FinanceModuleDeps['guards']>
@@ -48,6 +49,7 @@ export function installFinance(host: FinanceHost) {
     noticeLanguage: host.noticeLanguage,
     noticeContext: host.noticeContext,
     debtUnits: host.debtUnits,
+    staffDirectory: host.staffDirectory,
     guards: host.guards,
     idempotent: host.idempotent,
     reminderRatePerHour: host.reminderRatePerHour,

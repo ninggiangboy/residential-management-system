@@ -278,12 +278,17 @@ describe('the publish flow (E-90, E-170, E-94, E-95, E-92, E-91, E-89, E-93)', (
     const view = await api(app, `/staff/fee-batches/${batch.id}`, { token: manager })
     expect(view.status).toBe(200)
     expect(view.headers.get('etag')).toBe('"3"')
-    expect(
-      await bodyOf<{ status: string; counts: Record<string, number | null> }>(view),
-    ).toMatchObject({
+    const viewBody = await bodyOf<{
+      status: string
+      createdBy: { id: string; name: string | null }
+      counts: Record<string, number | null>
+    }>(view)
+    expect(viewBody).toMatchObject({
       status: 'draft',
       counts: { charges: 1, lines: 2, open: 0, paid: 0, void: 0, missing: null },
     })
+    // The creator's name from `IdentityApi.getStaff`, not the id alone (E-91; DOC-66 §5, DOC-07 §11A).
+    expect(viewBody.createdBy).toEqual({ id: expect.any(String), name: 'Lê Văn Quản' })
 
     // E-95 without If-Match is 428; a stale version is 409 version_conflict while the batch is still a draft.
     expect(
@@ -337,12 +342,15 @@ describe('the publish flow (E-90, E-170, E-94, E-95, E-92, E-91, E-89, E-93)', (
 
     // E-89 lists it with the building's status counts on the first page.
     const list = await bodyOf<{
-      items: Array<{ id: string; status: string }>
+      items: Array<{ id: string; status: string; createdBy: { id: string; name: string | null } }>
       counts: Record<string, number>
       totalCount: number
       nextCursor: string | null
     }>(await api(app, '/staff/fee-batches?status=published', { token: manager }))
-    expect(list.items.some((item) => item.id === batch.id)).toBe(true)
+    const listed = list.items.find((item) => item.id === batch.id)
+    expect(listed).toBeDefined()
+    // The creator's name from `IdentityApi.getStaff`, not the id alone (E-89; DOC-66 §5, DOC-07 §11A).
+    expect(listed?.createdBy).toEqual({ id: expect.any(String), name: 'Lê Văn Quản' })
     expect(list.items.every((item) => item.status === 'published')).toBe(true)
     expect(list.counts.published).toBeGreaterThanOrEqual(1)
     expect(list.totalCount).toBeGreaterThanOrEqual(1)

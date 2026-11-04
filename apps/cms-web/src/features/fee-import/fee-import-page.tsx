@@ -11,7 +11,7 @@ import { Icon } from '../../components/ui/icon'
 import { PageHeader } from '../../components/ui/page'
 import { Skeleton } from '../../components/ui/skeleton'
 import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
-import { StatusTag } from '../../components/ui/tag'
+import { Plate, StatusTag } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { day } from '../../lib/day'
@@ -112,6 +112,7 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
   const [phase, setPhase] = useState<Phase>({ name: 'idle' })
   const [fileError, setFileError] = useState<string | null>(null)
   const [slow, setSlow] = useState(false)
+  const [stuck, setStuck] = useState(false)
   const [picked, setPicked] = useState<{ file: File; fileId: string } | null>(null)
   const [size, setSize] = useState<number | null>(null)
   const [settings, setSettings] = useState<Settings>(() => {
@@ -141,10 +142,19 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
   const batch = useQuery({ ...feeBatchQuery(batchId ?? ''), enabled: batchId !== undefined })
   const building = useQuery(settingsQuery())
 
+  // §7: a check that runs long says so after 10 s, then offers a retry with the same key after 30 s (the keys replay, DR-21).
   useEffect(() => {
-    if (phase.name !== 'checking') return setSlow(false)
-    const timer = setTimeout(() => setSlow(true), 10_000)
-    return () => clearTimeout(timer)
+    if (phase.name !== 'checking') {
+      setSlow(false)
+      setStuck(false)
+      return
+    }
+    const slowTimer = setTimeout(() => setSlow(true), 10_000)
+    const stuckTimer = setTimeout(() => setStuck(true), 30_000)
+    return () => {
+      clearTimeout(slowTimer)
+      clearTimeout(stuckTimer)
+    }
   }, [phase.name])
 
   // The settings keep the entered values; a draft fills them once, and a new batch takes the building's default term.
@@ -263,6 +273,7 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
         <StepOne
           phase={phase}
           slow={slow}
+          stuck={stuck}
           error={fileError}
           canWrite={canWrite}
           settings={settings}
@@ -324,6 +335,7 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
 function StepOne({
   phase,
   slow,
+  stuck,
   error,
   canWrite,
   settings,
@@ -339,6 +351,7 @@ function StepOne({
 }: {
   phase: Phase
   slow: boolean
+  stuck: boolean
   error: string | null
   canWrite: boolean
   settings: Settings
@@ -513,9 +526,12 @@ function StepOne({
             </div>
           </div>
         )}
-        {slow && phase.name === 'checking' && (
-          <p className="text-secondary text-ink-muted">{t('web.import.validating.slow')}</p>
-        )}
+        <ValidatingHint
+          checking={phase.name === 'checking'}
+          slow={slow}
+          stuck={stuck}
+          onCheck={onCheck}
+        />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="ghost"
@@ -538,6 +554,32 @@ function StepOne({
         </div>
       </Card>
       <RecentImports onOpen={onOpen} />
+    </div>
+  )
+}
+
+/** §7: a check that runs long says so after 10 s, then offers a retry with the same key after 30 s (the keys replay, DR-21). */
+function ValidatingHint({
+  checking,
+  slow,
+  stuck,
+  onCheck,
+}: {
+  checking: boolean
+  slow: boolean
+  stuck: boolean
+  onCheck: () => void
+}) {
+  const { t } = useI18n()
+  if (!checking || (!slow && !stuck)) return null
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {slow && <p className="text-secondary text-ink-muted">{t('web.import.validating.slow')}</p>}
+      {stuck && (
+        <Button variant="outline" size="sm" data-testid="fee-import-retry" onClick={onCheck}>
+          {t('common.action.retry')}
+        </Button>
+      )}
     </div>
   )
 }
@@ -573,38 +615,45 @@ function RecentImports({ onOpen }: { onOpen: (importId: string) => void }) {
           <THead>
             <Tr>
               <Th>{t('web.import.history.col.file')}</Th>
-              <Th>{t('web.import.history.col.when')}</Th>
               <Th>{t('web.import.history.col.by')}</Th>
+              <Th>{t('web.import.history.col.when')}</Th>
+              <Th>{t('web.fee-import.history.col.code')}</Th>
               <Th>{t('web.import.history.col.result')}</Th>
-              <Th>{t('web.units.col.status')}</Th>
               <Th>
                 <span className="sr-only">{t('web.import.history.open')}</span>
               </Th>
             </Tr>
           </THead>
           <TBody>
-            {items.map((item) => (
-              <Tr key={item.importId} data-testid="history-row">
-                <Td className="max-w-56 truncate">{item.fileName ?? '—'}</Td>
-                <Td className="text-secondary text-ink-muted">{formatDateTime(item.createdAt)}</Td>
-                <Td className="text-secondary">{item.createdBy.name ?? '—'}</Td>
-                <Td className="text-secondary">
-                  {t('web.import.history.result', {
-                    valid: item.counts.valid,
-                    rows: item.counts.rows,
-                    errors: item.counts.errors,
-                  })}
-                </Td>
-                <Td>
-                  <StatusTag entity="import_job" value={item.status} />
-                </Td>
-                <Td>
-                  <Button size="sm" variant="outline" onClick={() => onOpen(item.importId)}>
-                    {t('web.import.history.open')}
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
+            {items.map((item) => {
+              // E-169 does not carry the batch code today (see the slice report): the plate shows only when the API adds it.
+              const code = (item as { code?: string | null }).code
+              return (
+                <Tr key={item.importId} data-testid="history-row">
+                  <Td className="max-w-56 truncate">{item.fileName ?? '—'}</Td>
+                  <Td className="text-secondary">{item.createdBy.name ?? '—'}</Td>
+                  <Td className="text-secondary text-ink-muted">
+                    {formatDateTime(item.createdAt)}
+                  </Td>
+                  <Td>{code ? <Plate>{code}</Plate> : null}</Td>
+                  <Td className="text-secondary">
+                    <span className="flex flex-wrap items-center gap-2">
+                      {t('web.import.history.result', {
+                        valid: item.counts.valid,
+                        rows: item.counts.rows,
+                        errors: item.counts.errors,
+                      })}
+                      <StatusTag entity="import_job" value={item.status} />
+                    </span>
+                  </Td>
+                  <Td>
+                    <Button size="sm" variant="outline" onClick={() => onOpen(item.importId)}>
+                      {t('web.import.history.open')}
+                    </Button>
+                  </Td>
+                </Tr>
+              )
+            })}
           </TBody>
         </DataTable>
       )}
@@ -623,7 +672,7 @@ function ResultCard({ job, onOther }: { job: FeeImportJob; onOther: () => void }
       </span>
       <p className="text-title-3 text-ink" data-testid="import-done">
         {t('web.fee-import.done', {
-          charges: committed?.created ?? 0,
+          charges: job.preview.counts.valid,
           units: committed?.created ?? 0,
         })}
       </p>

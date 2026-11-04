@@ -102,16 +102,16 @@ function FeeRow({ item }: { item: FeeBatchListItem }) {
       <Td>
         <StatusTag entity="fee_batch" value={item.status} />
       </Td>
-      <Td className="tabular-nums">{item.unitCount}</Td>
+      <Td className="text-right tabular-nums">{item.unitCount}</Td>
       <Td className="text-right font-medium tabular-nums">{formatMoney(item.total)}</Td>
       <Td>
         <Collected item={item} />
       </Td>
       <Td className="text-secondary text-ink-muted">{formatDate(item.dueDate)}</Td>
-      {/* The read carries only the creator's id (P2-15 §5): `identity` holds the name and no port reaches it from `finance`. */}
+      {/* The creator's name comes from `IdentityApi.getStaff` (E-89 `createdBy {id, name}`); an unknown account is an empty cell. */}
       <Td className="text-secondary text-ink-muted">
-        <span className="block max-w-32 truncate" title={item.createdBy.id}>
-          {item.createdBy.id}
+        <span className="block max-w-32 truncate" title={item.createdBy.name ?? undefined}>
+          {item.createdBy.name ?? '—'}
         </span>
       </Td>
       <Td>
@@ -130,7 +130,7 @@ function FeesHead() {
         <Th className="w-[120px]">{t('web.fees.col.code')}</Th>
         <Th>{t('web.fees.col.name')}</Th>
         <Th className="w-36">{t('web.fees.col.status')}</Th>
-        <Th className="w-20">{t('web.fees.col.units')}</Th>
+        <Th className="w-20 text-right">{t('web.fees.col.units')}</Th>
         <Th className="w-32 text-right">{t('web.fees.col.total')}</Th>
         <Th className="w-48">{t('web.fees.col.collected')}</Th>
         <Th className="w-32">{t('web.fees.col.due')}</Th>

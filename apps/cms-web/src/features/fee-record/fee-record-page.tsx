@@ -299,6 +299,7 @@ export function FeeRecordPage({
         unitId={unitId}
         unitCode={debt.unit.code}
         ownerName={debt.owner.name}
+        outstanding={summary.outstanding}
         selectedChargeIds={selected}
         isAdmin={me.data?.role === 'admin'}
         onClose={() => closeDialog({ charge: undefined, payment: undefined })}
@@ -361,7 +362,6 @@ function ReceiptHistory({
         <THead>
           <Tr>
             <Th className="w-44">{t('web.fee-record.receipts.col.number')}</Th>
-            <Th className="w-32">{t('web.fee-record.receipts.col.batch')}</Th>
             <Th className="w-32">{t('web.fee-record.receipts.col.method')}</Th>
             <Th className="w-32">{t('web.fee-record.receipts.col.date')}</Th>
             <Th>{t('web.fee-record.receipts.col.payer')}</Th>
@@ -421,13 +421,13 @@ function ReceiptPage({
     return page.isError ? (
       <TBody>
         <Tr>
-          <Td colSpan={8} className="text-secondary text-ink-muted">
+          <Td colSpan={7} className="text-secondary text-ink-muted">
             {t('common.error.page.body')}
           </Td>
         </Tr>
       </TBody>
     ) : (
-      <SkeletonRows columns={8} rows={2} rowClassName="h-[65px]" />
+      <SkeletonRows columns={7} rows={2} rowClassName="h-[65px]" />
     )
 
   const payments = data.payments
@@ -435,7 +435,7 @@ function ReceiptPage({
     return (
       <TBody>
         <Tr>
-          <Td colSpan={8} className="text-secondary text-ink-muted" data-testid="receipt-empty">
+          <Td colSpan={7} className="text-secondary text-ink-muted" data-testid="receipt-empty">
             {t('web.fee-record.receipts.empty')}
           </Td>
         </Tr>
@@ -453,7 +453,6 @@ function ReceiptPage({
               ))}
             </div>
           </Td>
-          <Td className="text-secondary text-ink-muted">{t('common.table.empty-cell')}</Td>
           <Td>{methodLabel(payment.source, t)}</Td>
           <Td>{formatDate(payment.receivedAt)}</Td>
           <Td>{payment.payerName ?? t('common.table.empty-cell')}</Td>

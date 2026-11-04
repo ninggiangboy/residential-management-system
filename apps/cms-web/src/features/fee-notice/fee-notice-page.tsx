@@ -2,7 +2,7 @@ import { staffKey } from '@rms/client-core'
 import { formatBytes } from '@rms/shared-types'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { type ReactElement, useEffect, useState } from 'react'
+import { type ReactElement, useState } from 'react'
 import { api } from '../../api/client'
 import { apiErrorOf, unwrap } from '../../api/errors'
 import { staffMeQuery } from '../../api/hooks/staff-me'
@@ -13,13 +13,12 @@ import { Card } from '../../components/ui/card'
 import { EmptyState, ErrorState } from '../../components/ui/empty-state'
 import { PageHeader } from '../../components/ui/page'
 import { SegmentedControl } from '../../components/ui/segmented-control'
+import { SelectField } from '../../components/ui/select-field'
 import { Tag } from '../../components/ui/tag'
-import { SearchField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { downloadFile, FileDownloadError } from '../../lib/download'
 import { errorText, type T, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
-import { useDebounced } from '../../lib/use-debounced'
 import { settingsQuery } from '../building/hooks'
 import {
   type BatchChargeItem,
@@ -106,6 +105,19 @@ function bulkError(t: T, error: unknown): string {
   return errorText(t, { code: code ?? 'internal_error', message: '' })
 }
 
+/** The unit picker's options: `{unitCode}, {ownerName}` per charge of the batch (DOC-66 §4). */
+function unitOptionsOf(items: readonly BatchChargeItem[]): { value: string; label: string }[] {
+  return items.map((item) => ({
+    value: item.unitCode,
+    label: item.ownerName ? `${item.unitCode}, ${item.ownerName}` : item.unitCode,
+  }))
+}
+
+/** The unit the picker shows: the chosen one in the URL, else the batch's first charge (DOC-66 §2). */
+function selectedUnitOf(chosen: string | undefined, first: BatchChargeItem | undefined): string {
+  return chosen ?? first?.unitCode ?? ''
+}
+
 /** `W-Fee-Notice` (DOC-66): the A4 preview of one unit's notice and the bulk PDF export of the batch. */
 export function FeeNoticePage({
   batchId,
@@ -125,25 +137,16 @@ export function FeeNoticePage({
   const data = batch.data
   useSetBreadcrumbTail(data?.code ?? null)
 
-  const [typed, setTyped] = useState(search.unit ?? '')
-  const debounced = useDebounced(typed.trim())
-  useEffect(() => {
-    if ((search.unit ?? '') !== debounced)
-      void navigate({
-        to: '/fees/$batchId/notice',
-        params: { batchId },
-        search: { ...search, unit: debounced || undefined },
-        replace: true,
-        resetScroll: false,
-      })
-  }, [debounced, navigate, search, batchId])
+  // The unit picker: the batch's charges (E-93, one page of up to 200), labelled `{unitCode}, {ownerName}` (DOC-66 §4).
+  const unitList = useQuery(batchChargesQuery(batchId, { view: 'all', limit: 200 }))
+  const unitOptions = unitOptionsOf(unitList.data?.items ?? [])
 
   const noticeLang = resolveNoticeLang(
     search.lang,
     settings.data?.document.settings.feeNoticeLanguage,
   )
 
-  // The charge shown: the first of the batch, or the one whose unit code matches the search (E-93 `include=lines`, limit 1).
+  // The charge shown: the first of the batch, or the one whose unit code is chosen (E-93 `include=lines`, limit 1).
   const charge = useQuery({
     ...batchChargesQuery(batchId, {
       view: 'all',
@@ -154,6 +157,8 @@ export function FeeNoticePage({
     placeholderData: undefined,
   })
   const one = charge.data?.items[0]
+  // The picker shows the chosen unit, else the one the preview defaults to (the batch's first charge, DOC-66 §2).
+  const selectedUnit = selectedUnitOf(search.unit, one)
 
   const { requestNoticeZip } = useFeeBatchMutations(batchId)
   const job = useQuery({
@@ -205,7 +210,7 @@ export function FeeNoticePage({
   const bulkBlocked = data === undefined || !canExport(data.status)
 
   return (
-    <div className="mx-auto flex max-w-[860px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6">
       <PageHeader
         title={t('web.fee-notice.title')}
         subtitle={data ? subtitleOf(t, data, lang, formatDate) : undefined}
@@ -222,26 +227,32 @@ export function FeeNoticePage({
         }
       />
 
-      <OptionsCard
-        noticeLang={noticeLang}
-        onLangChange={(value) => go({ lang: value })}
-        typed={typed}
-        onTypedChange={setTyped}
-        selected={charge.data !== undefined}
-        one={one}
-        isAdmin={isAdmin}
-      />
+      {/* Two columns (DOC-66 §4): the view options on the left, the A4 preview on the right; they stack when narrow. */}
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="w-full lg:w-[360px] lg:shrink-0">
+          <OptionsCard
+            noticeLang={noticeLang}
+            onLangChange={(value) => go({ lang: value })}
+            unitOptions={unitOptions}
+            selectedUnit={selectedUnit}
+            onUnitChange={(value) => go({ unit: value || undefined })}
+            isAdmin={isAdmin}
+          />
+        </div>
 
-      {data && (
-        <FeeNoticePreview
-          batch={data}
-          charge={one}
-          loading={charge.isLoading || settings.isLoading}
-          lang={noticeLang}
-          settings={settings.data?.document}
-          gatewayActive={gatewayActive}
-        />
-      )}
+        <div className="w-full min-w-0 lg:flex-1">
+          {data && (
+            <FeeNoticePreview
+              batch={data}
+              charge={one}
+              loading={charge.isLoading || settings.isLoading}
+              lang={noticeLang}
+              settings={settings.data?.document}
+              gatewayActive={gatewayActive}
+            />
+          )}
+        </div>
+      </div>
 
       {data && (
         <BulkPanel
@@ -291,64 +302,47 @@ function NoticeActions({
   )
 }
 
-/** The "View options" card of §4: the language, the unit search over the batch's charges, and the note. */
+/** The "View options" card of §4: the language, the searchable unit picker over the batch's charges, and the note. */
 function OptionsCard({
   noticeLang,
   onLangChange,
-  typed,
-  onTypedChange,
-  selected,
-  one,
+  unitOptions,
+  selectedUnit,
+  onUnitChange,
   isAdmin,
 }: {
   noticeLang: FeeNoticeLanguage
   onLangChange: (value: FeeNoticeLanguage) => void
-  typed: string
-  onTypedChange: (value: string) => void
-  selected: boolean
-  one: BatchChargeItem | undefined
+  unitOptions: readonly { value: string; label: string }[]
+  selectedUnit: string
+  onUnitChange: (value: string) => void
   isAdmin: boolean
 }): ReactElement {
   const { t } = useI18n()
   return (
-    <Card className="p-5">
-      <h2 className="mb-4 text-title-3 text-ink">{t('web.fee-notice.options.title')}</h2>
-      <div className="flex flex-wrap items-end gap-5">
-        <div className="flex flex-col gap-2">
-          <span className="text-label text-ink-muted">{t('web.fee-notice.lang.label')}</span>
-          <SegmentedControl
-            value={noticeLang}
-            onValueChange={onLangChange}
-            label={t('web.fee-notice.lang.label')}
-            options={[
-              { value: 'vi', label: t('web.fee-notice.lang.vi') },
-              { value: 'en', label: t('web.fee-notice.lang.en') },
-              { value: 'both', label: t('web.fee-notice.lang.both') },
-            ]}
-          />
-        </div>
-        <div className="min-w-64 flex-1">
-          <SearchField
-            label={t('web.fee-notice.unit')}
-            hint={t('web.units.field.search.hint')}
-            placeholder={t('web.units.field.search.placeholder')}
-            value={typed}
-            data-testid="unit-search"
-            onChange={(event) => onTypedChange(event.target.value)}
-          />
-          {selected && (
-            <p className="mt-2 text-secondary text-ink-muted" data-testid="unit-selected">
-              {one
-                ? t('web.fee-notice.unit.selected', {
-                    unit: one.unitCode,
-                    owner: one.ownerName ?? t('common.table.empty-cell'),
-                  })
-                : t('web.fee-notice.unit.not-found')}
-            </p>
-          )}
-        </div>
+    <Card className="flex flex-col gap-5 p-5">
+      <h2 className="text-title-3 text-ink">{t('web.fee-notice.options.title')}</h2>
+      <div className="flex flex-col gap-2">
+        <span className="text-label text-ink-muted">{t('web.fee-notice.lang.label')}</span>
+        <SegmentedControl
+          value={noticeLang}
+          onValueChange={onLangChange}
+          label={t('web.fee-notice.lang.label')}
+          options={[
+            { value: 'vi', label: t('web.fee-notice.lang.vi') },
+            { value: 'en', label: t('web.fee-notice.lang.en') },
+            { value: 'both', label: t('web.fee-notice.lang.both') },
+          ]}
+        />
       </div>
-      <p className="mt-3 text-secondary text-ink-muted">
+      <SelectField
+        label={t('web.fee-notice.unit')}
+        value={selectedUnit}
+        onValueChange={onUnitChange}
+        options={unitOptions}
+        placeholder={t('web.fee-notice.unit')}
+      />
+      <p className="text-secondary text-ink-muted">
         {t('web.fee-notice.note')}
         {isAdmin && (
           <>

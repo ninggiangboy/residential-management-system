@@ -9,6 +9,7 @@ import {
 } from '@core/http'
 import { type Guards, type LocalDate, staffOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
+import type { StaffDirectory } from '../application/ports'
 import { CLOSE_FEE_BATCH_ROLES, type CloseFeeBatch } from '../application/use-cases/close-fee-batch'
 import {
   CREATE_FEE_BATCH_ROLES,
@@ -52,6 +53,8 @@ export interface BatchRouteDeps {
   requestFeeNoticeZip: RequestFeeNoticeZip
   guards: Guards
   idempotent: Idempotent
+  /** The creator's name of the batch body (E-90/E-92/E-95/E-96/E-97; DOC-66 §5, DOC-07 §11A); absent gives `name: null`. */
+  staffDirectory?: StaffDirectory
 }
 
 const Day = (description: string) => Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$', description })
@@ -104,9 +107,12 @@ const PdfBody = strictObject(
 export function batchRoutes(d: BatchRouteDeps) {
   const version = (context: { request: Request }) =>
     versionOf(context.request.headers.get('if-match'))
-  const answer = (set: RouteSet, batch: Parameters<typeof batchBody>[0]) => {
+  const answer = async (set: RouteSet, batch: Parameters<typeof batchBody>[0]) => {
     set.headers.etag = quoted(batch.version)
-    return batchBody(batch)
+    const name = d.staffDirectory
+      ? ((await d.staffDirectory.names([batch.createdBy])).get(batch.createdBy) ?? null)
+      : null
+    return batchBody(batch, name)
   }
 
   const create = async (context: {
@@ -159,7 +165,7 @@ export function batchRoutes(d: BatchRouteDeps) {
       reason: context.body.reason,
       version: version(context),
     })
-    return { ...answer(context.set, out.batch), chargeCount: out.chargeCount }
+    return { ...(await answer(context.set, out.batch)), chargeCount: out.chargeCount }
   }
 
   const close = async (context: {

@@ -46,7 +46,6 @@ export const finFeeRecordEn = {
   'web.fee-record.receipt.void': 'Void the receipt',
   'web.fee-record.receipts.col.actions': 'Actions',
   'web.fee-record.receipts.col.amount': 'Amount',
-  'web.fee-record.receipts.col.batch': 'Batch',
   'web.fee-record.receipts.col.date': 'Date',
   'web.fee-record.receipts.col.method': 'Method',
   'web.fee-record.receipts.col.number': 'Receipt',

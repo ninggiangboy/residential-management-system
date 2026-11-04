@@ -109,3 +109,13 @@ export interface DebtUnitDirectory {
   /** One entry per requested id that belongs to the building, in the input order; an unknown or foreign id is absent. */
   units(buildingId: string, unitIds: readonly string[]): Promise<readonly DebtUnitProfile[]>
 }
+
+/**
+ * The creator's name of E-89 and E-91 (DOC-66 §5, DOC-07 §11A): the full name from `IdentityApi.getStaff`, one call per page
+ * (`null` for an account `identity` does not know). A port in `application/`; the `apps/api` adapter is `staffDirectory` in
+ * `modules/finance/src/integrations/identity`.
+ */
+export interface StaffDirectory {
+  /** One entry per requested id, keyed by staff id; an id `identity` does not know maps to `null`, a missing id is absent. */
+  names(staffIds: readonly string[]): Promise<Map<string, string | null>>
+}
