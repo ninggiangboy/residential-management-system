@@ -1,4 +1,54 @@
 import type { finFeeNoticeEn } from './fin-fee-notice-en'
 
 /** DOC-66 `fee-notice` microcopy (Vietnamese). */
-export const finFeeNoticeVi: Record<keyof typeof finFeeNoticeEn, string> = {}
+export const finFeeNoticeVi: Record<keyof typeof finFeeNoticeEn, string> = {
+  'web.fee-notice.action.bulk': 'Xuất PDF {count} căn',
+  'web.fee-notice.action.one': 'Tải PDF căn này',
+  'web.fee-notice.bulk.error.all_units_failed': 'Không tạo được tệp nào. Hãy thử lại.',
+  'web.fee-notice.bulk.error.attempts_exhausted': 'Việc xuất lỗi sau nhiều lần thử. Hãy thử lại.',
+  'web.fee-notice.bulk.expired': 'Tệp đã hết hạn sau 7 ngày.',
+  'web.fee-notice.bulk.export-again': 'Xuất lại',
+  'web.fee-notice.bulk.link': 'Liên kết có hiệu lực 15 phút.',
+  'web.fee-notice.bulk.none': 'Chưa có lần xuất nào.',
+  'web.fee-notice.bulk.queued': 'Đang chờ xuất tệp.',
+  'web.fee-notice.bulk.ready': 'Sẵn sàng: {fileName}, {size}',
+  'web.fee-notice.bulk.retry': 'Thử lại',
+  'web.fee-notice.bulk.running':
+    'Đang tạo {done} / {total} căn. Bạn có thể rời trang, việc xuất vẫn tiếp tục.',
+  'web.fee-notice.bulk.title': 'Xuất hàng loạt',
+  'web.fee-notice.draft-mark': 'BẢN NHÁP · DRAFT',
+  'web.fee-notice.lang.both': 'Song ngữ',
+  'web.fee-notice.lang.en': 'English',
+  'web.fee-notice.lang.label': 'Ngôn ngữ thông báo phí',
+  'web.fee-notice.lang.vi': 'Tiếng Việt',
+  'web.fee-notice.note': 'Logo và thông tin công ty lấy từ Tòa nhà và cấu hình.',
+  'web.fee-notice.options.title': 'Tùy chọn xem',
+  'web.fee-notice.preview.adjustment': 'Điều chỉnh',
+  'web.fee-notice.preview.amount': 'Thành tiền',
+  'web.fee-notice.preview.basis': 'Cách tính',
+  'web.fee-notice.preview.batch': 'Đợt phí',
+  'web.fee-notice.preview.due-date': 'Hạn thanh toán',
+  'web.fee-notice.preview.hotline': 'Hotline {hotline}',
+  'web.fee-notice.preview.how-to-pay': 'Hướng dẫn nộp phí',
+  'web.fee-notice.preview.issue-date': 'Ngày phát hành',
+  'web.fee-notice.preview.item': 'Khoản phí',
+  'web.fee-notice.preview.owner': 'Chủ hộ',
+  'web.fee-notice.preview.pay-app':
+    'Thanh toán trên App cư dân bằng mã QR, gạch nợ ngay khi thanh toán thành công.',
+  'web.fee-notice.preview.pay-office': 'Nộp tại văn phòng Ban quản lý, {workingHours}.',
+  'web.fee-notice.preview.quantity-price': '{quantity} × {unitPrice}',
+  'web.fee-notice.preview.questions':
+    'Thắc mắc về phí, bạn gọi hotline {hotline} hoặc gửi yêu cầu trên App cư dân.',
+  'web.fee-notice.preview.questions-no-hotline':
+    'Thắc mắc về phí, bạn gửi yêu cầu trên App cư dân.',
+  'web.fee-notice.preview.title': 'Thông báo phí tháng {month}',
+  'web.fee-notice.preview.total': 'Tổng cộng',
+  'web.fee-notice.preview.unit': 'Căn hộ',
+  'web.fee-notice.subtitle': '{batch}, phát hành {date}, {units} căn',
+  'web.fee-notice.subtitle.draft': '{batch}, bản nháp, {units} căn',
+  'web.fee-notice.title': 'Mẫu thông báo phí',
+  'web.fee-notice.unit': 'Căn xem thử',
+  'web.fee-notice.unit.not-found': 'Không có khoản phí nào của căn này trong đợt.',
+  'web.fee-notice.unit.selected': '{unit}, {owner}',
+  'web.fee-notice.void': 'Khoản phí này không còn hiệu lực.',
+}
