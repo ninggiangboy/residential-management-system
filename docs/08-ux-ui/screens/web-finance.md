@@ -1,6 +1,6 @@
 # Web CMS: finance
 
-> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325, DR-326, DR-329: online payment is in P2; `W-Transactions`, `W-Money-Log` and `UnitMoneyPanel` written; `W-Fee-Record` and `W-Fee-Notice` follow Stripe) · 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-04 (P2-16 as built: the notes before "Decisions made while writing"; E-176 takes `language`) · 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325, DR-326, DR-329: online payment is in P2; `W-Transactions`, `W-Money-Log` and `UnitMoneyPanel` written; `W-Fee-Record` and `W-Fee-Notice` follow Stripe) · 2026-11-01 (P1-27: the nine P2 screens `W-Fees`, `W-Fee-Import`, `W-Fee-Batch`, `W-Fee-Notice`, `W-Fee-Record`, `W-Fee-Recall`, `W-Charge-Void`, `W-Fee-Reissue`, `W-Debts` written; the P3 and P6 screens are owed; DR-324) · DOC-66
 > Depends on: original SDD §5, §18, [DR](../../00-decision-register.md) (DR-09, 11, 18, 19, 20, 22, 23, 24, 72, 84, 97, 194, 196, 265, 267, 293, 304, 306, 324, 325, 326, 327, 329), [DOC-56](README.md) (convention, notes N4, N5, N6, N12), [DOC-53](../ux-principles-and-ia.md), [DOC-54](../design-system.md) §17 (the web quality bar), [DOC-55](../client-architecture.md) §12, [DOC-21](../../06-design/fee-batches-and-import.md), [DOC-22](../../06-design/ledger-and-allocation.md), [DOC-18](../../05-data/data-quality-rules.md) §2, [DOC-34](../../06-design/pdf-rendering.md) §6, §9, [DOC-23](../../06-design/payment-intents-and-settlement.md), [DOC-24](../../06-design/payment-gateway-drivers.md), [DOC-51](../../07-api/api-endpoints.md) (E-71…E-74, E-89…E-106, E-169…E-172, E-176, E-177), [DOC-65](web-residents.md) (`W-Unit-Detail` debt card), [DOC-58](resident-fees-payment.md) (what the resident sees)
 > Main readers: P2-16 (the fee screens), P2-15 (the finance API), P2-13 (the PDF screens), P2-04 (fee import), P3 and P6 writers of this file, P1-09 (catalog keys), DOC-68, DOC-88 (`UIWF-`)
 
@@ -477,7 +477,7 @@ Do not copy:
 | Action | Endpoint | Result |
 | --- | --- | --- |
 | Language, unit | none | the preview re-renders at once from the cached lines |
-| "Tải PDF căn này" | E-176 `GET /staff/charges/{chargeId}/pdf?lang=` | the PDF is saved; for a draft it carries the draft mark; 409 `invalid_transition` (a charge voided alone, a recalled batch) → "Khoản phí này không còn hiệu lực." |
+| "Tải PDF căn này" | E-176 `GET /staff/charges/{chargeId}/pdf?language=` | the PDF is saved; for a draft it carries the draft mark; 409 `invalid_transition` (a charge voided alone, a recalled batch) → "Khoản phí này không còn hiệu lực." |
 | "Xuất PDF {n} căn" | E-99 `POST /staff/fee-batches/{id}/pdf {language}` | 202 and the job shows `queued`; a repeat while one is active returns that job (no second job) | 409 `invalid_transition` (a draft or a recalled batch) → the button is disabled with the reason |
 | ZIP link | the signed URL of E-177 (15 minutes) | the browser downloads `PH-2610-01-both.zip`; when `expired` a new request is offered |
 | Leave the page | none | the job continues on the server; reopening shows its state |
@@ -1397,6 +1397,23 @@ None.
 ## The screens of P3 and P6
 
 `W-Statement` is specified when P3-00 starts, from DOC-25 and DOC-22 §9 (it matters once a bank-transfer driver exists). `W-Reports` and `W-Export-Center` are specified when P6-00 starts, from DOC-33 and the export design. Their rows in DOC-56 §3 and the notes N3, N4 and N12 stay the contract until then. Test IDs continue after `UIWF-80`; keys are `web.statement.*`, `web.reports.*`, `web.export.*`.
+
+## As built (P2-16, 2026-11-04)
+
+The nine fee and debt screens are in `apps/cms-web/src/features/{fees,fee-import,fee-batch,fee-notice,fee-record,debts,charge-void}` with their routes `/fees`, `/fees/import`, `/fees/$batchId`, `/fees/$batchId/notice`, `/debts`, `/debts/$unitId` (guard `roles: ['admin', 'manager']`, sidebar group "Tài chính"). The microcopy is in `packages/i18n-catalog/src/web/fin-<screen>-{vi,en}.ts`, one pair per screen. The flows are `e2e/fee-import-publish`, `fee-record-pay`, `fee-recall` and `fees-guard`. Where the screen differs from the text above:
+
+| Topic | As built | Why |
+| --- | --- | --- |
+| Breadcrumb | Two crumbs ("Tài chính" and the page); the batch code is the tail of `W-Fee-Batch` and `W-Fee-Notice` | the shell's `crumbs` is a pair |
+| `createdBy` of `W-Fees` | The column shows the account id, not a name | E-89 answers `createdBy {id}` only; a name needs a read from `identity` (open) |
+| `missing` | The "Chưa có khoản" tab and banner of `W-Fee-Batch` are drawn only when `counts.missing` is a number | E-91 `counts.missing` and E-93 `view=missing` are empty until `ResidencyApi` lists owned units (DOC-51 §11A) |
+| Owner phone, area | Not drawn when `null` (`W-Debts`, `W-Fee-Record`) | E-101 and E-102 answer `null` for `ownerPhone` and `areaM2` |
+| Skipped single voids | `W-Fee-Reissue` counts them from E-93 `status=void&voidKind=single`; the line of E-98 `skippedSingleVoid` is not read | E-98 answers `{batchId, code, copiedCharges}` only |
+| Fee notice query | E-176 takes `language` (`vi`, `en`, `both`), not `lang` | DOC-51 §11A |
+| Fee-month filter | The month select of `W-Fees` lists the months of the rows loaded, plus the one in the URL | no months endpoint in P2 |
+| Dates | A `LocalDate` is revived into a `Date` by Eden Treaty; `lib/day.ts` turns it back into `YYYY-MM-DD` before a screen slices or compares it | Eden's default `parseDate` |
+| Date field | A text date input as in the fee import settings card | `components/ui` has no `DateField` yet |
+| Fee template | `GET /staff/imports/templates/fee_batch` is fetched with the bearer token and saved (`lib/download.ts`) | a link would not carry the token |
 
 ## Decisions made while writing
 

@@ -88,9 +88,6 @@ export interface PaymentInput {
 type PaymentAnswer = NonNullable<Awaited<ReturnType<typeof api.staff.payments.post>>['data']>
 export type PaymentPlan = Extract<PaymentAnswer, { dryRun: true }>
 type PaymentBody = Exclude<PaymentAnswer, { dryRun: true }>
-type VoidedPayment = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof api.staff.payments>['void']['post']>>['data']
->
 
 /** E-104 and E-105, DOC-66 `W-Fee-Record`: the payment form and its void, both scoped to one unit's debt. */
 export function useUnitPaymentMutations(unitId: string) {
@@ -130,11 +127,6 @@ export function useUnitPaymentMutations(unitId: string) {
     }),
   }
 }
-
-/** E-100, DOC-66 `W-Charge-Void`: one open charge is voided under `If-Match`. */
-type VoidedCharge = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof api.staff.charges>['void']['post']>>['data']
->
 
 /** E-100: shared with the charge-void dialog, whose `unitId` may be unknown; the screens that hold it pass it. */
 export function useVoidChargeMutation() {
