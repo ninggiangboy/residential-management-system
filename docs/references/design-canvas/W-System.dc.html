@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Admin: Sao lưu và lưu trữ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 100%; min-height: 1000px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<aside style="flex: 1 1 248px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; padding: 20px 12px; background: var(--surface); border-right: 1px solid var(--line);">
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 12px;">
+<div style="display: flex; flex-direction: column; min-width: 0;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 700;">Mộc Miên Residence</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Web quản lý</div>
+</div>
+</div>
+<nav style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="house" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tổng quan</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Vận hành</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="chat-circle-dots" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phiếu hỗ trợ</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellTickets}}"></x-import>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="megaphone" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Bản tin</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="note-pencil" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tài liệu</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Cư dân</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="buildings" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Căn hộ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="users-three" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cư dân</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="car" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phương tiện</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellVehicles}}"></x-import>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Tài chính</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="receipt" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Đợt phí</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="wallet" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Công nợ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="qr-code" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Giao dịch online</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="squares-four" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Báo cáo</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Hệ thống</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="user-circle" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nhân viên</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="gear" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tòa nhà và cấu hình</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="key" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cổng thanh toán</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="clock" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nhật ký thao tác</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; background: var(--teal-soft); color: var(--on-teal-soft); font-weight: 600;">
+<x-import component-from-global-scope="Hien.Icon" name="package" size="{{shellIcon}}" weight="fill"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sao lưu và lưu trữ</span>
+</div>
+</div>
+</nav>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-control); background: var(--fill);">
+<x-import component-from-global-scope="Hien.Avatar" name="Phạm Quốc Việt" size="sm"></x-import>
+<div style="display: flex; flex-direction: column; min-width: 0; flex-grow: 1;">
+<div style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phạm Quốc Việt</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Admin</div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="sign-out" label="Đăng xuất" size="sm" on-click="{{shellNoop}}"></x-import>
+</div>
+</aside>
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+<header style="flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 64px; box-sizing: border-box; padding: 8px 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+<div style="flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);"><span>Hệ thống</span> <span style="color: var(--line-strong);">/</span> <span style="color: var(--ink); font-weight: 600;">Sao lưu và lưu trữ</span></div>
+<div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--radius-full); background: var(--fill); font-size: 13px; line-height: 18px; font-weight: 600;">
+<span style="padding: 4px 10px; border-radius: var(--radius-full); background: var(--plate); color: var(--on-plate);">VI</span>
+<span style="padding: 4px 10px; color: var(--ink-muted);">EN</span>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 4 mục chưa đọc" count="{{shellBell}}" on-click="{{shellNoop}}"></x-import>
+</header>
+<main style="flex-grow: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 28px 32px 40px;">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;">
+<div style="flex: 1 1 320px; min-width: 0;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em;">Sao lưu và lưu trữ</h1>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Tình trạng sao lưu, dung lượng file, kênh gửi thông báo và môi trường, cập nhật 09:30</p>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start;">
+
+<div style="display: flex; flex-direction: column; gap: 24px;">
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Sao lưu</div>
+<x-import component-from-global-scope="Hien.Tag" tone="success">Tự động hằng ngày 02:00</x-import>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: var(--radius-control); background: var(--fill);">
+<span style="flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--success-soft); color: var(--on-success-soft); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Hien.Icon" name="check-circle" size="{{s24}}" weight="fill"></x-import></span>
+<div style="flex-grow: 1; min-width: 0;">
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Lần gần nhất</div>
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">02:00, 09/10/2026, thành công</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Toàn bộ cơ sở dữ liệu và file, 4,8 GB</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column;">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 80px 120px; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);"><div>5 bản gần nhất</div><div style="text-align: right;">Dung lượng</div><div></div></div>
+<sc-for list="{{backups}}" as="b" hint-placeholder-count="5">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 80px 120px; gap: 16px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 20px;">
+<div style="font-variant-numeric: tabular-nums;">{{b.time}}</div>
+<div style="text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-muted);">{{b.size}}</div>
+<div style="display: flex; justify-content: flex-end;"><x-import component-from-global-scope="Hien.Tag" tone="success">Thành công</x-import></div>
+</div>
+</sc-for>
+</div>
+<div><x-import component-from-global-scope="Hien.Button" variant="outline" size="sm" icon="note-pencil" on-click="{{noop}}">Xem quy trình khôi phục</x-import></div>
+</div>
+
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Môi trường</div>
+<sc-for list="{{envs}}" as="e" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);">
+<span style="flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--radius-full); {{e.well}} display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Hien.Icon" name="{{e.icon}}" size="{{s20}}"></x-import></span>
+<div style="flex-grow: 1; min-width: 0;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">{{e.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">{{e.url}}, {{e.note}}</div>
+</div>
+<x-import component-from-global-scope="Hien.Tag" tone="{{e.tone}}">{{e.status}}</x-import>
+</div>
+</sc-for>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Dữ liệu thử nghiệm tách riêng, không ảnh hưởng dữ liệu cư dân thật.</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 24px;">
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Lưu trữ file</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+<div><span style="font-size: 28px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums;">38,2 GB</span><span style="font-size: 14px; line-height: 20px; color: var(--ink-muted);"> trên 50 GB</span></div>
+<div style="font-size: 15px; line-height: 20px; font-weight: 600; color: var(--on-lamp-soft);">76%</div>
+</div>
+<div role="img" aria-label="Đã dùng 76% dung lượng, ngưỡng cảnh báo 80%" style="position: relative; height: 12px; border-radius: var(--radius-full); background: var(--fill);">
+<div style="width: 76%; height: 100%; border-radius: var(--radius-full); background: var(--lamp);"></div>
+<div style="position: absolute; top: -4px; bottom: -4px; left: 80%; width: 2px; background: var(--ink-muted);"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><span>Còn trống 11,8 GB</span><span>Ngưỡng cảnh báo 80%</span></div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<sc-for list="{{storage}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; line-height: 20px;"><span style="min-width: 0;">{{s.label}}</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{s.size}}</span></div>
+<div style="height: 6px; border-radius: var(--radius-full); background: var(--fill);"><div style="height: 100%; border-radius: var(--radius-full); background: var(--teal); {{s.w}}"></div></div>
+</div>
+</sc-for>
+</div>
+<x-import component-from-global-scope="Hien.Banner" tone="warning" title="Sắp đầy">Hệ thống cảnh báo Admin khi dung lượng vượt 80%.</x-import>
+</div>
+
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Gửi thông báo</div>
+<sc-for list="{{channels}}" as="c" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);">
+<span style="flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Hien.Icon" name="{{c.icon}}" size="{{s20}}"></x-import></span>
+<div style="flex-grow: 1; min-width: 0;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">{{c.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">{{c.sub}}</div>
+</div>
+<x-import component-from-global-scope="Hien.Tag" tone="success">Hoạt động</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', shellIcon: 20, shellTickets: 3, shellVehicles: 3, shellBell: 4, shellNoop: () => {}, 
+yes: true,
+s20: 20,
+s24: 24,
+noop: () => {},
+backups: [
+{ time: '02:00, 09/10/2026', size: '4,8 GB' },
+{ time: '02:00, 08/10/2026', size: '4,8 GB' },
+{ time: '02:00, 07/10/2026', size: '4,7 GB' },
+{ time: '02:00, 06/10/2026', size: '4,7 GB' },
+{ time: '02:00, 05/10/2026', size: '4,7 GB' }
+],
+storage: [
+{ label: 'Ảnh phiếu hỗ trợ', size: '18,4 GB', w: 'width: 48%;' },
+{ label: 'Ảnh xe và giấy đăng ký', size: '9,6 GB', w: 'width: 25%;' },
+{ label: 'Tài liệu wiki', size: '6,1 GB', w: 'width: 16%;' },
+{ label: 'Phiếu thu và thông báo phí PDF', size: '4,1 GB', w: 'width: 11%;' }
+],
+channels: [
+{ icon: 'bell', name: 'Push (FCM / APNs)', sub: 'App cư dân và App quản lý' },
+{ icon: 'chat-circle-dots', name: 'SMS OTP', sub: 'Đăng nhập cư dân, hôm nay 214 tin' },
+{ icon: 'key', name: 'Email', sub: 'Đặt và quên mật khẩu nhân viên' }
+],
+envs: [
+{ icon: 'buildings', well: 'background: var(--success-soft); color: var(--on-success-soft);', name: 'Chính thức', url: 'app.mocmien.vn', note: 'dữ liệu thật', tone: 'success', status: 'Đang chạy' },
+{ icon: 'wrench', well: 'background: var(--info-soft); color: var(--on-info-soft);', name: 'Thử nghiệm', url: 'staging.mocmien.vn', note: 'kiểm thử trước khi cập nhật', tone: 'info', status: 'Đang chạy' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

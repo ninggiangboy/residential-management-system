@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Liên hệ Ban quản lý</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Liên hệ Ban quản lý" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 24px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<div role="img" aria-label="Logo Công ty Quản lý Mộc Miên" style="flex-shrink: 0; width: 56px; height: 56px; border-radius: var(--radius-plate); background: var(--plate); color: var(--on-plate); display: flex; align-items: center; justify-content: center; font-family: var(--font-plate); font-size: 24px; font-weight: 700;">MM</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Ban quản lý Mộc Miên Residence</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Công ty Quản lý Mộc Miên</div>
+</div>
+</div>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="phone" tone="teal" title="Hotline" subtitle="[HOTLINE]" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="clock" tone="gold" title="Giờ làm việc" subtitle="08:00–17:30, thứ Hai đến thứ Bảy"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="chat-circle-dots" tone="sky" title="Email" subtitle="[EMAIL BQL]" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="map-pin" tone="coral" title="Văn phòng" subtitle="Tầng 1, cạnh sảnh thang máy" ></x-import>
+</x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Ngoài giờ làm việc, việc khẩn về an ninh hoặc sự cố kỹ thuật, bạn gọi hotline để gặp bảo vệ trực.</p>
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 20px 32px;">
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="phone" block="{{yes}}" on-click="{{noop}}">Gọi hotline</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="tonal" size="lg" icon="note-pencil" block="{{yes}}" on-click="{{noop}}">Tạo yêu cầu hỗ trợ</x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', yes: true, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

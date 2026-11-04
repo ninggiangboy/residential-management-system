@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Giúp việc: Bản tin chung</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1080px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Bản tin chung" subtitle="Căn hộ A-1508" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 16px; padding: 4px 20px 24px;">
+<div style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.Chip" selected="{{yes}}" on-click="{{noop}}">Tất cả</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Chưa đọc</x-import>
+</div>
+<x-import component-from-global-scope="Hien.NoticeCard" unread="{{yes}}" urgent="{{yes}}" category="Khẩn cấp" icon="drop" tone="coral" time="07:45 hôm nay" title="Ngừng cấp nước tầng 8–15, 09:00–11:00 thứ Bảy 10/10" excerpt="BQL thay van tổng trục nước lạnh. Bạn nên trữ nước trước 09:00." on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.NoticeCard" category="Bảo trì" icon="elevator" tone="sky" time="07/10" title="Bảo dưỡng thang máy số 2, 08:00–17:00 thứ Hai 12/10" excerpt="Trong thời gian này bạn dùng thang số 1 và số 3. BQL báo lại khi hoàn tất." on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.NoticeCard" category="Chung" icon="megaphone" tone="teal" time="05/10" title="Đổ rác tại phòng rác mỗi tầng trước 21:00" excerpt="Rác cồng kềnh để tại khu tập kết tầng hầm B1, không để ở hành lang." on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.NoticeCard" category="Sự kiện" icon="users-three" tone="violet" time="01/10" title="Diễn tập phòng cháy, 15:00 thứ Năm 15/10" excerpt="Chuông báo cháy kêu khoảng 10 phút. Mọi người ra sảnh tầng 1 theo thang bộ." on-click="{{noop}}"></x-import>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', yes: true, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

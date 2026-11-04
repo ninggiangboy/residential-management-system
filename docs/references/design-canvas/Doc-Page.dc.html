@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Trang tài liệu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+th,td{padding:10px 12px;text-align:left;vertical-align:top}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1500px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Nội quy tòa nhà" subtitle="Tài liệu" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 32px;">
+<header style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Nội quy sử dụng thang máy và hành lang</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Ban quản lý cập nhật 02/10/2026</div>
+</header>
+
+<div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 24px;">
+<p style="margin: 0;">Nội quy áp dụng cho mọi cư dân, khách và nhà thầu thi công trong tòa nhà.</p>
+<ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;">
+<li>Không để đồ đạc, giày dép, xe đạp ở hành lang chung.</li>
+<li>Trẻ em dưới 10 tuổi đi thang máy cần có người lớn đi cùng.</li>
+<li>Chuyển đồ cồng kềnh cần đăng ký với BQL trước ít nhất 1 ngày.</li>
+</ul>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Giờ chuyển đồ bằng thang hàng</h2>
+<div style="overflow-x: auto; border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card);">
+<table style="width: 100%; border-collapse: collapse; font-size: 15px; line-height: 20px;">
+<thead><tr style="border-bottom: 1px solid var(--line); color: var(--ink-muted); font-size: 13px; line-height: 18px;"><th style="font-weight: 600;">Ngày</th><th style="font-weight: 600;">Khung giờ</th></tr></thead>
+<tbody>
+<tr style="border-bottom: 1px solid var(--line);"><td>Thứ Hai đến thứ Sáu</td><td style="font-variant-numeric: tabular-nums;">08:00–11:00, 14:00–17:00</td></tr>
+<tr style="border-bottom: 1px solid var(--line);"><td>Thứ Bảy</td><td style="font-variant-numeric: tabular-nums;">08:00–11:00</td></tr>
+<tr><td>Chủ nhật, ngày lễ</td><td>Không nhận chuyển đồ</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Video hướng dẫn</h2>
+<a href="#" aria-label="Phát video Cách dùng thang máy khi mất điện trên YouTube" style="display: flex; flex-direction: column; gap: 8px; color: inherit; text-decoration: none;">
+<div style="position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-card); background: var(--plate); display: flex; align-items: center; justify-content: center;">
+<div style="width: 64px; height: 64px; border-radius: var(--radius-full); background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-float);"><x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconLg}}" weight="fill"></x-import></div>
+</div>
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Cách dùng thang máy khi mất điện</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted); margin-top: -6px;">YouTube, 3 phút 20 giây</div>
+</a>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tệp đính kèm</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="receipt" tone="sky" title="Nội quy tòa nhà bản đầy đủ.pdf" subtitle="PDF, 1,2 MB" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="note-pencil" tone="gold" title="Mẫu đăng ký chuyển đồ.docx" subtitle="Word, 48 KB" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', iconLg: 32, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

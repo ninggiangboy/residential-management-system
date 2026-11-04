@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỹ thuật: Từ chối phiếu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Phiếu mới được giao" subtitle="Giao lúc 09:12, 09/10" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 24px;">
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1009-003</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="warning" icon="clock">Chờ bạn nhận</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Đèn hành lang tầng 11 nhấp nháy</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, cư dân gửi 06:40, 09/10/2026</div>
+</section>
+</main>
+<x-import component-from-global-scope="Hien.BottomSheet" open="{{yes}}" contained="{{yes}}" title="Từ chối phiếu YC-1009-003" primary-label="Trả lại cho BQL" on-primary="{{noop}}" on-close="{{noop}}">
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Phiếu trả về cho BQL để phân công kỹ thuật viên khác. BQL xem được lý do bạn chọn.</p>
+<div role="radiogroup" aria-label="Lý do từ chối" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Lý do từ chối</div>
+<x-import component-from-global-scope="Hien.Radio" name="reason" value="skill" checked="{{no}}" label="Không đúng chuyên môn" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.Radio" name="reason" value="busy" checked="{{yes}}" label="Đang kín việc" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.Radio" name="reason" value="tool" checked="{{no}}" label="Cần thiết bị chuyên dụng" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.Radio" name="reason" value="other" checked="{{no}}" label="Lý do khác" on-change="{{noop}}"></x-import>
+</div>
+<x-import component-from-global-scope="Hien.TextField" label="Ghi chú cho BQL" value="Em đang xử lý phiếu mất điện khẩn ở A-0805, khoảng 11:00 mới xong." multiline="{{yes}}" rows="{{rows}}" optional="{{yes}}" on-change="{{noop}}"></x-import>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+no: false,
+rows: 3,
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

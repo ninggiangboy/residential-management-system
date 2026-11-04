@@ -1,25 +1,27 @@
 # Resident app: fees and payment
 
-> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325…328: online payment is in P2 with Stripe; `Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards` written; the pay buttons and the fee-notice PDF are back; DR-323 revised) · 2026-11-01 (P1-27: the four fee screens written; DR-323) · DOC-58
+> Status: **Approved** (Owner, 2026-11-02) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-11-02 (approved by the Owner) · 2026-11-01 (DR-325…328: online payment is in P2 with Stripe; `Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards` written; the pay buttons and the fee-notice PDF are back; DR-323 revised) · 2026-11-01 (P1-27: the four fee screens written; DR-323) · DOC-58
 > Depends on: original SDD §5.1, §18, [DR](../../00-decision-register.md) (DR-16, 18, 19, 40, 41…47, 72, 84, 174, 194, 196, 200, 323, 325, 326, 328), [DOC-56](README.md) (convention, notes N1, N4, N6, N10), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, §12, [DOC-54](../design-system.md) (components), [DOC-22](../../06-design/ledger-and-allocation.md) §8, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, §6.6, [DOC-34](../../06-design/pdf-rendering.md) §6.3, §8.2, [DOC-23](../../06-design/payment-intents-and-settlement.md) §3…§5, [DOC-24](../../06-design/payment-gateway-drivers.md) §2, §4, [DOC-51](../../07-api/api-endpoints.md) (E-80…E-84, E-15, E-13), [DOC-57](resident-signin-home.md) (the home card and tile)
 > Main readers: P2-17 (receipt view and PDF in the resident app), P2-15 (the resident fee API), P2-16, P2-25 (the payment screens; was P3-05), P1-09 (catalog keys), DOC-68, DOC-88 (`UIRF-`)
 
-This document specifies the resident screens that show what a unit owes and has paid. **All are P2.** The four fee screens (`Fees`, `Fees-NoPay`, `Fee-Detail`, `Fee-History`) and the payment screens (`Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards`) are written. Online payment is in P2 and Stripe is the first gateway (DR-325); the screens render the **presentation** a driver returns (`redirect` or `qr`, DOC-24 §2), so `Pay-VietQR` and `Pay-Mismatch` are kept for a bank-transfer driver and are written when one is added. The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Tokens and components are DOC-54, navigation DOC-53, the shared states DOC-68, the API DOC-51, and what a resident may see by membership DOC-22 §8.4.
+This document specifies the resident screens that show what a unit owes and has paid. **All are P2.** The four fee screens (`Fees`, `Fees-NoPay`, `Fee-Detail`, `Fee-History`) and the payment screens (`Pay-Select`, `Pay-Redirect`, `Pay-Done`, `Pay-Failed`, `Cards`) are written. Online payment is in P2 and Stripe is the first gateway (DR-325); the screens render the **presentation** a driver returns (`redirect` or `qr`, DOC-24 §2), so `Pay-VietQR` and `Pay-Mismatch` are kept for a bank-transfer driver and are written when one is added. The reference for layout and UX is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Tokens and components are DOC-54, navigation DOC-53, the shared states DOC-68, the API DOC-51, and what a resident may see by membership DOC-22 §8.4.
+
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
 
 ## Screens in this file
 
 | Section | Screen | Role or member type | Phase | Prototype |
 | --- | --- | --- | --- | --- |
-| `Fees` | Open charges of the unit, grouped by fee month | Owner, Family member, Tenant (`view_fees`) | P2 | designed |
-| `Fees-NoPay` | The same list for a tenant who may not pay: a banner, no pay buttons | Tenant without `can_pay` | P2 | designed |
-| `Fee-Detail` | One charge: lines, total, due date, how to pay | Owner, Family member, Tenant | P2 | designed |
-| `Fee-History` | Paid charges by fee month, with the receipt | Owner, Family member, Tenant | P2 | designed |
-| `Pay-Select` | Choose the charges to pay and see the total | Member with `pay` | P2 | designed (changed, see section) |
+| [`Fees`](../../references/design-canvas/Fees.dc.html) | Open charges of the unit, grouped by fee month | Owner, Family member, Tenant (`view_fees`) | P2 | designed |
+| [`Fees-NoPay`](../../references/design-canvas/Fees-NoPay.dc.html) | The same list for a tenant who may not pay: a banner, no pay buttons | Tenant without `can_pay` | P2 | designed |
+| [`Fee-Detail`](../../references/design-canvas/Fee-Detail.dc.html) | One charge: lines, total, due date, how to pay | Owner, Family member, Tenant | P2 | designed |
+| [`Fee-History`](../../references/design-canvas/Fee-History.dc.html) | Paid charges by fee month, with the receipt | Owner, Family member, Tenant | P2 | designed |
+| [`Pay-Select`](../../references/design-canvas/Pay-Select.dc.html) | Choose the charges to pay and see the total | Member with `pay` | P2 | designed (changed, see section) |
 | `Pay-Redirect` | The wait while the hosted payment page is open | Member with `pay` | P2 | to design (new, replaces `Pay-VietQR` for a redirect driver) |
-| `Pay-Done` | Payment confirmed, one receipt per charge | Member with `pay` | P2 | designed |
+| [`Pay-Done`](../../references/design-canvas/Pay-Done.dc.html) | Payment confirmed, one receipt per charge | Member with `pay` | P2 | designed |
 | `Pay-Failed` | The payment expired, was cancelled or failed | Member with `pay` | P2 | to design (new) |
 | `Cards` | Cards saved at the payment provider: list and remove | Member with `pay` | P2 | to design (new) |
-| `Pay-VietQR` | The dynamic QR of a bank-transfer driver | Member with `pay` | with a QR driver | designed — section owed |
+| [`Pay-VietQR`](../../references/design-canvas/Pay-VietQR.dc.html) | The dynamic QR of a bank-transfer driver | Member with `pay` | with a QR driver | designed — section owed |
 | `Pay-Mismatch` | A state of `Pay-VietQR`: a transfer of another amount arrived | Member with `pay` | with a QR driver | to design — section owed |
 
 **What every screen here shares.** All read the unit chosen in `Unit-Pick` (header `X-Unit-Id`, DOC-55 §5); every query key starts with `['unit', unitId, 'fees', …]`, so a unit switch drops the data of the old unit with no flash of it (UIRQ-02). The capability is `view_fees` (owner, family member, tenant); a helper has no tab "Phí" and a direct URL answers 403 `forbidden` and the generic forbidden state of DOC-68. A **charge** is one unit's bill in one batch; the resident word is "đợt" (batch) for the whole bill and "khoản" for a line. Money is shown as `2.838.000 đ` (Vietnamese) or `2,838,000 đ` (English), never as a decimal (DOC-14 §8). Dates are building-local `dd/MM/yyyy`, and "today" is the building's day (DR-09).
@@ -42,7 +44,7 @@ PS-5 Owner, PS-6 Family member, PS-7 Tenant (DOC-02). UC-03 (the reading that co
 
 ### 3. Prototype
 
-Canvas artboard `Fees` (title "Phí cần thanh toán", 390 × 1560, scrolls). Regions: `Glow`; large `TopBar` ("Phí", subtitle "Căn hộ A-1508") with the bell `IconButton` and its count; `SegmentedControl` "Cần thanh toán | Lịch sử"; a line "Còn phải thanh toán, 2 đợt" with the total "2.838.000 đ"; a section titled with the fee month ("Phí tháng 10/2026") holding one `BillSlip` per batch (period "Đợt 1, phát hành 01/10", due "Hạn thanh toán 15/10/2026", a status chip "Còn 6 ngày", the lines, the total, the button "Thanh toán đợt này"); a `Button` tonal "Thanh toán nhiều đợt cùng lúc" with a caption; `TabBar` with the center QR action.
+Canvas artboard [`Fees`](../../references/design-canvas/Fees.dc.html) (title "Phí cần thanh toán", 390 × 1560, scrolls). Regions: `Glow`; large `TopBar` ("Phí", subtitle "Căn hộ A-1508") with the bell `IconButton` and its count; `SegmentedControl` "Cần thanh toán | Lịch sử"; a line "Còn phải thanh toán, 2 đợt" with the total "2.838.000 đ"; a section titled with the fee month ("Phí tháng 10/2026") holding one `BillSlip` per batch (period "Đợt 1, phát hành 01/10", due "Hạn thanh toán 15/10/2026", a status chip "Còn 6 ngày", the lines, the total, the button "Thanh toán đợt này"); a `Button` tonal "Thanh toán nhiều đợt cùng lúc" with a caption; `TabBar` with the center QR action.
 
 Do not copy:
 
@@ -175,7 +177,7 @@ PS-7 Tenant whose owner has not allowed payment (`can_pay` false, DOC-27 §3.2).
 
 ### 3. Prototype
 
-Canvas artboard `Fees-NoPay` (title "Người thuê không trả phí: Phí", 390 × 1240): the same shell as `Fees` with a neutral `Banner` at the top ("Chủ hộ thanh toán phí của căn này", "Bạn xem được các đợt phí và biên lai. Muốn tự thanh toán, bạn nhờ chủ hộ bật quyền thanh toán cho bạn."), the segmented control, and two sections: "Phí tháng 10/2026" with a `BillSlip` of status "Còn 6 ngày" and the sentence "Chủ hộ thanh toán đợt phí này. Bạn nhận thông báo khi đợt phí được thanh toán.", and "Phí tháng 9/2026" with a **paid** `BillSlip` ("Đã thanh toán", "Xem biên lai").
+Canvas artboard [`Fees-NoPay`](../../references/design-canvas/Fees-NoPay.dc.html) (title "Người thuê không trả phí: Phí", 390 × 1240): the same shell as `Fees` with a neutral `Banner` at the top ("Chủ hộ thanh toán phí của căn này", "Bạn xem được các đợt phí và biên lai. Muốn tự thanh toán, bạn nhờ chủ hộ bật quyền thanh toán cho bạn."), the segmented control, and two sections: "Phí tháng 10/2026" with a `BillSlip` of status "Còn 6 ngày" and the sentence "Chủ hộ thanh toán đợt phí này. Bạn nhận thông báo khi đợt phí được thanh toán.", and "Phí tháng 9/2026" with a **paid** `BillSlip` ("Đã thanh toán", "Xem biên lai").
 
 Do not copy:
 
@@ -244,7 +246,7 @@ PS-5, PS-6, PS-7 (`view_fees`). UC-03 step "read the bill", FR-03, FR-36 (the no
 
 ### 3. Prototype
 
-Canvas artboard `Fee-Detail` (title "Thông báo phí", 390 × 1480): `TopBar` ("Thông báo phí", subtitle "Phí tháng 10/2026, đợt 1", back); a `SegmentedControl` "Ngôn ngữ thông báo phí" (Tiếng Việt, English); a company strip (a plate with initials, "Công ty Quản lý Mộc Miên", "Phát hành 01/10/2026, hotline …"); a `BillSlip` (unit, period, due, status chip, lines, total, "Thanh toán"); the section "Cách nộp phí" with three `ListItem`s (in-app payment, bank transfer, cash at the office); a `Button` outline "Tải thông báo phí PDF".
+Canvas artboard [`Fee-Detail`](../../references/design-canvas/Fee-Detail.dc.html) (title "Thông báo phí", 390 × 1480): `TopBar` ("Thông báo phí", subtitle "Phí tháng 10/2026, đợt 1", back); a `SegmentedControl` "Ngôn ngữ thông báo phí" (Tiếng Việt, English); a company strip (a plate with initials, "Công ty Quản lý Mộc Miên", "Phát hành 01/10/2026, hotline …"); a `BillSlip` (unit, period, due, status chip, lines, total, "Thanh toán"); the section "Cách nộp phí" with three `ListItem`s (in-app payment, bank transfer, cash at the office); a `Button` outline "Tải thông báo phí PDF".
 
 Do not copy:
 
@@ -362,7 +364,7 @@ PS-5, PS-6, PS-7 (`view_fees`). UC-03 "see what I paid", DR-17 (the receipt of e
 
 ### 3. Prototype
 
-Canvas artboard `Fee-History` (title "Lịch sử đợt phí và công nợ", 390 × 1160): the shell of `Fees` with the segment "Lịch sử" selected; a `Card` with "Công nợ hiện tại 2.838.000 đ", a divider and "Đã thanh toán năm 2026 21.946.000 đ"; then one section per fee month ("Phí tháng 9/2026", "… 8/2026", "… 7/2026"), each a `List` of `ListItem`s (a teal receipt icon, "Đợt 1", "Trả 12/09, VietQR", the amount).
+Canvas artboard [`Fee-History`](../../references/design-canvas/Fee-History.dc.html) (title "Lịch sử đợt phí và công nợ", 390 × 1160): the shell of `Fees` with the segment "Lịch sử" selected; a `Card` with "Công nợ hiện tại 2.838.000 đ", a divider and "Đã thanh toán năm 2026 21.946.000 đ"; then one section per fee month ("Phí tháng 9/2026", "… 8/2026", "… 7/2026"), each a `List` of `ListItem`s (a teal receipt icon, "Đợt 1", "Trả 12/09, VietQR", the amount).
 
 Do not copy:
 
@@ -458,7 +460,7 @@ PS-5 Owner, PS-6 Family member, PS-7 Tenant with `can_pay`. UC-03 steps 1 to 3, 
 
 ### 3. Prototype
 
-Artboard `Pay-Select` (title "Chọn đợt và hình thức thanh toán"): a back `TopBar`; a list of batches with a check per row (period, due date, amount); a "Hình thức" block with VietQR and a second, VNPay row; a total bar and a primary "Thanh toán {amount}".
+Artboard [`Pay-Select`](../../references/design-canvas/Pay-Select.dc.html) (title "Chọn đợt và hình thức thanh toán"): a back `TopBar`; a list of batches with a check per row (period, due date, amount); a "Hình thức" block with VietQR and a second, VNPay row; a total bar and a primary "Thanh toán {amount}".
 
 Do not copy:
 
@@ -663,7 +665,7 @@ As `Pay-Select`. UC-03 step 9, FR-08.7.
 
 ### 3. Prototype
 
-Artboard `Pay-Done` (title "Thanh toán thành công"): a success mark, "Thanh toán thành công", the amount, the time and method, one `ListItem` per receipt ("Đợt 1", the receipt number, the amount, a download action), and the buttons "Xem biên lai" and "Về trang Phí".
+Artboard [`Pay-Done`](../../references/design-canvas/Pay-Done.dc.html) (title "Thanh toán thành công"): a success mark, "Thanh toán thành công", the amount, the time and method, one `ListItem` per receipt ("Đợt 1", the receipt number, the amount, a download action), and the buttons "Xem biên lai" and "Về trang Phí".
 
 Do not copy: a receipt code `PT-…` (N4: the number is `BL-2610-0153`); "VNPay" or "VietQR" in the method line (the method is `res.fee.method.online`).
 

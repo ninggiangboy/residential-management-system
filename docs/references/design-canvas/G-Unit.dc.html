@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảo vệ: Căn hộ A-1508</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1300px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Căn hộ" subtitle="Mộc Miên Residence" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 32px; padding: 8px 20px 32px;">
+
+<x-import component-from-global-scope="Hien.Card" style="box-shadow: var(--shadow-float);">
+<div style="display: flex; align-items: center; gap: 16px;">
+<x-import component-from-global-scope="Hien.Plate" size="xl">A-1508</x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Tầng 15, 3 phòng ngủ</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">85 m², đang ở, 3 người được ra vào</div>
+</div>
+</div>
+</x-import>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Chủ hộ</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" avatar="Trần Minh Anh" title="Trần Minh Anh" subtitle="Chủ hộ, 0912 345 678">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi chủ hộ Trần Minh Anh" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Thành viên</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" avatar="Trần Minh Khoa" title="Trần Minh Khoa" subtitle="Thành viên gia đình, 0903 111 222">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Trần Minh Khoa" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" avatar="Nguyễn Thị Lan" title="Nguyễn Thị Lan" subtitle="Giúp việc, 0934 555 666">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Nguyễn Thị Lan" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+</x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Chỉ hiện thành viên đang hoạt động. Người bị chủ hộ khóa không quét mã ra vào được.</p>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phương tiện của căn</h2>
+<x-import component-from-global-scope="Hien.VehicleCard" plate="30H-112.05" kind="car" model="Mazda CX-5, màu trắng" status="active" status-label="Đã duyệt"></x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Chỉ hiện phương tiện đã được BQL duyệt.</p>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

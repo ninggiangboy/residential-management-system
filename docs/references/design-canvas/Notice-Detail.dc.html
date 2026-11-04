@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chi tiết bản tin</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1240px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Bản tin" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 32px;">
+<header style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<x-import component-from-global-scope="Hien.Tag" tone="warning">Khẩn cấp</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="neutral" icon="{{no}}">Đã ghim</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Ngừng cấp nước tầng 8–15, 09:00–11:00 thứ Bảy 10/10</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Ban quản lý, 07:45, 09/10/2026</div>
+</header>
+
+<div role="img" aria-label="Ảnh sơ đồ trục nước tòa nhà" style="aspect-ratio: 16 / 9; border-radius: var(--radius-card); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);">
+<x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconLg}}"></x-import>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 24px;">
+<p style="margin: 0;">Ban quản lý thay van tổng trục nước lạnh cấp cho tầng 8 đến tầng 15. Nước sinh hoạt tạm ngừng từ 09:00 đến 11:00 thứ Bảy 10/10/2026.</p>
+<p style="margin: 0;">Bạn nên trữ nước trước 09:00 và khóa vòi trong nhà. Sau khi cấp lại, nước có thể đục trong vài phút đầu, bạn xả vòi đến khi nước trong.</p>
+<p style="margin: 0;">Cần hỗ trợ, bạn gọi hotline BQL [HOTLINE].</p>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tệp đính kèm</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="receipt" tone="sky" title="Phương án thi công van tổng.pdf" subtitle="PDF, 240 KB" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1240}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', no: false, iconLg: 32, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

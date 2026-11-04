@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>QR thanh toán</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1080px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Quét mã để thanh toán" subtitle="VietQR, căn hộ A-1508" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 20px; padding: 8px 20px 24px;">
+<x-import component-from-global-scope="Hien.Banner" tone="info" icon="clock" title="Đang chờ ngân hàng xác nhận">Ứng dụng tự chuyển sang biên lai khi nhận được tiền. Bạn không cần chụp màn hình chuyển khoản.</x-import>
+
+<x-import component-from-global-scope="Hien.Card">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+<div style="padding: 16px; background: #FFFFFF; border-radius: var(--radius-control);">
+<svg viewBox="0 0 25 25" width="208" height="208" role="img" aria-label="Mã VietQR thanh toán 2.838.000 đ" style="display: block;"><path d="{{qrPath}}" fill="#0F2A2B" shape-rendering="crispEdges"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Số tiền</div>
+<div style="font-size: 34px; line-height: 40px; font-weight: 700; font-variant-numeric: tabular-nums;">2.838.000 đ</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Phí tháng 10/2026, đợt 1 và đợt 2</div>
+</div>
+</div>
+</x-import>
+
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" title="Ngân hàng nhận" subtitle="[NGÂN HÀNG], [SỐ TÀI KHOẢN]"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" title="Chủ tài khoản" subtitle="Công ty Quản lý Mộc Miên"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" title="Nội dung chuyển khoản" subtitle="MM A1508 T10 D1D2 8F3K">
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}">Sao chép</x-import>
+</x-import>
+</x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Mã tạo riêng cho căn A-1508 và 2 đợt phí đã chọn. Giữ nguyên số tiền và nội dung để hệ thống gạch nợ tự động.</p>
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 20px 32px;">
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="image" block="{{yes}}" on-click="{{noop}}">Lưu ảnh mã QR</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="md" block="{{yes}}" on-click="{{noop}}">Đổi cách thanh toán</x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+var n = 25, seed = 83, d = '';
+for (var y = 0; y < n; y++) {
+for (var x = 0; x < n; x++) {
+seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+var fx = x < 7 ? x : (x >= n - 7 ? x - (n - 7) : -1);
+var fy = y < 7 ? y : (y >= n - 7 ? y - (n - 7) : -1);
+var finder = fx >= 0 && fy >= 0 && !(x >= n - 7 && y >= n - 7);
+var quiet = (x < 8 && y < 8) || (x >= n - 8 && y < 8) || (x < 8 && y >= n - 8);
+var on = finder ? (fx === 0 || fx === 6 || fy === 0 || fy === 6 || (fx >= 2 && fx <= 4 && fy >= 2 && fy <= 4)) : (quiet ? false : ((seed >> 8) % 2) === 0);
+if (on) d += 'M' + x + ' ' + y + 'h1v1h-1z';
+}
+}
+return { theme: this.props.theme ?? 'light', yes: true, qrPath: d, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Web: sign-in, dashboard, operations
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the rest is owed to P4, P5 and P6) · Updated: 2026-10-30 (DR-312: the sidebar toggle) · 2026-10-29 (DR-311: the shell on `ground`, the active entry) · 2026-10-28 (DR-279: the usage switch on `W-Profile`) · 2026-10-20 · DOC-64
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the rest is owed to P4, P5 and P6) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-10-30 (DR-312: the sidebar toggle) · 2026-10-29 (DR-311: the shell on `ground`, the active entry) · 2026-10-28 (DR-279: the usage switch on `W-Profile`) · 2026-10-20 · DOC-64
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-38, 39, 41…47, 64, 71, 72, 75, 84, 128, 130, 147, 150), [DOC-03](../../01-product/requirements.md) (FR-13, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-17, UC-26), [DOC-26](../../06-design/identity-and-sessions.md) §3.3, §4, [DOC-37](../../06-design/files-and-uploads.md) §4, [DOC-42](../../06-design/error-handling.md) §5, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-05…E-08, E-11, E-12, E-30…E-38), [DOC-53](../ux-principles-and-ia.md) §3.4, §4, [DOC-55](../client-architecture.md) §5, §6, §17, [DOC-56](README.md) §5, §6, [DOC-54](../design-system.md)
 > Main readers: P1-16 (web CMS shell), P1-14, P1-15, the writers of DOC-65 and DOC-67 (they use the shell described here), P4, P5 and P6 tasks that build the later screens of this file
 
@@ -8,15 +8,17 @@ This document specifies the web CMS screens for signing in, the account profile 
 
 Test prefix: `UIWO-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it).
 
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
+
 ## Screens in this file
 
 | Section | Screen | Role | Phase | Prototype | Notes (DOC-56 §5) |
 | --- | --- | --- | --- | --- | --- |
 | Web app shell | Sidebar, top bar, bell, `/wrong-app` | Admin, Manager | P1 | designed (shell); `/wrong-app` to design | N8 |
-| `W-Login` | Email and password sign-in | Any staff (signed out) | P1 | designed | N2, N8 |
-| `W-Forgot-Sent` | Reset link sent | Any staff (signed out) | P1 | designed | N8 |
-| `W-Reset` | Set a new password in the browser | Any staff (link holder) | P1 | designed | |
-| `W-Profile` | Name, avatar, language, reset link, sessions | Admin, Manager | P1 | designed | N9 |
+| [`W-Login`](../../references/design-canvas/W-Login.dc.html) | Email and password sign-in | Any staff (signed out) | P1 | designed | N2, N8 |
+| [`W-Forgot-Sent`](../../references/design-canvas/W-Forgot-Sent.dc.html) | Reset link sent | Any staff (signed out) | P1 | designed | N8 |
+| [`W-Reset`](../../references/design-canvas/W-Reset.dc.html) | Set a new password in the browser | Any staff (link holder) | P1 | designed | |
+| [`W-Profile`](../../references/design-canvas/W-Profile.dc.html) | Name, avatar, language, reset link, sessions | Admin, Manager | P1 | designed | N9 |
 | `W-Dashboard`, `W-Tickets`, `W-Ticket-Detail`, `W-Ticket-Assign`, `W-Ticket-Types`, `W-Ticket-Cancel`, `W-Notices`, `W-Notice-Edit`, `W-Notice-Stats`, `W-Docs` | | | P4, P5, P6 | see the table at the end | N7 |
 
 ## Web app shell
@@ -78,7 +80,7 @@ PS-1 Admin and PS-2 Manager (a Technician or Guard may type their credentials he
 
 ### 3. Prototype
 
-Canvas artboard `W-Login` ("Chung: Đăng nhập"), 1440 wide, fluid. Regions: (a) left hero panel (`hero-from` → `hero-to` gradient card): building name and hotline at the top; headline and subtitle; three feature lines with icons; (b) right column: language pill VI / EN, then the form: `h1`, one line of help, `Banner` (danger) for errors, `TextField` Email, `TextField` Mật khẩu, ghost `Button` "Quên mật khẩu", primary lg block `Button` "Đăng nhập", one line about the apps, and a footer line.
+Canvas artboard [`W-Login`](../../references/design-canvas/W-Login.dc.html) ("Chung: Đăng nhập"), 1440 wide, fluid. Regions: (a) left hero panel (`hero-from` → `hero-to` gradient card): building name and hotline at the top; headline and subtitle; three feature lines with icons; (b) right column: language pill VI / EN, then the form: `h1`, one line of help, `Banner` (danger) for errors, `TextField` Email, `TextField` Mật khẩu, ghost `Button` "Quên mật khẩu", primary lg block `Button` "Đăng nhập", one line about the apps, and a footer line.
 
 Do not copy:
 
@@ -174,7 +176,7 @@ PS-1, PS-2 (and a Technician or Guard who asks from the web). UC-17 alternative 
 
 ### 3. Prototype
 
-Canvas artboard `W-Forgot-Sent` ("Chung: Quên mật khẩu, đã gửi link"), 1440 wide. Regions: top row (building name, "Web quản lý", language pill); a centered 520 px `Card`: round `teal-soft` icon (`check-circle`), `h1` "Kiểm tra email của bạn", a paragraph, a `fill` box with two rows (clock, phone), outline lg `Button` "Gửi lại link sau 00:45" (disabled), ghost lg `Button` "Quay lại đăng nhập" with `caret-left`, one footnote.
+Canvas artboard [`W-Forgot-Sent`](../../references/design-canvas/W-Forgot-Sent.dc.html) ("Chung: Quên mật khẩu, đã gửi link"), 1440 wide. Regions: top row (building name, "Web quản lý", language pill); a centered 520 px `Card`: round `teal-soft` icon (`check-circle`), `h1` "Kiểm tra email của bạn", a paragraph, a `fill` box with two rows (clock, phone), outline lg `Button` "Gửi lại link sau 00:45" (disabled), ghost lg `Button` "Quay lại đăng nhập" with `caret-left`, one footnote.
 
 Do not copy:
 
@@ -248,7 +250,7 @@ Two routes, one screen (DOC-53 §4, DOC-26 §4.3): `/reset?token=…` and `/invi
 
 ### 3. Prototype
 
-Canvas artboard `W-Reset` ("Chung: Đặt mật khẩu mới (trình duyệt)"), 1440 wide. Regions: top row (building name, "Tài khoản nhân viên", language pill); a centered 520 px `Card`: `h1` "Đặt mật khẩu mới", one line of validity, an account block (avatar, "Tài khoản", the email), two `TextField` (Mật khẩu mới, Nhập lại mật khẩu mới), a rule checklist of three rows (Ít nhất 8 ký tự / Có cả chữ và số / Hai lần nhập giống nhau; a filled `check-circle` in `success` when met), a primary lg block `Button` "Lưu mật khẩu mới" (disabled until all rules hold), one closing line.
+Canvas artboard [`W-Reset`](../../references/design-canvas/W-Reset.dc.html) ("Chung: Đặt mật khẩu mới (trình duyệt)"), 1440 wide. Regions: top row (building name, "Tài khoản nhân viên", language pill); a centered 520 px `Card`: `h1` "Đặt mật khẩu mới", one line of validity, an account block (avatar, "Tài khoản", the email), two `TextField` (Mật khẩu mới, Nhập lại mật khẩu mới), a rule checklist of three rows (Ít nhất 8 ký tự / Có cả chữ và số / Hai lần nhập giống nhau; a filled `check-circle` in `success` when met), a primary lg block `Button` "Lưu mật khẩu mới" (disabled until all rules hold), one closing line.
 
 Do not copy (DR-209):
 
@@ -336,7 +338,7 @@ PS-1 Admin and PS-2 Manager (a Technician or Guard edits the same fields in `S-A
 
 ### 3. Prototype
 
-Canvas artboard `W-Profile` ("Chung: Hồ sơ cá nhân"), 1440 wide, inside the shell. Regions: page header (`h1` "Hồ sơ cá nhân", subtitle "Tên và ảnh hiển thị cho đồng nghiệp trên web và App quản lý", primary md `Button` "Lưu thay đổi"); left column: `Card` "Thông tin cá nhân" (large `Avatar`, name, "Ban quản lý, {building}", outline sm `Button` "Đổi ảnh" with `camera`; two fields Họ và tên and Email; the label "Vai trò" with an info `Tag` and a hint) and `Card` "Ngôn ngữ giao diện" (two-option `SegmentedControl` Tiếng Việt / English, one hint on formats); right column: `Card` "Mật khẩu" (hint and tonal sm `Button` "Gửi link đổi mật khẩu") and `Card` "Phiên đăng nhập gần nhất" (rows: round icon, where, time).
+Canvas artboard [`W-Profile`](../../references/design-canvas/W-Profile.dc.html) ("Chung: Hồ sơ cá nhân"), 1440 wide, inside the shell. Regions: page header (`h1` "Hồ sơ cá nhân", subtitle "Tên và ảnh hiển thị cho đồng nghiệp trên web và App quản lý", primary md `Button` "Lưu thay đổi"); left column: `Card` "Thông tin cá nhân" (large `Avatar`, name, "Ban quản lý, {building}", outline sm `Button` "Đổi ảnh" with `camera`; two fields Họ và tên and Email; the label "Vai trò" with an info `Tag` and a hint) and `Card` "Ngôn ngữ giao diện" (two-option `SegmentedControl` Tiếng Việt / English, one hint on formats); right column: `Card` "Mật khẩu" (hint and tonal sm `Button` "Gửi link đổi mật khẩu") and `Card` "Phiên đăng nhập gần nhất" (rows: round icon, where, time).
 
 Do not copy:
 

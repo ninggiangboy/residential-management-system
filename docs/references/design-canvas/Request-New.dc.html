@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tạo yêu cầu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1160px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Tạo yêu cầu" subtitle="Căn hộ A-1508" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 20px; padding: 8px 20px 24px;">
+<x-import component-from-global-scope="Hien.SelectField" label="Loại yêu cầu" value="Sửa chữa" icon="wrench" helper="Sửa chữa, vệ sinh, an ninh, khiếu nại hoặc khác." on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Tiêu đề" value="Điều hòa phòng ngủ chảy nước xuống sàn" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Mô tả" value="Nước nhỏ giọt từ dàn lạnh, đã tắt máy từ tối qua. Nhà có người ở nhà từ 18:00 hằng ngày." multiline="{{yes}}" rows="{{rows}}" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Vị trí" value="Phòng ngủ chính" icon="map-pin" helper="Mặc định là căn A-1508. Ghi rõ phòng hoặc khu vực chung nếu cần." on-change="{{noop}}"></x-import>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Ảnh, video hiện trường <span style="font-weight: 400; color: var(--ink-muted);">(không bắt buộc)</span></div>
+<x-import component-from-global-scope="Hien.AttachmentPicker" items="{{files}}" max="{{maxFiles}}" add-label="Thêm ảnh, video" on-add="{{noop}}" on-remove="{{noop}}"></x-import>
+</div>
+</main>
+<div style="position: relative; flex-shrink: 0; padding: 12px 20px 32px;">
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" block="{{yes}}" on-click="{{noop}}">Gửi yêu cầu</x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1160}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+rows: 4,
+maxFiles: 5,
+files: [{ name: 'dan-lanh.jpg' }, { name: 'san-nha.mp4' }],
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

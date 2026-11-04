@@ -1,12 +1,12 @@
 # Screens index
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-325: the payment screens move to P2; `Pay-Redirect`, `Pay-Failed`, `Cards`) · 2026-11-01 (DR-314: `W-Unit-Types` in DOC-65) · 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-04 (DR-335: every artboard links to its file; the canvas is the reference for layout and UX) · 2026-11-01 (DR-325: the payment screens move to P2; `Pay-Redirect`, `Pay-Failed`, `Cards`) · 2026-11-01 (DR-314: `W-Unit-Types` in DOC-65) · 2026-10-21 (DR-226: recent-imports table of `W-Import`; earlier: §4.1: pieces with no artboard; DR-174, 202, 204, 210, 216, 218) · DOC-56
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-27, 33, 38, 39, 40, 41…47, 48, 59, 69…72, 74, 75, 84, 128), [DOC-03](../../01-product/requirements.md), [DOC-04](../../01-product/use-cases.md), [DOC-14](../../05-data/data-conventions.md) (human codes), [DOC-27](../../06-design/residency-and-memberships.md) §3.2 (policy table), [DOC-51](../../07-api/api-endpoints.md), DOC-53, DOC-54, DOC-55, [design screens catalog](../../references/design-screens.md)
 > Main readers: the writers of DOC-57…67 and DOC-68, P1-16, P1-17 (the client shells), P1-09 (i18n catalog), every task that builds or tests a screen
 
 This document lists every screen of the three clients, tells which document specifies it, in which phase, and whether the Owner's prototype already draws it. It also fixes how a screen document is written, so that DOC-57…67 read alike. It does not specify any screen: that is the job of the area files listed in §2. Tokens and components are DOC-54, navigation is DOC-53, client structure is DOC-55, and all microcopy is collected in DOC-68.
 
-The visual source of truth is the Owner's prototype, the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> (design system "Hiên"). The screen documents do not redraw it (DR-194): they name the artboard, list its regions, and add what the canvas cannot show (data, interactions, states, copy keys, acceptance criteria).
+The reference for layout and UX is the Owner's prototype, the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> (design system "Hiên"). A snapshot of its files is in the repository, [`references/design-canvas/`](../../references/design-canvas/README.md). **An artboard is a reference, not a spec to match exactly (DR-335)**: components and visual styling follow the project's design system ([DOC-54](../design-system.md)). The screen documents do not redraw it (DR-194): they name the artboard, list its regions, and add what the canvas cannot show (data, interactions, states, copy keys, acceptance criteria).
 
 ## 1. What the three sources say
 
@@ -65,17 +65,17 @@ File `08-ux-ui/screens/resident-signin-home.md` · Resident app · 11 sections (
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `Login` | Phone number sign-in | Any resident (signed out) | P1 | designed |  |
-| `Login-Error` | Phone not registered: how to reach the Manager | Any resident (signed out) | P1 | designed |  |
-| `OTP` | Six-digit code, 5-minute lifetime, resend | Any resident (signed out) | P1 | designed |  |
-| `Terms` | Terms and privacy consent at first sign-in | Owner, Family member, Tenant, Helper | P1 | designed |  |
+| `Login` | Phone number sign-in | Any resident (signed out) | P1 | [designed](../../references/design-canvas/Login.dc.html) |  |
+| `Login-Error` | Phone not registered: how to reach the Manager | Any resident (signed out) | P1 | [designed](../../references/design-canvas/Login-Error.dc.html) |  |
+| `OTP` | Six-digit code, 5-minute lifetime, resend | Any resident (signed out) | P1 | [designed](../../references/design-canvas/OTP.dc.html) |  |
+| `Terms` | Terms and privacy consent at first sign-in | Owner, Family member, Tenant, Helper | P1 | [designed](../../references/design-canvas/Terms.dc.html) |  |
 | `Terms-Update` | Re-consent after a new terms version (DR-59, FR-41) | Owner, Family member, Tenant, Helper | P1 | to design |  |
-| `Unit-Pick` | Pick a unit when the account has several memberships | Owner, Family member, Tenant, Helper | P1 | designed |  |
-| `Main` | Home of an owner | Owner | P1 | designed | N10 |
-| `Home-Member` | Home of a family member | Family member | P1 | designed | N10 |
-| `Home-Tenant-Pay` | Home of a tenant allowed to pay | Tenant with `can_pay` | P1 | designed | N10 |
-| `Home-Tenant-NoPay` | Home of a tenant not allowed to pay | Tenant without `can_pay` | P1 | designed | N10 |
-| `Home-Helper` | Home of a helper: QR and general notices only | Helper | P1 | designed | N10, N11 |
+| `Unit-Pick` | Pick a unit when the account has several memberships | Owner, Family member, Tenant, Helper | P1 | [designed](../../references/design-canvas/Unit-Pick.dc.html) |  |
+| `Main` | Home of an owner | Owner | P1 | [designed](../../references/design-canvas/Main.dc.html) | N10 |
+| `Home-Member` | Home of a family member | Family member | P1 | [designed](../../references/design-canvas/Home-Member.dc.html) | N10 |
+| `Home-Tenant-Pay` | Home of a tenant allowed to pay | Tenant with `can_pay` | P1 | [designed](../../references/design-canvas/Home-Tenant-Pay.dc.html) | N10 |
+| `Home-Tenant-NoPay` | Home of a tenant not allowed to pay | Tenant without `can_pay` | P1 | [designed](../../references/design-canvas/Home-Tenant-NoPay.dc.html) | N10 |
+| `Home-Helper` | Home of a helper: QR and general notices only | Helper | P1 | [designed](../../references/design-canvas/Home-Helper.dc.html) | N10, N11 |
 
 ### DOC-58 · Resident: fees and payment
 
@@ -83,16 +83,16 @@ File `08-ux-ui/screens/resident-fees-payment.md` · Resident app · 8 sections (
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `Fees` | Charges due, grouped by batch | Owner, Family member, Tenant | P2 | designed | N6 |
-| `Fees-NoPay` | Same list, read-only (no pay button) | Tenant without `can_pay` | P2 | designed |  |
-| `Fee-Detail` | Fee notice of one batch: lines, how to pay | Owner, Family member, Tenant | P2 | designed | N1 |
-| `Fee-History` | Paid batches and receipts | Owner, Family member, Tenant | P2 | designed | N1, N4 |
-| `Pay-Select` | Select batches and see the total (one method of the active gateway) | Owner, Family member, Tenant with `can_pay` | P2 | designed | N1 |
+| `Fees` | Charges due, grouped by batch | Owner, Family member, Tenant | P2 | [designed](../../references/design-canvas/Fees.dc.html) | N6 |
+| `Fees-NoPay` | Same list, read-only (no pay button) | Tenant without `can_pay` | P2 | [designed](../../references/design-canvas/Fees-NoPay.dc.html) |  |
+| `Fee-Detail` | Fee notice of one batch: lines, how to pay | Owner, Family member, Tenant | P2 | [designed](../../references/design-canvas/Fee-Detail.dc.html) | N1 |
+| `Fee-History` | Paid batches and receipts | Owner, Family member, Tenant | P2 | [designed](../../references/design-canvas/Fee-History.dc.html) | N1, N4 |
+| `Pay-Select` | Select batches and see the total (one method of the active gateway) | Owner, Family member, Tenant with `can_pay` | P2 | [designed](../../references/design-canvas/Pay-Select.dc.html) | N1 |
 | `Pay-Redirect` | The wait while the hosted payment page is open (*DR-325*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
 | `Pay-Failed` | The payment expired, was cancelled or failed (*DR-325*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
 | `Cards` | Cards saved at the provider: list and remove (*DR-326*) | Owner, Family member, Tenant with `can_pay` | P2 | to design | |
-| `Pay-VietQR` | Dynamic VietQR for the selected batches | Owner, Family member, Tenant with `can_pay` | with a QR driver (*DR-325*) | designed | N4 |
-| `Pay-Done` | Payment confirmed, one receipt per batch | Owner, Family member, Tenant with `can_pay` | P2 | designed | N4 |
+| `Pay-VietQR` | Dynamic VietQR for the selected batches | Owner, Family member, Tenant with `can_pay` | with a QR driver (*DR-325*) | [designed](../../references/design-canvas/Pay-VietQR.dc.html) | N4 |
+| `Pay-Done` | Payment confirmed, one receipt per batch | Owner, Family member, Tenant with `can_pay` | P2 | [designed](../../references/design-canvas/Pay-Done.dc.html) | N4 |
 | `Pay-Mismatch` | State of `Pay-VietQR`: a transfer of another amount arrived (DR-84 item 8) | Owner, Family member, Tenant with `can_pay` | with a QR driver (*DR-325*) | to design |  |
 
 ### DOC-59 · Resident: requests, unit, members, vehicles
@@ -101,18 +101,18 @@ File `08-ux-ui/screens/resident-requests-unit.md` · Resident app · 12 sections
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `Requests` | Ticket list (UI word "Yêu cầu") | Owner, Family member, Tenant | P4 | designed | N7 |
-| `Request-New` | Create a ticket: type, title, description, location, up to 5 photos and 1 video | Owner, Family member, Tenant | P4 | designed |  |
-| `Request-Detail` | Timeline and resident-visible comments | Owner, Family member, Tenant | P4 | designed |  |
-| `Request-Cancel` | Cancel a ticket before the Manager accepts it | Owner, Family member, Tenant | P4 | designed |  |
-| `Request-Done` | Ticket resolved: result photos, rating | Owner, Family member, Tenant | P4 | designed |  |
-| `Unit-Owner` | My unit as owner: info, members, vehicles | Owner | P4 | designed |  |
-| `Unit-Member` | My unit as family member or tenant (read-only members) | Family member, Tenant | P4 | designed |  |
-| `Members` | Household members list | Owner | P4 | designed |  |
-| `Member-Add` | Add a member by phone (family, tenant with `can_pay`, helper) | Owner | P4 | designed |  |
-| `Member-Actions` | Edit, lock, remove a member | Owner | P4 | designed |  |
-| `Vehicles` | Vehicles of the unit with review status | Owner, Family member, Tenant | P5 | designed |  |
-| `Vehicle-Add` | Register or edit a vehicle: photos of the vehicle and the registration paper | Owner, Family member, Tenant | P5 | designed |  |
+| `Requests` | Ticket list (UI word "Yêu cầu") | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Requests.dc.html) | N7 |
+| `Request-New` | Create a ticket: type, title, description, location, up to 5 photos and 1 video | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Request-New.dc.html) |  |
+| `Request-Detail` | Timeline and resident-visible comments | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Request-Detail.dc.html) |  |
+| `Request-Cancel` | Cancel a ticket before the Manager accepts it | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Request-Cancel.dc.html) |  |
+| `Request-Done` | Ticket resolved: result photos, rating | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Request-Done.dc.html) |  |
+| `Unit-Owner` | My unit as owner: info, members, vehicles | Owner | P4 | [designed](../../references/design-canvas/Unit-Owner.dc.html) |  |
+| `Unit-Member` | My unit as family member or tenant (read-only members) | Family member, Tenant | P4 | [designed](../../references/design-canvas/Unit-Member.dc.html) |  |
+| `Members` | Household members list | Owner | P4 | [designed](../../references/design-canvas/Members.dc.html) |  |
+| `Member-Add` | Add a member by phone (family, tenant with `can_pay`, helper) | Owner | P4 | [designed](../../references/design-canvas/Member-Add.dc.html) |  |
+| `Member-Actions` | Edit, lock, remove a member | Owner | P4 | [designed](../../references/design-canvas/Member-Actions.dc.html) |  |
+| `Vehicles` | Vehicles of the unit with review status | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/Vehicles.dc.html) |  |
+| `Vehicle-Add` | Register or edit a vehicle: photos of the vehicle and the registration paper | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/Vehicle-Add.dc.html) |  |
 
 ### DOC-60 · Resident: QR, notices, account
 
@@ -120,21 +120,21 @@ File `08-ux-ui/screens/resident-qr-notices-account.md` · Resident app · 15 sec
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `Account` | Account and settings: units, language, push, links | Owner, Family member, Tenant, Helper | P1 | designed |  |
-| `Account-Phone` | Change login phone: Manager only, contact instructions | Owner, Family member, Tenant, Helper | P1 | designed |  |
-| `Account-Helper` | Account of a helper (reduced) | Helper | P1 | designed |  |
+| `Account` | Account and settings: units, language, push, links | Owner, Family member, Tenant, Helper | P1 | [designed](../../references/design-canvas/Account.dc.html) |  |
+| `Account-Phone` | Change login phone: Manager only, contact instructions | Owner, Family member, Tenant, Helper | P1 | [designed](../../references/design-canvas/Account-Phone.dc.html) |  |
+| `Account-Helper` | Account of a helper (reduced) | Helper | P1 | [designed](../../references/design-canvas/Account-Helper.dc.html) |  |
 | `Account-Deletion` | Request and cancel account deletion (DR-59) | Owner, Family member, Tenant, Helper | P1 | to design |  |
 | `Sessions` | Signed-in devices, revoke one (DR-38; the staff variants are inside `W-Profile` and `S-Account`) | Owner, Family member, Tenant, Helper | P1 | to design | N9 |
-| `Contact` | Contact the Manager: hotline, hours, email | Owner, Family member, Tenant, Helper | P1 | designed |  |
-| `Notices` | Notice list with filters and pinned items | Owner, Family member, Tenant | P4 | designed |  |
-| `Notices-Helper` | General notices only | Helper | P4 | designed |  |
-| `Notice-Detail` | Notice with attachments | Owner, Family member, Tenant, Helper | P4 | designed |  |
-| `Inbox` | Notification center | Owner, Family member, Tenant | P4 | designed | N11 |
-| `QR` | Dynamic QR of the unit, 15-minute countdown | Owner, Family member, Tenant | P5 | designed |  |
-| `QR-Expired` | Expired QR, regenerate | Owner, Family member, Tenant | P5 | designed |  |
-| `QR-Helper` | QR of a helper | Helper | P5 | designed |  |
-| `Docs` | Library folders for residents | Owner, Family member, Tenant | P5 | designed |  |
-| `Doc-Page` | Library page | Owner, Family member, Tenant | P5 | designed |  |
+| `Contact` | Contact the Manager: hotline, hours, email | Owner, Family member, Tenant, Helper | P1 | [designed](../../references/design-canvas/Contact.dc.html) |  |
+| `Notices` | Notice list with filters and pinned items | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Notices.dc.html) |  |
+| `Notices-Helper` | General notices only | Helper | P4 | [designed](../../references/design-canvas/Notices-Helper.dc.html) |  |
+| `Notice-Detail` | Notice with attachments | Owner, Family member, Tenant, Helper | P4 | [designed](../../references/design-canvas/Notice-Detail.dc.html) |  |
+| `Inbox` | Notification center | Owner, Family member, Tenant | P4 | [designed](../../references/design-canvas/Inbox.dc.html) | N11 |
+| `QR` | Dynamic QR of the unit, 15-minute countdown | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/QR.dc.html) |  |
+| `QR-Expired` | Expired QR, regenerate | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/QR-Expired.dc.html) |  |
+| `QR-Helper` | QR of a helper | Helper | P5 | [designed](../../references/design-canvas/QR-Helper.dc.html) |  |
+| `Docs` | Library folders for residents | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/Docs.dc.html) |  |
+| `Doc-Page` | Library page | Owner, Family member, Tenant | P5 | [designed](../../references/design-canvas/Doc-Page.dc.html) |  |
 
 ### DOC-61 · Staff app: shared and Manager
 
@@ -142,26 +142,26 @@ File `08-ux-ui/screens/staff-shared-and-manager.md` · Staff app · 20 sections 
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `S-Login` | Staff sign-in by email and password | Any staff (signed out) | P1 | designed | N2 |
-| `S-Login-Error` | Wrong password and lock states | Any staff (signed out) | P1 | designed | N2 |
-| `S-Forgot` | Request a reset link by email | Any staff (signed out) | P1 | designed |  |
-| `S-Forgot-Sent` | Reset link sent | Any staff (signed out) | P1 | designed |  |
-| `S-Account` | Name, avatar, language, push, sessions, sign out | Manager, Technician, Guard | P1 | designed | N9 |
-| `S-Inbox` | Staff notification center | Manager, Technician, Guard | P4 | designed |  |
-| `S-Docs` | Library filtered to the staff role | Manager, Technician, Guard | P5 | designed |  |
-| `S-Doc-Page` | Library page, video, file | Manager, Technician, Guard | P5 | designed |  |
-| `B-Home` | Today: new, unassigned, vehicles pending | Manager | P4 | designed | N7 |
-| `B-Tickets` | Ticket list | Manager | P4 | designed | N7 |
-| `B-Ticket-Detail` | Ticket detail with internal notes | Manager | P4 | designed | N7 |
-| `B-Assign` | Assign to a Technician or Guard by workload | Manager | P4 | designed |  |
-| `B-Ticket-Close` | Close or reopen after the result report | Manager | P4 | designed |  |
-| `B-Units` | Unit lookup by code, name or phone | Manager | P4 | designed |  |
-| `B-Unit-Detail` | Unit: members with call buttons, vehicles, open tickets | Manager | P4 | designed |  |
-| `B-Notice-New` | Quick notice | Manager | P4 | designed |  |
-| `B-Notice-Stats` | Read statistics | Manager | P4 | designed |  |
-| `B-Vehicles` | Vehicles waiting for review | Manager | P5 | designed |  |
-| `B-Vehicle-Review` | Review with photos and the unit's vehicles | Manager | P5 | designed |  |
-| `B-Vehicle-Reject` | Reject with a reason code and note | Manager | P5 | designed |  |
+| `S-Login` | Staff sign-in by email and password | Any staff (signed out) | P1 | [designed](../../references/design-canvas/S-Login.dc.html) | N2 |
+| `S-Login-Error` | Wrong password and lock states | Any staff (signed out) | P1 | [designed](../../references/design-canvas/S-Login-Error.dc.html) | N2 |
+| `S-Forgot` | Request a reset link by email | Any staff (signed out) | P1 | [designed](../../references/design-canvas/S-Forgot.dc.html) |  |
+| `S-Forgot-Sent` | Reset link sent | Any staff (signed out) | P1 | [designed](../../references/design-canvas/S-Forgot-Sent.dc.html) |  |
+| `S-Account` | Name, avatar, language, push, sessions, sign out | Manager, Technician, Guard | P1 | [designed](../../references/design-canvas/S-Account.dc.html) | N9 |
+| `S-Inbox` | Staff notification center | Manager, Technician, Guard | P4 | [designed](../../references/design-canvas/S-Inbox.dc.html) |  |
+| `S-Docs` | Library filtered to the staff role | Manager, Technician, Guard | P5 | [designed](../../references/design-canvas/S-Docs.dc.html) |  |
+| `S-Doc-Page` | Library page, video, file | Manager, Technician, Guard | P5 | [designed](../../references/design-canvas/S-Doc-Page.dc.html) |  |
+| `B-Home` | Today: new, unassigned, vehicles pending | Manager | P4 | [designed](../../references/design-canvas/B-Home.dc.html) | N7 |
+| `B-Tickets` | Ticket list | Manager | P4 | [designed](../../references/design-canvas/B-Tickets.dc.html) | N7 |
+| `B-Ticket-Detail` | Ticket detail with internal notes | Manager | P4 | [designed](../../references/design-canvas/B-Ticket-Detail.dc.html) | N7 |
+| `B-Assign` | Assign to a Technician or Guard by workload | Manager | P4 | [designed](../../references/design-canvas/B-Assign.dc.html) |  |
+| `B-Ticket-Close` | Close or reopen after the result report | Manager | P4 | [designed](../../references/design-canvas/B-Ticket-Close.dc.html) |  |
+| `B-Units` | Unit lookup by code, name or phone | Manager | P4 | [designed](../../references/design-canvas/B-Units.dc.html) |  |
+| `B-Unit-Detail` | Unit: members with call buttons, vehicles, open tickets | Manager | P4 | [designed](../../references/design-canvas/B-Unit-Detail.dc.html) |  |
+| `B-Notice-New` | Quick notice | Manager | P4 | [designed](../../references/design-canvas/B-Notice-New.dc.html) |  |
+| `B-Notice-Stats` | Read statistics | Manager | P4 | [designed](../../references/design-canvas/B-Notice-Stats.dc.html) |  |
+| `B-Vehicles` | Vehicles waiting for review | Manager | P5 | [designed](../../references/design-canvas/B-Vehicles.dc.html) |  |
+| `B-Vehicle-Review` | Review with photos and the unit's vehicles | Manager | P5 | [designed](../../references/design-canvas/B-Vehicle-Review.dc.html) |  |
+| `B-Vehicle-Reject` | Reject with a reason code and note | Manager | P5 | [designed](../../references/design-canvas/B-Vehicle-Reject.dc.html) |  |
 
 ### DOC-62 · Staff app: Technician
 
@@ -169,12 +169,12 @@ File `08-ux-ui/screens/staff-technician.md` · Staff app · 6 sections (6 design
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `K-Jobs` | My jobs: awaiting acceptance, in progress, urgent | Technician | P4 | designed | N7 |
-| `K-Job-New` | Newly assigned job: accept or reject | Technician | P4 | designed |  |
-| `K-Job-Reject` | Reject with a reason | Technician | P4 | designed |  |
-| `K-Job-Working` | Work in progress: before/after photos, comments | Technician | P4 | designed |  |
-| `K-Job-Done` | Report done with a result note | Technician | P4 | designed |  |
-| `K-History` | Completed jobs and ratings | Technician | P4 | designed |  |
+| `K-Jobs` | My jobs: awaiting acceptance, in progress, urgent | Technician | P4 | [designed](../../references/design-canvas/K-Jobs.dc.html) | N7 |
+| `K-Job-New` | Newly assigned job: accept or reject | Technician | P4 | [designed](../../references/design-canvas/K-Job-New.dc.html) |  |
+| `K-Job-Reject` | Reject with a reason | Technician | P4 | [designed](../../references/design-canvas/K-Job-Reject.dc.html) |  |
+| `K-Job-Working` | Work in progress: before/after photos, comments | Technician | P4 | [designed](../../references/design-canvas/K-Job-Working.dc.html) |  |
+| `K-Job-Done` | Report done with a result note | Technician | P4 | [designed](../../references/design-canvas/K-Job-Done.dc.html) |  |
+| `K-History` | Completed jobs and ratings | Technician | P4 | [designed](../../references/design-canvas/K-History.dc.html) |  |
 
 ### DOC-63 · Staff app: Guard
 
@@ -182,15 +182,15 @@ File `08-ux-ui/screens/staff-guard.md` · Staff app · 9 sections (9 designed, 0
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `G-Lookup` | Scan entry and manual lookup, recent lookups | Guard | P5 | designed |  |
-| `G-Scan` | QR scanner with torch | Guard | P5 | designed |  |
-| `G-Scan-OK` | Valid code: unit, person, member type, permissions | Guard | P5 | designed |  |
-| `G-Scan-Expired` | Expired code: no resident data, manual lookup | Guard | P5 | designed |  |
-| `G-Scan-Invalid` | Invalid code: no resident data | Guard | P5 | designed |  |
-| `G-Unit` | Unit with active members (masked phone, DR-48) and approved vehicles | Guard | P5 | designed |  |
-| `G-Plate` | Plate search over approved vehicles | Guard | P5 | designed |  |
-| `G-Jobs` | My security tickets | Guard | P4 | designed | N7 |
-| `G-Jobs-Tech` | Read-only view of Technician tickets | Guard | P4 | designed | N7 |
+| `G-Lookup` | Scan entry and manual lookup, recent lookups | Guard | P5 | [designed](../../references/design-canvas/G-Lookup.dc.html) |  |
+| `G-Scan` | QR scanner with torch | Guard | P5 | [designed](../../references/design-canvas/G-Scan.dc.html) |  |
+| `G-Scan-OK` | Valid code: unit, person, member type, permissions | Guard | P5 | [designed](../../references/design-canvas/G-Scan-OK.dc.html) |  |
+| `G-Scan-Expired` | Expired code: no resident data, manual lookup | Guard | P5 | [designed](../../references/design-canvas/G-Scan-Expired.dc.html) |  |
+| `G-Scan-Invalid` | Invalid code: no resident data | Guard | P5 | [designed](../../references/design-canvas/G-Scan-Invalid.dc.html) |  |
+| `G-Unit` | Unit with active members (masked phone, DR-48) and approved vehicles | Guard | P5 | [designed](../../references/design-canvas/G-Unit.dc.html) |  |
+| `G-Plate` | Plate search over approved vehicles | Guard | P5 | [designed](../../references/design-canvas/G-Plate.dc.html) |  |
+| `G-Jobs` | My security tickets | Guard | P4 | [designed](../../references/design-canvas/G-Jobs.dc.html) | N7 |
+| `G-Jobs-Tech` | Read-only view of Technician tickets | Guard | P4 | [designed](../../references/design-canvas/G-Jobs-Tech.dc.html) | N7 |
 
 ### DOC-64 · Web: sign-in, dashboard, operations
 
@@ -198,20 +198,20 @@ File `08-ux-ui/screens/web-auth-dashboard-operations.md` · Web CMS · 14 sectio
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `W-Login` | Email and password sign-in | Any staff (signed out) | P1 | designed | N2, N8 |
-| `W-Forgot-Sent` | Reset link sent | Any staff (signed out) | P1 | designed |  |
-| `W-Reset` | Set a new password in the browser | Any staff (link holder) | P1 | designed |  |
-| `W-Profile` | Name, avatar, language, reset link, recent sessions | Admin, Manager | P1 | designed | N9 |
-| `W-Tickets` | Ticket list with filters | Admin, Manager | P4 | designed | N7 |
-| `W-Ticket-Detail` | Ticket detail: comments, internal notes, timeline | Admin, Manager | P4 | designed | N7 |
-| `W-Ticket-Assign` | Assign dialog with workload | Admin, Manager | P4 | designed |  |
-| `W-Ticket-Types` | Ticket types: names, enable or disable | Admin, Manager | P4 | designed |  |
+| `W-Login` | Email and password sign-in | Any staff (signed out) | P1 | [designed](../../references/design-canvas/W-Login.dc.html) | N2, N8 |
+| `W-Forgot-Sent` | Reset link sent | Any staff (signed out) | P1 | [designed](../../references/design-canvas/W-Forgot-Sent.dc.html) |  |
+| `W-Reset` | Set a new password in the browser | Any staff (link holder) | P1 | [designed](../../references/design-canvas/W-Reset.dc.html) |  |
+| `W-Profile` | Name, avatar, language, reset link, recent sessions | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Profile.dc.html) | N9 |
+| `W-Tickets` | Ticket list with filters | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Tickets.dc.html) | N7 |
+| `W-Ticket-Detail` | Ticket detail: comments, internal notes, timeline | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Ticket-Detail.dc.html) | N7 |
+| `W-Ticket-Assign` | Assign dialog with workload | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Ticket-Assign.dc.html) |  |
+| `W-Ticket-Types` | Ticket types: names, enable or disable | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Ticket-Types.dc.html) |  |
 | `W-Ticket-Cancel` | Manager cancels a ticket with a reason (DR-44) | Admin, Manager | P4 | to design |  |
-| `W-Notices` | Notice list: sent, scheduled, draft | Admin, Manager | P4 | designed |  |
-| `W-Notice-Edit` | Rich-text editor, audience, schedule, attachments | Admin, Manager | P4 | designed |  |
-| `W-Notice-Stats` | Read rate per member type, unread list, push failures | Admin, Manager | P4 | designed |  |
-| `W-Docs` | Library editor: folders, pages, visibility, VI/EN | Admin, Manager | P5 | designed |  |
-| `W-Dashboard` | Collection rate, debt, open tickets, vehicles, latest notice | Admin, Manager | P6 | designed |  |
+| `W-Notices` | Notice list: sent, scheduled, draft | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Notices.dc.html) |  |
+| `W-Notice-Edit` | Rich-text editor, audience, schedule, attachments | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Notice-Edit.dc.html) |  |
+| `W-Notice-Stats` | Read rate per member type, unread list, push failures | Admin, Manager | P4 | [designed](../../references/design-canvas/W-Notice-Stats.dc.html) |  |
+| `W-Docs` | Library editor: folders, pages, visibility, VI/EN | Admin, Manager | P5 | [designed](../../references/design-canvas/W-Docs.dc.html) |  |
+| `W-Dashboard` | Collection rate, debt, open tickets, vehicles, latest notice | Admin, Manager | P6 | [designed](../../references/design-canvas/W-Dashboard.dc.html) |  |
 
 ### DOC-65 · Web: residents
 
@@ -219,13 +219,13 @@ File `08-ux-ui/screens/web-residents.md` · Web CMS · 7 sections (6 designed, 1
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `W-Residents` | Resident accounts with filters | Admin, Manager | P1 | designed |  |
-| `W-Resident-Add` | Create an owner by phone, or link an existing account | Admin, Manager | P1 | designed |  |
-| `W-Units` | Unit list | Admin, Manager | P1 | designed |  |
-| `W-Unit-Detail` | Unit: members, debt, vehicles; change phone, lock, transfer | Admin, Manager | P1 | designed | N12 |
+| `W-Residents` | Resident accounts with filters | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Residents.dc.html) |  |
+| `W-Resident-Add` | Create an owner by phone, or link an existing account | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Resident-Add.dc.html) |  |
+| `W-Units` | Unit list | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Units.dc.html) |  |
+| `W-Unit-Detail` | Unit: members, debt, vehicles; change phone, lock, transfer | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Unit-Detail.dc.html) | N12 |
 | `W-Unit-Types` | Unit types and their defaults: list, add, edit, archive | Admin, Manager | P1 | to design | no artboard; specified from DOC-54 parts (DR-314, task P1-30) |
-| `W-Import` | Excel import of units and residents: validate, row errors, save, recent imports | Admin, Manager | P1 | designed | the recent-imports table has no artboard (DR-226) |
-| `W-Vehicles` | Vehicle review with photos | Admin, Manager | P5 | designed |  |
+| `W-Import` | Excel import of units and residents: validate, row errors, save, recent imports | Admin, Manager | P1 | [designed](../../references/design-canvas/W-Import.dc.html) | the recent-imports table has no artboard (DR-226) |
+| `W-Vehicles` | Vehicle review with photos | Admin, Manager | P5 | [designed](../../references/design-canvas/W-Vehicles.dc.html) |  |
 
 ### DOC-66 · Web: finance
 
@@ -233,20 +233,20 @@ File `08-ux-ui/screens/web-finance.md` · Web CMS · 15 sections (8 designed, 7 
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `W-Fees` | Fee batches: code, status, units, total, collected | Admin, Manager | P2 | designed | N5 |
-| `W-Fee-Import` | Import a batch from Excel | Admin, Manager | P2 | designed |  |
-| `W-Fee-Batch` | Draft batch: check, edit lines, preview, publish | Admin, Manager | P2 | designed |  |
-| `W-Fee-Notice` | Fee notice template, VI/EN | Admin, Manager | P2 | designed |  |
-| `W-Fee-Record` | Unit debt and manual payment (cash or transfer) | Admin, Manager | P2 | designed | N4, N6 |
+| `W-Fees` | Fee batches: code, status, units, total, collected | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Fees.dc.html) | N5 |
+| `W-Fee-Import` | Import a batch from Excel | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Fee-Import.dc.html) |  |
+| `W-Fee-Batch` | Draft batch: check, edit lines, preview, publish | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Fee-Batch.dc.html) |  |
+| `W-Fee-Notice` | Fee notice template, VI/EN | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Fee-Notice.dc.html) |  |
+| `W-Fee-Record` | Unit debt and manual payment (cash or transfer) | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Fee-Record.dc.html) | N4, N6 |
 | `W-Fee-Recall` | Recall a published batch, with the 409 result | Admin, Manager | P2 | to design |  |
 | `W-Charge-Void` | Dialog: void one open charge, reason of at least 5 characters | Admin, Manager | P2 | to design |  |
 | `W-Fee-Reissue` | Re-issue a recalled batch as a new draft | Admin, Manager | P2 | to design |  |
-| `W-Debts` | Debt per unit, aging, push reminders | Admin, Manager | P2 | designed |  |
-| `W-Transactions` | Online transactions, pending, duplicates, re-query | Admin, Manager | P2 (*DR-325*) | designed | N3, N4 |
+| `W-Debts` | Debt per unit, aging, push reminders | Admin, Manager | P2 | [designed](../../references/design-canvas/W-Debts.dc.html) |  |
+| `W-Transactions` | Online transactions, pending, duplicates, re-query | Admin, Manager | P2 (*DR-325*) | [designed](../../references/design-canvas/W-Transactions.dc.html) | N3, N4 |
 | `W-Money-Log` | Tab of `W-Transactions`: every confirmation and unmatched line, review (DR-16) | Admin, Manager | P2 (*DR-325*) | to design |  |
 | `UnitMoneyPanel` | Component: the log rows of one unit (DR-16) | Admin, Manager | P2 (*DR-325*) | to design |  |
 | `W-Statement` | Bank-statement upload and reconciliation | Admin, Manager | P3 | to design |  |
-| `W-Reports` | Aging, collection per item, ticket statistics | Admin, Manager | P6 | designed |  |
+| `W-Reports` | Aging, collection per item, ticket statistics | Admin, Manager | P6 | [designed](../../references/design-canvas/W-Reports.dc.html) |  |
 | `W-Export-Center` | Requested exports and downloads (DR-55) | Admin, Manager | P6 | to design |  |
 
 ### DOC-67 · Web: system
@@ -255,13 +255,13 @@ File `08-ux-ui/screens/web-system.md` · Web CMS · 7 sections (6 designed, 1 to
 
 | Section | Screen | Role or member type | Phase | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `W-Staff` | Staff accounts, roles, lock, resend invite | Admin; Manager (Technician and Guard only) | P1 | designed |  |
-| `W-Staff-New` | Create a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed |  |
-| `W-Building` | Building and company info, defaults, terms | Admin | P1 | designed |  |
+| `W-Staff` | Staff accounts, roles, lock, resend invite | Admin; Manager (Technician and Guard only) | P1 | [designed](../../references/design-canvas/W-Staff.dc.html) |  |
+| `W-Staff-New` | Create a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | [designed](../../references/design-canvas/W-Staff-New.dc.html) |  |
+| `W-Building` | Building and company info, defaults, terms | Admin | P1 | [designed](../../references/design-canvas/W-Building.dc.html) |  |
 | `W-Step-Up` | Dialog: request a code, enter password and code (DR-39) | Admin | P1 | to design |  |
-| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed | N3 |
-| `W-Audit` | Audit log of staff data changes | Admin; Manager (narrowed set) | P6 | designed |  |
-| `W-System` | Backups, storage, notification channels | Admin | P6 | designed |  |
+| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | [designed](../../references/design-canvas/W-Gateway.dc.html) | N3 |
+| `W-Audit` | Audit log of staff data changes | Admin; Manager (narrowed set) | P6 | [designed](../../references/design-canvas/W-Audit.dc.html) |  |
+| `W-System` | Backups, storage, notification channels | Admin | P6 | [designed](../../references/design-canvas/W-System.dc.html) |  |
 
 
 ## 4. Screens the prototype does not draw
@@ -340,7 +340,7 @@ Template A.5 of the master plan, with one change (DR-194): section 3 is "Prototy
 | line under the heading | status line | `> Status: Draft · Prototype: designed \| to design · Phase: Pn · DOC-xx` (same words as §3 of this document) |
 | 1 | Persona, use cases, permissions | Persona `PS-x`, use cases `UC-xx`, requirements `FR-xx`; the capability or the staff roles that open the screen; what changes for each member type |
 | 2 | URL and search params | Web: the route and its search params. Mobile: the expo-router path and the params. Deep link scheme where it applies (DR-69) |
-| 3 | Prototype | The canvas artboard name and its canvas title; size (390 wide for mobile, 1440 for web); a compact list of regions top to bottom (top bar, hero, list, bottom bar) naming the design-system component of each; then "Do not copy" with the notes of §5 that apply. **No ASCII wireframe** for a `designed` screen. A `to design` screen carries an ASCII wireframe here instead, plus the design owner and the phase deadline |
+| 3 | Prototype | The canvas artboard name, linked to its file in `references/design-canvas/` (DR-335), and its canvas title; size (390 wide for mobile, 1440 for web); a compact list of regions top to bottom (top bar, hero, list, bottom bar) naming the design-system component of each; then "Do not copy" with the notes of §5 that apply. **No ASCII wireframe** for a `designed` screen. A `to design` screen carries an ASCII wireframe here instead, plus the design owner and the phase deadline |
 | 4 | Regions and components | The components of DOC-54 each region uses, and the state each shows |
 | 5 | Data | Every read as `E-xx` with the query keys (unit prefix, DR-70), polling interval, refetch triggers, and the real-time source (§6.5) |
 | 6 | Interactions | Table `Action · E-xx · Success · Failure`: each write names its endpoint, the idempotency key if required (DOC-50), the result the user sees, and each error code from DOC-42 §5 the screen branches on |
@@ -446,7 +446,8 @@ Delegated by the Owner (the decision log of the register says design documents a
 
 | Id | Decision |
 | --- | --- |
-| DR-194 | Wireframes are not duplicated. The prototype is the visual source of truth; a screen section has a "Prototype" part (artboard name, regions, "Do not copy"). ASCII wireframes only for `to design` screens (§6.2) |
+| DR-194 | Wireframes are not duplicated. The prototype is the reference for layout and UX (DR-335); a screen section has a "Prototype" part (artboard name, regions, "Do not copy"). ASCII wireframes only for `to design` screens (§6.2) |
+| DR-335 | The canvas is kept in `references/design-canvas/` as a snapshot. An artboard is the reference for layout and UX; components and visual styling follow DOC-54 |
 | DR-195 | Screen documents use one test-ID prefix each (§6.3) and the microcopy key scheme `<app>.<screen>.<element>` (§6.4) |
 | DR-196 | A composite screen is built in its first phase with the cards whose modules exist; later cards are hidden until their phase (§6.7, N10) |
 | DR-197 | The UI word for a ticket: residents see "Yêu cầu" (DR-41…47), staff screens and the web CMS keep the prototype's "Phiếu" (a staff member handles a work slip, a resident files a request); the glossary records both |

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Trung tâm thông báo</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1080px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Thông báo" subtitle="Căn hộ A-1508, 4 chưa đọc" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 4px 20px 24px;">
+<div style="display: flex; justify-content: flex-end; margin-top: -8px;">
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" icon="check" on-click="{{noop}}" style="margin-right: -12px;">Đánh dấu đã đọc hết</x-import>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Hôm nay</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="megaphone" tone="coral" title="Khẩn: ngừng cấp nước tầng 8–15" subtitle="Bản tin, 07:45" on-click="{{noop}}"><span aria-label="Chưa đọc" style="display: block; width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--lamp); box-shadow: 0 0 0 1.5px var(--ink);"></span></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="note-pencil" tone="teal" title="YC-1009-007 đã gửi tới BQL" subtitle="Yêu cầu hỗ trợ, 07:55" on-click="{{noop}}"><span aria-label="Chưa đọc" style="display: block; width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--lamp); box-shadow: 0 0 0 1.5px var(--ink);"></span></x-import>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Trước đó</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="note-pencil" tone="teal" title="YC-1007-012 chuyển sang Đang xử lý" subtitle="Yêu cầu hỗ trợ, 14:00, 08/10" on-click="{{noop}}"><span aria-label="Chưa đọc" style="display: block; width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--lamp); box-shadow: 0 0 0 1.5px var(--ink);"></span></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="receipt" tone="gold" title="Đã phát hành phí tháng 10/2026, đợt 2" subtitle="Phí, 350.000 đ, hạn 25/10" on-click="{{noop}}"><span aria-label="Chưa đọc" style="display: block; width: 10px; height: 10px; border-radius: var(--radius-full); background: var(--lamp); box-shadow: 0 0 0 1.5px var(--ink);"></span></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="car" tone="sky" title="Xe 29B1-456.78 đang chờ BQL duyệt" subtitle="Phương tiện, 06/10" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="car" tone="sky" title="Xe 30H-112.05 đã được duyệt" subtitle="Phương tiện, 03/10" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="wallet" tone="gold" title="Đã thanh toán phí tháng 9/2026" subtitle="Thanh toán, 2.416.000 đ, 12/09" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

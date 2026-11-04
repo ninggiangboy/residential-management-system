@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỹ thuật: Công việc của tôi</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1300px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 32px; padding: 12px 20px 32px;">
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<x-import component-from-global-scope="Hien.GreetingBar" name="Đỗ Văn Hùng" greeting="Chào buổi sáng" on-profile="{{noop}}">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 2 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Kỹ thuật, Mộc Miên Residence. Hôm nay bạn có 1 phiếu chờ nhận và 2 phiếu đang xử lý.</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Mới được giao</h2>
+<x-import component-from-global-scope="Hien.Card" style="box-shadow: var(--shadow-float);">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate">YC-1009-003</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="warning" icon="clock">Chờ bạn nhận</x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Đèn hành lang tầng 11 nhấp nháy</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, hành lang tầng 11 trước căn A-1102</div>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-control); background: var(--fill); font-size: 14px; line-height: 20px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Nguyễn Thu Trang" size="sm"></x-import>
+<span style="min-width: 0;"><span style="font-weight: 600;">BQL Nguyễn Thu Trang</span> giao cho bạn lúc 09:12</span>
+</div>
+<div style="display: flex; gap: 12px;">
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="lg" on-click="{{noop}}" style="flex: 1 1 0;">Xem chi tiết</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="check" on-click="{{noop}}" style="flex: 1 1 0;">Nhận việc</x-import>
+</div>
+</div>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phiếu của bạn</h2>
+<div style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.Chip" selected="{{yes}}" on-click="{{noop}}">Tất cả</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Chờ nhận 1</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Đang xử lý 2</x-import>
+<x-import component-from-global-scope="Hien.Chip" icon="warning" on-click="{{noop}}">Khẩn</x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);">
+<x-import component-from-global-scope="Hien.Tag" tone="warning">Khẩn</x-import>
+<span>Mất điện trong căn, ưu tiên xử lý trước</span>
+</div>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-010" title="Mất điện ổ cắm bếp" category="Sửa chữa, căn A-0805" time="nhận 08:15 hôm nay" status="processing" on-click="{{noop}}"></x-import>
+</div>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1007-012" title="Điều hòa phòng ngủ chảy nước xuống sàn" category="Sửa chữa, căn A-1508" time="hẹn 18:30 hôm nay" status="processing" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-003" title="Đèn hành lang tầng 11 nhấp nháy" category="Sửa chữa, hành lang tầng 11" time="giao 09:12 hôm nay" status="sent" status-label="Chờ bạn nhận" on-click="{{noop}}"></x-import>
+</section>
+
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="jobs" items="{{tabs}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+unread: 2,
+noop: function () {},
+tabs: [
+{ key: 'jobs', icon: 'wrench', label: 'Công việc', badge: 2 },
+{ key: 'history', icon: 'clock', label: 'Lịch sử' },
+{ key: 'docs', icon: 'squares-four', label: 'Tài liệu' },
+{ key: 'me', icon: 'user-circle', label: 'Tài khoản' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

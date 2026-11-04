@@ -1,6 +1,6 @@
 # Web: system
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); Owner, 2026-11-02, for `W-Gateway` (P2); W-Audit and W-System are owed) · Updated: 2026-11-01 (DR-325, DR-326: `W-Gateway` is P2 and follows Stripe) · 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); Owner, 2026-11-02, for `W-Gateway` (P2); W-Audit and W-System are owed) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-11-01 (DR-325, DR-326: `W-Gateway` is P2 and follows Stripe) · 2026-10-29 (DR-310: the conflict banner offers two choices; UIWS-19, UIWS-23) · 2026-10-20 · DOC-67
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-33, 38, 39, 41…47, 59, 72, 74, 128, 133, 147, 148), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-38, FR-41, FR-50), [DOC-04](../../01-product/use-cases.md) (UC-17), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-36](../../06-design/building-configuration-and-demo.md) §4…8, [DOC-37](../../06-design/files-and-uploads.md), [DOC-51](../../07-api/api-endpoints.md) (E-08, E-38…E-56), [DOC-42](../../06-design/error-handling.md) §5, [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md), DOC-54
 > Main readers: P1-16 (web CMS shell: `W-Staff`, `W-Staff-New`, `W-Building`), P1-14, P1-15, the writers of DOC-64…66 (they cite the step-up rule below), P3 and P6 (the later table), EXP-10
 
@@ -8,17 +8,19 @@ This document specifies the web screens of the System group of the sidebar (`H�
 
 Test prefix: `UIWS-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it).
 
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
+
 ## Screens in this file
 
 | Section | Screen | Role | Phase | Status |
 | --- | --- | --- | --- | --- |
-| `W-Staff` | Staff accounts, roles, lock, resend invite | Admin; Manager (actions on Technician and Guard only) | P1 | designed |
-| `W-Staff-New` | Create (and edit) a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed (create); edit mode reuses it (DR-218) |
-| `W-Building` | Building and company info, defaults, terms | Admin | P1 | designed |
+| [`W-Staff`](../../references/design-canvas/W-Staff.dc.html) | Staff accounts, roles, lock, resend invite | Admin; Manager (actions on Technician and Guard only) | P1 | designed |
+| [`W-Staff-New`](../../references/design-canvas/W-Staff-New.dc.html) | Create (and edit) a staff account, invite email | Admin; Manager (Technician and Guard only) | P1 | designed (create); edit mode reuses it (DR-218) |
+| [`W-Building`](../../references/design-canvas/W-Building.dc.html) | Building and company info, defaults, terms | Admin | P1 | designed |
 | `W-Step-Up` | Dialog: request a code, enter password and code | Admin | P1 | to design |
-| `W-Gateway` | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed (written 2026-11-01; the table below keeps the canvas deviations) |
-| `W-Audit` | Audit log | Admin | P6 | designed (table below) |
-| `W-System` | Backups, storage, notification channels | Admin | P6 | designed (table below) |
+| [`W-Gateway`](../../references/design-canvas/W-Gateway.dc.html) | Payment gateway configuration and checks | Admin | P2 (*DR-325*) | designed (written 2026-11-01; the table below keeps the canvas deviations) |
+| [`W-Audit`](../../references/design-canvas/W-Audit.dc.html) | Audit log | Admin | P6 | designed (table below) |
+| [`W-System`](../../references/design-canvas/W-System.dc.html) | Backups, storage, notification channels | Admin | P6 | designed (table below) |
 
 Shared facts for the P1 sections:
 
@@ -55,7 +57,7 @@ PS-1 Admin ("Hà"), PS-2 Manager; UC-17 (alternatives A, C, D), FR-13.6, FR-14.1
 
 ### 3. Prototype
 
-Artboard `W-Staff` ("Admin: Tài khoản nhân viên"), 1440 × 1000. Regions, top to bottom: sidebar with the group `Hệ thống` and `Nhân viên` selected; header with the breadcrumb "Hệ thống / Nhân viên", the VI/EN switch and the bell; title block with the primary `Button` "Tạo tài khoản"; info `Banner`; role `Chip`s with counts beside a `SearchField`; a table card (columns Họ tên, Role, Trạng thái, Đăng nhập gần nhất, Thao tác) with `Avatar`, `Tag` and a row action `Button` plus a pencil `IconButton`; pager.
+Artboard [`W-Staff`](../../references/design-canvas/W-Staff.dc.html) ("Admin: Tài khoản nhân viên"), 1440 × 1000. Regions, top to bottom: sidebar with the group `Hệ thống` and `Nhân viên` selected; header with the breadcrumb "Hệ thống / Nhân viên", the VI/EN switch and the bell; title block with the primary `Button` "Tạo tài khoản"; info `Banner`; role `Chip`s with counts beside a `SearchField`; a table card (columns Họ tên, Role, Trạng thái, Đăng nhập gần nhất, Thao tác) with `Avatar`, `Tag` and a row action `Button` plus a pencil `IconButton`; pager.
 
 Do not copy:
 
@@ -164,7 +166,7 @@ PS-1, PS-2; UC-17 main flow "create a staff account", alternative C; FR-14.1, FR
 
 ### 3. Prototype
 
-Artboard `W-Staff-New` ("Tạo tài khoản nhân viên"), 1440 × 960: the list of `W-Staff` dimmed behind a right-hand dialog titled "Tạo tài khoản nhân viên" with a close `IconButton`; fields `TextField` "Họ và tên", `TextField` "Email công việc", `TextField` "Số điện thoại" (optional), a `Radio` group "Role" with four options each with a description, a `Checkbox` "Gửi email đặt mật khẩu ngay"; footer "Hủy" (ghost) and "Tạo và gửi email" (primary).
+Artboard [`W-Staff-New`](../../references/design-canvas/W-Staff-New.dc.html) ("Tạo tài khoản nhân viên"), 1440 × 960: the list of `W-Staff` dimmed behind a right-hand dialog titled "Tạo tài khoản nhân viên" with a close `IconButton`; fields `TextField` "Họ và tên", `TextField` "Email công việc", `TextField` "Số điện thoại" (optional), a `Radio` group "Role" with four options each with a description, a `Checkbox` "Gửi email đặt mật khẩu ngay"; footer "Hủy" (ghost) and "Tạo và gửi email" (primary).
 
 Do not copy:
 
@@ -257,7 +259,7 @@ PS-1 Admin only; UC-17 alternative E, UC-27 (terms); FR-38.1…38.4, FR-41.1, FR
 
 ### 3. Prototype
 
-Artboard `W-Building` ("Tòa nhà và cấu hình"), 1440 × 1120. Regions: title "Tòa nhà và cấu hình" with the subtitle and the actions "Hoàn tác" (ghost) and "Lưu thay đổi" (primary); left column, card "Thông tin tòa nhà và công ty" (name VI/EN, company, address, hotline, email, working hours) and card "Cấu hình chung" (default due days, default resident language `SegmentedControl`, login tries, lock minutes); right column, card "Logo công ty" (preview, "Đổi logo", format note) and card "Điều khoản sử dụng" (version, date, `Tag` "Đang áp dụng", "Sửa điều khoản").
+Artboard [`W-Building`](../../references/design-canvas/W-Building.dc.html) ("Tòa nhà và cấu hình"), 1440 × 1120. Regions: title "Tòa nhà và cấu hình" with the subtitle and the actions "Hoàn tác" (ghost) and "Lưu thay đổi" (primary); left column, card "Thông tin tòa nhà và công ty" (name VI/EN, company, address, hotline, email, working hours) and card "Cấu hình chung" (default due days, default resident language `SegmentedControl`, login tries, lock minutes); right column, card "Logo công ty" (preview, "Đổi logo", format note) and card "Điều khoản sử dụng" (version, date, `Tag` "Đang áp dụng", "Sửa điều khoản").
 
 Do not copy:
 
@@ -509,7 +511,7 @@ PS-1 Admin only. UC-17 (configure the payment gateway), FR-38.3, FR-50 (a step-u
 
 ### 3. Prototype
 
-Artboard `W-Gateway` (title "BQL: Cổng thanh toán", 1440 wide): a status card with the connection state and the last check; a form with the provider fields (client id, API key, checksum key with "Hiện" buttons), a receiving-account block (bank, number, name), a "Môi trường thử nghiệm" switch, a webhook URL with a copy button, buttons "Kiểm tra kết nối" and "Lưu", health cards ("IPN gần nhất", counts), and a banner "Chưa chốt cổng…".
+Artboard [`W-Gateway`](../../references/design-canvas/W-Gateway.dc.html) (title "BQL: Cổng thanh toán", 1440 wide): a status card with the connection state and the last check; a form with the provider fields (client id, API key, checksum key with "Hiện" buttons), a receiving-account block (bank, number, name), a "Môi trường thử nghiệm" switch, a webhook URL with a copy button, buttons "Kiểm tra kết nối" and "Lưu", health cards ("IPN gần nhất", counts), and a banner "Chưa chốt cổng…".
 
 Do not copy (N3, DR-325, DR-326): the choice between providers and the banner (a design note); "IPN" (the word is "webhook"); the "Hiện" buttons (a secret is masked and never returned); the **receiving-account block for Stripe** (money goes to the Stripe account; the block appears only for a driver with the `qr` presentation); the "Môi trường thử nghiệm" switch (the mode is read from the key prefix, never typed); "IPN gần nhất" and the health cards need the last-webhook data that E-51 does not return and are replaced by two lines from DOC-40 metrics (last verified webhook, rejections in 24 h).
 

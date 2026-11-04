@@ -1,6 +1,6 @@
 # Design screens: catalog and rules
 
-Source: the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> (115 artboards, Vietnamese UI, sample building "Mộc Miên Residence", 24 floors, 240 units). This file is a condensed copy: the artboard list per app and role, and the business rules the screens imply. Open the canvas for the visuals. Names, phone numbers and amounts in the design are sample data.
+Source: the design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> (115 artboards, Vietnamese UI, sample building "Mộc Miên Residence", 24 floors, 240 units). The files of every artboard are in [`design-canvas/`](design-canvas/README.md), as the reference for layout and UX (DR-335). This file is a condensed copy: the artboard list per app and role, and the business rules the screens imply. Open the canvas for the visuals. Names, phone numbers and amounts in the design are sample data.
 
 Artboard prefixes: `W-` web CMS, `B-` staff app as Manager, `K-` staff app as Technician, `G-` staff app as Guard, `S-` staff app screens shared by every staff role, no prefix: resident app.
 

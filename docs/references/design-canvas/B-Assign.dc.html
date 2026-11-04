@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Phân công phiếu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Chi tiết phiếu" subtitle="Phiếu hỗ trợ" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 8px 20px 24px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1009-007</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="warning">Chưa phân công</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Ổ cắm phòng khách có mùi khét</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, phòng khách, gửi 07:55, 09/10/2026</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card);">
+<x-import component-from-global-scope="Hien.Avatar" name="Trần Minh Anh" size="md"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 16px; line-height: 22px; font-weight: 600;">Trần Minh Anh</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import><span>Chủ hộ, 0912 345 678</span></div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Trần Minh Anh, 0912 345 678" variant="filled" on-click="{{noop}}"></x-import>
+</div>
+</main>
+<x-import component-from-global-scope="Hien.BottomSheet" open="{{yes}}" contained="{{yes}}" title="Phân công YC-1009-007" primary-label="Phân công cho Lê Minh Tuấn" on-primary="{{noop}}" on-close="{{noop}}">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Ổ cắm phòng khách có mùi khét, căn A-1508. Chọn người phụ trách theo khối lượng đang giữ.</p>
+<x-import component-from-global-scope="Hien.SegmentedControl" label="Bộ phận" value="tech" options="{{teams}}" on-change="{{noop}}"></x-import>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<x-import component-from-global-scope="Hien.Radio" name="staff" value="hung" checked="{{no}}" label="Đỗ Văn Hùng" description="Đang giữ 2 phiếu đang xử lý" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.Radio" name="staff" value="tuan" checked="{{yes}}" label="Lê Minh Tuấn" description="Đang giữ 1 phiếu đang xử lý" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.Radio" name="staff" value="nam" checked="{{no}}" label="Bùi Văn Nam" description="Đang giữ 4 phiếu đang xử lý" on-change="{{noop}}"></x-import>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Lê Minh Tuấn nhận thông báo đẩy ngay. Cư dân thấy phiếu chuyển sang Đã tiếp nhận.</p>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+no: false,
+noop: function () {},
+teams: [{ value: 'tech', label: 'Kỹ thuật' }, { value: 'guard', label: 'Bảo vệ' }]
+};
+}
+}
+</script>
+</body>
+</html>

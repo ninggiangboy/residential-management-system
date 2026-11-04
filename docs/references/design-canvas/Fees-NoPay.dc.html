@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Người thuê không trả phí: Phí</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1240px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; padding: 4px 0 56px;">
+<x-import component-from-global-scope="Hien.TopBar" variant="large" title="Phí" subtitle="Căn hộ A-1102">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 2 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="display: flex; flex-direction: column; gap: 24px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.Banner" tone="neutral" icon="info" title="Chủ hộ thanh toán phí của căn này">Bạn xem được các đợt phí và biên lai. Muốn tự thanh toán, bạn nhờ chủ hộ bật quyền thanh toán cho bạn.</x-import>
+<x-import component-from-global-scope="Hien.SegmentedControl" label="Xem phí" value="due" options="{{segments}}" on-change="{{noop}}"></x-import>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phí tháng 10/2026</h2>
+<x-import component-from-global-scope="Hien.BillSlip" tone="surface" unit="A-1102" period="Đợt 1, phát hành 01/10" due="Hạn thanh toán 15/10/2026" status="due" status-label="Còn 6 ngày" items="{{items}}" total="{{total}}">
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Chủ hộ thanh toán đợt phí này. Bạn nhận thông báo khi đợt phí được thanh toán.</p>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phí tháng 9/2026</h2>
+<x-import component-from-global-scope="Hien.BillSlip" unit="A-1102" period="Đợt 1, phát hành 01/09" due="Thanh toán ngày 11/09/2026" status="paid" status-label="Đã thanh toán" total="{{paidTotal}}">
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="md" icon="receipt" block="{{yes}}" on-click="{{noop}}">Xem biên lai</x-import>
+</x-import>
+</section>
+</div>
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="fees" items="{{tabs}}" center="{{centerAction}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1240}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+unread: 2,
+noop: function () {},
+segments: [{ value: 'due', label: 'Cần thanh toán' }, { value: 'history', label: 'Lịch sử' }],
+items: [
+{ icon: 'buildings', label: 'Phí quản lý', detail: '70 m² × 12.000 đ', amount: 840000 },
+{ icon: 'drop', label: 'Nước sinh hoạt', detail: '12 m³', amount: 144000 },
+{ icon: 'car', label: 'Gửi ô tô', detail: '1 xe', amount: 1200000 }
+],
+total: 2184000,
+paidTotal: 2160000,
+centerAction: { icon: 'qr-code', label: 'Mã QR ra vào của tôi' },
+tabs: [
+{ key: 'home', icon: 'house', label: 'Trang chủ' },
+{ key: 'fees', icon: 'receipt', label: 'Phí' },
+{ key: 'requests', icon: 'chat-circle-dots', label: 'Yêu cầu' },
+{ key: 'unit', icon: 'buildings', label: 'Căn hộ' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

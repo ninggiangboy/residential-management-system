@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Phiếu hỗ trợ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1400px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 4px 0 24px;">
+<x-import component-from-global-scope="Hien.TopBar" variant="large" title="Phiếu hỗ trợ" subtitle="Mộc Miên Residence">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 5 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="display: flex; flex-direction: column; gap: 16px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.SearchField" label="Tìm phiếu" value="" placeholder="Mã phiếu, căn hoặc tiêu đề" on-change="{{noop}}"></x-import>
+<div style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.Chip" selected="{{yes}}" on-click="{{noop}}">Tất cả</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Chưa phân công</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Đang xử lý</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Sửa chữa</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">An ninh</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Vệ sinh</x-import>
+<x-import component-from-global-scope="Hien.Chip" on-click="{{noop}}">Hôm nay</x-import>
+</div>
+<x-import component-from-global-scope="Hien.Tabs" label="Trạng thái phiếu" value="open" items="{{tabsStatus}}" on-change="{{noop}}"></x-import>
+
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-007" title="Ổ cắm phòng khách có mùi khét" category="Sửa chữa" time="gửi 07:55, 09/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import><span>Chưa có người phụ trách</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-003" title="Đèn hành lang tầng 11 nhấp nháy" category="Sửa chữa" time="gửi 06:40, 09/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1102</x-import><span>Chưa có người phụ trách</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1008-009" title="Rác tồn ở phòng rác tầng 6" category="Vệ sinh" time="gửi 20:15, 08/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-0603</x-import><span>Chưa có người phụ trách</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1008-015" title="Rò nước ở trần nhà vệ sinh" category="Sửa chữa" time="báo xong 09:10, 09/10" status="done" status-label="Chờ đóng phiếu" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-0906</x-import><span>Phụ trách: Lê Minh Tuấn, kỹ thuật</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1007-012" title="Điều hòa phòng ngủ chảy nước xuống sàn" category="Sửa chữa" time="hẹn 18:30 hôm nay" status="processing" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import><span>Phụ trách: Đỗ Văn Hùng, kỹ thuật</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1005-020" title="Xe lạ đỗ chắn lối vào ô đỗ B1-042" category="An ninh" time="gửi 21:15, 05/10" status="received" on-click="{{noop}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import><span>Phụ trách: Vũ Quang Huy, bảo vệ</span></div>
+</div>
+</div>
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="tickets" items="{{tabs}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+unread: 5,
+noop: function () {},
+tabsStatus: [
+{ key: 'open', label: 'Đang mở', count: 6 },
+{ key: 'done', label: 'Hoàn thành' },
+{ key: 'closed', label: 'Đã đóng' }
+],
+tabs: [
+{ key: 'home', icon: 'house', label: 'Trang chủ' },
+{ key: 'tickets', icon: 'chat-circle-dots', label: 'Phiếu', badge: 3 },
+{ key: 'vehicles', icon: 'car', label: 'Phương tiện', badge: 3 },
+{ key: 'units', icon: 'buildings', label: 'Căn hộ' },
+{ key: 'me', icon: 'user-circle', label: 'Tài khoản' }
+]
+};
+}
+}
+</script>
+</body>
+</html>
