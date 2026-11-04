@@ -3,6 +3,7 @@ import type {
   FileDto,
   FileExpectation,
   FilesApi,
+  FindByOwnerRefInput,
   RegisterInput,
   StoreGeneratedInput,
   UploadTicket,
@@ -62,5 +63,9 @@ export class FilesApiImpl implements FilesApi {
 
   storeGenerated(input: StoreGeneratedInput): Promise<FileDto> {
     return this.uc.storeGeneratedFile.execute(input)
+  }
+
+  findByOwnerRef(buildingId: string, input: FindByOwnerRefInput): Promise<FileDto | null> {
+    return this.queries.findByOwnerRef(buildingId, input)
   }
 }

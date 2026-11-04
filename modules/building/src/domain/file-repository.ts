@@ -1,4 +1,5 @@
 import type { BuildingScope } from '@rms/shared-types'
+import type { FindByOwnerRefInput } from '../contracts'
 import type { FileObject, FileTransition, NewFile } from './file-object'
 
 export interface FileRepository {
@@ -11,6 +12,11 @@ export interface FileRepository {
   findAnyBuilding(id: string): Promise<FileObject | null>
   /** The thumbnail row of an original (`owner_ref = 'thumb:<id>'`, live), through `ix_file_object_building_owner`. */
   findThumbnail(scope: BuildingScope, originalId: string): Promise<FileObject | null>
+  /**
+   * The `attached` row of the building with that module, purpose and `owner_ref`, through `ix_file_object_building_owner`
+   * (DR-293; DOC-34 §8, DOC-37 §3). The newest one when several match; `null` when none.
+   */
+  findByOwnerRef(scope: BuildingScope, key: FindByOwnerRefInput): Promise<FileObject | null>
   /**
    * Applies the change the aggregate decided (DR-255): one conditional `UPDATE` inside the building, the row after it, or `null`
    * when the state moved since the file was loaded (DOC-37 §6).

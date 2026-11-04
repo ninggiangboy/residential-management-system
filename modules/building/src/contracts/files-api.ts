@@ -63,6 +63,16 @@ export interface FileExpectation {
   ownerRef?: string
 }
 
+/**
+ * The logical key of `storeGenerated` (DR-86) to look a cached file up by: the row of a building with that module, purpose and
+ * `owner_ref` (DR-293; DOC-34 §8).
+ */
+export interface FindByOwnerRefInput {
+  module: FileModule
+  purpose: Purpose
+  ownerRef: string
+}
+
 export interface FilesApi {
   /** Checks the audience, the purpose, the mime, the size, the rate bucket and the quota; inserts a `pending` row; presigns the `PUT`. */
   register(actor: FileActor, input: RegisterInput): Promise<UploadTicket>
@@ -87,4 +97,9 @@ export interface FilesApi {
   ): Promise<string | null>
   /** The worker stores a PDF, a ZIP or an export; it bypasses the quota (DR-123). */
   storeGenerated(input: StoreGeneratedInput): Promise<FileDto>
+  /**
+   * The `attached` row of the building with that module, purpose and `owner_ref`, through `ix_file_object_building_owner`; `null`
+   * when none (DR-293; DOC-34 §8, DOC-37 §3). Read-only: no transaction, no bucket call.
+   */
+  findByOwnerRef(buildingId: string, input: FindByOwnerRefInput): Promise<FileDto | null>
 }
