@@ -1,5 +1,5 @@
 import { createGaplessCounter, type Database } from '@core/db'
-import type { Idempotent } from '@core/http'
+import { type Idempotent, routePlugin } from '@core/http'
 import type { Clock, IdGenerator, Log } from '@core/kernel'
 import {
   DrizzleInboxGuard,
@@ -391,13 +391,14 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     moneyLog: new MoneyLogQueries(moneyLog),
     feeNotice: feeNoticeQueries,
   }
-  const routes = financeRoutes({
-    ...useCases,
-    moneyLog: queries.moneyLog,
-    // `install.ts` requires both of the host; a test that does not mount the routes leaves them out (see `guards`).
-    guards: deps.guards as Guards,
-    idempotent: deps.idempotent as Idempotent,
-  })
+  // `install.ts` requires the guards and the key wrapper of the host; a test that builds the module to call its use cases leaves
+  // them out and gets no routes, never unguarded ones (see `guards`).
+  const { guards, idempotent } = deps
+  const routes = (
+    guards && idempotent
+      ? financeRoutes({ ...useCases, moneyLog: queries.moneyLog, guards, idempotent })
+      : routePlugin()
+  ) as ReturnType<typeof financeRoutes>
   return {
     name: 'finance',
     docs: [
