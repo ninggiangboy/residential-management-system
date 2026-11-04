@@ -23,6 +23,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     expect(defined.map(({ job }) => job.name).sort()).toEqual([
       'audit_purge',
       'demo_reset',
+      'fee_notice_run',
       'import_expire',
       'import_purge',
       'inbox_purge',
@@ -56,6 +57,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       usage_rollup: 720,
       inbox_purge: 1_440,
       invariant_check: 720,
+      fee_notice_run: 0,
       push_receipts: 0,
       realtime_purge: 0,
     })
