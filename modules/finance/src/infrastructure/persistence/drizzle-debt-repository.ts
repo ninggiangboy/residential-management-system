@@ -1,11 +1,14 @@
 import type { Database } from '@core/db'
 import { type BuildingScope, type LocalDate, type Money, money } from '@rms/shared-types'
-import { sql } from 'drizzle-orm'
+import { type SQL, sql } from 'drizzle-orm'
 import { AGING_BUCKETS, type AgingBucket } from '../../domain/aging'
 import type {
   AgingRow,
   CollectionRow,
+  DebtFilter,
   DebtRepository,
+  DebtRow,
+  DebtSummaryRow,
   OpenChargeOfUnit,
   UnitDebt,
 } from '../../domain/debt-repository'
@@ -21,15 +24,38 @@ const asLocalDate = (value: Date | string): LocalDate =>
 const asInstant = (value: Date | string | null): Date | null =>
   value === null ? null : value instanceof Date ? value : new Date(value)
 
-/** One row of the E-101 aggregate before `Money`/`LocalDate` conversion (DOC-22 §8.2). */
-interface UnitDebtRow {
+/** Escapes the `LIKE` wildcards of a user substring so a `%` or `_` in a unit code is a literal (DOC-66 §5). */
+const likeContains = (value: string): string => `%${value.replace(/[\\%_]/g, '\\$&')}%`
+
+/** The first day of a fee month: `YYYY-MM` → `YYYY-MM-01`; a full day is left as it is (`ck_fee_batch_fee_month`). */
+const firstOf = (month: string): string => (month.length === 7 ? `${month}-01` : month)
+
+/** The WHERE fragments of E-101's filters (DOC-66 §5), shared by the list and the summary. */
+function filterSql(filter: DebtFilter | undefined): SQL {
+  const fragments: SQL[] = []
+  if (filter?.month) fragments.push(sql`AND b.fee_month = ${firstOf(filter.month)}::date`)
+  if (filter?.q) fragments.push(sql`AND c.unit_code ILIKE ${likeContains(filter.q)}`)
+  return fragments.length === 0 ? sql`` : sql.join(fragments, sql` `)
+}
+
+/** The HAVING of the `overdue30` switch (DOC-66 §5): only units with an open charge more than 30 days past due. */
+const overdueSql = (today: LocalDate, filter: DebtFilter | undefined): SQL =>
+  filter?.overdue30 ? sql`HAVING max(${today}::date - b.due_date) > 30` : sql``
+
+/** One row of the E-101 aggregate before `Money`/`LocalDate` conversion (DOC-22 §8.2, DOC-66 §5). */
+interface DebtRowRaw {
   readonly unit_id: string
+  readonly unit_code: string
   readonly outstanding: string
   readonly open_charges: string
   readonly oldest_due: Date | string
   readonly max_days_past_due: number
   readonly overdue_30: string
+  readonly last_reminder_at: Date | string | null
 }
+
+/** One row of the plain per-unit debt before conversion (DOC-22 §8.2). */
+type UnitDebtRow = Omit<DebtRowRaw, 'unit_code' | 'last_reminder_at'>
 
 const toUnitDebt = (row: UnitDebtRow): UnitDebt => ({
   unitId: row.unit_id,
@@ -39,6 +65,20 @@ const toUnitDebt = (row: UnitDebtRow): UnitDebt => ({
   maxDaysPastDue: Number(row.max_days_past_due),
   overdue30: money(Number(row.overdue_30)),
 })
+
+const toDebtRow = (row: DebtRowRaw): DebtRow => ({
+  ...toUnitDebt(row),
+  unitCode: row.unit_code,
+  lastReminderAt: asInstant(row.last_reminder_at),
+})
+
+/** One summary row before conversion (DOC-66 §5). */
+interface DebtSummaryRaw {
+  readonly outstanding: string
+  readonly units: number
+  readonly overdue_30: string
+  readonly overdue_30_units: number
+}
 
 /** One open charge of a unit with its batch and the active intent (DOC-22 §8.2, FR-05.6). */
 interface OpenChargeRow {
@@ -69,9 +109,9 @@ interface CollectionRowRaw {
 }
 
 /**
- * The debt reads of DOC-22 §8.2, the collection rate of §8.1 and the reminders of §8.5 (DR-267).
- * "Open" is an `open` charge of a `published` or `closed` batch (DR-18).
- * The building day is the caller's, computed once per request (DR-09).
+ * The debt reads of DOC-22 §8.2, the E-101 filters and summary of DOC-66 §5, the collection rate of §8.1 and the reminders of
+ * §8.5 (DR-267). "Open" is an `open` charge of a `published` or `closed` batch (DR-18). The building day is the caller's,
+ * computed once per request (DR-09).
  */
 export class DrizzleDebtRepository implements DebtRepository {
   constructor(private readonly database: Database) {}
@@ -82,24 +122,57 @@ export class DrizzleDebtRepository implements DebtRepository {
     page: {
       readonly after?: { readonly outstanding: Money; readonly unitId: string }
       readonly limit: number
+      readonly filter?: DebtFilter
     },
-  ): Promise<readonly UnitDebt[]> {
+  ): Promise<readonly DebtRow[]> {
     const after = page.after
-    const keyset = after
-      ? sql`HAVING (sum(c.amount), c.unit_id)
-              < (${Number(after.outstanding)}::bigint, ${after.unitId}::uuid)`
-      : sql``
+    const conditions: SQL[] = []
+    if (after)
+      conditions.push(
+        sql`(sum(c.amount), c.unit_id) < (${Number(after.outstanding)}::bigint, ${after.unitId}::uuid)`,
+      )
+    if (page.filter?.overdue30) conditions.push(sql`max(${today}::date - b.due_date) > 30`)
+    const keyset = conditions.length === 0 ? sql`` : sql`HAVING ${sql.join(conditions, sql` AND `)}`
     const rows = (await this.database.executor.execute(sql`
-      SELECT c.unit_id AS unit_id, sum(c.amount) AS outstanding, count(*) AS open_charges,
-             min(b.due_date)::text AS oldest_due, max(${today}::date - b.due_date) AS max_days_past_due,
-             coalesce(sum(c.amount) FILTER (WHERE ${today}::date - b.due_date > 30), 0) AS overdue_30
+      SELECT c.unit_id AS unit_id, max(c.unit_code) AS unit_code, sum(c.amount) AS outstanding,
+             count(*) AS open_charges, min(b.due_date)::text AS oldest_due,
+             max(${today}::date - b.due_date) AS max_days_past_due,
+             coalesce(sum(c.amount) FILTER (WHERE ${today}::date - b.due_date > 30), 0) AS overdue_30,
+             (SELECT max(r.created_at) FROM finance.debt_reminder r
+               WHERE r.building_id = ${scope.buildingId} AND r.unit_id = c.unit_id) AS last_reminder_at
         FROM finance.charge c JOIN finance.fee_batch b ON b.id = c.batch_id
        WHERE c.building_id = ${scope.buildingId} AND c.status = 'open'
          AND b.status IN ('published', 'closed')
+         ${filterSql(page.filter)}
        GROUP BY c.unit_id
        ${keyset}
-       ORDER BY outstanding DESC, c.unit_id DESC LIMIT ${page.limit}`)) as unknown as UnitDebtRow[]
-    return rows.map(toUnitDebt)
+       ORDER BY outstanding DESC, c.unit_id DESC LIMIT ${page.limit}`)) as unknown as DebtRowRaw[]
+    return rows.map(toDebtRow)
+  }
+
+  async summary(
+    scope: BuildingScope,
+    today: LocalDate,
+    filter?: DebtFilter,
+  ): Promise<DebtSummaryRow> {
+    const [row] = (await this.database.executor.execute(sql`
+      SELECT coalesce(sum(x.outstanding), 0) AS outstanding, count(*) AS units,
+             coalesce(sum(x.overdue_30), 0) AS overdue_30,
+             count(*) FILTER (WHERE x.overdue_30 > 0) AS overdue_30_units
+        FROM (SELECT c.unit_id, sum(c.amount) AS outstanding,
+                     coalesce(sum(c.amount) FILTER (WHERE ${today}::date - b.due_date > 30), 0) AS overdue_30
+                FROM finance.charge c JOIN finance.fee_batch b ON b.id = c.batch_id
+               WHERE c.building_id = ${scope.buildingId} AND c.status = 'open'
+                 AND b.status IN ('published', 'closed')
+                 ${filterSql(filter)}
+               GROUP BY c.unit_id
+               ${overdueSql(today, filter)}) x`)) as unknown as DebtSummaryRaw[]
+    return {
+      outstanding: money(Number(row?.outstanding ?? 0)),
+      units: Number(row?.units ?? 0),
+      overdue30: money(Number(row?.overdue_30 ?? 0)),
+      overdue30Units: Number(row?.overdue_30_units ?? 0),
+    }
   }
 
   async byUnits(

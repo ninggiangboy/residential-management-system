@@ -9,6 +9,8 @@ import {
   type FeeImportJobDto,
 } from '../../contracts'
 
+export { debtUnitDirectory } from './debt-unit-directory'
+
 type Column = keyof (typeof FEE_IMPORT_HEADERS)['vi']
 
 const headerOf = (lang: Language, column: string): string =>
