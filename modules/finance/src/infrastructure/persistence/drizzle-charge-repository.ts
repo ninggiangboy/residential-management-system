@@ -1,6 +1,6 @@
 import { type Database, inBuilding } from '@core/db'
 import { type BuildingScope, type LocalDate, type Money, money } from '@rms/shared-types'
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm'
 import { type ChargeLine, quantityText } from '../../domain/charge-line'
 import type { ChargeNoticeRow, ChargeRepository } from '../../domain/charge-repository'
 import type {
@@ -91,6 +91,76 @@ export class DrizzleChargeRepository implements ChargeRepository {
         note: line.note,
       })),
     }
+  }
+
+  /** The chunk read of DOC-34 §9.2 phase 1/2 (DR-294): the batch's open and paid charges after `afterChargeId`, by id. */
+  async listNoticeSources(
+    scope: BuildingScope,
+    batchId: string,
+    afterChargeId: string | null,
+    limit: number,
+  ): Promise<ChargeNoticeRow[]> {
+    const rows = await this.database.executor
+      .select({ charge, batch: feeBatch })
+      .from(charge)
+      .innerJoin(feeBatch, eq(feeBatch.id, charge.batchId))
+      .where(
+        and(
+          inBuilding(charge, scope),
+          eq(charge.batchId, batchId),
+          inArray(charge.status, ['open', 'paid']),
+          afterChargeId === null ? undefined : gt(charge.id, afterChargeId),
+        ),
+      )
+      .orderBy(asc(charge.id))
+      .limit(limit)
+    if (rows.length === 0) return []
+    const lines = await this.database.executor
+      .select()
+      .from(chargeLine)
+      .where(
+        and(
+          inBuilding(chargeLine, scope),
+          inArray(
+            chargeLine.chargeId,
+            rows.map((row) => row.charge.id),
+          ),
+        ),
+      )
+      .orderBy(asc(chargeLine.chargeId), asc(chargeLine.position))
+    const byCharge = new Map<string, ChargeNoticeRow['lines'][number][]>()
+    for (const line of lines) {
+      const list = byCharge.get(line.chargeId) ?? []
+      list.push({
+        position: line.position,
+        kind: line.kind as 'fee' | 'adjustment',
+        itemName: line.itemName as BilingualName,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        amount: line.amount,
+        note: line.note,
+      })
+      byCharge.set(line.chargeId, list)
+    }
+    return rows.map((row) => ({
+      charge: {
+        id: row.charge.id,
+        unitId: row.charge.unitId,
+        unitCode: row.charge.unitCode,
+        amount: money(row.charge.amount),
+        status: row.charge.status as ChargeStatus,
+      },
+      batch: {
+        id: row.batch.id,
+        code: row.batch.code,
+        name: row.batch.name as BilingualName,
+        feeMonth: row.batch.feeMonth as LocalDate,
+        dueDate: row.batch.dueDate as LocalDate,
+        publishedAt: row.batch.publishedAt,
+        status: row.batch.status as FeeBatchStatus,
+      },
+      lines: byCharge.get(row.charge.id) ?? [],
+    }))
   }
 
   async replaceDraftLines(

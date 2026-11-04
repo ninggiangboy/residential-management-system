@@ -50,6 +50,17 @@ export interface ChargeRepository {
    * `position` order, or `null` (an unknown or another building's charge).
    */
   findForNotice(scope: BuildingScope, chargeId: string): Promise<ChargeNoticeRow | null>
+  /**
+   * The chunk read of DOC-34 §9.2 phase 1 and 2 (DR-294): the `open` and `paid` charges of the batch after
+   * `afterChargeId` (all of them when `null`), by id, at most `limit`, each with its lines in `position` order and the
+   * batch row. The shape of `findForNotice`; two queries, never one per charge. `countNoticeCharges` is not needed.
+   */
+  listNoticeSources(
+    scope: BuildingScope,
+    batchId: string,
+    afterChargeId: string | null,
+    limit: number,
+  ): Promise<ChargeNoticeRow[]>
   find(scope: BuildingScope, chargeId: string): Promise<ChargeRecord | null>
   findInBatch(scope: BuildingScope, batchId: string, unitId: string): Promise<ChargeRecord | null>
   /**
