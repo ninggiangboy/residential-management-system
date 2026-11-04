@@ -178,11 +178,18 @@ export class ChargeChangedError extends ConflictError {
 }
 
 /** 422 `allocation_mismatch {expected, got}`: a request `amount` that differs from the sum (DOC-22 §5.1, FR-05.2). */
-export class AllocationMismatchError extends DomainError {
+export class AllocationMismatchError extends RuleViolationError {
+  // The answer's `details` are `{ expected, got }` (DOC-22 §5.1), not the rule list of a `validation_failed`.
+  override readonly details: { readonly expected: number; readonly got: number }
+
   constructor(expected: number, got: number) {
-    super('allocation_mismatch', 'The amount does not match the selected charges', 'validation', {
-      details: { expected, got },
-    })
+    super(
+      'allocation_mismatch',
+      'The amount does not match the selected charges',
+      'amount',
+      'allocation_mismatch',
+    )
+    this.details = { expected, got }
   }
 }
 
