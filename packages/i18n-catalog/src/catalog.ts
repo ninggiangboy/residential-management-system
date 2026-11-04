@@ -5,6 +5,8 @@ import { mailEn } from './mail/en'
 import { mailVi } from './mail/vi'
 import { notifyEn } from './notify/en'
 import { notifyVi } from './notify/vi'
+import { pdfEn } from './pdf/en'
+import { pdfVi } from './pdf/vi'
 import { resEn } from './res/en'
 import { resVi } from './res/vi'
 import { en as sharedEn } from './shared/en'
@@ -25,6 +27,7 @@ const en = {
   ...webEn,
   ...resEn,
   ...staffEn,
+  ...pdfEn,
 } as const
 const vi: Record<keyof typeof en, string> = {
   ...sharedVi,
@@ -35,14 +38,15 @@ const vi: Record<keyof typeof en, string> = {
   ...webVi,
   ...resVi,
   ...staffVi,
+  ...pdfVi,
 }
 
 /**
  * The message catalog of the whole product (DR-71, DOC-68): one flat map of ICU messages per language, keyed by the
  * dotted key of DOC-68 §1. The shared families live in `shared/`; the staff mails (`mail.*`) and the resident SMS
  * (`sms.*`) of `identity` (DOC-26 §5.4) are in `mail/` and `sms/`; the inbox and push texts (`notify.*`, DOC-31 §3.4)
- * are in `notify/`; screen keys (`res.*`, `staff.*`, `web.*`) are added by the screen tasks in their own files and
- * spread in here.
+ * are in `notify/`; the printed PDF labels (`pdf.*`, DOC-34 §5–§7, DR-295) are in `pdf/`; screen keys (`res.*`,
+ * `staff.*`, `web.*`) are added by the screen tasks in their own files and spread in here.
  */
 export type MessageKey = keyof typeof en
 export type Messages = Readonly<Record<MessageKey, string>>
@@ -60,6 +64,7 @@ export const SHARED_FAMILIES = [
   'mail',
   'sms',
   'notify',
+  'pdf',
 ] as const
 
 /** The first segments the screen documents own (DOC-68 §1): the web CMS, the resident app and the staff app. */
