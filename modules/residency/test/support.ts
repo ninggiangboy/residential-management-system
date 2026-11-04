@@ -275,6 +275,7 @@ export async function createHarness(options: { audited?: Audited } = {}) {
     building: {
       getBuilding: async () => null,
       getSettings: async () => DEFAULT_SETTINGS,
+      listBuildings: async () => [],
       async assertDemo(buildingId) {
         if (!demoBuildings.has(buildingId)) throw new NotFoundError()
       },

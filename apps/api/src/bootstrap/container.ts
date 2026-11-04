@@ -330,6 +330,7 @@ export function createContainer(
     audited: audit.audited,
     metrics: metrics.port,
     outboxMaxPayloadBytes: jobsConfig.OUTBOX_MAX_PAYLOAD_BYTES,
+    integrityWeeklyGraceMinutes: jobsConfig.JOB_INTEGRITY_WEEKLY_GRACE_MINUTES,
     // DR-149: `/staff/imports` dispatches `fee_batch` to `finance`, installed below (it reads `residency.api`); read per request.
     importHandlers: () => [feeImportHandler(finance.feeImports)],
   })
