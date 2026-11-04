@@ -9,17 +9,42 @@ import type { ResidencyApi } from '@mod/residency/contracts'
  * module states its needs without importing them (DOC-12 §4.2).
  */
 export function financePorts(apis: {
-  building: Pick<BuildingApi, 'getBuilding' | 'listBuildings' | 'getSettings'>
+  building: Pick<BuildingApi, 'getBuilding' | 'listBuildings' | 'getSettings' | 'getGatewayConfig'>
   identity: Pick<IdentityApi, 'getResidentAccounts'>
-  residency: Pick<ResidencyApi, 'getMembership'>
+  residency: Pick<ResidencyApi, 'getMembership' | 'unitOwnerNames'>
 }): Pick<
   FinanceModuleDeps,
-  'calendar' | 'receiptBuildings' | 'payers' | 'ledgerCheckBuildings' | 'noticeLanguage'
+  | 'calendar'
+  | 'receiptBuildings'
+  | 'payers'
+  | 'ledgerCheckBuildings'
+  | 'noticeLanguage'
+  | 'noticeContext'
 > {
   const buildingOf = async (buildingId: string) => {
     const building = await apis.building.getBuilding(buildingId)
     if (!building) throw new NotFoundError()
     return building
+  }
+  /** A gateway is active when any provider's configuration is `active` (DOC-34 §6.1): the QR line prints. */
+  const gatewayActive = async (buildingId: string): Promise<boolean> => {
+    for (const provider of ['payos', 'vietqr'] as const) {
+      const config = await apis.building.getGatewayConfig(buildingId, provider)
+      if (config?.status === 'active') return true
+    }
+    return false
+  }
+  /** `unitOwnerNames` of DOC-34 §6.1 in parts of 500 (DR-292), flattened to the map the notice reads. */
+  const ownerNames = async (buildingId: string, unitIds: string[]) => {
+    const names = new Map<string, string | null>()
+    for (let index = 0; index < unitIds.length; index += 500) {
+      const rows = await apis.residency.unitOwnerNames(
+        buildingId,
+        unitIds.slice(index, index + 500),
+      )
+      for (const row of rows) names.set(row.unitId, row.ownerName)
+    }
+    return names
   }
   return {
     // DOC-22 §12, DOC-40 §4 rule 4: the nightly ledger check covers the real buildings only.
@@ -56,6 +81,25 @@ export function financePorts(apis: {
     noticeLanguage: {
       language: async (buildingId) =>
         (await apis.building.getSettings(buildingId)).feeNoticeLanguage,
+    },
+    // DOC-34 §6.1, DR-292: the header block of a fee notice and the active owner's name of each unit.
+    noticeContext: {
+      building: async (buildingId) => {
+        const building = await buildingOf(buildingId)
+        return {
+          name: building.name,
+          // The company profile, the building address and the logo of DOC-36 §4.2 are not exposed by `BuildingApi`
+          // yet (open with P2-13): as in `receiptBuildings`, the building name stands in and the notice prints no logo.
+          company: { name: building.name, address: null },
+          address: '',
+          hotline: building.contact.hotline,
+          email: building.contact.email,
+          workingHours: building.contact.workingHours,
+          logoFile: null,
+          gatewayActive: await gatewayActive(buildingId),
+        }
+      },
+      ownerNames,
     },
   }
 }

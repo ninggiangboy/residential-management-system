@@ -4,14 +4,6 @@ import { UuidV7Generator } from '@core/kernel'
 import type { Envelope } from '@core/messaging'
 import { FakeClock } from '@core/testing'
 import { auditActionCatalogOf, auditManifest, installAudit } from '@mod/audit'
-import type {
-  FileActor,
-  FileDto,
-  FileExpectation,
-  FilesApi,
-  FindByOwnerRefInput,
-  StoreGeneratedInput,
-} from '@mod/building/contracts'
 import {
   type BuildingId,
   type MetricsPort,
@@ -35,6 +27,7 @@ import {
   feeBatch,
   receipt,
 } from '../src/infrastructure/persistence/schema'
+import { MemoryFilesApi } from './memory-files-api'
 import { makeBarrier } from './support'
 import { testPorts } from './support/ports'
 
@@ -75,123 +68,6 @@ class FakeRenderer implements PdfRenderer {
       throw new PdfRenderFailure('render_failed', 'the fake renderer failed once')
     }
     return PDF
-  }
-}
-
-interface StoredFile {
-  readonly fileId: string
-  readonly buildingId: string
-  readonly module: string
-  readonly purpose: string
-  readonly ownerRef: string | null
-  status: 'attached' | 'deleted'
-  readonly bytes: Uint8Array
-  readonly seq: number
-}
-
-async function collect(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = []
-  let size = 0
-  for await (const chunk of stream) {
-    chunks.push(chunk)
-    size += chunk.byteLength
-  }
-  const out = new Uint8Array(size)
-  let offset = 0
-  for (const chunk of chunks) {
-    out.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return out
-}
-
-/** The real `FilesApi`'s rules for the four methods the use case calls, over an in-memory object store. */
-class MemoryFilesApi
-  implements Pick<FilesApi, 'read' | 'attach' | 'remove' | 'storeGenerated' | 'findByOwnerRef'>
-{
-  private seq = 0
-
-  private nextSeq(): number {
-    this.seq += 1
-    return this.seq
-  }
-  readonly files = new Map<string, StoredFile>()
-
-  constructor(private readonly ids: UuidV7Generator) {}
-
-  /** The receipt PDF path never attaches a file by hand: `storeGenerated` writes it `attached`. */
-  async attach(): Promise<void> {
-    throw new Error('attach is not used by the receipt PDF')
-  }
-
-  async storeGenerated(input: StoreGeneratedInput): Promise<FileDto> {
-    const bytes = input.body instanceof Uint8Array ? input.body : await collect(input.body)
-    const fileId = this.ids.next()
-    this.files.set(fileId, {
-      fileId,
-      buildingId: input.buildingId,
-      module: input.module,
-      purpose: input.purpose,
-      ownerRef: input.ownerRef,
-      status: 'attached',
-      bytes,
-      seq: this.nextSeq(),
-    })
-    const dto = this.dto(fileId)
-    if (!dto) throw new Error('the stored file vanished')
-    return dto
-  }
-
-  async findByOwnerRef(buildingId: string, input: FindByOwnerRefInput): Promise<FileDto | null> {
-    const match = this.attached(buildingId, input).sort((a, b) => b.seq - a.seq)[0]
-    return match ? (this.dto(match.fileId) ?? null) : null
-  }
-
-  async read(_actor: FileActor, fileId: string, expect: FileExpectation): Promise<Uint8Array> {
-    const file = this.files.get(fileId)
-    if (!file || file.status !== 'attached' || file.ownerRef !== expect.ownerRef)
-      throw new Error('file_not_verified')
-    return file.bytes
-  }
-
-  async remove(_actor: FileActor, fileId: string): Promise<void> {
-    const file = this.files.get(fileId)
-    if (file) file.status = 'deleted'
-  }
-
-  /** The `attached` rows of a building, module, purpose and ownerRef, in insert order. */
-  attached(
-    buildingId: string,
-    input: { module: string; purpose: string; ownerRef: string },
-  ): StoredFile[] {
-    return [...this.files.values()].filter(
-      (file) =>
-        file.status === 'attached' &&
-        file.buildingId === buildingId &&
-        file.module === input.module &&
-        file.purpose === input.purpose &&
-        file.ownerRef === input.ownerRef,
-    )
-  }
-
-  /** Every row of a key, `attached` or `deleted` (the PD-23 check). */
-  all(ownerRef: string, buildingId: string): StoredFile[] {
-    return [...this.files.values()].filter(
-      (file) => file.ownerRef === ownerRef && file.buildingId === buildingId,
-    )
-  }
-
-  private dto(fileId: string): FileDto | undefined {
-    const file = this.files.get(fileId)
-    if (!file) return undefined
-    return {
-      fileId: file.fileId,
-      purpose: file.purpose as FileDto['purpose'],
-      mime: 'application/pdf',
-      size: file.bytes.byteLength,
-      status: file.status,
-      createdAt: AT.toISOString(),
-    }
   }
 }
 

@@ -18,6 +18,7 @@ export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'databas
     | 'pdfRenderer'
     | 'pdf'
     | 'noticeLanguage'
+    | 'noticeContext'
   >
 
 export function installFinance(host: FinanceHost) {
@@ -39,5 +40,6 @@ export function installFinance(host: FinanceHost) {
     pdfRenderer: host.pdfRenderer,
     pdf: host.pdf,
     noticeLanguage: host.noticeLanguage,
+    noticeContext: host.noticeContext,
   })
 }

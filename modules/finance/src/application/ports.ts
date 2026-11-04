@@ -1,7 +1,7 @@
 import type { Language, MemberType } from '@rms/shared-types'
 import type { Sheet } from '../domain/fee-import/sheet'
 import type { ReceiptContext } from '../domain/receipt-snapshot'
-import type { PdfLanguage } from './pdf-renderer'
+import type { Bilingual, PdfLanguage } from './pdf-renderer'
 
 /** A unit found by its code (DOC-21 §2.1, DR-265): `occupancy` is for display, `hasActiveOwner` decides DQ-78. */
 export interface FoundUnitDto {
@@ -59,4 +59,29 @@ export interface PayerDirectory {
  */
 export interface NoticeLanguageSource {
   language(buildingId: string): Promise<PdfLanguage>
+}
+
+/** The building block a fee notice prints (DOC-34 §6.1, DR-292): the header, the logo id and the two "how to pay" switches. */
+export interface NoticeBuilding {
+  readonly name: Bilingual
+  readonly company: { readonly name: Bilingual; readonly address: string | null }
+  readonly address: string
+  readonly hotline: string | null
+  readonly email: string | null
+  readonly workingHours: Bilingual | null
+  /** The `building.logo_file` id, not the bytes (DOC-34 §8.1): the cache key covers it and the renderer reads the bytes. */
+  readonly logoFile: string | null
+  /** The building's gateway configuration is `active` (DOC-34 §6.1): the first "how to pay" line prints. */
+  readonly gatewayActive: boolean
+}
+
+/**
+ * What a fee notice prints of the building and its units (DOC-34 §6.1, DR-292): a port in `application/`; the `apps/api`
+ * adapter reads `BuildingApi` and `ResidencyApi.unitOwnerNames`.
+ */
+export interface NoticeContextSource {
+  /** The header block of DOC-34 §6.1 for one building. */
+  building(buildingId: string): Promise<NoticeBuilding>
+  /** The active owner's name of each unit, `null` when it has none (DR-292); a missing id is absent from the map. */
+  ownerNames(buildingId: string, unitIds: string[]): Promise<Map<string, string | null>>
 }
