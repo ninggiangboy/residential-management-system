@@ -6,14 +6,8 @@ import { Button } from '../../components/ui/button'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useFeeBatchMutations } from './hooks'
-import {
-  blankLine,
-  bodyOfLines,
-  issuesOf,
-  type LineDraft,
-  type LineIssues,
-  LineRows,
-} from './line-editor'
+import { LineRows } from './line-editor'
+import { blankLine, bodyOfLines, issuesOf, type LineDraft, type LineIssues } from './line-model'
 
 /** The 404/409/422 codes of E-170 that name the unit; each has its own sentence (DOC-66 §6). */
 const UNIT_CODE_KEY: Readonly<Record<string, MessageKey>> = {

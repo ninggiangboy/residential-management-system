@@ -15,6 +15,7 @@ import { DataTable, SkeletonRows, TBody, Td, THead, Th, Tr } from '../../compone
 import { Plate, Tag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { errorText, type T, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
 import { useDebounced } from '../../lib/use-debounced'
@@ -59,8 +60,14 @@ function recentMonths(anchor: string | undefined, count = 12): string[] {
 }
 
 /** The month the select ends at: the filter, else the building day, else the latest published fee month. */
-const anchorMonth = (search: DebtsSearch, asOf: string | undefined, summary: Summary | undefined) =>
-  search.month ?? asOf?.slice(0, 7) ?? summary?.collected?.feeMonth?.slice(0, 7)
+const anchorMonth = (
+  search: DebtsSearch,
+  asOf: string | Date | undefined,
+  summary: Summary | undefined,
+) =>
+  search.month ??
+  (asOf ? day(asOf).slice(0, 7) : undefined) ??
+  (summary?.collected ? day(summary.collected.feeMonth).slice(0, 7) : undefined)
 
 /** The months of the select: the anchor's own twelve, plus the one in the URL when it is older than them. */
 const monthChoices = (anchor: string | undefined, month: string | undefined): string[] => {
@@ -252,8 +259,8 @@ function DebtTiles({ summary }: { summary: Summary | undefined }) {
           testId="tile-collected"
           value={formatMoney(collected.amount)}
           label={t('web.debts.tile.collected', {
-            month: Number(collected.feeMonth.slice(5, 7)),
-            year: collected.feeMonth.slice(0, 4),
+            month: Number(day(collected.feeMonth).slice(5, 7)),
+            year: day(collected.feeMonth).slice(0, 4),
           })}
         />
       )}

@@ -11,7 +11,7 @@ import { languageStore } from '../../lib/i18n'
  * The kind carries `params.batchId`, so the job body is the fee shape (DR-149, DOC-21 §4); the rows and issues it lists have no
  * personal data, so the page shows them whole (DOC-15 §10.1).
  */
-export type FeeImportStatus = 'validated' | 'failed' | 'committed' | 'expired'
+type FeeImportStatus = 'validated' | 'failed' | 'committed' | 'expired'
 
 export interface FeeImportCounts {
   rows: number
@@ -65,7 +65,7 @@ export interface FeeImportJob {
 }
 
 /** One row of E-169 `kind=fee_batch` (DOC-66 §5); the list does not carry the batch code. */
-export interface FeeImportHistoryRow {
+interface FeeImportHistoryRow {
   importId: string
   kind: 'fee_batch'
   status: FeeImportStatus

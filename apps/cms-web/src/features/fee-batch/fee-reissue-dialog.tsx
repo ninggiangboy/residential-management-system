@@ -8,6 +8,7 @@ import { Dialog, FieldSkeleton, useExit } from '../../components/ui/dialog'
 import { Skeleton } from '../../components/ui/skeleton'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { errorText, useI18n } from '../../lib/i18n'
 import { batchChargesQuery, feeBatchQuery, useFeeBatchMutations } from './hooks'
 
@@ -62,7 +63,7 @@ function FeeReissueForm({
   const { reissue } = useFeeBatchMutations(batchId)
   const { open, close } = useExit(onClose)
   const data = batch.data
-  const [dueDate, setDueDate] = useState(data?.dueDate ?? '')
+  const [dueDate, setDueDate] = useState(data ? day(data.dueDate) : '')
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
 
@@ -70,7 +71,7 @@ function FeeReissueForm({
   const batchDueDate = data?.dueDate
   useEffect(() => {
     if (batchDueDate === undefined) return
-    setDueDate(batchDueDate)
+    setDueDate(day(batchDueDate))
     setFieldError(null)
     setBanner(null)
   }, [batchDueDate])
@@ -200,8 +201,8 @@ function FeeReissueForm({
         />
         <p className="text-secondary text-ink-muted" data-testid="fee-reissue-month">
           {t('web.fee-reissue.month', {
-            month: Number(data.feeMonth.slice(5, 7)),
-            year: data.feeMonth.slice(0, 4),
+            month: Number(day(data.feeMonth).slice(5, 7)),
+            year: day(data.feeMonth).slice(0, 4),
           })}
         </p>
         <p className="text-secondary text-ink-muted">{t('web.fee-reissue.note')}</p>

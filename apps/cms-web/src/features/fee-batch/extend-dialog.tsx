@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { errorText, useI18n } from '../../lib/i18n'
 import { type FeeBatchView, useFeeBatchMutations } from './hooks'
 
@@ -24,19 +25,19 @@ export function ExtendDialog({
 }): ReactElement {
   const { t, formatDate } = useI18n()
   const { update } = useFeeBatchMutations(batch.id)
-  const [dueDate, setDueDate] = useState<string>(batch.dueDate)
+  const [dueDate, setDueDate] = useState<string>(day(batch.dueDate))
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
 
   // The form opens on the current due date, not on the last thing typed (DOC-54 §17.9).
   useEffect(() => {
     if (!open) return
-    setDueDate(batch.dueDate)
+    setDueDate(day(batch.dueDate))
     setFieldError(null)
     setBanner(null)
   }, [open, batch.dueDate])
 
-  const later = dueDate !== '' && dueDate > batch.dueDate
+  const later = dueDate !== '' && dueDate > day(batch.dueDate)
 
   const submit = () => {
     setFieldError(null)
@@ -100,7 +101,7 @@ export function ExtendDialog({
           type="date"
           label={t('web.fee-batch.extend.field')}
           required
-          min={batch.dueDate}
+          min={day(batch.dueDate)}
           value={dueDate}
           hint={t('web.fee-batch.extend.hint', { date: formatDate(batch.dueDate) })}
           error={fieldError ?? undefined}

@@ -14,6 +14,7 @@ import { DataTable, SkeletonRows } from '../../components/ui/table'
 import { TabList, Tabs } from '../../components/ui/tabs'
 import { Plate, StatusTag } from '../../components/ui/tag'
 import { SearchField } from '../../components/ui/text-field'
+import { day } from '../../lib/day'
 import { OPENED_HERE, useCloseOverlay } from '../../lib/history'
 import { useI18n } from '../../lib/i18n'
 import { useDebounced } from '../../lib/use-debounced'
@@ -179,8 +180,8 @@ export function FeeBatchPage({
 
   const meta =
     t('web.fee-batch.meta', {
-      month: Number(data.feeMonth.slice(5, 7)),
-      year: data.feeMonth.slice(0, 4),
+      month: Number(day(data.feeMonth).slice(5, 7)),
+      year: day(data.feeMonth).slice(0, 4),
       date: formatDate(data.dueDate),
     }) +
     (data.source
@@ -197,7 +198,9 @@ export function FeeBatchPage({
     <div className="flex h-full min-h-0 flex-col">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Plate size="lg">{data.code}</Plate>
+          <span data-testid="batch-code">
+            <Plate size="lg">{data.code}</Plate>
+          </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-title-1 text-ink">{bilingual(data.name, lang)}</h1>
@@ -413,17 +416,19 @@ function HeaderActions({
         <Button variant="outline" onClick={onClose}>
           {t('web.fee-batch.action.close')}
         </Button>
-        <RowMenu
-          label={t('web.fee-batch.col.actions')}
-          items={[
-            {
-              key: 'recall',
-              label: t('web.fee-batch.action.recall'),
-              danger: true,
-              onSelect: onRecall,
-            },
-          ]}
-        />
+        <span data-testid="batch-menu" className="contents">
+          <RowMenu
+            label={t('web.fee-batch.col.actions')}
+            items={[
+              {
+                key: 'recall',
+                label: t('web.fee-batch.action.recall'),
+                danger: true,
+                onSelect: onRecall,
+              },
+            ]}
+          />
+        </span>
       </>
     )
   if (batch.status === 'closed')

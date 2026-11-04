@@ -14,6 +14,7 @@ import { DataTable, TBody, Td, THead, Th, Tr } from '../../components/ui/table'
 import { StatusTag } from '../../components/ui/tag'
 import { TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
+import { day } from '../../lib/day'
 import { saveBlob } from '../../lib/download'
 import { errorText, useI18n } from '../../lib/i18n'
 import { useCanWrite } from '../../lib/online'
@@ -52,7 +53,7 @@ const addDays = (date: Date, days: number) => {
 }
 const monthOf = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 /** `2026-10-01` or `2026-10` as `10/2026`. */
-const monthLabel = (value: string) => `${value.slice(5, 7)}/${value.slice(0, 4)}`
+const monthLabel = (value: string | Date) => `${day(value).slice(5, 7)}/${day(value).slice(0, 4)}`
 
 interface Settings {
   nameVi: string
@@ -113,12 +114,20 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
   const [slow, setSlow] = useState(false)
   const [picked, setPicked] = useState<{ file: File; fileId: string } | null>(null)
   const [size, setSize] = useState<number | null>(null)
-  const [settings, setSettings] = useState<Settings>(() => ({
-    nameVi: '',
-    nameEn: '',
-    month: monthOf(new Date()),
-    due: addDays(new Date(), 10),
-  }))
+  const [settings, setSettings] = useState<Settings>(() => {
+    const now = new Date()
+    const month = monthOf(now)
+    // The batch name opens on the default of DOC-66 §4 ("Phí tháng {m}/{y}"), so "Kiểm tra" is ready at once.
+    return {
+      nameVi: t('web.fee-import.field.name.default', {
+        month: month.slice(5, 7),
+        year: month.slice(0, 4),
+      }),
+      nameEn: '',
+      month,
+      due: addDays(now, 10),
+    }
+  })
   const seeded = useRef(false)
   const input = useRef<HTMLInputElement>(null)
   const abort = useRef<AbortController | null>(null)
@@ -146,8 +155,8 @@ export function FeeImportPage({ search }: { search: FeeImportSearch }) {
       setSettings({
         nameVi: batch.data.name.vi,
         nameEn: batch.data.name.en ?? '',
-        month: batch.data.feeMonth.slice(0, 7),
-        due: batch.data.dueDate,
+        month: day(batch.data.feeMonth).slice(0, 7),
+        due: day(batch.data.dueDate),
       })
       seeded.current = true
       return
