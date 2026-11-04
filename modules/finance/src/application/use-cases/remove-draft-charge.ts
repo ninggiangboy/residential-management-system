@@ -3,12 +3,11 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
 import type { ChargeRepository } from '../../domain/charge-repository'
-import { InvalidTransitionError } from '../../domain/errors'
+import { InvalidTransitionError, versionConflict } from '../../domain/errors'
 import { assertDraft, type ChargeRecord } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
 
@@ -51,12 +50,12 @@ export class RemoveDraftCharge {
         const stored = await this.charges.find(staff.scope, chargeId)
         if (!stored) throw new NotFoundError()
         assertDraft(stored, 'remove')
-        if (stored.version !== version) throw new VersionConflictError(stored)
+        if (stored.version !== version) throw versionConflict(stored)
         if (!(await this.charges.deleteDraft(staff.scope, chargeId, version))) {
           const fresh = await this.charges.find(staff.scope, chargeId)
           if (!fresh) throw new NotFoundError()
           assertDraft(fresh, 'remove')
-          throw new VersionConflictError(fresh)
+          throw versionConflict(fresh)
         }
         if (!(await this.batches.bumpDraftVersion(staff.scope, stored.batchId)))
           throw new InvalidTransitionError('fee_batch', stored.batchStatus, 'remove')

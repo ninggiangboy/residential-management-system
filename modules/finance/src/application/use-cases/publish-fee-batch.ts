@@ -5,7 +5,6 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 import type { Audited } from '@mod/audit/contracts'
@@ -16,6 +15,7 @@ import {
   InvalidTransitionError,
   NoChargesError,
   PublishChargeTotalZeroError,
+  versionConflict,
 } from '../../domain/errors'
 import type { FeeBatchRecord } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
@@ -126,7 +126,7 @@ export class PublishFeeBatch {
     if (!fresh) return new NotFoundError()
     if (fresh.status !== 'draft')
       return new InvalidTransitionError('fee_batch', fresh.status, 'publish')
-    return new VersionConflictError(fresh)
+    return versionConflict(fresh)
   }
 }
 

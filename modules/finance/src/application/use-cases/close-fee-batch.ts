@@ -4,11 +4,10 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
-import { InvalidTransitionError } from '../../domain/errors'
+import { InvalidTransitionError, versionConflict } from '../../domain/errors'
 import type { FeeBatchRecord } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
 
@@ -65,7 +64,7 @@ export class CloseFeeBatch {
           if (!fresh) throw new NotFoundError()
           if (fresh.status !== 'published')
             throw new InvalidTransitionError('fee_batch', fresh.status, 'close')
-          throw new VersionConflictError(fresh)
+          throw versionConflict(fresh)
         }
         return {
           result: closed,

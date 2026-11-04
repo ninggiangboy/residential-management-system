@@ -3,11 +3,10 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
-import { InvalidTransitionError } from '../../domain/errors'
+import { InvalidTransitionError, versionConflict } from '../../domain/errors'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
 
 /** The Manager's and the Admin's (DOC-21 §2.3, DOC-35 §4.1). */
@@ -57,14 +56,14 @@ export class DiscardFeeBatch {
         if (!stored) throw new NotFoundError()
         if (stored.status !== 'draft')
           throw new InvalidTransitionError('fee_batch', stored.status, 'discard')
-        if (stored.version !== version) throw new VersionConflictError(stored)
+        if (stored.version !== version) throw versionConflict(stored)
         const deleted = await this.batches.deleteDraft(staff.scope, batchId, version)
         if (!deleted) {
           const fresh = await this.batches.find(staff.scope, batchId)
           if (!fresh) throw new NotFoundError()
           if (fresh.status !== 'draft')
             throw new InvalidTransitionError('fee_batch', fresh.status, 'discard')
-          throw new VersionConflictError(fresh)
+          throw versionConflict(fresh)
         }
         return { result: { id: batchId, ...deleted }, changes: [] }
       },

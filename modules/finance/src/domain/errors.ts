@@ -1,4 +1,10 @@
-import { ConflictError, NotFoundError, RuleViolationError, ValidationError } from '@core/kernel'
+import {
+  ConflictError,
+  NotFoundError,
+  RuleViolationError,
+  ValidationError,
+  VersionConflictError,
+} from '@core/kernel'
 import type { ChargeLineIssue } from './charge-line'
 
 /** 409 `invalid_transition`: the batch or charge is not in the state the action needs (DOC-21 §8, DR-127). */
@@ -208,4 +214,15 @@ export class RequestRuleError extends ValidationError {
   constructor(path: string, rule: string, message: string) {
     super([{ path, code: rule, message }])
   }
+}
+
+/**
+ * 409 `version_conflict { current }` with the fresh record as JSON can carry it (DOC-50 §9): a `Money` is a `bigint`, which
+ * `JSON.stringify` refuses, so it answers as a number (DOC-50 §6); a date answers as ISO text.
+ */
+export function versionConflict(current: unknown): VersionConflictError {
+  const safe = JSON.parse(
+    JSON.stringify(current, (_key, value) => (typeof value === 'bigint' ? Number(value) : value)),
+  )
+  return new VersionConflictError(safe)
 }

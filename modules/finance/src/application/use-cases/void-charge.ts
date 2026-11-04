@@ -5,14 +5,18 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 import type { Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
 import { type ChargeVoidedPayload, FINANCE_EVENTS } from '../../contracts'
 import type { ChargeRepository } from '../../domain/charge-repository'
-import { ChargeNotVoidableError, checkedReason, InvalidTransitionError } from '../../domain/errors'
+import {
+  ChargeNotVoidableError,
+  checkedReason,
+  InvalidTransitionError,
+  versionConflict,
+} from '../../domain/errors'
 import type { ChargeRecord } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
 import { monthOf } from '../fan-out'
@@ -97,7 +101,7 @@ export class VoidCharge {
           const fresh = await this.charges.find(scope, chargeId)
           if (!fresh) throw new NotFoundError()
           await this.assertVoidable(staff, fresh, version)
-          throw new VersionConflictError(fresh)
+          throw versionConflict(fresh)
         }
         const charge: ChargeRecord = { ...voided, batchStatus: before.batchStatus }
         const { intentIds } = await this.cancellation.cancelHolding(
@@ -139,6 +143,6 @@ export class VoidCharge {
     if (charge.status !== 'open') throw new InvalidTransitionError('charge', charge.status, 'void')
     if (await this.charges.hasLiveAllocation(staff.scope, charge.id))
       throw new ChargeNotVoidableError('open')
-    if (charge.version !== version) throw new VersionConflictError(charge)
+    if (charge.version !== version) throw versionConflict(charge)
   }
 }
