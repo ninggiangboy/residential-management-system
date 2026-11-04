@@ -55,6 +55,11 @@ test.describe('W-Fee-Recall (UIWF-43, 44, 47)', () => {
       await expect(page.getByTestId(`charge-row-${unit}`)).toContainText('Thu hồi đợt')
     }
 
+    // The dialog leaves with its exit motion and only then clears `dialog=recall` from the URL (`useExit`); a reload that
+    // starts before that navigation is aborted (`net::ERR_ABORTED`), so wait for it.
+    await expect(dialog).toBeHidden()
+    await expect(page).not.toHaveURL(/dialog=recall/)
+
     // A reloaded recalled batch keeps "Phát hành lại" as its only header action.
     await page.reload()
     await expect(page.getByTestId('banner-recalled')).toBeVisible()
