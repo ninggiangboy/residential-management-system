@@ -26,6 +26,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       'import_expire',
       'import_purge',
       'inbox_purge',
+      'integrity_weekly',
       'invariant_check',
       'orphan_uploads',
       'push_receipts',
@@ -40,7 +41,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
     }
   })
 
-  test('the audit purge catches up for 168 hours, the demo reset for 2, the import purge for 24, the usage rollup and the invariant check for 12, the hourly jobs not at all', () => {
+  test('the audit purge catches up for 168 hours, the demo reset for 2, the import purge for 24, the usage rollup and the invariant check for 12, the integrity check for 24, the hourly jobs not at all', () => {
     const graces = Object.fromEntries(
       container.modules.flatMap((module) =>
         (module.jobs ?? []).map((job) => [job.name, job.graceMinutes]),
@@ -55,6 +56,7 @@ describe('JB-10: the jobs of the installed modules are the rows of the catalog (
       import_purge: 1_440,
       usage_rollup: 720,
       inbox_purge: 1_440,
+      integrity_weekly: 1_440,
       invariant_check: 720,
       push_receipts: 0,
       realtime_purge: 0,
