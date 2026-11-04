@@ -1,6 +1,6 @@
 # Residency and memberships
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-03 (P2-04: `findUnitsByCodes` built) · 2026-11-01 (DR-314, DR-315: unit types, §4.3, RM-52…62) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` of the unit list) · 2026-10-28 (P1-26: `ResidencyApi.unitOwnerNames` for the fee notice, DR-292 to confirm) · 2026-10-26 (DR-268: `FilesApi` store is SeaweedFS in `vn`, a diagram label only) · 2026-10-23 (P1-14: the staff API as built, §17.5, DR-260; earlier 2026-10-23 P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-04 (P2-11: `integrity_weekly` built, §9.4, §15, RM-63…70) · 2026-11-03 (P2-04: `findUnitsByCodes` built) · 2026-11-01 (DR-314, DR-315: unit types, §4.3, RM-52…62) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` of the unit list) · 2026-10-28 (P1-26: `ResidencyApi.unitOwnerNames` for the fee notice, DR-292 to confirm) · 2026-10-26 (DR-268: `FilesApi` store is SeaweedFS in `vn`, a diagram label only) · 2026-10-23 (P1-14: the staff API as built, §17.5, DR-260; earlier 2026-10-23 P1-13: the import as built, §9.5, §17.4, DR-258; P1-12: the module as built, §17.3, DR-257; earlier 2026-10-21: DR-226: E-169 in the module table; earlier: DR-212, DR-214: list fields, the four member types in the add form; DR-149: `fileId`, deletion filter, retype race, 204) · DOC-27
 > Depends on: original SDD §7.2, §7.4, §7.7, §11, [DR](../00-decision-register.md) (DR-09, 12, 21, 22, 36, 40, 41, 42, 48, 58, 59, 74, 87, 99, 106, 108, 109, 114, 124, 125, 126, 127, DR-226, DR-314, DR-315), [ADR-0010](../04-adr/0010-two-account-kinds-membership-scoped-authorization.md), [ADR-0014](../04-adr/0014-schema-per-module-no-cross-module-foreign-keys.md), [DOC-03](../01-product/requirements.md) (FR-16…18, FR-31.2, FR-39, NFR-08, NFR-12, NFR-14), [DOC-04](../01-product/use-cases.md) (UC-13, UC-14, UC-15, UC-27), [DOC-09](../03-architecture/messaging-contracts.md) §6.2, §7, [DOC-12](../03-architecture/code-architecture.md) §5.3, §7, §8, §11, [DOC-16](../05-data/identity-and-residency-model.md) §5, [DOC-18](../05-data/data-quality-rules.md) §1, [DOC-35](audit-privacy-and-terms.md) §3, §6, §10, [DOC-36](building-configuration-and-demo.md) §6, §10, [DOC-42](error-handling.md) §5, [DOC-06](../02-glossary.md)
 > Main readers: P1-12 (`residency` module), P1-13 (units and owners import), P1-14 (staff, unit and resident API), P4-10 (household management), P5-05 (lookup API), DOC-26, DOC-29, DOC-30, DOC-46, DOC-48, DOC-51, DOC-59, DOC-65, EXP-10
 
@@ -554,6 +554,8 @@ A loop of the statements of steps 3 to 6 for 2,000 new owners (an account, a uni
 
 `import_expire` (hourly at :25) turns `validated` jobs past `expires_at` into `expired` and removes their file through `FilesApi.remove`; `import_purge` (Sunday 04:00) deletes rows and files older than 30 days (DOC-38 §4, DOC-20 §5). The commit removes the file in its own transaction, so neither job finds it (DR-114 (13)).
 
+`integrity_weekly` (Monday 03:30 building time, mode `snapshot`, DR-62, DR-120, DR-321) reports and never repairs. For each real building it logs one Warning line per kind that has rows, with the building id, the count and up to 50 ids and no name or phone: `membership_two_owners` (a unit with more than one owner that is not `removed`; the ids are unit ids), `membership_unit_missing` (a membership of a unit that is not in the building), `member_of_removed_account` (a membership that is not `removed` while its account is `deleted` in `identity`) and `dangling_reference` (a membership whose account `identity` does not know); the last two list membership ids. The first two need a dropped index or a dropped foreign key to happen, and they are the two corruptions K20 and K21 of EXP-11 when injected. The rows of `residency` are read in the one `REPEATABLE READ READ ONLY` transaction of the job; the accounts are read through `IdentityApi.getResidentAccounts`, 500 per call, right after it, because they live in another schema (ADR-0014). The run's `details` is `{"findings": n, "buildings": n, "perKind": {…}}`. A `deletion_requested` account is not a finding: its memberships are still in force until the deletion runs.
+
 ### 9.5 As built (P1-13, 2026-10-23, DR-258)
 
 The routes are `residency`'s own (`presentation/import-routes.ts`); the use cases are `ValidateUnitOwnerImport` and `CommitUnitOwnerImport`, the reads are `ImportQueries`, and the validation of DOC-18 §1 is split between the pure rules of `domain/import/` and the `ImportPlanner`, which the validation and the commit share. Where the build settled what the text left open:
@@ -693,6 +695,7 @@ Building settings that matter here are in DOC-17 §1.2: `accountDeletionDays`, a
 | `import_commits_total` | counter | `outcome` (`committed`, `expired`, `stale`, `not_ready`) | |
 | `import_validate_duration_seconds` | histogram | none | NFR-12: 2,000 rows ≤ 10 s |
 | `units_without_owner` | gauge | none | Informational; units that are not `vacant` and have no owner |
+| `integrity_findings` | gauge | `job_name` | Set from `details.findings` of the last successful `integrity_weekly` (DOC-40 §4.2); the alert `IntegrityFindings` is a Warning at above 0 |
 
 **As built (P1-18, DOC-40 §4.3, DR-269).** `membership_changes_total` is counted where the event is written: `ChangeMembership` (any change by staff), `CreateResident` (`added`) and `TransferOwnership` (the removed members, and `added` for an owner who had no row); `owner_transfers_total` in `TransferOwnership`; `membership_guard_refusals_total` in the `unit(capability)` guard (`locked` for a row that is not `active`, `missing` for none); `import_commits_total` and `import_validate_duration_seconds` in `CommitUnitOwnerImport` (the three refusals) and `ValidateUnitOwnerImport` (the whole call); `member_invitations_total` in `QueueMemberInvitation` (`queued`, `phone_bucket`); `units_without_owner` is a gauge read at the scrape (a unit whose `occupancy` is not `vacant` and that has no membership of type `owner` other than `removed`). `owner_cap` and the owner's own changes (`actor` `resident`) come with P4-10.
 
@@ -794,6 +797,14 @@ Prefix `RM-` (master plan §0.2, unused elsewhere: `grep -rn "| RM-" docs/` foun
 | RM-60 | `GET /staff/units?unitTypeId=` (alone, with `bedrooms=2`, with a type of another building) | the units of the type; the intersection; an empty list (never a 404); every item has `unitType` or `null` |
 | RM-61 | `GET /staff/unit-types` for a building with 2 active and 1 archived type, `?status=active` | 3 items ordered by lower-case Vietnamese name, each with `unitCount`; 2 items; the types of another building are never listed |
 | RM-62 | A Technician, a Guard, a resident and no token on E-180, E-181, E-182 | 403 `forbidden`; 403; 403; 401 (rows of the authorization matrix, SC-) |
+| RM-63 | `integrity_weekly` over two buildings with units, owners and members | `findings` 0, no Warning line |
+| RM-64 | K20: the index `membership_one_owner_per_unit` dropped and a second active owner added to a unit of building A | one line `membership_two_owners`, rows 1, the unit id; building B has none; `findings` 1 |
+| RM-65 | K21: the account of an active membership set to `deleted` | one line `member_of_removed_account`, rows 1, the membership id; building B has none |
+| RM-66 | A membership whose account is not in `identity` | one line `dangling_reference`, rows 1 |
+| RM-67 | A `deletion_requested` account with a membership; a `removed` membership of a `deleted` account | no finding |
+| RM-68 | The membership table before and after a run with findings | the same count and checksum: the job repairs nothing |
+| RM-69 | The building list holds only the real building | only its ids are read; a demo building is not checked |
+| RM-70 | The job definition | name `integrity_weekly`, weekly Monday 03:30, mode `snapshot` |
 
 ### 17.1 Statements run
 
@@ -871,6 +882,14 @@ Differences from the text above: the unit row is held (`SELECT … FOR UPDATE`) 
 | `UnitType` rules | `modules/residency/src/domain/unit-type.test.ts`, `unit.test.ts` | the code format, the names, the defaults, an archive and a restore in one statement |
 
 Differences from the text above: the audit wrapper writes a row for an edit that changes nothing, as `UpdateUnit` does, so §4.3 rule 6 holds for the version and the fields, not for the row count. The unit list and `getUnit` read the type with a `LEFT JOIN`, and `insert` and `apply` read the unit again after the write so that every answer carries `unitType`. The list of E-180 writes its count as `residency.unit_type.id` in full: a single-table select renders a column without its table, and the inner `unit` would shadow it.
+
+### 17.7 As built (P2-11, 2026-11-04, DR-321)
+
+| Test | Where | Note |
+| --- | --- | --- |
+| RM-63…70 | `modules/residency/test/integrity-weekly.integration.test.ts` | the job through `DrizzleIntegrityReader` and the real `identity.resident_account` on PostgreSQL 18.6, in an own database per test so a dropped index never leaks; RM-64 and RM-65 are K20 and K21 of EXP-11 |
+
+Differences from the text above: EXP-11 §3 K21 said `status = 'removed'`, but `identity` has only `active`, `deletion_requested` and `deleted`; the injection and the finding use `deleted`. `membership_unit_missing` has no test of its own: `fk_membership_unit` makes it impossible without dropping the key, and its query is the same shape as the others.
 
 ### 17.2 Where DOC-16 and DOC-27 differed
 
