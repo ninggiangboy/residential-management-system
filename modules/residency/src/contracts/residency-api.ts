@@ -74,6 +74,12 @@ export interface FoundUnitDto {
   hasActiveOwner: boolean
 }
 
+/** The active owner's name of a unit for the fee notice, `null` when it has none (DR-292, DOC-34 §6.1). */
+export interface UnitOwnerNameDto {
+  unitId: string
+  ownerName: string | null
+}
+
 export interface UnitHitDto {
   unitId: string
   code: string
@@ -128,6 +134,12 @@ export interface ResidencyApi {
    * missing code: the `db` layer of the fee import in one call (DOC-21 §4.3, DR-265).
    */
   findUnitsByCodes(buildingId: string, codes: readonly string[]): Promise<FoundUnitDto[]>
+  /**
+   * The full name of the active owner of each unit, for the fee notice (DR-292, DOC-34 §6.1): one entry per requested id, in the
+   * input order and once each, `ownerName` null when the unit has no active owner or belongs to another building; more than 500
+   * throws. The name is for the caller only: never logged, never put in an error.
+   */
+  unitOwnerNames(buildingId: string, unitIds: string[]): Promise<UnitOwnerNameDto[]>
   /** The membership by id with its `credentialVersion`, whatever its status. */
   getMembershipForScan(membershipId: string): Promise<ScanMembershipDto | null>
   /** The units whose active owner is the account (DOC-35 §10.1). */

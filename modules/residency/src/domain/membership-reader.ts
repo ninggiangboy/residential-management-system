@@ -1,4 +1,4 @@
-import type { MemberType } from '@rms/shared-types'
+import type { BuildingScope, MemberType } from '@rms/shared-types'
 import type { MembershipStatus, Occupancy } from '../contracts'
 
 /** The columns of a membership that the guard and the contract calls read. */
@@ -28,6 +28,12 @@ export interface UnitView {
   code: string
   floor: number | null
   occupancy: Occupancy
+}
+
+/** The active owner's name of a unit for the fee notice, `null` when the unit has none (DR-292, DOC-34 §6.1). */
+export interface UnitOwnerNameView {
+  unitId: string
+  ownerName: string | null
 }
 
 /**
@@ -78,4 +84,9 @@ export interface MembershipReader {
     buildingId: string,
     codesLower: readonly string[],
   ): Promise<Array<UnitView & { hasActiveOwner: boolean }>>
+  /**
+   * The active owner's name of each of these units of the building, one row per unit that has one, in the order given; a unit of
+   * another building is not returned (DR-292, DOC-34 §6.1).
+   */
+  unitOwnerNames(scope: BuildingScope, unitIds: readonly string[]): Promise<UnitOwnerNameView[]>
 }
