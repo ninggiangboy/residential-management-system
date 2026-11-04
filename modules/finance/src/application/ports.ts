@@ -1,6 +1,7 @@
 import type { Language, MemberType } from '@rms/shared-types'
 import type { Sheet } from '../domain/fee-import/sheet'
 import type { ReceiptContext } from '../domain/receipt-snapshot'
+import type { PdfLanguage } from './pdf-renderer'
 
 /** A unit found by its code (DOC-21 §2.1, DR-265): `occupancy` is for display, `hasActiveOwner` decides DQ-78. */
 export interface FoundUnitDto {
@@ -50,4 +51,12 @@ export interface PayerDirectory {
     accountId: string,
     unitId: string,
   ): Promise<{ readonly name: string | null; readonly memberType: MemberType | null }>
+}
+
+/**
+ * The building's fee-notice language at the moment a receipt is first rendered (DOC-34 §7.3, DOC-36 §5.2, FR-36.1): a
+ * cached receipt keeps that language even when the setting changes later. The adapter reads `BuildingApi.getSettings`.
+ */
+export interface NoticeLanguageSource {
+  language(buildingId: string): Promise<PdfLanguage>
 }

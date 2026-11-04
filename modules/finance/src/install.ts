@@ -16,6 +16,8 @@ export type FinanceHost = Pick<ModuleHost, 'logger' | 'clock' | 'ids' | 'databas
     | 'ledgerCheckBuildings'
     | 'invariantCheckGraceMinutes'
     | 'pdfRenderer'
+    | 'pdf'
+    | 'noticeLanguage'
   >
 
 export function installFinance(host: FinanceHost) {
@@ -35,5 +37,7 @@ export function installFinance(host: FinanceHost) {
     ledgerCheckBuildings: host.ledgerCheckBuildings,
     invariantCheckGraceMinutes: host.invariantCheckGraceMinutes,
     pdfRenderer: host.pdfRenderer,
+    pdf: host.pdf,
+    noticeLanguage: host.noticeLanguage,
   })
 }

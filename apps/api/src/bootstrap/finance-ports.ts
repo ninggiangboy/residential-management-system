@@ -9,10 +9,13 @@ import type { ResidencyApi } from '@mod/residency/contracts'
  * module states its needs without importing them (DOC-12 §4.2).
  */
 export function financePorts(apis: {
-  building: Pick<BuildingApi, 'getBuilding' | 'listBuildings'>
+  building: Pick<BuildingApi, 'getBuilding' | 'listBuildings' | 'getSettings'>
   identity: Pick<IdentityApi, 'getResidentAccounts'>
   residency: Pick<ResidencyApi, 'getMembership'>
-}): Pick<FinanceModuleDeps, 'calendar' | 'receiptBuildings' | 'payers' | 'ledgerCheckBuildings'> {
+}): Pick<
+  FinanceModuleDeps,
+  'calendar' | 'receiptBuildings' | 'payers' | 'ledgerCheckBuildings' | 'noticeLanguage'
+> {
   const buildingOf = async (buildingId: string) => {
     const building = await apis.building.getBuilding(buildingId)
     if (!building) throw new NotFoundError()
@@ -48,6 +51,11 @@ export function financePorts(apis: {
         const membership = await apis.residency.getMembership(accountId, unitId)
         return { name: account?.displayName ?? null, memberType: membership?.memberType ?? null }
       },
+    },
+    // DOC-34 §7.3, DOC-36 §5.2: a receipt prints in the building's fee-notice language as it is at its first render.
+    noticeLanguage: {
+      language: async (buildingId) =>
+        (await apis.building.getSettings(buildingId)).feeNoticeLanguage,
     },
   }
 }
