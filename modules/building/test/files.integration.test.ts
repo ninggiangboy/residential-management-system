@@ -11,7 +11,7 @@ import {
   QuotaExceededError,
 } from '../src/domain/errors'
 import { MIME_XLSX } from '../src/domain/purposes'
-import { BUILDING, createHarness, type Harness, jpeg, PNG_HEAD } from './support'
+import { BUILDING, createHarness, DEMO_BUILDING, type Harness, jpeg, PNG_HEAD } from './support'
 
 const MB = 1_048_576
 let h: Harness
@@ -921,5 +921,72 @@ describe('read (the import reads its upload twice)', () => {
     await expect(h.building.files.read(actor, ticket.fileId, importExpect)).rejects.toBeInstanceOf(
       FileNotVerifiedError,
     )
+  })
+})
+
+describe('findByOwnerRef (DR-293; DOC-34 §8, DOC-37 §3)', () => {
+  const key = (ownerRef: string) =>
+    ({ module: 'finance', purpose: 'receipt_pdf', ownerRef }) as const
+
+  const store = (ownerRef: string, buildingId: string = BUILDING) =>
+    h.building.files.storeGenerated({
+      buildingId,
+      module: 'finance',
+      purpose: 'receipt_pdf',
+      ownerRef,
+      mime: 'application/pdf',
+      body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+    })
+
+  test('a hit returns the FileDto of the attached row', async () => {
+    const stored = await store('receipt/hit/issued.pdf')
+    expect(await h.building.files.findByOwnerRef(BUILDING, key('receipt/hit/issued.pdf'))).toEqual(
+      stored,
+    )
+  })
+
+  test('a miss returns null', async () => {
+    expect(
+      await h.building.files.findByOwnerRef(BUILDING, key('receipt/absent/issued.pdf')),
+    ).toBeNull()
+  })
+
+  test("another building's row with the same ownerRef is not found", async () => {
+    await store('receipt/other/issued.pdf', DEMO_BUILDING)
+    expect(
+      await h.building.files.findByOwnerRef(BUILDING, key('receipt/other/issued.pdf')),
+    ).toBeNull()
+    expect(
+      await h.building.files.findByOwnerRef(DEMO_BUILDING, key('receipt/other/issued.pdf')),
+    ).not.toBeNull()
+  })
+
+  test('a deleted row is not found', async () => {
+    const stored = await store('receipt/deleted/issued.pdf')
+    await h.admin.unsafe(
+      `UPDATE building.file_object SET status = 'deleted', deleted_at = now() WHERE id = '${stored.fileId}'`,
+    )
+    expect(
+      await h.building.files.findByOwnerRef(BUILDING, key('receipt/deleted/issued.pdf')),
+    ).toBeNull()
+  })
+
+  test('a pending, not yet attached row is not found', async () => {
+    const id = h.ids.next()
+    await h.admin.unsafe(`
+      INSERT INTO building.file_object (id, building_id, module, purpose, object_key, mime, size, status, owner_ref, account_kind, account_id)
+      VALUES ('${id}', '${BUILDING}', 'finance', 'receipt_pdf', 'test/${BUILDING}/finance/2026/10/${id}.pdf', 'application/pdf', 0, 'pending', 'receipt/pending/issued.pdf', 'system', '${SYSTEM_ACCOUNT_ID}')`)
+    expect(
+      await h.building.files.findByOwnerRef(BUILDING, key('receipt/pending/issued.pdf')),
+    ).toBeNull()
+  })
+
+  test('two matching rows return the newest', async () => {
+    const ownerRef = 'receipt/twice/issued.pdf'
+    await store(ownerRef)
+    h.clock.advance(60_000)
+    const newest = await store(ownerRef)
+    const found = await h.building.files.findByOwnerRef(BUILDING, key(ownerRef))
+    expect(found?.fileId).toBe(newest.fileId)
   })
 })

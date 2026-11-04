@@ -1,8 +1,9 @@
 import { NotFoundError } from '@core/kernel'
-import type { FileActor, FileExpectation } from '../../contracts'
+import type { FileActor, FileDto, FileExpectation, FindByOwnerRefInput } from '../../contracts'
 import { FileNotVerifiedError } from '../../domain/errors'
 import type { FileRepository } from '../../domain/file-repository'
 import type { BuildingDirectory } from '../directory'
+import { toFileDto } from '../file-dto'
 import type { FilesConfig } from '../files-config'
 import type { ObjectStore } from '../ports'
 import { scopeOf } from '../scope-of'
@@ -62,5 +63,11 @@ export class FileQueries {
         : config.downloadUrlTtlSeconds,
       downloadName: opts.downloadName,
     })
+  }
+
+  /** `FilesApi.findByOwnerRef` (DR-293; DOC-34 §8, DOC-37 §3): the `attached` row a cache wrote, or `null`. No store call. */
+  async findByOwnerRef(buildingId: string, input: FindByOwnerRefInput): Promise<FileDto | null> {
+    const file = await this.files.findByOwnerRef(scopeOf(buildingId), input)
+    return file ? toFileDto(file) : null
   }
 }

@@ -1,6 +1,7 @@
 import { applyTransition, type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
-import { and, asc, eq, inArray, lt, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, lt, ne, sql } from 'drizzle-orm'
+import type { FindByOwnerRefInput } from '../../contracts'
 import {
   FileObject,
   type FileRecord,
@@ -85,6 +86,27 @@ export class DrizzleFileRepository implements FileRepository {
           ne(fileObject.status, 'deleted'),
         ),
       )
+    return row ? toRecord(row) : null
+  }
+
+  /**
+   * `ix_file_object_building_owner` of DOC-37 §3: the `attached` row of that module, purpose and owner, newest first (DR-293).
+   */
+  async findByOwnerRef(scope: BuildingScope, key: FindByOwnerRefInput): Promise<FileObject | null> {
+    const [row] = await this.database.executor
+      .select()
+      .from(fileObject)
+      .where(
+        and(
+          inBuilding(fileObject, scope),
+          eq(fileObject.module, key.module),
+          eq(fileObject.purpose, key.purpose),
+          eq(fileObject.ownerRef, key.ownerRef),
+          eq(fileObject.status, 'attached'),
+        ),
+      )
+      .orderBy(desc(fileObject.createdAt), desc(fileObject.id))
+      .limit(1)
     return row ? toRecord(row) : null
   }
 
