@@ -31,6 +31,7 @@ import { FeeBatchQueries } from './application/queries/fee-batch-queries'
 import { FeeImportQueries } from './application/queries/fee-import-queries'
 import { FeeNoticeQueries } from './application/queries/fee-notice-queries'
 import { MoneyLogQueries } from './application/queries/money-log-queries'
+import type { ResidentFeeQueries } from './application/queries/resident-fee-queries'
 import { Settlement } from './application/settle'
 import { AddDraftCharge } from './application/use-cases/add-draft-charge'
 import { CloseFeeBatch } from './application/use-cases/close-fee-batch'
@@ -72,6 +73,7 @@ import { DrizzleLedgerRepository } from './infrastructure/persistence/drizzle-le
 import { DrizzleMoneyLogRepository } from './infrastructure/persistence/drizzle-money-log-repository'
 import { DrizzlePaymentRepository } from './infrastructure/persistence/drizzle-payment-repository'
 import { DrizzleReceiptPdfRepository } from './infrastructure/persistence/drizzle-receipt-pdf-repository'
+import { DrizzleResidentFeeReader } from './infrastructure/persistence/drizzle-resident-fee-reader'
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
 import { financeInbox, financeOutbox } from './infrastructure/persistence/schema'
 import { financeManifest } from './manifest'
@@ -169,6 +171,8 @@ export interface FinanceQueries {
   feeImports: FeeImportQueries
   debts: DebtQueries
   moneyLog: MoneyLogQueries
+  /** The resident reads of E-80…E-83 (DOC-22 §8.4, DR-40; P2-15). */
+  residentFees: ResidentFeeQueries
   /** The latest bulk job of a batch (E-177, DOC-34 §9.1; P2-13). */
   feeNotice: FeeNoticeQueries
 }
@@ -389,6 +393,11 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     feeImports: feeImportQueries,
     debts: new DebtQueries(debts, deps.calendar, clock),
     moneyLog: new MoneyLogQueries(moneyLog),
+    residentFees: new ResidentFeeQueries(
+      new DrizzleResidentFeeReader(database),
+      deps.calendar,
+      clock,
+    ),
     feeNotice: feeNoticeQueries,
   }
   // `install.ts` requires the guards and the key wrapper of the host; a test that builds the module to call its use cases leaves
@@ -396,7 +405,13 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
   const { guards, idempotent } = deps
   const routes = (
     guards && idempotent
-      ? financeRoutes({ ...useCases, moneyLog: queries.moneyLog, guards, idempotent })
+      ? financeRoutes({
+          ...useCases,
+          moneyLog: queries.moneyLog,
+          residentFees: queries.residentFees,
+          guards,
+          idempotent,
+        })
       : routePlugin()
   ) as ReturnType<typeof financeRoutes>
   return {
