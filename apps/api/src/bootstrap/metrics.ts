@@ -93,6 +93,14 @@ const COUNTERS: {
     help: 'Events written to the replay buffer, by type (DOC-52 §15).',
     labels: ['type'],
   },
+  pdf_renders_total: {
+    help: 'PDF renders, by document and outcome (DOC-34 §14, DR-291).',
+    labels: ['document', 'outcome'],
+  },
+  pdf_renderer_restarts_total: {
+    help: 'Render hosts replaced before the next render, by reason (DOC-34 §14, DR-291).',
+    labels: ['reason'],
+  },
 }
 
 const HISTOGRAMS: {
@@ -116,6 +124,11 @@ const HISTOGRAMS: {
     help: 'Seconds of one foreground stretch of an app, one observation per app_close written (DR-279).',
     buckets: [10, 30, 60, 180, 600, 1800, 3600],
     labels: ['app', 'audience'],
+  },
+  pdf_render_duration_seconds: {
+    help: 'Duration of a PDF render, from the message to the host to the bytes back (DOC-34 §14, DR-291).',
+    buckets: [0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30],
+    labels: ['document'],
   },
 }
 

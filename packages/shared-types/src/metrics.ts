@@ -92,6 +92,12 @@ export interface CounterLabels {
       | 'export.ready'
       | 'session.revoked'
   }
+  /** DOC-34 §14 (DR-291): the render host pool of `finance` (`cached` counts a hit that avoided a render). */
+  pdf_renders_total: {
+    document: 'fee_notice' | 'receipt' | 'report' | 'wiki_page'
+    outcome: 'rendered' | 'cached' | 'failed'
+  }
+  pdf_renderer_restarts_total: { reason: 'documents' | 'rss' | 'timeout' | 'crash' }
 }
 
 /** The histograms, observed in seconds, with the labels of each (`undefined` = none). */
@@ -100,6 +106,8 @@ export interface HistogramLabels {
   demo_reset_duration_seconds: undefined
   /** One observation of `durationSec` per `app_close` written (DOC-104 §11). */
   usage_foreground_seconds: { app: UsageApp; audience: UsageAudience }
+  /** DOC-34 §14 (DR-291): from the message to the host to the bytes back. */
+  pdf_render_duration_seconds: { document: 'fee_notice' | 'receipt' | 'report' | 'wiki_page' }
 }
 
 export type HistogramName = keyof HistogramLabels
