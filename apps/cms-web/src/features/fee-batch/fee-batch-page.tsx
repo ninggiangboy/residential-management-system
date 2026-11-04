@@ -151,13 +151,14 @@ export function FeeBatchPage({
   if (!data)
     return (
       <div aria-hidden="true">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Skeleton className="h-9 w-24 rounded-plate" />
-            <div className="flex flex-col gap-1.5">
-              <Skeleton className="h-7 w-64" />
-              <Skeleton className="h-3.5 w-80" />
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-24 rounded-plate" />
+              <Skeleton className="h-5 w-16 rounded-full" />
             </div>
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-3.5 w-80" />
           </div>
           <div className="flex gap-2">
             <Skeleton className="h-control-md w-36" />
@@ -185,24 +186,23 @@ export function FeeBatchPage({
       : '')
 
   // The "missing" tab exists only when the API counts the units without a charge (it is null as built, DOC-66 §5).
-  const showMissingTab = typeof data.counts.missing === 'number'
+  const missing = data.counts.missing
+  const showMissingTab = typeof missing === 'number'
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <span data-testid="batch-code">
-            <Plate size="lg">{data.code}</Plate>
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-title-1 text-ink">{bilingual(data.name, lang)}</h1>
-              <StatusTag entity="fee_batch" value={data.status} />
-            </div>
-            <p className="mt-1 text-secondary text-ink-muted" data-testid="batch-meta">
-              {meta}
-            </p>
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <span data-testid="batch-code">
+              <Plate size="lg">{data.code}</Plate>
+            </span>
+            <StatusTag entity="fee_batch" value={data.status} />
           </div>
+          <h1 className="text-title-1 text-ink">{bilingual(data.name, lang)}</h1>
+          <p className="mt-1 text-secondary text-ink-muted" data-testid="batch-meta">
+            {meta}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {data.status === 'draft' && (
@@ -229,6 +229,14 @@ export function FeeBatchPage({
       <BatchBanner batch={data} onShowMissing={() => switchView('missing')} />
 
       <div className="mb-4 flex flex-wrap items-end gap-4">
+        <div className="min-w-64 flex-1">
+          <SearchField
+            label={t('web.fee-batch.search.label')}
+            placeholder={t('web.fee-batch.search')}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        </div>
         {data.status === 'draft' && (
           <Tabs
             value={showMissingTab ? search.view : 'all'}
@@ -238,11 +246,11 @@ export function FeeBatchPage({
               label={t('web.fee-batch.col.unit')}
               tabs={[
                 { value: 'all', label: t('web.fee-batch.tab.all') },
-                ...(showMissingTab
+                ...(typeof missing === 'number'
                   ? [
                       {
                         value: 'missing',
-                        label: `${t('web.fee-batch.tab.missing')} ${data.counts.missing}`,
+                        label: t('web.fee-batch.tab.missing.count', { count: missing }),
                       },
                     ]
                   : []),
@@ -250,14 +258,6 @@ export function FeeBatchPage({
             />
           </Tabs>
         )}
-        <div className="min-w-64 flex-1">
-          <SearchField
-            label={t('web.fee-batch.search.label')}
-            placeholder={t('web.fee-batch.search')}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-          />
-        </div>
       </div>
 
       <div className="min-h-0 flex-1">

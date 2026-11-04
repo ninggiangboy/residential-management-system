@@ -212,34 +212,37 @@ export function ChargesTable({
         minWidth="min-w-[880px]"
         busy={query.isPlaceholderData}
         footer={
-          <>
-            <span className="text-secondary text-ink-muted">
-              {t('common.pagination.range', {
-                from: (page - 1) * LIMIT + 1,
-                to: (page - 1) * LIMIT + items.length,
-                total: batch.counts.charges,
-              })}
-            </span>
-            <div className="flex gap-2">
-              <IconButton
-                icon="caret-left"
-                label={t('common.pagination.previous')}
-                variant="outline"
-                disabled={search.cursor === undefined}
-                onClick={() => goCursor(visited.current.pop())}
-              />
-              <IconButton
-                icon="caret-right"
-                label={t('common.pagination.next')}
-                variant="outline"
-                disabled={!data.nextCursor}
-                onClick={() => {
-                  visited.current.push(search.cursor)
-                  goCursor(data.nextCursor ?? undefined)
-                }}
-              />
+          <div className="flex w-full flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <span className="text-secondary text-ink-muted">
+                {t('common.pagination.range', {
+                  from: (page - 1) * LIMIT + 1,
+                  to: (page - 1) * LIMIT + items.length,
+                  total: batch.counts.charges,
+                })}
+              </span>
+              <div className="flex gap-2">
+                <IconButton
+                  icon="caret-left"
+                  label={t('common.pagination.previous')}
+                  variant="outline"
+                  disabled={search.cursor === undefined}
+                  onClick={() => goCursor(visited.current.pop())}
+                />
+                <IconButton
+                  icon="caret-right"
+                  label={t('common.pagination.next')}
+                  variant="outline"
+                  disabled={!data.nextCursor}
+                  onClick={() => {
+                    visited.current.push(search.cursor)
+                    goCursor(data.nextCursor ?? undefined)
+                  }}
+                />
+              </div>
             </div>
-          </>
+            <TotalsBar batch={batch} />
+          </div>
         }
       >
         <TableHead showStatus={showStatus} />
@@ -268,7 +271,6 @@ export function ChargesTable({
           })}
         </TBody>
       </DataTable>
-      <TotalsBar batch={batch} />
       <ConfirmDialog
         open={pendingDelete !== null}
         onOpenChange={(next) => !next && !deleteCharge.isPending && setPendingDelete(null)}
@@ -339,11 +341,21 @@ function FragmentRow({
         )}
         <Td onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-end gap-2">
-            {draft && (
+            {draft && missing && (
+              <IconButton
+                icon="plus"
+                label={t('web.fee-batch.charge.add')}
+                size="sm"
+                disabled={!canWrite}
+                data-testid={`charge-add-${item.unitCode}`}
+                onClick={() => (open ? onRequestClose() : onOpenUnit(item.unitCode, mode))}
+              />
+            )}
+            {draft && !missing && (
               <>
                 <IconButton
                   icon="pencil-simple"
-                  label={t('web.fee-batch.action.edit')}
+                  label={t('web.fee-batch.charge.edit', { unit: item.unitCode })}
                   size="sm"
                   disabled={!canWrite}
                   data-testid={`charge-edit-${item.unitCode}`}
@@ -351,7 +363,7 @@ function FragmentRow({
                 />
                 <IconButton
                   icon="trash"
-                  label={t('common.action.delete')}
+                  label={t('web.fee-batch.charge.delete.unit', { unit: item.unitCode })}
                   size="sm"
                   disabled={!canWrite}
                   data-testid={`charge-delete-${item.unitCode}`}
@@ -424,20 +436,23 @@ function TableHead({ showStatus }: { showStatus: boolean }): ReactElement {
   )
 }
 
-/** The totals bar: the unit and line counts and the batch total (DOC-66 §4). */
+/** The totals bar inside the table card: the `Tổng đợt` label, the unit and line counts and the batch total (DOC-66 §4). */
 function TotalsBar({ batch }: { batch: FeeBatchView }): ReactElement {
   const { t, formatMoney } = useI18n()
   const missing = batch.counts.missing
   return (
     <div
       data-testid="totals-bar"
-      className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-muted px-4 py-3 text-body"
+      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-control bg-surface-muted px-4 py-2.5 text-body"
     >
-      <span className="text-ink" data-testid="totals-units">
-        {typeof missing === 'number'
-          ? t('web.fee-batch.totals', { units: batch.counts.charges, missing })
-          : t('web.fee-batch.totals.units', { units: batch.counts.charges })}
-      </span>
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-semibold text-ink">{t('web.fee-batch.totals.label')}</span>
+        <span className="text-ink-muted" data-testid="totals-units">
+          {typeof missing === 'number'
+            ? t('web.fee-batch.totals', { units: batch.counts.charges, missing })
+            : t('web.fee-batch.totals.units', { units: batch.counts.charges })}
+        </span>
+      </div>
       <span className="tabular-nums text-ink-muted" data-testid="totals-lines">
         {t('web.fee-batch.totals.lines', {
           lines: batch.counts.lines,

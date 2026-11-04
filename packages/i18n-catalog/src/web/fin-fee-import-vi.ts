@@ -43,6 +43,7 @@ export const finFeeImportVi: Record<keyof typeof finFeeImportEn, string> = {
   'web.fee-import.file.meta': '{rows} dòng, {size}, tải lên {time}, {date}',
   'web.fee-import.file.meta.rows': '{rows} dòng, tải lên {time}, {date}',
   'web.fee-import.file.note': 'Nhập lại file sẽ thay thế toàn bộ khoản phí của đợt nháp.',
+  'web.fee-import.history.col.code': 'Mã đợt',
   'web.fee-import.history.title': 'Lịch sử nhập file',
   'web.fee-import.not-draft': 'Đợt phí không còn là bản nháp.',
   'web.fee-import.replace-warning':

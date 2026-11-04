@@ -11,6 +11,7 @@ import type {
   FeeBatchStatusCounts,
   FeeBatchView,
 } from '../../domain/fee-batch-reader'
+import type { StaffDirectory } from '../ports'
 
 /** The Manager's and the Admin's (EP:181-185, DOC-21 §3); the routes read the same list for their guard and audience. */
 export const FEE_BATCH_READ_ROLES = ['admin', 'manager'] as const satisfies readonly StaffRole[]
@@ -75,6 +76,11 @@ export class FeeBatchQueries {
   constructor(
     private readonly reader: FeeBatchReader,
     private readonly owners?: OwnerNames,
+    /**
+     * The creator's name of E-89 and E-91 (DOC-66 §5, DOC-07 §11A); optional so a caller without it still reads the batch
+     * screens and gets `name: null`. The routes of P2-16 wire `StaffDirectory`.
+     */
+    private readonly staff?: StaffDirectory,
   ) {}
 
   async batch(scope: BuildingScope, batchId: string): Promise<FeeBatchRecord> {
@@ -102,9 +108,10 @@ export class FeeBatchQueries {
     const items = page.rows.slice(0, limit)
     const last = page.rows.length > limit ? items.at(-1) : undefined
     const next = last ? { feeMonth: last.feeMonth, id: last.id } : null
+    const named = await this.withStaffNames(items)
     return page.counts
-      ? { items, next, counts: page.counts, totalCount: page.totalCount ?? 0 }
-      : { items, next }
+      ? { items: named, next, counts: page.counts, totalCount: page.totalCount ?? 0 }
+      : { items: named, next }
   }
 
   /** E-91: the header, the counts and the provenance of one batch; a foreign id is 404 like an unknown one (DOC-66 §5). */
@@ -112,7 +119,7 @@ export class FeeBatchQueries {
     requireRole(staff, FEE_BATCH_READ_ROLES)
     const view = await this.reader.findBatchView(staff.scope, batchId)
     if (!view) throw new NotFoundError()
-    return view
+    return this.withStaffName(view)
   }
 
   /** E-93: the charges of a batch, keyset by unit code, lines on demand (DOC-66 §5). */
@@ -155,6 +162,28 @@ export class FeeBatchQueries {
       items.map((item) => item.unitId),
     )
     return items.map((item) => ({ ...item, ownerName: names.get(item.unitId) ?? null }))
+  }
+
+  /** The creator's name of each item, in one call (DOC-66 §5, DOC-07 §11A); `name` stays `null` without a staff port. */
+  private async withStaffNames(
+    items: readonly FeeBatchListItem[],
+  ): Promise<readonly FeeBatchListItem[]> {
+    if (!this.staff || items.length === 0) return items
+    const names = await this.staff.names(items.map((item) => item.createdBy.id))
+    return items.map((item) => ({
+      ...item,
+      createdBy: { id: item.createdBy.id, name: names.get(item.createdBy.id) ?? null },
+    }))
+  }
+
+  /** The creator's name of one batch, from one call (DOC-66 §5, DOC-07 §11A); `name` stays `null` without a staff port. */
+  private async withStaffName(view: FeeBatchView): Promise<FeeBatchView> {
+    if (!this.staff) return view
+    const names = await this.staff.names([view.createdBy.id])
+    return {
+      ...view,
+      createdBy: { id: view.createdBy.id, name: names.get(view.createdBy.id) ?? null },
+    }
   }
 }
 

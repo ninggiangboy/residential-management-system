@@ -34,6 +34,11 @@
       "types": "./src/integrations/residency/index.ts",
       "default": "./src/integrations/residency/index.ts"
     },
+    "./integrations/identity": {
+      "bun": "./src/integrations/identity/index.ts",
+      "types": "./src/integrations/identity/index.ts",
+      "default": "./src/integrations/identity/index.ts"
+    },
     "./integrations/notification": {
       "bun": "./src/integrations/notification/index.ts",
       "types": "./src/integrations/notification/index.ts",
@@ -58,6 +63,7 @@
     "@core/runtime": "workspace:*",
     "@mod/audit": "workspace:*",
     "@mod/building": "workspace:*",
+    "@mod/identity": "workspace:*",
     "@mod/notification": "workspace:*",
     "@mod/realtime": "workspace:*",
     "@mod/residency": "workspace:*",

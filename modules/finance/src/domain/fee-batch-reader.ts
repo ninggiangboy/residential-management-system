@@ -51,8 +51,8 @@ export interface FeeBatchListItem {
   /** `collected ÷ total` as 0…1, or `null` when nothing is billed (`total` 0). */
   readonly collectedRate: number | null
   readonly dueDate: LocalDate
-  /** Only the id: a staff name is `identity`'s and no port reaches it from `finance` (P2-15 slice 1). */
-  readonly createdBy: { readonly id: string }
+  /** The creator's id; the query service fills `name` from `StaffDirectory` (`null` when `identity` knows no account). */
+  readonly createdBy: { readonly id: string; readonly name: string | null }
   readonly version: number
 }
 
@@ -112,8 +112,8 @@ export interface FeeBatchView {
   readonly dueDate: LocalDate
   readonly status: FeeBatchStatus
   readonly version: number
-  /** Only the id, for the reason of `FeeBatchListItem.createdBy`. */
-  readonly createdBy: { readonly id: string }
+  /** The creator's id; the query service fills `name` from `StaffDirectory`, as in `FeeBatchListItem`. */
+  readonly createdBy: { readonly id: string; readonly name: string | null }
   readonly publishedAt: Date | null
   /** The recalled batch a re-issue corrects (DOC-21 §3.7); `null` otherwise. */
   readonly replaces: { readonly id: string; readonly code: string } | null

@@ -1407,11 +1407,14 @@ The nine fee and debt screens are in `apps/cms-web/src/features/{fees,fee-import
 | Topic | As built | Why |
 | --- | --- | --- |
 | Breadcrumb | Two crumbs ("Tài chính" and the page); the batch code is the tail of `W-Fee-Batch` and `W-Fee-Notice` | the shell's `crumbs` is a pair |
-| `createdBy` of `W-Fees` | The column shows the account id, not a name | E-89 answers `createdBy {id}` only; a name needs a read from `identity` (open) |
+| `createdBy` of `W-Fees` | The creator's name (E-89 and the batch bodies answer `createdBy {id, name}` from `IdentityApi.getStaff`, `name` is `null` for an unknown account) | design check against the canvas |
 | `missing` | The "Chưa có khoản" tab and banner of `W-Fee-Batch` are drawn only when `counts.missing` is a number | E-91 `counts.missing` and E-93 `view=missing` are empty until `ResidencyApi` lists owned units (DOC-51 §11A) |
 | Owner phone, area | Not drawn when `null` (`W-Debts`, `W-Fee-Record`) | E-101 and E-102 answer `null` for `ownerPhone` and `areaM2` |
 | Skipped single voids | `W-Fee-Reissue` counts them from E-93 `status=void&voidKind=single`; the line of E-98 `skippedSingleVoid` is not read | E-98 answers `{batchId, code, copiedCharges}` only |
 | Fee notice query | E-176 takes `language` (`vi`, `en`, `both`), not `lang` | DOC-51 §11A |
+| Receipt history | The "Đợt" column of the receipts table of `W-Fee-Record` is not drawn | E-102 receipts carry `chargeId` and no batch; the column returns when E-102 does |
+| Debt list, oldest | "Nợ lâu nhất" shows the oldest due date, not the batch label of the artboard | E-101 answers `oldestDue` only |
+| Fee notice layout | The "Tùy chọn xem" card sits left of the A4 preview, the unit field is a searchable select, the two PDF actions stay in the page header (§4) | canvas `W-Fee-Notice`, DOC-66 §4 |
 | Fee-month filter | The month select of `W-Fees` lists the months of the rows loaded, plus the one in the URL | no months endpoint in P2 |
 | Dates | A `LocalDate` is revived into a `Date` by Eden Treaty; `lib/day.ts` turns it back into `YYYY-MM-DD` before a screen slices or compares it | Eden's default `parseDate` |
 | Date field | A text date input as in the fee import settings card | `components/ui` has no `DateField` yet |

@@ -25,6 +25,7 @@ import type {
   NoticeLanguageSource,
   PayerDirectory,
   ReceiptBuildingSource,
+  StaffDirectory,
   UnitDirectory,
 } from './application/ports'
 import { DebtQueries } from './application/queries/debt-queries'
@@ -117,6 +118,11 @@ export interface FinanceModuleDeps {
   invariantCheckGraceMinutes?: number
   /** The unit code, floor and owner of E-101/E-102 (DOC-66 §5): `debtUnitDirectory(residency.api)` of `integrations/residency`. */
   debtUnits?: DebtUnitDirectory
+  /**
+   * The creator's name of E-89 and E-91 (DOC-66 §5, DOC-07 §11A): `staffDirectory(identity.api)` of `integrations/identity`. A
+   * test that leaves it out reads `createdBy { id, name: null }`.
+   */
+  staffDirectory?: StaffDirectory
   /** `DEBT_REMINDER_PER_HOUR` (DOC-41): the bucket of E-103 per account; a test that leaves it out has no limit (LG-40). */
   reminderRatePerHour?: number
   /** DOC-40: `import_validate_duration_seconds`, `import_commits_total` (DOC-21 §7). */
@@ -404,7 +410,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     requestFeeNoticeZip,
   }
   const queries: FinanceQueries = {
-    feeBatches: new FeeBatchQueries(batches, noticeContext),
+    feeBatches: new FeeBatchQueries(batches, noticeContext, deps.staffDirectory),
     feeImports: feeImportQueries,
     debts: new DebtQueries(
       debts,
@@ -435,6 +441,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
           debts: queries.debts,
           feeNotice: queries.feeNotice,
           receiptPdf: queries.receiptPdf,
+          staffDirectory: deps.staffDirectory,
           guards,
           idempotent,
         })

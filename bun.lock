@@ -248,6 +248,7 @@
         "@core/runtime": "workspace:*",
         "@mod/audit": "workspace:*",
         "@mod/building": "workspace:*",
+        "@mod/identity": "workspace:*",
         "@mod/notification": "workspace:*",
         "@mod/realtime": "workspace:*",
         "@mod/residency": "workspace:*",

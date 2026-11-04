@@ -6,6 +6,7 @@ import { Checkbox, RadioCards } from '../../components/ui/controls'
 import { Dialog } from '../../components/ui/dialog'
 import { Icon } from '../../components/ui/icon'
 import { Skeleton } from '../../components/ui/skeleton'
+import { Plate } from '../../components/ui/tag'
 import { TextAreaField, TextField } from '../../components/ui/text-field'
 import { toast } from '../../components/ui/toaster'
 import { downloadFile } from '../../lib/download'
@@ -41,7 +42,7 @@ function ChargeChoices({
   checked: readonly string[]
   onToggle: (chargeId: string, next: boolean) => void
 }) {
-  const { t, lang, formatMoney, formatDateTime } = useI18n()
+  const { t, lang, formatMoney, formatDate, formatDateTime } = useI18n()
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
       <legend className="mb-1 text-label text-ink">{t('web.fee-record.pay.charges')}</legend>
@@ -50,12 +51,16 @@ function ChargeChoices({
           <Checkbox
             checked={checked.includes(charge.chargeId)}
             onCheckedChange={(next) => onToggle(charge.chargeId, next)}
+            hint={`${t('web.fee-record.open.col.due')}: ${formatDate(charge.dueDate)}`}
             label={
               <span className="flex items-center justify-between gap-3">
-                <span className="text-body-strong">
-                  {lang === 'en'
-                    ? (charge.batch.name.en ?? charge.batch.name.vi)
-                    : charge.batch.name.vi}
+                <span className="flex items-center gap-2">
+                  <Plate>{charge.batch.code}</Plate>
+                  <span className="text-body-strong">
+                    {lang === 'en'
+                      ? (charge.batch.name.en ?? charge.batch.name.vi)
+                      : charge.batch.name.vi}
+                  </span>
                 </span>
                 <span className="tabular-nums">{formatMoney(charge.amount)}</span>
               </span>
@@ -127,6 +132,7 @@ export function PaymentDialog({
   unitId,
   unitCode,
   ownerName,
+  outstanding,
   selectedChargeIds,
   isAdmin,
   onClose,
@@ -138,6 +144,8 @@ export function PaymentDialog({
   unitId: string
   unitCode: string
   ownerName: string | null
+  /** The unit's total outstanding (E-102 `summary.outstanding`), shown in the subtitle; the ticked sum stays in the sum row. */
+  outstanding: number
   selectedChargeIds: readonly string[]
   /** An Admin may back-date a payment more than 90 days (FR-05.5); a Manager may not. */
   isAdmin: boolean
@@ -298,7 +306,7 @@ export function PaymentDialog({
       title={t('web.fee-record.pay.title', { unit: unitCode })}
       description={t('web.fee-record.pay.subtitle', {
         owner: ownerName ?? unitCode,
-        amount: formatMoney(sum),
+        amount: formatMoney(outstanding),
       })}
       dismissible={!recordPayment.isPending}
       footer={

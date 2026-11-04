@@ -41,6 +41,7 @@ export const finFeeImportEn = {
   'web.fee-import.file.meta': '{rows} rows, {size}, uploaded {time}, {date}',
   'web.fee-import.file.meta.rows': '{rows} rows, uploaded {time}, {date}',
   'web.fee-import.file.note': 'Importing again replaces every charge of the draft.',
+  'web.fee-import.history.col.code': 'Batch code',
   'web.fee-import.history.title': 'Import history',
   'web.fee-import.not-draft': 'The batch is no longer a draft.',
   'web.fee-import.replace-warning':

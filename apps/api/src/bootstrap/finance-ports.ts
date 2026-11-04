@@ -1,6 +1,7 @@
 import { NotFoundError } from '@core/kernel'
 import type { BuildingApi } from '@mod/building/contracts'
 import type { FinanceModuleDeps } from '@mod/finance'
+import { staffDirectory } from '@mod/finance/integrations/identity'
 import { debtUnitDirectory } from '@mod/finance/integrations/residency'
 import type { IdentityApi } from '@mod/identity/contracts'
 import type { ResidencyApi } from '@mod/residency/contracts'
@@ -11,7 +12,7 @@ import type { ResidencyApi } from '@mod/residency/contracts'
  */
 export function financePorts(apis: {
   building: Pick<BuildingApi, 'getBuilding' | 'listBuildings' | 'getSettings' | 'getGatewayConfig'>
-  identity: Pick<IdentityApi, 'getResidentAccounts'>
+  identity: Pick<IdentityApi, 'getResidentAccounts' | 'getStaff'>
   residency: Pick<
     ResidencyApi,
     'getMembership' | 'unitOwnerNames' | 'getUnits' | 'findUnitsByCodes'
@@ -25,6 +26,7 @@ export function financePorts(apis: {
   | 'noticeLanguage'
   | 'noticeContext'
   | 'debtUnits'
+  | 'staffDirectory'
 > {
   const buildingOf = async (buildingId: string) => {
     const building = await apis.building.getBuilding(buildingId)
@@ -54,6 +56,8 @@ export function financePorts(apis: {
   return {
     // DOC-66 §5: the unit code, floor and owner of the debt screens.
     debtUnits: debtUnitDirectory(apis.residency),
+    // DOC-66 §5, DOC-07 §11A: the creator's name of the batch screens, from `IdentityApi.getStaff`.
+    staffDirectory: staffDirectory(apis.identity),
     // DOC-22 §12, DOC-40 §4 rule 4: the nightly ledger check covers the real buildings only.
     ledgerCheckBuildings: {
       liveBuildingIds: async () =>
