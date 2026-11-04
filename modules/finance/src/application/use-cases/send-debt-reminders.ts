@@ -12,6 +12,11 @@ export const SEND_DEBT_REMINDERS_ROLES = [
   'manager',
 ] as const satisfies readonly StaffRole[]
 
+/** `reminder:account:<id>`, `DEBT_REMINDER_PER_HOUR` per hour (DOC-22 §8.5, DR-64); throws `RateLimitedError` with `Retry-After` when empty (LG-40). */
+export interface ReminderRateLimiter {
+  take(accountId: string): Promise<void>
+}
+
 /** A reminder request carries 1 to 500 units (DOC-22 §8.5 step 1, §13, DR-267 item 5). */
 export const DEBT_REMINDER_MAX_UNITS = 500
 
@@ -37,6 +42,7 @@ export class SendDebtReminders {
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
     private readonly logger: Log,
+    private readonly limiter?: ReminderRateLimiter,
   ) {}
 
   async execute(
@@ -53,6 +59,8 @@ export class SendDebtReminders {
         'too_many_units',
         `At most ${DEBT_REMINDER_MAX_UNITS} units`,
       )
+    // A request refused for its body takes no token (DOC-22 §8.5); the bucket is the account's, not the building's.
+    await this.limiter?.take(staff.staffId)
     const scope = staff.scope
     const today = buildingToday(this.clock.now(), await this.calendar.timeZone(scope.buildingId))
     const result = await this.uow.run(async () => {
