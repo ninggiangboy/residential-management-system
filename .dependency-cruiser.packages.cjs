@@ -32,7 +32,7 @@ const ALLOWED = {
   'ui-native': ['design-tokens', 'shared-types', 'core-i18n'],
   'client-core': ['shared-types'],
   'mobile-core': ['shared-types', 'client-core', 'i18n-catalog', 'core-i18n'],
-  'pdf-assets': [],
+  'pdf-assets': ['design-tokens'],
 }
 
 const rule = (pkg, allowed) => ({

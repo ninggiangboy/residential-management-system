@@ -641,6 +641,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@react-pdf/renderer": "4.9.0",
+        "@rms/design-tokens": "workspace:*",
         "react": "19.3.1",
       },
     },
