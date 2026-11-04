@@ -1,4 +1,5 @@
 import {
+  describedEnum,
   type Idempotent,
   IdParams,
   type RouteSet,
@@ -36,9 +37,13 @@ export interface ChargeRouteDeps {
 const Line = Type.Object(
   {
     kind: Type.Optional(
-      Type.Union([Type.Literal('fee'), Type.Literal('adjustment')], {
-        description: '`fee` (the default) or `adjustment`; an adjustment needs a `note`',
-      }),
+      describedEnum(
+        {
+          fee: 'A fee line, the default',
+          adjustment: 'A correction of the charge; it needs a `note`',
+        },
+        'What the line is',
+      ),
     ),
     itemName: Type.Object(
       {

@@ -7,6 +7,7 @@ import { buildApp } from '../../src/app'
 import { loadAppConfig } from '../../src/bootstrap/config'
 import { type ContainerOverrides, createContainer } from '../../src/bootstrap/container'
 import type { Actor } from './actors'
+import { type FinanceWorld, seedFinance } from './finance-world'
 
 /**
  * The fixtures of the matrix (DOC-39 §4.2): the sample building B1 with U1 `A-1508` and U2 `A-1509`, a second building B2 with
@@ -173,6 +174,8 @@ export interface World {
   importFiles: Partial<Record<Actor, string>>
   /** One unread inbox entry of each resident actor (in the unit) and of each staff actor (E-178, E-179: `POST …/inbox/{id}/read`). */
   inbox: Partial<Record<Actor, string>>
+  /** The batches, charges, payment, receipt and gateway event of each building (E-81…E-110, E-170…E-177). */
+  finance: FinanceWorld
   /** A second Admin of B1, who is not an actor: the step-up cases need another Admin's code and a notice for each Admin. */
   admin2: { id: string; email: string; token: string }
 }
@@ -192,8 +195,10 @@ const worldEnv = (databaseUrl: string) => ({
 export function appOver(databaseUrl: string, overrides: ContainerOverrides = {}) {
   const config = loadAppConfig(worldEnv(databaseUrl) as Record<string, string | undefined>)
   // The run needs no network (DOC-39 §4.5): the object store is a fake, so E-37 never waits for a store that CI does not run.
+  // Nor does it start a render host: a PDF route answers the bytes of a fake renderer (DOC-34 §4).
   const container = createContainer(config, createLogger('silent'), {
     storage: new FakeStorage(),
+    pdfRenderer: { render: async () => new TextEncoder().encode('%PDF-1.4 matrix') },
     ...overrides,
   })
   return { container, app: buildApp(container) }
@@ -440,6 +445,25 @@ export async function buildWorld(): Promise<World> {
       throw new Error(`terms of ${r.actor}: ${res.status} ${await res.text()}`)
   }
 
+  const finance = await seedFinance(
+    sql,
+    call,
+    {
+      id: IDS.B1,
+      unitId: IDS.U1,
+      unitCode: 'A-1508',
+      adminId: STAFF[0]?.id as string,
+      adminToken: tokens['staff.admin'] as string,
+    },
+    {
+      id: IDS.B2,
+      unitId: IDS.U3,
+      unitCode: 'B-0101',
+      adminId: STAFF[5]?.id as string,
+      adminToken: tokens['staff.admin_b2'] as string,
+    },
+  )
+
   // A token issued before the account was disabled is the actor `staff.disabled` (DOC-39 §4.2).
   await sql`UPDATE identity.staff_account SET status = 'disabled' WHERE id = ${STAFF[4]?.id as string}`
 
@@ -461,6 +485,7 @@ export async function buildWorld(): Promise<World> {
     files,
     importFiles,
     inbox,
+    finance,
     admin2: { ...ADMIN2, token: admin2Token },
   }
 }

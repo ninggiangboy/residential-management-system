@@ -413,7 +413,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       deps.debtUnits,
       new DrizzleUnitPaymentsReader(database),
     ),
-    moneyLog: new MoneyLogQueries(moneyLog),
+    moneyLog: new MoneyLogQueries(moneyLog, deps.debtUnits),
     residentFees: new ResidentFeeQueries(
       new DrizzleResidentFeeReader(database),
       deps.calendar,

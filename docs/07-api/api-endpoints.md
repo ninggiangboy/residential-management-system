@@ -2926,6 +2926,7 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-102 | `{ unit, owner, summary, openCharges, payments, nextCursor }`, 20 payments a page by `paymentsCursor`. |
 | E-103 | 200 `{ sent, alreadyRemindedToday, noDebt }`. The bucket `DEBT_REMINDER_PER_HOUR` (10) is per account and refuses with 429 and `Retry-After`; a request refused for its body takes no token. |
 | E-108 | `state` is `open`, `reviewed` or `all`; the default is `all` of the rows that are not posted. |
+| E-110 | A unit that does not exist, or belongs to another building, is 404 `not_found` (the unit is read through `DebtUnitDirectory`); a unit with no gateway event is 200 with `items: []`. |
 
 **Samples owed by §11.** E-95: `POST /staff/fee-batches/0192f3c4-7b00-7000-8000-000000000b01/publish` with `If-Match: "3"` answers 200 `ETag: "4"` and `{ "id": "0192f3c4-7b00-7000-8000-000000000b01", "code": "PH-2610-01", "name": { "vi": "Phí tháng 10/2026" }, "feeMonth": "2026-10-01", "dueDate": "2026-10-25", "status": "published", "version": 4, "createdBy": "0192f3c4-0000-7000-8000-0000000000a1", "createdAt": "2026-10-20T03:12:44.000Z", "replacesBatchId": null }`. E-96 sends `{ "reason": "Sai đơn giá phí quản lý" }` with the same header and answers the batch body with `status: "recalled"` and `"chargeCount": 240`. E-100 sends `{ "reason": "Căn đã bàn giao lại" }` with `If-Match` of the charge and answers `{ "id": …, "batchId": …, "unitId": …, "unitCode": "A-1508", "amount": 1419000, "status": "void", "version": 3 }`. E-104 is DOC-22 §5.1.
 
