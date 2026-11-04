@@ -3,10 +3,12 @@ import { type BatchRouteDeps, batchRoutes } from './batch-routes'
 import { type ChargeRouteDeps, chargeRoutes } from './charge-routes'
 import { type MoneyLogRouteDeps, moneyLogRoutes } from './money-log-routes'
 import { type PaymentRouteDeps, paymentRoutes } from './payment-routes'
+import { type ResidentRouteDeps, residentRoutes } from './resident-routes'
 
 /** Everything the routes of `finance` call (DOC-12 §4.1, §4.5): use cases and query services, never repositories. */
 export type FinanceRouteDeps = PaymentRouteDeps &
   MoneyLogRouteDeps &
+  ResidentRouteDeps &
   BatchRouteDeps &
   ChargeRouteDeps
 
@@ -17,4 +19,5 @@ export function financeRoutes(d: FinanceRouteDeps) {
     .use(chargeRoutes(d))
     .use(paymentRoutes(d))
     .use(moneyLogRoutes(d))
+    .use(residentRoutes(d))
 }
