@@ -43,7 +43,7 @@ describe('render host pool (DOC-34 §4, DR-291)', () => {
     }
   }, 30_000)
 
-  test('recycles the host after maxDocuments and starts a new one', async () => {
+  test('PD-32 recycles the host after maxDocuments and starts a new one', async () => {
     const starts: number[] = []
     const restarts: string[] = []
     const pool = createRenderHostPool({
@@ -70,7 +70,7 @@ describe('render host pool (DOC-34 §4, DR-291)', () => {
     }
   }, 30_000)
 
-  test('kills a host that passes renderTimeoutMs and replaces it', async () => {
+  test('PD-33 kills a host that passes renderTimeoutMs and replaces it', async () => {
     const restarts: string[] = []
     const pool = createRenderHostPool({
       templatesModule: TEMPLATES,
