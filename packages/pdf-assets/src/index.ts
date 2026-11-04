@@ -12,3 +12,5 @@ export type {
   RenderTemplates,
 } from './host'
 export { createRenderHostPool, PdfRenderError, runRenderHost } from './host'
+export * from './primitives'
+export * from './styles'
