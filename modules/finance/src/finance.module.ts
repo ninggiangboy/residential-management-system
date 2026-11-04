@@ -392,10 +392,8 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     feeNotice: feeNoticeQueries,
   }
   const routes = financeRoutes({
-    recordManualPayment: useCases.recordManualPayment,
-    voidPayment: useCases.voidPayment,
+    ...useCases,
     moneyLog: queries.moneyLog,
-    reviewMoneyLogRow: useCases.reviewMoneyLogRow,
     // `install.ts` requires both of the host; a test that does not mount the routes leaves them out (see `guards`).
     guards: deps.guards as Guards,
     idempotent: deps.idempotent as Idempotent,

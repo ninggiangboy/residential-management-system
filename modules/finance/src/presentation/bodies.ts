@@ -1,4 +1,6 @@
 import { type Money, moneyToJson } from '@rms/shared-types'
+import type { FeeNoticeJobView } from '../application/queries/fee-notice-queries'
+import type { ChargeRecord, FeeBatchRecord } from '../domain/fee-batch'
 import type { PaymentView } from '../domain/payment-repository'
 
 /** Money is a JSON integer (DOC-50 §6). */
@@ -20,5 +22,50 @@ export function paymentBody(payment: PaymentView) {
       chargeId: receipt.chargeId,
       amount: amountOf(receipt.amount),
     })),
+  }
+}
+
+/** A batch as the write routes answer it; `E-91` adds the counts and the links (DOC-21 §3.1). */
+export function batchBody(batch: FeeBatchRecord) {
+  return {
+    id: batch.id,
+    code: batch.code,
+    name: batch.name,
+    feeMonth: batch.feeMonth,
+    dueDate: batch.dueDate,
+    status: batch.status,
+    version: batch.version,
+    createdBy: batch.createdBy,
+    createdAt: batch.createdAt.toISOString(),
+    replacesBatchId: batch.replacesBatchId ?? null,
+  }
+}
+
+/** A charge as the write routes answer it (DOC-21 §3.2). */
+export function chargeBody(charge: ChargeRecord) {
+  return {
+    id: charge.id,
+    batchId: charge.batchId,
+    unitId: charge.unitId,
+    unitCode: charge.unitCode,
+    amount: amountOf(charge.amount),
+    status: charge.status,
+    version: charge.version,
+  }
+}
+
+/** The bulk fee-notice job of E-99 and E-177 (DOC-34 §9.1); `zip` is only known to the reader (E-177). */
+export function noticeJobBody(job: FeeNoticeJobView) {
+  return {
+    id: job.id,
+    batchId: job.batchId,
+    status: job.status,
+    language: job.language,
+    unitTotal: job.unitTotal,
+    unitDone: job.unitDone,
+    zip: job.zip,
+    error: job.error,
+    createdAt: job.createdAt.toISOString(),
+    finishedAt: job.finishedAt?.toISOString() ?? null,
   }
 }
