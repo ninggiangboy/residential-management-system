@@ -13,6 +13,7 @@ import { ChargeAllocator } from './application/allocation/charge-allocator'
 import { FeeImportApiImpl } from './application/api/fee-import-api-impl'
 import { FinanceApiImpl } from './application/api/finance-api-impl'
 import { FeeImportPlanner } from './application/fee-import-planner'
+import { FeeNoticeCache } from './application/fee-notice-cache'
 import { RenderReceiptPdfHandler } from './application/handlers/render-receipt-pdf'
 import { IntentCancellation } from './application/intent-cancellation'
 import type { PdfRenderer } from './application/pdf-renderer'
@@ -220,16 +221,15 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     ownerNames: async (_buildingId, unitIds) =>
       new Map(unitIds.map((unitId) => [unitId, null] as const)),
   }
+  // DOC-34 §8.1 (DR-293): the fee-notice cache shared by E-176 and the bulk job E-99 (§9.2 phase 1).
+  const feeNoticeCache = new FeeNoticeCache(deps.files, logo, pdfRenderer, metrics)
   const renderFeeNoticePdf = new RenderFeeNoticePdf(
     charges,
-    deps.files,
-    logo,
-    pdfRenderer,
+    feeNoticeCache,
     noticeContext,
     deps.calendar,
     clock,
     logger,
-    metrics,
   )
   const renderReceiptPdf = new RenderReceiptPdf(
     database,
