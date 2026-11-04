@@ -48,11 +48,13 @@ export const pdfStyles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: 600,
+    lineHeight: 1.3,
   },
   // DOC-34 §5: the English line of a bilingual title, 11 pt Regular.
   subtitle: {
     fontSize: 11,
     fontWeight: 400,
+    lineHeight: 1.3,
   },
   // DOC-34 §5: amounts are right-aligned.
   amount: {
@@ -79,19 +81,23 @@ export const pdfStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
   },
-  // DOC-34 §5: the fixed footer of every page, 40 pt inside the page.
-  footerSlot: {
+  // DOC-34 §5: the fixed footer of every page. The two texts sit directly in the `Page`, each
+  // `fixed` and anchored from the top: react-pdf 4.9.0 loses a `render` text (the page count) that
+  // sits inside a `View`, and one anchored with `bottom` inside a block, so there is no wrapper.
+  footerLeft: {
     position: 'absolute',
     left: PDF_MARGINS.left,
-    right: PDF_MARGINS.right,
-    bottom: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  // DOC-34 §5: the footer text, 8.5 pt in `inkMuted`.
-  footerText: {
+    top: PDF_PAGE.height - 36,
     fontSize: 8.5,
     color: pdfColors.inkMuted,
+  },
+  footerRight: {
+    position: 'absolute',
+    right: PDF_MARGINS.right,
+    top: PDF_PAGE.height - 36,
+    fontSize: 8.5,
+    color: pdfColors.inkMuted,
+    textAlign: 'right',
   },
   // DOC-34 §5, §7.1: the layer the watermark sits in, fixed so it prints on every page.
   watermarkLayer: {
