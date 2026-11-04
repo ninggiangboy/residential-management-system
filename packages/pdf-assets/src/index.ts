@@ -12,5 +12,6 @@ export type {
   RenderTemplates,
 } from './host'
 export { createRenderHostPool, PdfRenderError, runRenderHost } from './host'
+export { PDF_DOCUMENT_INFO } from './metadata'
 export * from './primitives'
 export * from './styles'
