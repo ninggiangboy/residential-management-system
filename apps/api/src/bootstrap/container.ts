@@ -347,6 +347,7 @@ export function createContainer(
     database,
     guards,
     idempotent,
+    reminderRatePerHour: config.later.DEBT_REMINDER_PER_HOUR,
     audited: audit.audited,
     units: residency.api,
     files: building.files,

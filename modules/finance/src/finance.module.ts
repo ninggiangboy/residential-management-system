@@ -77,6 +77,7 @@ import { DrizzleReceiptPdfRepository } from './infrastructure/persistence/drizzl
 import { DrizzleResidentFeeReader } from './infrastructure/persistence/drizzle-resident-fee-reader'
 import { DrizzleSettlementRepository } from './infrastructure/persistence/drizzle-settlement-repository'
 import { financeInbox, financeOutbox } from './infrastructure/persistence/schema'
+import { SqlReminderRateLimiter } from './infrastructure/persistence/sql-reminder-rate-limiter'
 import { financeManifest } from './manifest'
 import { financeRoutes } from './presentation/finance-routes'
 
@@ -112,6 +113,8 @@ export interface FinanceModuleDeps {
   ledgerCheckBuildings?: LedgerCheckBuildings
   /** `JOB_INVARIANT_CHECK_GRACE_MINUTES` (DOC-41 §11). */
   invariantCheckGraceMinutes?: number
+  /** `DEBT_REMINDER_PER_HOUR` (DOC-41): the bucket of E-103 per account; a test that leaves it out has no limit (LG-40). */
+  reminderRatePerHour?: number
   /** DOC-40: `import_validate_duration_seconds`, `import_commits_total` (DOC-21 §7). */
   metrics?: MetricsPort
   /** The PDF renderer of DOC-34 §2 (P2-13): built by the container over the render host pool, or a test's fake. */
@@ -388,6 +391,9 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
       clock,
       ids,
       logger,
+      deps.reminderRatePerHour === undefined
+        ? undefined
+        : new SqlReminderRateLimiter(database, deps.reminderRatePerHour),
     ),
     renderReceiptPdf,
     renderFeeNoticePdf,
