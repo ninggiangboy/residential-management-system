@@ -16,7 +16,7 @@ import {
 
 /**
  * The staff batch reads of P2-15 (E-89, E-91, E-93; DOC-66 §5, DR-324) on a clone of the migrated template: the Drizzle reader
- * behind `FeeBatchQueries`, a fake owner-name port and rows seeded as `rms_app` through the real guard triggers. FB-R01…FB-R06.
+ * behind `FeeBatchQueries`, a fake owner-name port and rows seeded as `rms_app` through the real guard triggers.
  */
 
 const AT = new Date('2026-10-19T03:00:00Z')
@@ -311,7 +311,7 @@ afterAll(async () => {
 describe('E-89 the batch list (DOC-66 §5)', () => {
   const managerA = () => staffOf('manager', BUILDING_A)
 
-  test('FB-R01 filters, keyset over three pages with no duplicate, whole-building counts on the first page', async () => {
+  test('filters, keyset over three pages with no duplicate, whole-building counts on the first page', async () => {
     const page1 = await queries.list(managerA(), { limit: 2 })
     expect(page1.items.map((item) => item.code)).toEqual(['PH-2610-01', 'PH-2609-01'])
     expect(page1.next).not.toBeNull()
@@ -352,7 +352,7 @@ describe('E-89 the batch list (DOC-66 §5)', () => {
     expect(byCode.items.map((item) => item.code)).toEqual(['PH-2607-01'])
   })
 
-  test('FB-R02 collectedRate, unitCount and void exclusion (DOC-22 §8.1)', async () => {
+  test('collectedRate, unitCount and void exclusion (DOC-22 §8.1)', async () => {
     const [september] = (await queries.list(managerA(), { month: '2026-09' })).items
     expect<unknown[]>([september?.unitCount, september?.total, september?.collected]).toEqual([
       2,
@@ -377,7 +377,7 @@ describe('E-89 the batch list (DOC-66 §5)', () => {
     expect<unknown[]>([june?.unitCount, june?.collectedRate]).toEqual([0, null])
   })
 
-  test('FB-R03 a foreign building is never listed and keeps its own counts', async () => {
+  test('a foreign building is never listed and keeps its own counts', async () => {
     const mine = new Set((await queries.list(managerA(), {})).items.map((item) => item.code))
     expect(mine.has('PH-2610-09')).toBe(false)
 
@@ -389,7 +389,7 @@ describe('E-89 the batch list (DOC-66 §5)', () => {
 })
 
 describe('E-91 the batch view (DOC-66 §5)', () => {
-  test('FB-R04 counts, total, replaces links and the latest committed import', async () => {
+  test('counts, total, replaces links and the latest committed import', async () => {
     const view = await queries.view(staffOf('manager', BUILDING_A), fixture.a.published!)
     expect(view.status).toBe('published')
     expect(view.version).toBe(1)
@@ -402,7 +402,7 @@ describe('E-91 the batch view (DOC-66 §5)', () => {
     expect(view.source?.importedAt).toEqual(new Date('2026-09-20T02:00:00Z'))
   })
 
-  test('FB-R05 a draft views its replaces link; the recalled batch lists its replacement', async () => {
+  test('a draft views its replaces link; the recalled batch lists its replacement', async () => {
     const draft = await queries.view(staffOf('admin', BUILDING_A), fixture.a.draft!)
     expect(draft.replaces).toEqual({ id: fixture.a.recalled!, code: 'PH-2607-01' })
     expect(draft.counts).toEqual({ charges: 1, lines: 1, open: 0, paid: 0, void: 0, missing: null })
@@ -422,7 +422,7 @@ describe('E-91 the batch view (DOC-66 §5)', () => {
     expect(Number(recalled.total)).toBe(0)
   })
 
-  test('FB-R06 an unknown id and a foreign batch are 404', async () => {
+  test('an unknown id and a foreign batch are 404', async () => {
     expect(await codeOf(() => queries.view(staffOf('manager', BUILDING_A), ids.next()))).toBe(
       'not_found',
     )
@@ -435,7 +435,7 @@ describe('E-91 the batch view (DOC-66 §5)', () => {
 describe('E-93 the batch charges (DOC-66 §5)', () => {
   const managerA = () => staffOf('manager', BUILDING_A)
 
-  test('FB-R07 keyset by unit code over two pages, owner names and lines on demand', async () => {
+  test('keyset by unit code over two pages, owner names and lines on demand', async () => {
     const page1 = await queries.chargesPage(managerA(), fixture.a.published!, { limit: 1 })
     expect(page1.items.map((item) => item.unitCode)).toEqual(['A-0901'])
     expect(page1.items[0]?.ownerName).toBe('Nguyễn Văn B')
@@ -462,7 +462,7 @@ describe('E-93 the batch charges (DOC-66 §5)', () => {
     ])
   })
 
-  test('FB-R08 status, voidKind and q filters', async () => {
+  test('status, voidKind and q filters', async () => {
     const paid = await queries.chargesPage(managerA(), fixture.a.published!, { status: 'paid' })
     expect(paid.items.map((item) => item.unitCode)).toEqual(['A-0902'])
 
@@ -477,7 +477,7 @@ describe('E-93 the batch charges (DOC-66 §5)', () => {
     ])
   })
 
-  test('FB-R09 view=missing is an empty page, and an unknown or foreign batch is 404', async () => {
+  test('view=missing is an empty page, and an unknown or foreign batch is 404', async () => {
     const missing = await queries.chargesPage(managerA(), fixture.a.draft!, { view: 'missing' })
     expect(missing).toEqual({ items: [], next: null })
 
