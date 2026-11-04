@@ -1,4 +1,42 @@
 import type { finDebtsEn } from './fin-debts-en'
 
 /** DOC-66 `debts` microcopy (Vietnamese). */
-export const finDebtsVi: Record<keyof typeof finDebtsEn, string> = {}
+export const finDebtsVi: Record<keyof typeof finDebtsEn, string> = {
+  'web.debts.action.remind': 'Gửi nhắc nợ qua push',
+  'web.debts.asof': 'Số liệu đến {time}, {date}, gồm mọi đợt phí đã phát hành',
+  'web.debts.asof.date': 'Số liệu đến {date}, gồm mọi đợt phí đã phát hành',
+  'web.debts.col.batches': 'Số đợt nợ',
+  'web.debts.col.oldest': 'Nợ lâu nhất',
+  'web.debts.col.outstanding': 'Còn nợ',
+  'web.debts.col.owner': 'Chủ hộ',
+  'web.debts.col.pay': 'Ghi nhận nộp',
+  'web.debts.col.reminded': 'Lần nhắc gần nhất',
+  'web.debts.col.unit': 'Căn',
+  'web.debts.empty.filtered': 'Không có căn khớp bộ lọc',
+  'web.debts.empty.title': 'Không có căn nào còn nợ',
+  'web.debts.footer': '{from}–{to} trên {total} căn, sắp xếp theo số tiền nợ',
+  'web.debts.month': 'Phí của tháng',
+  'web.debts.month.all': 'Tất cả',
+  'web.debts.overdue': 'Quá hạn {days} ngày',
+  'web.debts.remind.confirm.body':
+    'Mỗi căn chỉ nhận một nhắc nợ mỗi ngày. Thông báo không ghi số tiền.',
+  'web.debts.remind.confirm.title': 'Gửi nhắc nợ cho {count} căn?',
+  'web.debts.remind.done': 'Đã gửi {sent} căn.',
+  'web.debts.remind.done.extra': '{already} căn đã nhắc hôm nay, {none} căn không còn nợ.',
+  'web.debts.remind.rate-limited': 'Bạn gửi nhắc nợ quá nhiều lần. Thử lại sau {minutes} phút.',
+  'web.debts.reminded.never': 'Chưa nhắc',
+  'web.debts.search': 'Tìm mã căn, chủ hộ',
+  'web.debts.search.label': 'Tìm công nợ',
+  'web.debts.select.page': 'Chọn trang này',
+  'web.debts.select.row': 'Chọn {code}',
+  'web.debts.selection': 'Đã chọn {count} căn, tổng nợ {amount}',
+  'web.debts.selection.all': 'Chọn tất cả {count} căn',
+  'web.debts.selection.clear': 'Bỏ chọn',
+  'web.debts.switch.overdue': 'Chỉ căn quá hạn trên 30 ngày',
+  'web.debts.tile.collected': 'Đã thu phí tháng {month}/{year}',
+  'web.debts.tile.overdue': 'Quá hạn trên 30 ngày, {count} căn',
+  'web.debts.tile.total': 'Tổng công nợ',
+  'web.debts.tile.units': '{count} căn',
+  'web.debts.tile.units.label': 'Còn nợ, trên {total} căn',
+  'web.debts.title': 'Công nợ',
+}
