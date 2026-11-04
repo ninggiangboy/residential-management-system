@@ -34,6 +34,12 @@ module.exports = {
       },
     },
     {
+      name: 'pdf-assets-is-infrastructure-only',
+      severity: 'error',
+      from: { path: '^modules/[^/]+/src/(domain|application)/' },
+      to: { path: '^packages/pdf-assets/' },
+    },
+    {
       name: 'presentation-no-infrastructure',
       severity: 'error',
       from: { path: '^modules/[^/]+/src/presentation/' },

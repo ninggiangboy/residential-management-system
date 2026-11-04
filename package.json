@@ -48,6 +48,7 @@
     "docker:build": "docker build --file docker/Dockerfile.api --tag rms-api:local .",
     "check:compat": "bun test tools/compat",
     "tokens:build": "bun packages/design-tokens/scripts/build.ts",
+    "fonts:pdf": "bun run packages/pdf-assets/scripts/build-fonts.ts",
     "check:tools": "bun scripts/check-tools.ts",
     "keys:generate": "bun scripts/keys-generate.ts",
     "secrets:push": "bun scripts/secrets-push.ts",
