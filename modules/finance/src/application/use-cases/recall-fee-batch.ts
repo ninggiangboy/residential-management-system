@@ -5,13 +5,17 @@ import {
   PreconditionRequiredError,
   requireRole,
   type UnitOfWork,
-  VersionConflictError,
 } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 import type { Audited } from '@mod/audit/contracts'
 import type { StaffContext, StaffRole } from '@rms/shared-types'
 import { type BatchRecalledPayload, FINANCE_EVENTS } from '../../contracts'
-import { BatchHasPaymentsError, checkedReason, InvalidTransitionError } from '../../domain/errors'
+import {
+  BatchHasPaymentsError,
+  checkedReason,
+  InvalidTransitionError,
+  versionConflict,
+} from '../../domain/errors'
 import type { FeeBatchRecord } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
 import { monthOf, unitChunks } from '../fan-out'
@@ -145,6 +149,6 @@ export class RecallFeeBatch {
     if (!fresh) return new NotFoundError()
     if (fresh.status !== 'published')
       return new InvalidTransitionError('fee_batch', fresh.status, 'recall')
-    return new VersionConflictError(fresh)
+    return versionConflict(fresh)
   }
 }

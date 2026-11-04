@@ -6,7 +6,6 @@ import {
   requireRole,
   type UnitOfWork,
   ValidationError,
-  VersionConflictError,
 } from '@core/kernel'
 import type { OutboxWriter } from '@core/messaging'
 import type { AuditChange, Audited } from '@mod/audit/contracts'
@@ -16,6 +15,7 @@ import {
   BatchNameInvalidError,
   DueDateNotLaterError,
   InvalidTransitionError,
+  versionConflict,
 } from '../../domain/errors'
 import { type BilingualName, type FeeBatchRecord, normalizeBatchName } from '../../domain/fee-batch'
 import type { FeeBatchRepository } from '../../domain/fee-batch-repository'
@@ -104,7 +104,7 @@ export class UpdateFeeBatch {
     if (!fresh) return new NotFoundError()
     if (fresh.status !== 'published')
       return new InvalidTransitionError('fee_batch', fresh.status, 'extend_due')
-    if (fresh.version !== version) return new VersionConflictError(fresh)
+    if (fresh.version !== version) return versionConflict(fresh)
     return new DueDateNotLaterError()
   }
 
@@ -119,7 +119,7 @@ export class UpdateFeeBatch {
         if (!stored) throw new NotFoundError()
         if (stored.status !== 'published')
           throw new InvalidTransitionError('fee_batch', stored.status, 'extend_due')
-        if (stored.version !== version) throw new VersionConflictError(stored)
+        if (stored.version !== version) throw versionConflict(stored)
         if (dueDate <= stored.dueDate) throw new DueDateNotLaterError()
         const after = await this.batches.extendDueDate(staff.scope, batchId, dueDate, version)
         if (!after) throw await this.extendRefusal(staff, batchId, version)
@@ -165,9 +165,7 @@ export class UpdateFeeBatch {
         const after = await this.batches.updateDraftHeader(staff.scope, batchId, next, version)
         if (!after) {
           // Another request changed the batch between the read and the guarded write: tell which (DOC-21 §3.2).
-          throw new VersionConflictError(
-            editable(await this.batches.find(staff.scope, batchId), version),
-          )
+          throw versionConflict(editable(await this.batches.find(staff.scope, batchId), version))
         }
         return { result: after, changes: headerChanges(stored, after) }
       },
@@ -180,7 +178,7 @@ function editable(batch: FeeBatchRecord | null, version: number): FeeBatchRecord
   if (!batch) throw new NotFoundError()
   if (batch.status !== 'draft')
     throw new InvalidTransitionError('fee_batch', batch.status, 'update')
-  if (batch.version !== version) throw new VersionConflictError(batch)
+  if (batch.version !== version) throw versionConflict(batch)
   return batch
 }
 
