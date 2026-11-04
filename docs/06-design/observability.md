@@ -149,7 +149,7 @@ Rules for every metric (DR-154):
 | `job_last_success_timestamp` | gauge | `job_name` | `worker` | DOC-38 §3.5; restored at boot from `job_run` | P1 |
 | `job_runs_total` | counter | `job_name`, `status` (`succeeded`, `failed`) | `worker` | DOC-38 §8 | P1 |
 | `job_duration_seconds` | histogram, buckets 0.1, 0.5, 1, 5, 30, 120, 600 | `job_name` | `worker` | DOC-38 §8 | P1 |
-| `integrity_findings` | gauge | `job_name` (`integrity_weekly`, `integrity_notices`) | `worker` | the job sets it to `details.findings` at the end of each run (DR-154) | with the job (DOC-38 §4.2); the jobs do not exist yet |
+| `integrity_findings` | gauge | `job_name` (`integrity_weekly`, `integrity_notices`) | `worker` | the job sets it to `details.findings` at the end of each run (DR-154) | P2-11 for `integrity_weekly` (DOC-38 §4.2); `integrity_notices` joins with P4-05 |
 
 ### 4.3 Identity and residency
 
@@ -360,7 +360,7 @@ groups:
 | `WorkerDown` | Warning | `up{job="rms-worker"} == 0` | 2m | RB-04 | SDD §19.3 · live (P1-18) |
 | `JobStale` | Warning | §5.4 | none | RB-04 | DOC-38 §8 · live (P1-18) |
 | `InvariantCheckStale` | Critical | `time() - max(job_last_success_timestamp{job_name="invariant_check"}) > 36 * 3600` | none | RB-01 | NFR-09 · live (P2-11) |
-| `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | table of DOC-74 | DOC-38 §4.2 · P1-12 |
+| `IntegrityFindings` | Warning | `max by (job_name) (integrity_findings) > 0` | none | RB-01 §3 | DOC-38 §4.2 · live for `integrity_weekly` (P2-11) |
 | `MoneyLogOpen` | Warning | `max(money_log_open) > 0` | 24h | RB-11 | DR-84 · P2-28 (was P3-09) |
 | `GatewayCheckFailing` | Warning | `min by (building) (gateway_check_ok) == 0` | 1h | RB-13 | DOC-36 §11 · P3-01 |
 | `GatewayErrors` | Warning | `sum(increase(payment_gateway_requests_total{outcome=~"timeout\|http_error"}[10m])) > 0.5 * sum(increase(payment_gateway_requests_total[10m])) and sum(increase(payment_gateway_requests_total[10m])) >= 10` (DR-30's "more than half of the calls in 10 minutes failed") | 5m | RB-02 | DOC-23 §14, DR-282 · P2-28 (was P3-09) |
