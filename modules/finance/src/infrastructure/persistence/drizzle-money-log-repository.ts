@@ -164,8 +164,8 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
       gateway.push(sql`g.received_at >= ${filter.from.toISOString()}::timestamptz`)
     if (filter.to !== undefined)
       gateway.push(sql`g.received_at < ${filter.to.toISOString()}::timestamptz`)
-    if (filter.openOnly === true) gateway.push(sql`g.reviewed_at IS NULL`)
-    if (filter.reviewedOnly === true) gateway.push(sql`g.reviewed_at IS NOT NULL`)
+    const gatewayReview = reviewPredicate('g', filter)
+    if (gatewayReview) gateway.push(gatewayReview)
 
     const gatewayHalf = sql`
       SELECT 'gateway_event' AS kind, g.id, g.received_at AS at, g.amount, g.outcome AS status,
@@ -179,8 +179,8 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
       statement.push(sql`l.booked_on::timestamptz >= ${filter.from.toISOString()}::timestamptz`)
     if (filter.to !== undefined)
       statement.push(sql`l.booked_on::timestamptz < ${filter.to.toISOString()}::timestamptz`)
-    if (filter.openOnly === true) statement.push(sql`l.reviewed_at IS NULL`)
-    if (filter.reviewedOnly === true) statement.push(sql`l.reviewed_at IS NOT NULL`)
+    const statementReview = reviewPredicate('l', filter)
+    if (statementReview) statement.push(statementReview)
 
     const statementHalf = sql`
       SELECT 'statement_line' AS kind, l.id, l.booked_on::timestamptz AS at, l.amount,
@@ -269,4 +269,12 @@ export class DrizzleMoneyLogRepository implements MoneyLogRepository {
       reviewNote: row.review_note,
     }
   }
+}
+
+/** `state=open` keeps the rows nobody reviewed, `state=reviewed` the others (E-108); neither is every row. */
+function reviewPredicate(alias: 'g' | 'l', filter: MoneyLogFilter) {
+  const column = sql.raw(`${alias}.reviewed_at`)
+  if (filter.openOnly === true) return sql`${column} IS NULL`
+  if (filter.reviewedOnly === true) return sql`${column} IS NOT NULL`
+  return null
 }
