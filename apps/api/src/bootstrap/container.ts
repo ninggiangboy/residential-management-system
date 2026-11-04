@@ -18,7 +18,7 @@ import { installAnalytics } from '@mod/analytics'
 import { auditActionCatalogOf, installAudit } from '@mod/audit'
 import { installBuilding } from '@mod/building'
 import type { ActiveIntentProbe, StepUpVerifier } from '@mod/building/contracts'
-import { installFinance } from '@mod/finance'
+import { type FinanceHost, installFinance } from '@mod/finance'
 import { activeIntentProbe } from '@mod/finance/integrations/building'
 import { financeNotifications } from '@mod/finance/integrations/notification'
 import { financeRealtime } from '@mod/finance/integrations/realtime'
@@ -62,6 +62,8 @@ export interface ContainerOverrides {
   stepUp?: StepUpVerifier
   /** The SMS sender (tests: one that records); by default the driver `SMS_DRIVER` names. */
   sms?: SmsSender
+  /** The PDF renderer of `finance` (tests: a fake that fails, PD-26); by default the render host pool of DOC-34 §4. */
+  pdfRenderer?: FinanceHost['pdfRenderer']
   /** `ResidencyApi.listActiveMemberships` for the sign-in answer (tests: a stand-in); by default `residency`'s own. */
   memberships?: ActiveMemberships
   /** `ResidencyApi.buildingIdsOfAccounts` for boot guard check 1 (tests: a stand-in); by default `residency`'s own. */
@@ -348,6 +350,7 @@ export function createContainer(
     guards,
     idempotent,
     reminderRatePerHour: config.later.DEBT_REMINDER_PER_HOUR,
+    pdfRenderer: overrides.pdfRenderer,
     audited: audit.audited,
     units: residency.api,
     files: building.files,

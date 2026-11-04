@@ -1,3 +1,4 @@
+export { type PdfRenderer, PdfRenderFailure } from './application/pdf-renderer'
 export type {
   FinanceModule,
   FinanceModuleDeps,
