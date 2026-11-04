@@ -252,7 +252,7 @@ async function pay(
 }
 
 describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', () => {
-  test('RF-01 the DR-40 window: a member added after a payment sees the open charges only (LG-43)', async () => {
+  test('the DR-40 window: a member added after a payment sees the open charges only (LG-43)', async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -296,7 +296,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect(openDetail.amount).toBe(money(350_000))
   })
 
-  test('RF-02 a member since before the payment sees the history, the receipt and the detail', async () => {
+  test('a member since before the payment sees the history, the receipt and the detail', async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -343,7 +343,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect(detail.batch.ordinal).toBe(4)
   })
 
-  test("RF-03 another unit's or another building's charge is 404, never a leak", async () => {
+  test("another unit's or another building's charge is 404, never a leak", async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -380,7 +380,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     await expect(residentFees.detail(member, ids.next())).rejects.toThrow(NotFoundError)
   })
 
-  test('RF-04 the history keyset pages without duplicates or gaps', async () => {
+  test('the history keyset pages without duplicates or gaps', async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -419,7 +419,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect(new Set(seen)).toEqual(new Set(charges))
   })
 
-  test('RF-05 the summary is on the first page only (DR-323)', async () => {
+  test('the summary is on the first page only (DR-323)', async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -460,7 +460,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect(pageTwo.summary).toBeNull()
   })
 
-  test('RF-06 daysPastDue is signed: 0 on the due day, 1 the day after (DOC-22 §8.1)', async () => {
+  test('daysPastDue is signed: 0 on the due day, 1 the day after (DOC-22 §8.1)', async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -492,7 +492,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect(fees.items[0]?.lines[0]?.itemName).toEqual(ITEM_NAME)
   })
 
-  test("RF-07 a voided payment's charge is open again and leaves the history (FR-06.5)", async () => {
+  test("a voided payment's charge is open again and leaves the history (FR-06.5)", async () => {
     setClock(AT)
     const building = ids.next()
     const unit = ids.next()
@@ -522,7 +522,7 @@ describe('resident fee reads E-80…E-83 (DOC-22 §8.4, DOC-58, DR-40, P2-15)', 
     expect((await residentFees.detail(member, charge.chargeId)).status).toBe('open')
   })
 
-  test('RF-08 paidThisYear counts the building-local year, not the UTC one (DOC-58 §5, DR-09)', async () => {
+  test('paidThisYear counts the building-local year, not the UTC one (DOC-58 §5, DR-09)', async () => {
     // 2026-12-31 17:30 UTC is 2027-01-01 00:30 in Asia/Ho_Chi_Minh: the building year is 2027.
     setClock(new Date('2026-12-31T17:30:00Z'))
     const building = ids.next()

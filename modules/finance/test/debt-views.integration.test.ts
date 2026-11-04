@@ -24,7 +24,7 @@ import { debtUnitDirectory } from '../src/integrations/residency'
 import { TEST_ZONE } from './support/ports'
 
 /**
- * The P2-15 tests of the DOC-66 §5 debt views (DV-01…DV-10): the E-101 filters and summary and the E-102 unit view, on a clone of
+ * The P2-15 tests of the DOC-66 §5 debt views: the E-101 filters and summary and the E-102 unit view, on a clone of
  * the migrated template. The Drizzle `DebtQueries` is built directly with a fake `DebtUnitDirectory` (owner names) and a real
  * `DrizzleUnitPaymentsReader`, so the owner read is exercised without the container (the module wires the two adapters; this file
  * covers the reads). Charges are seeded as `draft` with lines and moved to `open` — the guard triggers require the lines first.
@@ -293,7 +293,7 @@ async function insertReceipt(paymentId: string, amount: number): Promise<void> {
 describe('the DOC-66 §5 debt views (P2-15)', () => {
   beforeAll(seedFixture)
 
-  test('DV-01 the `month` filter keeps the charges of that fee month (DOC-66 §5)', async () => {
+  test('the `month` filter keeps the charges of that fee month (DOC-66 §5)', async () => {
     const page = await queries.list(scopeOf(BUILDING_A), {
       limit: 50,
       filter: { month: '2026-10' },
@@ -302,19 +302,19 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(page.rows[0]?.outstanding).toBe(money(AMOUNT))
   })
 
-  test('DV-02 the `q` filter matches a unit-code substring, case-insensitively (DOC-66 §5)', async () => {
+  test('the `q` filter matches a unit-code substring, case-insensitively (DOC-66 §5)', async () => {
     const page = await queries.list(scopeOf(BUILDING_A), { limit: 50, filter: { q: 'a-15' } })
     expect(page.rows.map((row) => row.unitCode)).toEqual(['A-1508'])
     expect(page.rows[0]?.ownerName).toBe(OWNER)
   })
 
-  test('DV-03 the `overdue30` switch keeps only units with a charge more than 30 days past due (DOC-66 §5)', async () => {
+  test('the `overdue30` switch keeps only units with a charge more than 30 days past due (DOC-66 §5)', async () => {
     const page = await queries.list(scopeOf(BUILDING_A), { limit: 50, filter: { overdue30: true } })
     expect(page.rows.map((row) => row.unitId)).toEqual([UNIT_LATE])
     expect(page.rows[0]?.overdue30).toBe(money(LATE_AMOUNT))
   })
 
-  test('DV-04 the summary and asOf are on the first page only, and follow the filter (DOC-66 §5)', async () => {
+  test('the summary and asOf are on the first page only, and follow the filter (DOC-66 §5)', async () => {
     const first = await queries.list(scopeOf(BUILDING_A), { limit: 2, summary: true })
     expect(first.asOf).toBe('2026-10-19' as LocalDate)
     expect(first.summary?.outstanding).toBe(money(AMOUNT + SOON_AMOUNT + LATE_AMOUNT))
@@ -336,7 +336,7 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(plain.summary).toBeNull()
   })
 
-  test('DV-04b the collected tile follows the month filter (DOC-66 §5)', async () => {
+  test('the collected tile follows the month filter (DOC-66 §5)', async () => {
     const page = await queries.list(scopeOf(BUILDING_A), {
       limit: 50,
       summary: true,
@@ -346,7 +346,7 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(page.summary?.outstanding).toBe(money(AMOUNT))
   })
 
-  test('DV-05 lastReminderAt is the latest debt_reminder of the unit (DOC-66 §5)', async () => {
+  test('lastReminderAt is the latest debt_reminder of the unit (DOC-66 §5)', async () => {
     const before = await queries.list(scopeOf(BUILDING_A), { limit: 50, filter: { q: 'A-1508' } })
     expect(before.rows[0]?.lastReminderAt).toBeNull()
 
@@ -358,13 +358,13 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(after.rows[0]?.lastReminderAt?.getTime()).toBe(AT.getTime())
   })
 
-  test('DV-06 the owner name comes through the port, the code from the charge snapshot (DOC-66 §5)', async () => {
+  test('the owner name comes through the port, the code from the charge snapshot (DOC-66 §5)', async () => {
     const page = await queries.list(scopeOf(BUILDING_A), { limit: 50, filter: { q: 'B-201' } })
     expect(page.rows[0]?.ownerName).toBe('Lê Văn B')
     expect(page.rows[0]?.unitCode).toBe('B-201')
   })
 
-  test('DV-07 unitView carries the unit, the owner, the tiles and an open charge with its active intent (DOC-66 §5)', async () => {
+  test('unitView carries the unit, the owner, the tiles and an open charge with its active intent (DOC-66 §5)', async () => {
     const view = await queries.unitView(scopeOf(BUILDING_A), UNIT_SOON)
     expect(view.unit).toEqual({ id: UNIT_SOON, code: 'A-1508', floor: 15, areaM2: null })
     expect(view.owner).toEqual({ name: OWNER, phone: null })
@@ -386,7 +386,7 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(charge?.activeIntent?.since.getTime()).toBe(AT.getTime())
   })
 
-  test('DV-07b unitView of a unit with nothing open is not 404 and reads zero (DOC-66 §5)', async () => {
+  test('unitView of a unit with nothing open is not 404 and reads zero (DOC-66 §5)', async () => {
     const view = await queries.unitView(scopeOf(BUILDING_A), UNIT_EMPTY)
     expect(view.unit.code).toBe('D-1')
     expect(view.summary).toEqual({
@@ -398,7 +398,7 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(view.openCharges).toEqual([])
   })
 
-  test('DV-08 the payments page is keyset paged over more than 20 payments, newest first (DOC-66 §5, DR-324)', async () => {
+  test('the payments page is keyset paged over more than 20 payments, newest first (DOC-66 §5, DR-324)', async () => {
     const first = await queries.unitView(scopeOf(BUILDING_A), UNIT_SOON)
     expect(first.payments).toHaveLength(20)
     expect(first.nextCursor).not.toBeNull()
@@ -413,13 +413,13 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(second.payments[0]?.amount).toBe(money(50_020))
   })
 
-  test('DV-09 an unknown unit is 404 (DOC-66 §6)', async () => {
+  test('an unknown unit is 404 (DOC-66 §6)', async () => {
     await expect(queries.unitView(scopeOf(BUILDING_A), ids.next())).rejects.toBeInstanceOf(
       NotFoundError,
     )
   })
 
-  test('DV-10 a refund flag and a receipt are attached to their payment (DOC-66 §5, DR-327)', async () => {
+  test('a refund flag and a receipt are attached to their payment (DOC-66 §5, DR-327)', async () => {
     const view = await queries.unitView(scopeOf(BUILDING_A), UNIT_SOON)
     const [newest, second] = view.payments
     expect(newest?.receipts).toEqual([
@@ -443,7 +443,7 @@ describe('the DOC-66 §5 debt views (P2-15)', () => {
     expect(own.rows.map((row) => row.unitId)).toEqual([UNIT_FOREIGN])
   })
 
-  test('DV-11 the debtUnitDirectory adapter keeps only the units of the building (DOC-66 §5)', async () => {
+  test('the debtUnitDirectory adapter keeps only the units of the building (DOC-66 §5)', async () => {
     const units = new Map<string, { buildingId: string; code: string; floor: number | null }>([
       [UNIT_SOON, { buildingId: BUILDING_A, code: 'A-1508', floor: 15 }],
       [UNIT_FOREIGN, { buildingId: BUILDING_B, code: 'A-1508', floor: 15 }],
