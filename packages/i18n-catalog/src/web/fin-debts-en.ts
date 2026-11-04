@@ -1,2 +1,43 @@
 /** DOC-66 `debts` microcopy (English); keys sorted, one pair of files per screen so the slices do not share a file. */
-export const finDebtsEn = {} as const
+export const finDebtsEn = {
+  'web.debts.action.remind': 'Send a push reminder',
+  'web.debts.asof': 'Figures as of {time}, {date}, all published batches',
+  // The read as built carries only the building day, so the line names the date alone (no time).
+  'web.debts.asof.date': 'Figures as of {date}, all published batches',
+  'web.debts.col.batches': 'Batches owed',
+  'web.debts.col.oldest': 'Oldest',
+  'web.debts.col.outstanding': 'Owed',
+  'web.debts.col.owner': 'Owner',
+  'web.debts.col.pay': 'Record a payment',
+  'web.debts.col.reminded': 'Last reminder',
+  'web.debts.col.unit': 'Unit',
+  'web.debts.empty.filtered': 'No unit matches the filters',
+  'web.debts.empty.title': 'No unit owes anything',
+  'web.debts.footer': '{from}–{to} of {total} units, sorted by amount owed',
+  'web.debts.month': 'Fee month',
+  'web.debts.month.all': 'All',
+  'web.debts.overdue': '{days} days overdue',
+  'web.debts.remind.confirm.body':
+    'Each unit gets one reminder a day. The notification does not show an amount.',
+  'web.debts.remind.confirm.title': 'Send a reminder to {count} units?',
+  'web.debts.remind.done': 'Sent to {sent} units.',
+  'web.debts.remind.done.extra':
+    '{already} units were already reminded today, {none} no longer owe.',
+  'web.debts.remind.rate-limited':
+    'You sent reminders too many times. Try again in {minutes} minutes.',
+  'web.debts.reminded.never': 'Never',
+  'web.debts.search': 'Search unit or owner',
+  'web.debts.search.label': 'Search debts',
+  'web.debts.select.page': 'Select this page',
+  'web.debts.select.row': 'Select {code}',
+  'web.debts.selection': '{count} units selected, {amount} owed',
+  'web.debts.selection.all': 'Select all {count} units',
+  'web.debts.selection.clear': 'Clear',
+  'web.debts.switch.overdue': 'Only units more than 30 days overdue',
+  'web.debts.tile.collected': 'Collected for {month}/{year}',
+  'web.debts.tile.overdue': 'More than 30 days overdue, {count} units',
+  'web.debts.tile.total': 'Total outstanding',
+  'web.debts.tile.units': '{count} units',
+  'web.debts.tile.units.label': 'Owing, of {total} units',
+  'web.debts.title': 'Debts',
+} as const
