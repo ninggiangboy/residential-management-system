@@ -1,6 +1,6 @@
 # API endpoints
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-11-03 (P2-04: the import dispatch as built) · 2026-11-01 (DR-314, DR-315: E-180…E-182 the unit types; E-57…E-60 carry `unitType` and `unitTypeId`; E-71 template column `unit_type`) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` on E-57) · 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
+> Status: **Approved** (Owner, 2026-10-21, for the P1 groups (auth, public, residency, platform); the other groups are specified before their phase) · Updated: 2026-11-04 (P2-15: §11A, the finance routes as built) · 2026-11-03 (P2-04: the import dispatch as built) · 2026-11-01 (DR-314, DR-315: E-180…E-182 the unit types; E-57…E-60 carry `unitType` and `unitTypeId`; E-71 template column `unit_type`) · 2026-10-29 (DR-309: `summary.floors` and `summary.bedrooms` on E-57) · 2026-10-28 (P1-26: E-176, E-177 fee-notice PDFs and E-99 as the bulk request, DR-293; E-178, E-179 read one inbox entry, E-76…E-79 specified in DOC-31, DR-302; E-75 specified in DOC-52; E-22, E-23, E-34, E-35 follow DR-300; DR-282: E-175, the staff cancel of an intent; DR-279: E-173 `POST /usage-events`, §10A) · 2026-10-26 (DR-268: presigned URLs name the files host `files.<domain>`, no R2; DR-265: E-170…E-172 for draft charges and discard, P2 group; earlier: DR-226: E-169 `GET /staff/imports`, catalog E-01…E-169; DR-96: `unmatchedTransfer` on E-86; DR-225: `client` in E-20 and E-32; DR-202, 212, 213: E-13 cooling-off fields, E-57 and E-63 list fields, E-72 `unitCode`) · DOC-51
 > Depends on: original SDD §17.1, §17.2, [DR](../00-decision-register.md) (DR-36…39, 40, 41, 42, 59, 61, 73, 74, 75, 123, 127, DR-142…, 202, 212, 213, DR-96, DR-226, DR-228, DR-293, DR-300, DR-302, DR-314, DR-315), [ADR-0023](../04-adr/0023-api-conventions.md), [DOC-50](api-guidelines.md), [DOC-42](../06-design/error-handling.md) §5, [DOC-26](../06-design/identity-and-sessions.md), [DOC-27](../06-design/residency-and-memberships.md), [DOC-35](../06-design/audit-privacy-and-terms.md) §9, §10, [DOC-36](../06-design/building-configuration-and-demo.md), [DOC-37](../06-design/files-and-uploads.md), [DOC-04](../01-product/use-cases.md), [DOC-06](../02-glossary.md)
 > Main readers: P1-04, P1-10, P1-11, P1-12, P1-13, P1-14, P1-15 (route metadata and the authorization matrix), P1-16, P1-17 (the clients), every later task that adds an endpoint, DOC-39, DOC-52, DOC-56…67, EXP-10
 
@@ -2853,8 +2853,8 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
 | Group | Endpoints | Written in | Before |
 | --- | --- | --- | --- |
 | Real-time and inbox | E-75…E-79, E-178, E-179 | **written:** DOC-52 §4 (E-75), DOC-31 §4.4 (E-76…E-79, E-178, E-179) | P2-00 |
-| Resident fees and payment | E-80…E-88 | DOC-22, DOC-23, DOC-58 | P2-00 (E-80…E-84), P3-00 (E-85…E-88) |
-| Staff fee batches, charges, debts, payments, money log | E-89…E-110, E-176, E-177 | DOC-21, DOC-22, DOC-66; the PDF endpoints E-84, E-99, E-106, E-176, E-177 in DOC-34 §8, §9 | P2-00 |
+| Resident fees and payment | E-80…E-88 | DOC-22, DOC-23, DOC-58; **E-80…E-84 built, §11A** | P2-00 (E-80…E-84), P3-00 (E-85…E-88) |
+| Staff fee batches, charges, debts, payments, money log | E-89…E-110, E-176, E-177 | DOC-21, DOC-22, DOC-66; the PDF endpoints E-84, E-99, E-106, E-176, E-177 in DOC-34 §8, §9; **built (E-107 is P3), §11A** | P2-00 |
 | Statements, webhook | E-111…E-117 | DOC-25, DOC-24, DOC-52 | P3-00 |
 | Tickets | E-118…E-132 | DOC-28 | P4-00 |
 | Notices | E-143…E-149 | DOC-31 | P4-00 |
@@ -2865,10 +2865,10 @@ Two routes, one body, one use case. A resident token never passes a staff guard 
 | Sample owed (master plan §3.2) | Endpoint | Status |
 | --- | --- | --- |
 | Create intent | E-85 | owed (P3-00) |
-| Manual payment | E-104 | owed (P2-00) |
-| Publish | E-95 | owed (P2-00) |
-| Recall | E-96 | owed (P2-00) |
-| Void a single open charge | E-100 | owed (P2-00) |
+| Manual payment | E-104 | **written,** DOC-22 §5.1 |
+| Publish | E-95 | **written, §11A** |
+| Recall | E-96 | **written, §11A** |
+| Void a single open charge | E-100 | **written, §11A** |
 | Step-up | E-38 (with E-50) | **written, §7** |
 | OTP verify | E-10 | **written, §4** |
 | Assign ticket | E-127 | owed (P4-00) |
@@ -2901,6 +2901,39 @@ Endpoints this catalog adds to the list of DR-73 (DR-142):
 | E-132 | `PATCH /staff/ticket-types/{id}` | The id is in the path (DR-73 wrote the collection) |
 | E-145 | `GET /staff/notices` | The Manager's list |
 | E-159 | `GET /staff/docs/pages/{id}` | The editor loads one page |
+
+## 11A. Finance routes as built (P2-15)
+
+*Added 2026-11-04.* The contracts of `E-80…E-84`, `E-89…E-106`, `E-108…E-110`, `E-170…E-172`, `E-176` and `E-177` are in DOC-21 §3, DOC-22 §5, §6, §8, §9 and DOC-34 §8, §9; the screens' fields are in DOC-58 and DOC-66 §5. This section records what the code answers where those documents left a shape open, and what is not built. The routes are in `modules/finance/src/presentation/`; the guard and the audience come from one call (`staffRoute`, `unitRoute`), so `check:authz-metadata` compares each with the rows of §2.
+
+**Answers the documents left open**
+
+| Endpoint | As built |
+| --- | --- |
+| E-90 | 201 with `Location` and `ETag` (the batch `version`); body `{ id, code, name, feeMonth, dueDate, status, version, createdBy, createdAt, replacesBatchId }`. |
+| E-92, E-95, E-97 | 200 with the same batch body and the fresh `ETag`. |
+| E-96 | 200 with the batch body and `chargeCount`. A paid charge is 409 `batch_has_payments { paidCount }`. |
+| E-98 | 201 with `Location` and `{ batchId, code, copiedCharges }`. `skippedSingleVoid` of DOC-66 is not answered: the use case does not count the charges voided alone. |
+| E-170 | 201 with the charge body `{ id, batchId, unitId, unitCode, amount, status, version }` and `ETag`. E-94 and E-100 answer 200 with the same body; E-171 and E-172 answer 204. |
+| E-99 | 202 with the job of DOC-34 §9.1; no `Idempotency-Key`, a repeat answers the active job. E-177 answers the same shape with `zip`. |
+| E-104 | 201, or 200 with `Idempotent-Replayed: true` on a repeat of one key; `dryRun: true` answers the plan. The body may carry `amount` only as a check: a different sum is 422 `allocation_mismatch { expected, got }`. |
+| E-105 | 200 with the payment body and `chargeIds`; E-109 answers `{ kind, id, reviewedAt }`. |
+| E-176 | The query parameter is `language` (`vi`, `en`, `both`), as in the body of E-99 (DOC-66 wrote `lang`). |
+| E-80 | The body carries `payment: { enabled: false }` until the payment intents of P3; DOC-58's `presentation`, `savedMethods` and `limits` join then. |
+| E-82, E-83 | Keyset pages of 20 (at most 50). E-82 carries `summary` on the first page only. The shape of E-83 was not specified: `{ receiptId, number, chargeId, amount, issuedAt, receivedAt, method, status }`, a voided receipt listed with `status: void`. |
+| E-84, E-106, E-176 | `application/pdf`, `Cache-Control: private, no-store`, `Content-Disposition` named by the receipt number or `PH-…-<unit>`. A renderer that is busy, times out or crashes answers 503 `service_unavailable` with `Retry-After: 5` (DOC-34 §10). |
+| E-101 | Rows `{ unitId, unitCode, ownerName, ownerPhone, outstanding, openCharges, oldestDue, maxDaysPastDue, overdue30, lastReminderAt }`; filters `month`, `q`, `overdue=30`; the first page adds `summary` and `asOf`. |
+| E-102 | `{ unit, owner, summary, openCharges, payments, nextCursor }`, 20 payments a page by `paymentsCursor`. |
+| E-103 | 200 `{ sent, alreadyRemindedToday, noDebt }`. The bucket `DEBT_REMINDER_PER_HOUR` (10) is per account and refuses with 429 and `Retry-After`; a request refused for its body takes no token. |
+| E-108 | `state` is `open`, `reviewed` or `all`; the default is `all` of the rows that are not posted. |
+
+**Samples owed by §11.** E-95: `POST /staff/fee-batches/0192f3c4-7b00-7000-8000-000000000b01/publish` with `If-Match: "3"` answers 200 `ETag: "4"` and `{ "id": "0192f3c4-7b00-7000-8000-000000000b01", "code": "PH-2610-01", "name": { "vi": "Phí tháng 10/2026" }, "feeMonth": "2026-10-01", "dueDate": "2026-10-25", "status": "published", "version": 4, "createdBy": "0192f3c4-0000-7000-8000-0000000000a1", "createdAt": "2026-10-20T03:12:44.000Z", "replacesBatchId": null }`. E-96 sends `{ "reason": "Sai đơn giá phí quản lý" }` with the same header and answers the batch body with `status: "recalled"` and `"chargeCount": 240`. E-100 sends `{ "reason": "Căn đã bàn giao lại" }` with `If-Match` of the charge and answers `{ "id": …, "batchId": …, "unitId": …, "unitCode": "A-1508", "amount": 1419000, "status": "void", "version": 3 }`. E-104 is DOC-22 §5.1.
+
+**Not built, carried to a later task**
+
+- The drawer of a money-log row (DOC-22 §9.4, LG-50) has no endpoint in §2; rows carry `outcome`, `amount`, `unitId` and `reviewedAt`, not `unitCode`, `reference` or the related payment of DOC-66.
+- `ownerPhone` of E-101 and E-102 and `areaM2` of E-102 are `null`: `ResidencyApi` offers neither. `view=missing` of E-93 and `counts.missing` of E-91 need the building's owned units and are empty and `null`.
+- E-183 (P2-25), E-85…E-88 (P3) and the payments list E-107 (P3) are not mounted.
 
 ## 12. Source of the authorization matrix
 
