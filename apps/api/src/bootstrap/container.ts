@@ -345,6 +345,8 @@ export function createContainer(
     clock,
     ids,
     database,
+    guards,
+    idempotent,
     audited: audit.audited,
     units: residency.api,
     files: building.files,

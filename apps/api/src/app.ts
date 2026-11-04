@@ -116,6 +116,7 @@ export function buildApp(container: Container) {
       .use(container.identity.routes)
       .use(container.building.routes)
       .use(container.residency.routes)
+      .use(container.finance.routes)
       .use(container.notification.residentRoutes)
       .use(container.notification.staffRoutes)
       .use(container.realtime.routes)

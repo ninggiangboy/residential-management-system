@@ -242,6 +242,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@core/db": "workspace:*",
+        "@core/http": "workspace:*",
         "@core/kernel": "workspace:*",
         "@core/messaging": "workspace:*",
         "@core/runtime": "workspace:*",
@@ -254,7 +255,9 @@
         "@rms/i18n-catalog": "workspace:*",
         "@rms/pdf-assets": "workspace:*",
         "@rms/shared-types": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
         "drizzle-orm": "0.45.4",
+        "elysia": "1.4.30",
         "exceljs": "4.4.0",
         "fflate": "0.8.3",
       },
