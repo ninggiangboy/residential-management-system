@@ -16,6 +16,8 @@ import { smsVi } from './sms/vi'
 import { staffEn } from './staff/en'
 import { staffVi } from './staff/vi'
 import { webEn } from './web/en'
+import { webFinanceEn } from './web/finance-en'
+import { webFinanceVi } from './web/finance-vi'
 import { webVi } from './web/vi'
 
 const en = {
@@ -25,6 +27,7 @@ const en = {
   ...smsEn,
   ...importEn,
   ...webEn,
+  ...webFinanceEn,
   ...resEn,
   ...staffEn,
   ...pdfEn,
@@ -36,6 +39,7 @@ const vi: Record<keyof typeof en, string> = {
   ...smsVi,
   ...importVi,
   ...webVi,
+  ...webFinanceVi,
   ...resVi,
   ...staffVi,
   ...pdfVi,

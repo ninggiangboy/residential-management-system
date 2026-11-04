@@ -1,25 +1,5 @@
 /** Generated once from the microcopy tables of DOC-64, DOC-65 and DOC-67 (the web screens of phase 1), then maintained here; the shell and wrong-app keys complete them. */
-
-import { finChargeVoidEn } from './fin-charge-void-en'
-import { finDebtsEn } from './fin-debts-en'
-import { finFeeBatchEn } from './fin-fee-batch-en'
-import { finFeeImportEn } from './fin-fee-import-en'
-import { finFeeNoticeEn } from './fin-fee-notice-en'
-import { finFeeRecallEn } from './fin-fee-recall-en'
-import { finFeeRecordEn } from './fin-fee-record-en'
-import { finFeeReissueEn } from './fin-fee-reissue-en'
-import { finFeesEn } from './fin-fees-en'
-
 export const webEn = {
-  ...finFeesEn,
-  ...finFeeImportEn,
-  ...finFeeBatchEn,
-  ...finFeeNoticeEn,
-  ...finFeeRecordEn,
-  ...finFeeRecallEn,
-  ...finChargeVoidEn,
-  ...finFeeReissueEn,
-  ...finDebtsEn,
   'web.building.cta': 'Save changes',
   'web.building.action.undo': 'Undo changes',
   'web.building.action.keep-mine': 'Keep mine and save',

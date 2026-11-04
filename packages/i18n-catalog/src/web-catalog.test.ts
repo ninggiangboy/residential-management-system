@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { CATALOGS } from './catalog'
-import { createTranslator, errorText, loadWebLanguage } from './web'
+import { createTranslator, errorText, loadWebFeature, loadWebLanguage } from './web'
 import { WEB_CATALOGS } from './web-catalog'
 
 const WEB_FAMILIES = ['error', 'status', 'common', 'auth', 'offline', 'upgrade', 'web']
@@ -60,5 +60,20 @@ describe('the web translator', () => {
     expect(errorText(t, { code: 'no_such_code', message: 'From the server' })).toBe(
       'From the server',
     )
+  })
+})
+
+describe('a feature chunk (finance) is kept out of the first load (DR-308)', () => {
+  const key = 'web.shell.nav.fees'
+  const financeKey = Object.keys(WEB_CATALOGS.en).find((k) => k.startsWith('web.fees.'))!
+
+  test('its copy is in memory only once a route asked for it, for both languages, and earlier translators see it', async () => {
+    const before = createTranslator('vi')
+    expect(before.has(key)).toBe(true) // the navigation labels stay in the shell
+    expect(before.has(financeKey)).toBe(false)
+    await loadWebFeature('finance', 'vi')
+    expect(before.has(financeKey)).toBe(true)
+    expect(createTranslator('en').has(financeKey)).toBe(true) // English was in memory, so it got the chunk too
+    expect(before(financeKey as never)).toBe(WEB_CATALOGS.vi[financeKey as never] as string)
   })
 })

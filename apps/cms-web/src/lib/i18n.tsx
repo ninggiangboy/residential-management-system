@@ -1,4 +1,9 @@
-import { createTranslator, loadWebLanguage, type Translator } from '@rms/i18n-catalog/web'
+import {
+  createTranslator,
+  loadWebFeature,
+  loadWebLanguage,
+  type Translator,
+} from '@rms/i18n-catalog/web'
 import {
   formatDate,
   formatDateTime,
@@ -66,6 +71,13 @@ export const languageStore = {
 }
 
 if (typeof document !== 'undefined') document.documentElement.lang = current
+
+/**
+ * The loader of a finance route: the copy of the finance screens is a chunk of its own, kept out of the first load of `/login`
+ * (DOC-53 §8, DR-308), so the route waits for it before its page draws. A chunk that cannot be fetched fails the route, whose
+ * error screen offers a retry.
+ */
+export const loadFinanceText = (): Promise<void> => loadWebFeature('finance', current)
 
 export type T = Translator
 

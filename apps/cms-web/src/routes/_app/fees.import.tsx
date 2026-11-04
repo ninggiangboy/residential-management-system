@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { ReactElement } from 'react'
 import { FeeImportPage } from '../../features/fee-import/fee-import-page'
+import { loadFinanceText } from '../../lib/i18n'
 import { f, searchParser } from '../../lib/search'
 
 const UUID = /^[0-9a-fA-F-]{36}$/
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/_app/fees/import')({
     ],
   },
   validateSearch: searchParser(SearchShape),
+  loader: loadFinanceText,
   component: Page,
 })
 
