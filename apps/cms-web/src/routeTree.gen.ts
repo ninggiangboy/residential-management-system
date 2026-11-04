@@ -21,6 +21,11 @@ import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppResidentsRouteImport } from './routes/_app/residents'
 import { Route as AppStaffRouteImport } from './routes/_app/staff'
 import { Route as ForgotSentRouteImport } from './routes/forgot.sent'
+import { Route as AppDebtsIndexRouteImport } from './routes/_app/debts.index'
+import { Route as AppDebtsUnitIdRouteImport } from './routes/_app/debts.$unitId'
+import { Route as AppFeesIndexRouteImport } from './routes/_app/fees.index'
+import { Route as AppFeesBatchIdRouteImport } from './routes/_app/fees.$batchId'
+import { Route as AppFeesImportRouteImport } from './routes/_app/fees.import'
 import { Route as AppResidentsIndexRouteImport } from './routes/_app/residents.index'
 import { Route as AppResidentsNewRouteImport } from './routes/_app/residents.new'
 import { Route as AppStaffIndexRouteImport } from './routes/_app/staff.index'
@@ -28,6 +33,7 @@ import { Route as AppStaffNewRouteImport } from './routes/_app/staff.new'
 import { Route as AppUnitsIndexRouteImport } from './routes/_app/units.index'
 import { Route as AppUnitsUnitIdRouteImport } from './routes/_app/units.$unitId'
 import { Route as AppUnitsTypesRouteImport } from './routes/_app/units.types'
+import { Route as AppFeesBatchIdNoticeRouteImport } from './routes/_app/fees.$batchId_.notice'
 import { Route as AppStaffStaffIdEditRouteImport } from './routes/_app/staff.$staffId.edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +95,31 @@ const ForgotSentRoute = ForgotSentRouteImport.update({
   path: '/forgot/sent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppDebtsIndexRoute = AppDebtsIndexRouteImport.update({
+  id: '/debts/',
+  path: '/debts/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDebtsUnitIdRoute = AppDebtsUnitIdRouteImport.update({
+  id: '/debts/$unitId',
+  path: '/debts/$unitId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeesIndexRoute = AppFeesIndexRouteImport.update({
+  id: '/fees/',
+  path: '/fees/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeesBatchIdRoute = AppFeesBatchIdRouteImport.update({
+  id: '/fees/$batchId',
+  path: '/fees/$batchId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeesImportRoute = AppFeesImportRouteImport.update({
+  id: '/fees/import',
+  path: '/fees/import',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppResidentsIndexRoute = AppResidentsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -124,6 +155,11 @@ const AppUnitsTypesRoute = AppUnitsTypesRouteImport.update({
   path: '/units/types',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFeesBatchIdNoticeRoute = AppFeesBatchIdNoticeRouteImport.update({
+  id: '/fees/$batchId_/notice',
+  path: '/fees/$batchId/notice',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStaffStaffIdEditRoute = AppStaffStaffIdEditRouteImport.update({
   id: '/$staffId/edit',
   path: '/$staffId/edit',
@@ -142,13 +178,19 @@ export interface FileRoutesByFullPath {
   '/residents': typeof AppResidentsRouteWithChildren
   '/staff': typeof AppStaffRouteWithChildren
   '/forgot/sent': typeof ForgotSentRoute
+  '/debts/$unitId': typeof AppDebtsUnitIdRoute
+  '/fees/$batchId': typeof AppFeesBatchIdRoute
+  '/fees/import': typeof AppFeesImportRoute
   '/residents/new': typeof AppResidentsNewRoute
   '/staff/new': typeof AppStaffNewRoute
   '/units/$unitId': typeof AppUnitsUnitIdRoute
   '/units/types': typeof AppUnitsTypesRoute
+  '/debts/': typeof AppDebtsIndexRoute
+  '/fees/': typeof AppFeesIndexRoute
   '/residents/': typeof AppResidentsIndexRoute
   '/staff/': typeof AppStaffIndexRoute
   '/units/': typeof AppUnitsIndexRoute
+  '/fees/$batchId/notice': typeof AppFeesBatchIdNoticeRoute
   '/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -161,13 +203,19 @@ export interface FileRoutesByTo {
   '/import': typeof AppImportRoute
   '/profile': typeof AppProfileRoute
   '/forgot/sent': typeof ForgotSentRoute
+  '/debts/$unitId': typeof AppDebtsUnitIdRoute
+  '/fees/$batchId': typeof AppFeesBatchIdRoute
+  '/fees/import': typeof AppFeesImportRoute
   '/residents/new': typeof AppResidentsNewRoute
   '/staff/new': typeof AppStaffNewRoute
   '/units/$unitId': typeof AppUnitsUnitIdRoute
   '/units/types': typeof AppUnitsTypesRoute
+  '/debts': typeof AppDebtsIndexRoute
+  '/fees': typeof AppFeesIndexRoute
   '/residents': typeof AppResidentsIndexRoute
   '/staff': typeof AppStaffIndexRoute
   '/units': typeof AppUnitsIndexRoute
+  '/fees/$batchId/notice': typeof AppFeesBatchIdNoticeRoute
   '/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRoutesById {
@@ -184,13 +232,19 @@ export interface FileRoutesById {
   '/_app/residents': typeof AppResidentsRouteWithChildren
   '/_app/staff': typeof AppStaffRouteWithChildren
   '/forgot/sent': typeof ForgotSentRoute
+  '/_app/debts/$unitId': typeof AppDebtsUnitIdRoute
+  '/_app/fees/$batchId': typeof AppFeesBatchIdRoute
+  '/_app/fees/import': typeof AppFeesImportRoute
   '/_app/residents/new': typeof AppResidentsNewRoute
   '/_app/staff/new': typeof AppStaffNewRoute
   '/_app/units/$unitId': typeof AppUnitsUnitIdRoute
   '/_app/units/types': typeof AppUnitsTypesRoute
+  '/_app/debts/': typeof AppDebtsIndexRoute
+  '/_app/fees/': typeof AppFeesIndexRoute
   '/_app/residents/': typeof AppResidentsIndexRoute
   '/_app/staff/': typeof AppStaffIndexRoute
   '/_app/units/': typeof AppUnitsIndexRoute
+  '/_app/fees/$batchId_/notice': typeof AppFeesBatchIdNoticeRoute
   '/_app/staff/$staffId/edit': typeof AppStaffStaffIdEditRoute
 }
 export interface FileRouteTypes {
@@ -207,13 +261,19 @@ export interface FileRouteTypes {
     | '/residents'
     | '/staff'
     | '/forgot/sent'
+    | '/debts/$unitId'
+    | '/fees/$batchId'
+    | '/fees/import'
     | '/residents/new'
     | '/staff/new'
     | '/units/$unitId'
     | '/units/types'
+    | '/debts/'
+    | '/fees/'
     | '/residents/'
     | '/staff/'
     | '/units/'
+    | '/fees/$batchId/notice'
     | '/staff/$staffId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -226,13 +286,19 @@ export interface FileRouteTypes {
     | '/import'
     | '/profile'
     | '/forgot/sent'
+    | '/debts/$unitId'
+    | '/fees/$batchId'
+    | '/fees/import'
     | '/residents/new'
     | '/staff/new'
     | '/units/$unitId'
     | '/units/types'
+    | '/debts'
+    | '/fees'
     | '/residents'
     | '/staff'
     | '/units'
+    | '/fees/$batchId/notice'
     | '/staff/$staffId/edit'
   id:
     | '__root__'
@@ -248,13 +314,19 @@ export interface FileRouteTypes {
     | '/_app/residents'
     | '/_app/staff'
     | '/forgot/sent'
+    | '/_app/debts/$unitId'
+    | '/_app/fees/$batchId'
+    | '/_app/fees/import'
     | '/_app/residents/new'
     | '/_app/staff/new'
     | '/_app/units/$unitId'
     | '/_app/units/types'
+    | '/_app/debts/'
+    | '/_app/fees/'
     | '/_app/residents/'
     | '/_app/staff/'
     | '/_app/units/'
+    | '/_app/fees/$batchId_/notice'
     | '/_app/staff/$staffId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -354,6 +426,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotSentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/debts/': {
+      id: '/_app/debts/'
+      path: '/debts'
+      fullPath: '/debts/'
+      preLoaderRoute: typeof AppDebtsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/debts/$unitId': {
+      id: '/_app/debts/$unitId'
+      path: '/debts/$unitId'
+      fullPath: '/debts/$unitId'
+      preLoaderRoute: typeof AppDebtsUnitIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/fees/': {
+      id: '/_app/fees/'
+      path: '/fees'
+      fullPath: '/fees/'
+      preLoaderRoute: typeof AppFeesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/fees/$batchId': {
+      id: '/_app/fees/$batchId'
+      path: '/fees/$batchId'
+      fullPath: '/fees/$batchId'
+      preLoaderRoute: typeof AppFeesBatchIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/fees/import': {
+      id: '/_app/fees/import'
+      path: '/fees/import'
+      fullPath: '/fees/import'
+      preLoaderRoute: typeof AppFeesImportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/residents/': {
       id: '/_app/residents/'
       path: '/'
@@ -403,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppUnitsTypesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/fees/$batchId_/notice': {
+      id: '/_app/fees/$batchId_/notice'
+      path: '/fees/$batchId/notice'
+      fullPath: '/fees/$batchId/notice'
+      preLoaderRoute: typeof AppFeesBatchIdNoticeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/staff/$staffId/edit': {
       id: '/_app/staff/$staffId/edit'
       path: '/$staffId/edit'
@@ -449,9 +563,15 @@ interface AppRouteChildren {
   AppProfileRoute: typeof AppProfileRoute
   AppResidentsRoute: typeof AppResidentsRouteWithChildren
   AppStaffRoute: typeof AppStaffRouteWithChildren
+  AppDebtsUnitIdRoute: typeof AppDebtsUnitIdRoute
+  AppFeesBatchIdRoute: typeof AppFeesBatchIdRoute
+  AppFeesImportRoute: typeof AppFeesImportRoute
   AppUnitsUnitIdRoute: typeof AppUnitsUnitIdRoute
   AppUnitsTypesRoute: typeof AppUnitsTypesRoute
+  AppDebtsIndexRoute: typeof AppDebtsIndexRoute
+  AppFeesIndexRoute: typeof AppFeesIndexRoute
   AppUnitsIndexRoute: typeof AppUnitsIndexRoute
+  AppFeesBatchIdNoticeRoute: typeof AppFeesBatchIdNoticeRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -460,9 +580,15 @@ const AppRouteChildren: AppRouteChildren = {
   AppProfileRoute: AppProfileRoute,
   AppResidentsRoute: AppResidentsRouteWithChildren,
   AppStaffRoute: AppStaffRouteWithChildren,
+  AppDebtsUnitIdRoute: AppDebtsUnitIdRoute,
+  AppFeesBatchIdRoute: AppFeesBatchIdRoute,
+  AppFeesImportRoute: AppFeesImportRoute,
   AppUnitsUnitIdRoute: AppUnitsUnitIdRoute,
   AppUnitsTypesRoute: AppUnitsTypesRoute,
+  AppDebtsIndexRoute: AppDebtsIndexRoute,
+  AppFeesIndexRoute: AppFeesIndexRoute,
   AppUnitsIndexRoute: AppUnitsIndexRoute,
+  AppFeesBatchIdNoticeRoute: AppFeesBatchIdNoticeRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

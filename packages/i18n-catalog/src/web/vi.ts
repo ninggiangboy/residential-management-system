@@ -1,7 +1,25 @@
 /** Generated once from the microcopy tables of DOC-64, DOC-65 and DOC-67 (the web screens of phase 1), then maintained here; the shell and wrong-app keys complete them. */
 import type { webEn } from './en'
+import { finChargeVoidVi } from './fin-charge-void-vi'
+import { finDebtsVi } from './fin-debts-vi'
+import { finFeeBatchVi } from './fin-fee-batch-vi'
+import { finFeeImportVi } from './fin-fee-import-vi'
+import { finFeeNoticeVi } from './fin-fee-notice-vi'
+import { finFeeRecallVi } from './fin-fee-recall-vi'
+import { finFeeRecordVi } from './fin-fee-record-vi'
+import { finFeeReissueVi } from './fin-fee-reissue-vi'
+import { finFeesVi } from './fin-fees-vi'
 
 export const webVi: Record<keyof typeof webEn, string> = {
+  ...finFeesVi,
+  ...finFeeImportVi,
+  ...finFeeBatchVi,
+  ...finFeeNoticeVi,
+  ...finFeeRecordVi,
+  ...finFeeRecallVi,
+  ...finChargeVoidVi,
+  ...finFeeReissueVi,
+  ...finDebtsVi,
   'web.building.cta': 'Lưu thay đổi',
   'web.building.action.undo': 'Hoàn tác',
   'web.building.action.keep-mine': 'Giữ của tôi và lưu',
@@ -305,6 +323,8 @@ export const webVi: Record<keyof typeof webEn, string> = {
   'web.shell.nav.building': 'Tòa nhà và cấu hình',
   'web.shell.nav.collapse': 'Thu gọn thanh bên',
   'web.shell.nav.expand': 'Mở rộng thanh bên',
+  'web.shell.nav.fees': 'Đợt phí',
+  'web.shell.nav.debts': 'Công nợ',
   'web.shell.nav.group.finance': 'Tài chính',
   'web.shell.nav.group.operations': 'Vận hành',
   'web.shell.nav.group.overview': 'Tổng quan',

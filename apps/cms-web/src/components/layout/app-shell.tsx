@@ -25,7 +25,7 @@ import { useBrand } from './public-layout'
 import { ThemeSwitch } from './theme-switch'
 
 interface NavItem {
-  to: '/units' | '/units/types' | '/residents' | '/staff' | '/building'
+  to: '/units' | '/units/types' | '/residents' | '/fees' | '/debts' | '/staff' | '/building'
   /** Routes under `to` that have an entry of their own: the shorter entry is not lit on them (`/units` on `/units/types`). */
   except?: readonly string[]
   label: MessageKey
@@ -56,6 +56,18 @@ const NAV: readonly NavGroup[] = [
       },
       { to: '/units/types', label: 'web.shell.nav.unit-types', icon: 'squares-four', roles: BOTH },
       { to: '/residents', label: 'web.shell.nav.residents', icon: 'users-three', roles: BOTH },
+    ],
+  },
+  {
+    label: 'web.shell.nav.group.finance',
+    items: [
+      {
+        to: '/fees',
+        label: 'web.shell.nav.fees',
+        icon: 'receipt',
+        roles: BOTH,
+      },
+      { to: '/debts', label: 'web.shell.nav.debts', icon: 'wallet', roles: BOTH },
     ],
   },
   {

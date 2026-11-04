@@ -11,6 +11,9 @@ export interface Crumb {
     | '/staff'
     | '/building'
     | '/import'
+    | '/fees'
+    | '/fees/import'
+    | '/debts'
     | '/profile'
 }
 

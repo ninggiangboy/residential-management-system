@@ -73,6 +73,8 @@ const KNOWN_PREFIXES = [
   '/units',
   '/residents',
   '/import',
+  '/fees',
+  '/debts',
   '/staff',
   '/building',
   '/profile',
