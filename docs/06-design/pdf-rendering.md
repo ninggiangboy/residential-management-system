@@ -78,7 +78,7 @@ The templates receive everything they print: the logo bytes, the formatted strin
 
 ### 4.1 The render host
 
-A **render host** is a child process (`Bun.spawn(['bun', 'packages/pdf-assets/src/host/main.ts'], { ipc })`) that registers the fonts, waits for `PdfInput` messages, renders with `renderToBuffer` and answers the bytes. The parent keeps a pool of them (DR-291):
+A **render host** is a child process (`Bun.spawn([bun, 'packages/pdf-assets/src/host/main.ts', <templatesModule>], { ipc })`; *revised 2026-11-04 (DR-334):* the parent names the templates module of the document kinds it renders, because a package may not import a module; each rendering module owns one pool) that registers the fonts, waits for `PdfInput` messages, renders with `renderToBuffer` and answers the bytes. The parent keeps a pool of them (DR-291):
 
 | Rule | Value | Why |
 | --- | --- | --- |
@@ -121,9 +121,9 @@ The host's RSS starts near 160 MiB and grows by about 1.2 MiB per document (§15
 | Amounts | right-aligned; the total 12 pt SemiBold |
 | Rules | 0.5 pt, colour `line`; the table header has a 1 pt rule below |
 | Colours | from `@rms/design-tokens` only (the light theme: `ink`, `inkMuted`, `line`, `danger`), as everywhere (Biome rule); a PDF prints well in greyscale, so no meaning rests on colour |
-| Footer (every page, `fixed`) | left: the document number or code; right: "Trang 1/2" (`vi`), "Page 1 of 2" (`en`), "Trang 1/2 · Page 1 of 2" (`both`) |
+| Footer (every page, `fixed`) | two `fixed` texts placed directly in the `Page`, anchored from the top (a page-count text inside a `View` is lost by 4.9.0; DR-334): left: the document number or code; right: "Trang 1/2" (`vi`), "Page 1 of 2" (`en`), "Trang 1/2 · Page 1 of 2" (`both`) |
 | Splitting | a table row never splits (`wrap={false}`); the total block and the payment block each stay whole and keep the last table row with them (`minPresenceAhead`) |
-| Metadata | `title` = document code (`PH-2610-01 · A-1508`, `BL-2610-0153`), `author` = the company name, `creator` and `producer` = `RMS`; no `creationDate` is set, so one input gives byte-identical output (PD-29) |
+| Metadata | `title` = document code (`PH-2610-01 · A-1508`, `BL-2610-0153`), `author` = the company name, `creator` and `producer` = `RMS`; `creationDate` and `modDate` are pinned to 2026-01-01T00:00:00Z by `PDF_DOCUMENT_INFO`, because `@react-pdf/renderer` 4.9.0 stamps the current time when none is given; so one input gives byte-identical output (PD-29; DR-334) |
 
 **Language modes** (FR-36.1). `vi` is the fallback of every bilingual value (DR-71).
 
@@ -517,8 +517,12 @@ Exported by the process that owns the pool (`api` or `worker`). The bulk job als
 | First-step smoke, one process | 2026-10-28 | i7-4790, 8 threads, 15 GiB; Bun 1.4.3; `@react-pdf/renderer` 4.9.0 | 240 | 1 in-process, 1 at a time | 19.1 s | 482 MiB RSS | measured; not EXP-08 |
 | First-step smoke, one process | 2026-10-28 | the same | 240 | 1 in-process, 2 at a time | 22.3 s | 554 MiB | measured |
 | First-step smoke, one process | 2026-10-28 | the same | 720 | 1 in-process, 2 at a time | 69.3 s | 1,012 MiB (990 MiB with `Bun.gc(true)` every 20 documents) | measured |
+| P2-13 spike, render hosts | 2026-11-04 | Apple M2, 8 cores, 16 GiB; Bun 1.4.3; `@react-pdf/renderer` 4.9.0 | 240 | 1 host, 1 at a time; recycled every 150 documents | 14.4 s (60 ms per document) | 412 MiB (this process and its host); 1 recycle | measured with `scripts/pdf-spike.ts`; not EXP-08 |
+| P2-13 spike, render hosts | 2026-11-04 | the same | 5,000 | 1 host, 1 at a time; recycled every 150 documents | 280.1 s (56 ms per document) | 439 MiB; 33 recycles; 0 failures | measured; not EXP-08 |
 
 The smoke document: 3 pages, 60 bilingual lines, a fixed page footer and, in one variant, the VOID watermark; 31,396 bytes; the ZIP of 720 such PDFs, stored, was 22.2 MB. The script ran from the scratch directory and is not committed; P2-13 commits its own. What it shows: the renderer runs under Bun with Vietnamese text; one process renders about 12 three-page documents a second on this machine; two renders inside one process are not faster than one; and memory grows by about 1.2 MiB per document even under a forced GC, which is why §4 recycles render hosts (DR-291). DOC-11 §7 row 17 owes "partial: renders; memory grows; hosts recycled".
+
+**P2-13 spike, 2026-11-04.** `bun scripts/pdf-spike.ts --units 5000` renders 5,000 notices of 60 lines in `both` through the real pool and the real template (no job, no store, no database). On the M2 the time is a fifth of the 30-minute limit and the peak memory of the process and its host is below half of the 1 GB limit, with the recycling of §4.1 doing what §4.3 planned (the host ends near 400 MiB at most). The staging VPS core is slower than an M2; EXP-08 on staging (DOC-97) gives the result that counts and stays open (it needs the staging host, the job and the Stripe-free seed). The spike averages 47 KB per PDF.
 
 ## 16. Required tests
 
@@ -528,7 +532,7 @@ Prefix `PD-` (master plan §0.2, DOC-88). Templates are tested with fixtures and
 
 | ID | Scenario | Expected |
 | --- | --- | --- |
-| PD-01 | The fee notice of §6.2 in `vi`, `en`, `both` | Each PDF opens; `pdftotext` finds "THÔNG BÁO PHÍ THÁNG 10/2026" (`vi`), "FEE NOTICE FOR OCTOBER 2026" (`en`), both titles (`both`); the total `1.152.825 đ` or `₫1,152,825`; the due date `15/10/2026` or `Oct 15, 2026` (FR-36.1) |
+| PD-01 | The fee notice of §6.2 in `vi`, `en`, `both` | Each PDF opens; the text reader (`pypdf` through `uv`, DR-334; `pdftotext` is not installed) finds "THÔNG BÁO PHÍ THÁNG 10/2026" (`vi`), "FEE NOTICE FOR OCTOBER 2026" (`en`), both titles (`both`); the total `1.152.825 đ` or `₫1,152,825`; the due date `15/10/2026` or `Oct 15, 2026` (FR-36.1) |
 | PD-02 | A line name with every Vietnamese tone mark ("Nguyễn Thị Ánh Nguyệt, ỷ ỹ ự ữ") | The extracted text equals the input; the PDF embeds only Be Vietnam Pro faces |
 | PD-03 | An item name with `en` missing, in `en` and `both` | `en` prints the `vi` name; `both` prints it once |
 | PD-04 | An adjustment line −35,175 with the note "Trừ phí nước tính thừa tháng 9" | The Basis column shows the note; the amount `−35.175 đ` |
@@ -591,6 +595,7 @@ EXP-08 (§15) covers FR-36.4 and NFR-05.
 | DR-295 | Receipts: keys `receipt/<id>/issued.pdf` and `void.pdf`; the language is fixed at the first render; the handler stores first and swaps `pdf_file` in a conditional update (DOC-37 §9's "remove, then store" reversed); the title and the VAT statement are bilingual in every mode; the receipt prints the amount in words (`amountInWords` in `@rms/shared-types`) and the payer's member type | Decided (Claude, delegated) | §7, §8.2 |
 | DR-296 | A replaced logo is not removed: its `file_object` stays `attached`, because receipt snapshots name it by id (DR-17's "a later logo change never alters an old receipt"). Changes DOC-36 §4 ("the old logo goes through `FilesApi.remove`") and BD-10 | Decided (Claude, delegated) | §8.4 |
 | DR-297 | Fonts: a sixth file `BeVietnamPro-BoldItalic` (rich text uses bold and italic together; the renderer refuses an unregistered face), the subset ranges of §3, hyphenation off, colours from the design tokens | Decided (Claude, delegated) | §3, §5 |
+| DR-334 | The host takes its templates module as an argument; `PDF_DOCUMENT_INFO` pins both dates; the footer is two `fixed` texts straight in the `Page`; tests read text with `pypdf` through `uv`; the spike script is committed | Decided (Claude, delegated, 2026-11-04) | §2, §4.1, §5, §15.2, §16.1 |
 | DR-298 | Report PDFs are capped at 5,000 rows (Excel keeps 50,000, DR-55), refused with `validation_failed` / `too_many_rows_for_pdf`; library page PDFs are rendered on request and not stored | Decided by the Owner 2026-11-02 (narrows DR-55 for PDF; for the Owner, measured in P6-02) | §11, §12 |
 
 ## 18. Not in this document
