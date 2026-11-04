@@ -346,6 +346,20 @@ export function registerPulledMetrics(
     ],
   )
 
+  // DR-154, DOC-38 §4.2, DOC-40 §4.2: the findings of the last successful `integrity_weekly`, read from its `job_run` row like the
+  // gauge above. `integrity_notices` joins with the notices (P4-05). A failed run does not move it; no run yet is 0.
+  metrics.pulled(
+    'integrity_findings',
+    'Findings of the last successful weekly integrity job.',
+    ['job_name'],
+    async () => [
+      {
+        labels: { job_name: 'integrity_weekly' },
+        value: Number((await jobRuns.lastSuccessDetails('integrity_weekly'))?.findings ?? 0),
+      },
+    ],
+  )
+
   if (!worker) return
   metrics.pulled(
     'worker_relay_last_pass_timestamp',

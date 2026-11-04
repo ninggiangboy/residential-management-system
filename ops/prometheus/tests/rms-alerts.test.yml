@@ -397,6 +397,36 @@ tests:
         alertname: LedgerInvariantViolation
         exp_alerts: []
 
+  # --- IntegrityFindings: the weekly job found a row (DOC-40 §5.3, RB-01 §3)
+  - name: IntegrityFindings fires per job on any finding and not at 0
+    interval: 15s
+    input_series:
+      - series: 'integrity_findings{instance="api:3001", job_name="integrity_weekly"}'
+        values: '0 0 2x10'
+      - series: 'integrity_findings{instance="worker:3001", job_name="integrity_weekly"}'
+        values: '0 0 2x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: IntegrityFindings
+        exp_alerts:
+          - exp_labels: { severity: warning, job_name: integrity_weekly }
+            exp_annotations:
+              summary: "integrity_weekly found 2 rows that break a rule"
+              runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
+      - eval_time: 15s
+        alertname: IntegrityFindings
+        exp_alerts: []
+
+  - name: IntegrityFindings stays silent at 0
+    interval: 15s
+    input_series:
+      - series: 'integrity_findings{instance="api:3001", job_name="integrity_weekly"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: IntegrityFindings
+        exp_alerts: []
+
   # --- InvariantCheckStale: no success for 36 h
   - name: InvariantCheckStale fires past 36 hours and not inside them
     interval: 1h

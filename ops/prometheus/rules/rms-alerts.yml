@@ -12,6 +12,14 @@ groups:
           summary: "The nightly ledger check found {{ $value }} violating rows"
           runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
 
+      # DOC-40 §5.3, DR-154: the weekly job found a membership that breaks a rule (RB-01 §3); the gauge is set once a week.
+      - alert: IntegrityFindings
+        expr: max by (job_name) (integrity_findings) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job_name }} found {{ $value }} rows that break a rule"
+          runbook: docs/09-operations/runbooks/RB-01-ledger-invariant.md
+
       - alert: OutboxLag
         expr: max by (schema) (outbox_oldest_unpublished_age_seconds) > 120
         for: 1m
