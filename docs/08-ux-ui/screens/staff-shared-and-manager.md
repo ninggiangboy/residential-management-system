@@ -1,24 +1,26 @@
 # Staff app: shared and Manager
 
-> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the B-screens are owed) (§1, the P1 sections: sign-in and account) · Updated: 2026-10-28 (DR-279: the usage switch on `S-Account`) · 2026-10-20 · DOC-61
+> Status: **Approved** (Owner, 2026-10-21, for §1 (gate P1); the B-screens are owed) (§1, the P1 sections: sign-in and account) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-10-28 (DR-279: the usage switch on `S-Account`) · 2026-10-20 · DOC-61
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-38, 39, 41…47, 52, 69, 70, 71, 72, 73, 74, 128, 147), [DOC-02](../../01-product/personas-and-journeys.md), [DOC-03](../../01-product/requirements.md) (FR-13, FR-14, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-17, UC-26), [DOC-26](../../06-design/identity-and-sessions.md) §4, [DOC-42](../../06-design/error-handling.md), [DOC-51](../../07-api/api-endpoints.md) (E-03, E-05, E-06, E-12, E-30…E-37), [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md)
 > Main readers: P1-17 (staff app shell), P1-09 (i18n catalog), P1-00 (doc gate), the writers of DOC-62, DOC-63 and DOC-68, P4-00 and P5-00 for the later screens
 
-This document specifies the screens that every staff role shares in the staff app and, later, the Manager's screens. **§1 (P1, `Review`)** is the sign-in and account group: `S-Login`, `S-Login-Error`, `S-Forgot`, `S-Forgot-Sent`, `S-Account` with its sessions view. The rest (`S-Inbox`, `S-Docs`, `S-Doc-Page`, `B-*`) is only listed in the last section with phase and endpoints and is specified in full before P4 and P5. The convention is DOC-56 §6: the Owner's prototype (design system "Hiên") is the visual source of truth and is not redrawn. Tokens and components are DOC-54, navigation DOC-53, client rules DOC-55, error and status copy DOC-68. The staff app serves the Manager, Technician and Guard; the Admin works on the web (DR-174).
+This document specifies the screens that every staff role shares in the staff app and, later, the Manager's screens. **§1 (P1, `Review`)** is the sign-in and account group: `S-Login`, `S-Login-Error`, `S-Forgot`, `S-Forgot-Sent`, `S-Account` with its sessions view. The rest (`S-Inbox`, `S-Docs`, `S-Doc-Page`, `B-*`) is only listed in the last section with phase and endpoints and is specified in full before P4 and P5. The convention is DOC-56 §6: the Owner's prototype (design system "Hiên") is the reference for layout and UX and is not redrawn. Tokens and components are DOC-54, navigation DOC-53, client rules DOC-55, error and status copy DOC-68. The staff app serves the Manager, Technician and Guard; the Admin works on the web (DR-174).
 
 Test prefix: `UISM-` (DOC-56 §6.3). Copy keys: `staff.<screen>.<element>`, the screen name without `S-` (DOC-56 §6.4). Maestro flows live in `apps/staff-app/.maestro/` (DOC-88).
 
 Until a role's first screen ships (P4 for the Manager and the Technician, P5 for the Guard), the signed-in staff app has the single tab "Tài khoản" and lands on `S-Account`: a nav entry exists only when its phase has shipped (DR-174).
 
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
+
 ## Screens in this file
 
 | Section | Screen | Role | Phase | Prototype |
 | --- | --- | --- | --- | --- |
-| `S-Login` | Sign-in by email and password | Any staff (signed out) | P1 | designed |
-| `S-Login-Error` | Wrong password and lock: states of `S-Login` | Any staff (signed out) | P1 | designed |
-| `S-Forgot` | Ask for a reset link | Any staff (signed out) | P1 | designed |
-| `S-Forgot-Sent` | Reset link requested | Any staff (signed out) | P1 | designed |
-| `S-Account` | Profile, language, push, sessions, sign out | Manager, Technician, Guard | P1 | designed |
+| [`S-Login`](../../references/design-canvas/S-Login.dc.html) | Sign-in by email and password | Any staff (signed out) | P1 | designed |
+| [`S-Login-Error`](../../references/design-canvas/S-Login-Error.dc.html) | Wrong password and lock: states of `S-Login` | Any staff (signed out) | P1 | designed |
+| [`S-Forgot`](../../references/design-canvas/S-Forgot.dc.html) | Ask for a reset link | Any staff (signed out) | P1 | designed |
+| [`S-Forgot-Sent`](../../references/design-canvas/S-Forgot-Sent.dc.html) | Reset link requested | Any staff (signed out) | P1 | designed |
+| [`S-Account`](../../references/design-canvas/S-Account.dc.html) | Profile, language, push, sessions, sign out | Manager, Technician, Guard | P1 | designed |
 | (fifteen more) | Inbox, library, Manager screens | | P4, P5 | see the last section |
 
 ## S-Login
@@ -35,7 +37,7 @@ Route `/login` (group `(auth)`); no params. The language switch is local until s
 
 ### 3. Prototype
 
-Artboard `S-Login` ("Nhân viên: Đăng nhập", 390 × 844). Regions: `Glow` · header (brand "Hiên", ghost `Button` "English") · context line ("Mộc Miên Residence · Ứng dụng nhân viên"), H1 "Đăng nhập", intro sentence · `TextField` Email, `TextField` Mật khẩu with suffix "Hiện" · footer: primary `Button` "Đăng nhập", ghost `Button` "Quên mật khẩu", note about who creates accounts.
+Artboard [`S-Login`](../../references/design-canvas/S-Login.dc.html) ("Nhân viên: Đăng nhập", 390 × 844). Regions: `Glow` · header (brand "Hiên", ghost `Button` "English") · context line ("Mộc Miên Residence · Ứng dụng nhân viên"), H1 "Đăng nhập", intro sentence · `TextField` Email, `TextField` Mật khẩu with suffix "Hiện" · footer: primary `Button` "Đăng nhập", ghost `Button` "Quên mật khẩu", note about who creates accounts.
 
 Do not copy:
 - The brand "Hiên", the building name and the sample email are hard-drawn (N8). The display name of the app is an Owner input (DR-69, P0-03); the building name comes from E-03 `contact.name`; no field is pre-filled.
@@ -130,7 +132,7 @@ None (same route `/login`).
 
 ### 3. Prototype
 
-Artboard `S-Login-Error` (390 × 844): the same screen with a warning `Banner` titled "Nhập sai 5 lần sẽ tạm khóa đăng nhập" above the form and the password field in error with "Email hoặc mật khẩu chưa đúng. Bạn còn 2 lần thử."
+Artboard [`S-Login-Error`](../../references/design-canvas/S-Login-Error.dc.html) (390 × 844): the same screen with a warning `Banner` titled "Nhập sai 5 lần sẽ tạm khóa đăng nhập" above the form and the password field in error with "Email hoặc mật khẩu chưa đúng. Bạn còn 2 lần thử."
 
 Do not copy (N2, DR-128): the counter "Bạn còn 2 lần thử" (the API gives no remaining count and the client keeps none); the numbers 5 and 15 in the banner, which are building settings (`lockout.maxAttempts`, `lockout.minutes`, DOC-36) and would be wrong after an Admin changes them (DR-206). The banner shows after a failed attempt, not before.
 
@@ -187,7 +189,7 @@ Route `/forgot`; no params (the typed email is passed in memory).
 
 ### 3. Prototype
 
-Artboard `S-Forgot` ("Nhân viên: Quên mật khẩu", 390 × 844): `TopBar` with back · H1 "Quên mật khẩu" and a sentence · `TextField` Email with helper · neutral `Banner` "Đổi mật khẩu trên trình duyệt" · primary `Button` "Gửi link đổi mật khẩu".
+Artboard [`S-Forgot`](../../references/design-canvas/S-Forgot.dc.html) ("Nhân viên: Quên mật khẩu", 390 × 844): `TopBar` with back · H1 "Quên mật khẩu" and a sentence · `TextField` Email with helper · neutral `Banner` "Đổi mật khẩu trên trình duyệt" · primary `Button` "Gửi link đổi mật khẩu".
 
 Do not copy: the pre-filled sample email; the helper "Email bạn dùng để đăng nhập ứng dụng nhân viên" (keep, it is accurate).
 
@@ -251,7 +253,7 @@ Route `/forgot/sent`; the email is passed in memory, not in the URL.
 
 ### 3. Prototype
 
-Artboard `S-Forgot-Sent` ("Nhân viên: Đã gửi link đổi mật khẩu", 390 × 844): a close `IconButton` · `EmptyState` (icon check-circle, title, description with the masked email) · footer: primary "Mở ứng dụng email", ghost "Quay lại đăng nhập", a line about resending after 60 seconds.
+Artboard [`S-Forgot-Sent`](../../references/design-canvas/S-Forgot-Sent.dc.html) ("Nhân viên: Đã gửi link đổi mật khẩu", 390 × 844): a close `IconButton` · `EmptyState` (icon check-circle, title, description with the masked email) · footer: primary "Mở ứng dụng email", ghost "Quay lại đăng nhập", a line about resending after 60 seconds.
 
 Do not copy:
 - The title "Đã gửi link tới email của bạn" asserts delivery, which is false for an unknown email; the text is neutral (DR-206).
@@ -316,7 +318,7 @@ Route `/account`, and the sub-view `/account/sessions` (DOC-53 §5.2); no params
 
 ### 3. Prototype
 
-Artboard `S-Account` ("Kỹ thuật: Tài khoản", 390 × 1100, drawn for the Technician). Regions: large `TopBar` "Tài khoản" · profile row (`Avatar` lg, name, email, role `Tag`, pencil `IconButton`) · building row · section "Cài đặt" (Ngôn ngữ, Thông báo đẩy `Switch`) · section "Mật khẩu" (note card) · outline "Đăng xuất" · `TabBar`.
+Artboard [`S-Account`](../../references/design-canvas/S-Account.dc.html) ("Kỹ thuật: Tài khoản", 390 × 1100, drawn for the Technician). Regions: large `TopBar` "Tài khoản" · profile row (`Avatar` lg, name, email, role `Tag`, pencil `IconButton`) · building row · section "Cài đặt" (Ngôn ngữ, Thông báo đẩy `Switch`) · section "Mật khẩu" (note card) · outline "Đăng xuất" · `TabBar`.
 
 Do not copy:
 - The second line of the building row ("Công ty Quản lý Mộc Miên") has no source; the row shows the building name from E-03 (DR-203 applies to staff too).

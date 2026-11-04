@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tài liệu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1080px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Tài liệu" subtitle="Nội quy, hướng dẫn, biểu mẫu" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 4px 20px 24px;">
+<x-import component-from-global-scope="Hien.SearchField" label="Tìm tài liệu" value="" placeholder="Tìm theo tiêu đề hoặc nội dung" on-change="{{noop}}"></x-import>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Thư mục</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="info" tone="teal" title="Nội quy tòa nhà" subtitle="5 trang" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="wrench" tone="sky" title="Hướng dẫn sử dụng căn hộ" subtitle="3 thư mục, 12 trang" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="note-pencil" tone="gold" title="Biểu mẫu" subtitle="Đăng ký thi công, chuyển đồ, 6 tệp" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="fire-extinguisher" tone="coral" title="An toàn phòng cháy" subtitle="4 trang, có video" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="phone" tone="violet" title="Danh bạ khẩn cấp" subtitle="1 trang" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Mới cập nhật</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" title="Nội quy sử dụng thang máy và hành lang" subtitle="Nội quy tòa nhà, cập nhật 02/10/2026" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" title="Đăng ký chuyển đồ vào, ra" subtitle="Biểu mẫu, cập nhật 20/09/2026" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

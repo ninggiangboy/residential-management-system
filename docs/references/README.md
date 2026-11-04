@@ -1,16 +1,17 @@
 # References
 
-Inputs to the system design, kept in the repo so the design and its sources live together. They are condensed copies, not mirrors.
+Inputs to the system design, kept in the repo so the design and its sources live together. They are condensed copies, not mirrors, except `design-canvas/`, which is a byte-for-byte snapshot.
 
 | File | What it is | Source |
 | --- | --- | --- |
 | [product-proposal.md](product-proposal.md) | Product proposal and feature checklist (Vietnamese): user groups, 11 modules, 139 features, main flows, scope and points to confirm | Client proposal v1.0, 10/10/2026 |
 | [design-screens.md](design-screens.md) | Catalog of the 115 design artboards per app and role, and the business rules they imply | Design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> (see [Design artifacts](#design-artifacts)) |
+| [design-canvas/](design-canvas/README.md) | Snapshot of the canvas files: the 110 artboards with an index, `canvas.json`, the design system copy. **The reference for layout and UX (DR-335)**; components and visual styling follow DOC-54 | Design canvas <https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj> |
 | [architecture-reference/](architecture-reference/) | Selected chapters and patterns of the reference modular monolith (Elysia, Bun, Drizzle, Postgres) whose architecture this system follows | `elysia-architecture` repository, `docs/` |
 
 ## Design artifacts
 
-The two design sources are claude.ai artifacts. They are the visual source of truth (DOC-54); the repository holds copies of what the code needs (`packages/design-tokens/tokens.json`, the fonts) and a test keeps the copies honest.
+The two design sources are claude.ai artifacts. The canvas is the reference for layout and UX (DR-335), and the design system is where the tokens come from (DOC-54); the repository holds copies of what the code needs (`packages/design-tokens/tokens.json`, the fonts) and a test keeps the copies honest. [`design-canvas/`](design-canvas/README.md) holds a snapshot of the canvas files so that a screen document can link its artboard; no test compares it with the canvas, and the canvas wins when they differ (DR-335).
 
 | Artifact | URL | Holds | Read with |
 | --- | --- | --- | --- |

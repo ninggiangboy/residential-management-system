@@ -6,7 +6,7 @@ Original design document: [`../residential-management-sdd.md`](../residential-ma
 
 1. [00-master-plan.md](00-master-plan.md): the master plan. Documents to write with required content and gates, roadmap, tasks per phase, traceability.
 2. [00-decision-register.md](00-decision-register.md): the decision register. 84 gaps and policies of the original SDD, each with one proposed decision; the Owner reviews them first.
-3. `references/`: the inputs kept with the SDD (product proposal, design screen catalog, architecture reference).
+3. `references/`: the inputs kept with the SDD (product proposal, design screen catalog, the [design canvas snapshot](references/design-canvas/README.md) that is the reference for layout and UX, architecture reference).
 
 Reading order for a newcomer: master plan §1 → §4 → the current phase in §5 → the documents that phase lists.
 
@@ -125,7 +125,7 @@ The "Not written" rows have no file yet; paths are shown as code and become link
 
 | Folder | Content |
 | --- | --- |
-| `references/` | Product proposal, design screen catalog, architecture reference (inputs, not written by the plan) |
+| `references/` | Product proposal, design screen catalog, design canvas snapshot, architecture reference (inputs, not written by the plan) |
 | `01-product/` | Vision and scope, personas, requirements, use cases, feature catalog |
 | `02-glossary.md` | Glossary (written first) |
 | `03-architecture/` | Context and containers, data flows, messaging contracts, quality attributes, tech stack, code architecture |

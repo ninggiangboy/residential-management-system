@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tài khoản và cài đặt</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1240px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Tài khoản" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 32px;">
+<div style="display: flex; align-items: center; gap: 16px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Trần Minh Anh" size="lg"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 20px; line-height: 28px; font-weight: 600;">Trần Minh Anh</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">0912 345 678</div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="pencil-simple" label="Sửa tên và ảnh đại diện" variant="filled" on-click="{{noop}}"></x-import>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Căn hộ của bạn</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1508" subtitle="Chủ hộ, đang chọn" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" title="A-0703" subtitle="Người thuê, được thanh toán phí" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Cài đặt</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="info" title="Ngôn ngữ" value="Tiếng Việt" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="bell" title="Thông báo đẩy" subtitle="Phí, yêu cầu, phương tiện, bản tin">
+<x-import component-from-global-scope="Hien.Switch" checked="{{yes}}" label="Thông báo đẩy" on-change="{{noop}}"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="phone" title="Đổi số điện thoại" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="headset" title="Liên hệ Ban quản lý" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="info" title="Điều khoản sử dụng" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="trash" title="Yêu cầu xóa tài khoản" on-click="{{noop}}"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="lg" icon="sign-out" block="{{yes}}" on-click="{{noop}}">Đăng xuất</x-import>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1240}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', yes: true, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

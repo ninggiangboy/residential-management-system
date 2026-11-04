@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Tạo chủ hộ bằng SĐT</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 100%; min-height: 960px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<aside style="flex: 1 1 248px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; padding: 20px 12px; background: var(--surface); border-right: 1px solid var(--line);">
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 12px;">
+<div style="display: flex; flex-direction: column; min-width: 0;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 700;">Mộc Miên Residence</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Web quản lý</div>
+</div>
+</div>
+<nav style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="house" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tổng quan</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Vận hành</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="chat-circle-dots" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phiếu hỗ trợ</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellTickets}}"></x-import>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="megaphone" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Bản tin</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="note-pencil" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tài liệu</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Cư dân</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="buildings" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Căn hộ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; background: var(--teal-soft); color: var(--on-teal-soft); font-weight: 600;">
+<x-import component-from-global-scope="Hien.Icon" name="users-three" size="{{shellIcon}}" weight="fill"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cư dân</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="car" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phương tiện</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellVehicles}}"></x-import>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Tài chính</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="receipt" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Đợt phí</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="wallet" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Công nợ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="qr-code" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Giao dịch online</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="squares-four" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Báo cáo</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Hệ thống</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="user-circle" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nhân viên</span>
+</div>
+</div>
+</nav>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-control); background: var(--fill);">
+<x-import component-from-global-scope="Hien.Avatar" name="Nguyễn Thu Trang" size="sm"></x-import>
+<div style="display: flex; flex-direction: column; min-width: 0; flex-grow: 1;">
+<div style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nguyễn Thu Trang</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Ban quản lý</div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="sign-out" label="Đăng xuất" size="sm" on-click="{{shellNoop}}"></x-import>
+</div>
+</aside>
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+<header style="flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 64px; box-sizing: border-box; padding: 8px 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+<div style="flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);"><span>Cư dân</span> <span style="color: var(--line-strong);">/</span> <span style="color: var(--ink); font-weight: 600;">Cư dân</span></div>
+<div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--radius-full); background: var(--fill); font-size: 13px; line-height: 18px; font-weight: 600;">
+<span style="padding: 4px 10px; border-radius: var(--radius-full); background: var(--plate); color: var(--on-plate);">VI</span>
+<span style="padding: 4px 10px; color: var(--ink-muted);">EN</span>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 4 mục chưa đọc" count="{{shellBell}}" on-click="{{shellNoop}}"></x-import>
+</header>
+<main style="flex-grow: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 28px 32px 40px;">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;">
+<div style="flex: 1 1 320px; min-width: 0;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em;">Cư dân</h1>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">612 tài khoản</p>
+</div>
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="md" on-click="{{noop}}">Nhập từ Excel</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="md" on-click="{{noop}}">Xuất Excel</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="md" icon="plus" on-click="{{noop}}">Tạo chủ hộ</x-import>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;">
+<div style="flex: 1 1 280px; min-width: 0;"><x-import component-from-global-scope="Hien.SearchField" value="" placeholder="Tìm tên, SĐT, mã căn, email" label="Tìm cư dân"></x-import></div>
+<div style="width: 220px;"><x-import component-from-global-scope="Hien.SelectField" label="Trạng thái tài khoản" value="Tất cả" on-click="{{noop}}"></x-import></div>
+</div>
+
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden;">
+<div style="display: grid; grid-template-columns: minmax(0, 1.3fr) 120px minmax(0, 1.5fr) minmax(0, 1.3fr) 172px; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">
+<div>Họ tên</div><div>SĐT đăng nhập</div><div>Căn và vai trò</div><div>Email</div><div>Trạng thái</div>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: minmax(0, 1.3fr) 120px minmax(0, 1.5fr) minmax(0, 1.3fr) 172px; gap: 16px; align-items: center; padding: 10px 24px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 20px;">
+<div style="min-width: 0; display: flex; align-items: center; gap: 12px;">
+<x-import component-from-global-scope="Hien.Avatar" name="{{r.name}}" size="sm"></x-import>
+<div style="min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</div>
+</div>
+<div style="font-variant-numeric: tabular-nums;">{{r.phone}}</div>
+<div style="min-width: 0; display: flex; align-items: center; gap: 8px;"><x-import component-from-global-scope="Hien.Plate" size="sm">{{r.code}}</x-import><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.role}}</span></div>
+<div style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.email}}</div>
+<div><x-import component-from-global-scope="Hien.Tag" tone="success">Đang dùng</x-import></div>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; inset: 0; background: var(--scrim);"></div>
+<div style="position: absolute; top: 0; right: 0; bottom: 0; width: 520px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: var(--surface); box-shadow: var(--shadow-sheet);">
+<div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 16px 16px 16px 24px; border-bottom: 1px solid var(--line);">
+<h2 style="flex-grow: 1; min-width: 0; margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Gán chủ hộ cho căn A-2304</h2>
+<x-import component-from-global-scope="Hien.IconButton" icon="x" label="Đóng" on-click="{{noop}}"></x-import>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 20px; padding: 24px;">
+<x-import component-from-global-scope="Hien.TextField" label="SĐT đăng nhập" value="0938 222 333" icon="phone" type="tel"></x-import>
+<x-import component-from-global-scope="Hien.Banner" tone="info" title="SĐT này đã có tài khoản">Phạm Thu Hà, người thuê căn A-1102. Hệ thống sẽ liên kết thêm căn A-2304 với vai trò Chủ hộ, không tạo tài khoản mới.</x-import>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-control); background: var(--fill);">
+<x-import component-from-global-scope="Hien.Avatar" name="Phạm Thu Hà" size="md"></x-import>
+<div style="flex-grow: 1; min-width: 0;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Phạm Thu Hà</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">0938 222 333, tài khoản đang dùng</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+<x-import component-from-global-scope="Hien.Plate" size="sm">A-1102</x-import>
+<span style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Người thuê</span>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+<x-import component-from-global-scope="Hien.SelectField" label="Căn" value="A-2304" icon="buildings" helper="Tầng 23, 1PN, đang trống" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.SelectField" label="Vai trò ở căn này" value="Chủ hộ" helper="Mỗi căn có đúng một chủ hộ" disabled="{{yes}}"></x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Hồ sơ cư dân, lấy từ hồ sơ hiện có</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+<x-import component-from-global-scope="Hien.TextField" label="Họ tên" value="Phạm Thu Hà" disabled="{{yes}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Email" value="thuha.pham@gmail.com" disabled="{{yes}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Số CCCD" value="001 195 012 345" disabled="{{yes}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Ngày sinh" value="14/03/1995" disabled="{{yes}}"></x-import>
+</div>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink-muted);">
+<x-import component-from-global-scope="Hien.Icon" name="info" size="{{s16}}"></x-import>
+<span>Chủ hộ đăng nhập App cư dân bằng SĐT + OTP. Sau khi liên kết, Phạm Thu Hà thấy cả hai căn và chuyển căn trong app.</span>
+</div>
+</div>
+<div style="flex-shrink: 0; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line);">
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="md" on-click="{{noop}}">Hủy</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="md" on-click="{{noop}}">Liên kết căn A-2304</x-import>
+</div>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', shellIcon: 20, shellTickets: 3, shellVehicles: 3, shellBell: 4, shellNoop: () => {}, 
+s16: 16,
+yes: true,
+rows: [
+{ name: 'Trần Minh Anh', phone: '0912 345 678', code: 'A-1508', role: 'Chủ hộ', email: 'minhanh.tran@gmail.com' },
+{ name: 'Trần Minh Khoa', phone: '0903 111 222', code: 'A-1508', role: 'Thành viên gia đình', email: 'Chưa có' },
+{ name: 'Đặng Quốc Bảo', phone: '0903 456 789', code: 'A-1102', role: 'Chủ hộ', email: 'bao.dang@gmail.com' },
+{ name: 'Phạm Thu Hà', phone: '0938 222 333', code: 'A-1102', role: 'Người thuê', email: 'thuha.pham@gmail.com' },
+{ name: 'Ngô Văn Thành', phone: '0915 678 234', code: 'A-0906', role: 'Chủ hộ', email: 'thanh.ngo@gmail.com' },
+{ name: 'Lê Hoàng Phúc', phone: '0977 432 100', code: 'A-0906', role: 'Người thuê', email: 'phuc.lehoang@gmail.com' },
+{ name: 'Hoàng Thị Mai', phone: '0986 210 334', code: 'A-0603', role: 'Chủ hộ', email: 'mai.hoang@gmail.com' }
+],
+noop: () => {}
+};
+}
+}
+</script>
+</body>
+</html>

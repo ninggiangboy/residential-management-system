@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Đóng phiếu đã hoàn thành</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1480px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Chi tiết phiếu" subtitle="Phiếu hỗ trợ" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 32px; padding: 8px 20px 24px;">
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1008-015</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="success">Chờ đóng phiếu</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Rò nước ở trần nhà vệ sinh</h1>
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-0906</x-import><span>Sửa chữa, phụ trách Lê Minh Tuấn</span></div>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Kết quả của kỹ thuật</h2>
+<x-import component-from-global-scope="Hien.Card">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Lê Minh Tuấn" size="sm"></x-import>
+<div style="flex-grow: 1; min-width: 0; font-size: 14px; line-height: 20px;"><span style="font-weight: 600;">Lê Minh Tuấn</span> <span style="color: var(--ink-muted);">báo hoàn thành 09:10, 09/10</span></div>
+</div>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Khớp nối ống cấp nước của căn A-1006 phía trên bị lỏng, nước thấm xuống trần. Đã siết lại khớp nối, thay gioăng, mở nước thử 30 phút, trần khô.</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div role="img" aria-label="Ảnh trước khi sửa: trần thấm nước" style="height: 120px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconMd}}"></x-import></div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Trước</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div role="img" aria-label="Ảnh sau khi sửa: khớp nối đã thay gioăng" style="height: 120px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconMd}}"></x-import></div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Sau</div>
+</div>
+</div>
+</div>
+</x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Ảnh kết quả của BQL <span style="font-weight: 400; color: var(--ink-muted);">(không bắt buộc)</span></div>
+<x-import component-from-global-scope="Hien.AttachmentPicker" items="{{none}}" max="{{maxFiles}}" add-label="Thêm ảnh kết quả" on-add="{{noop}}" on-remove="{{noop}}"></x-import>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Cư dân thấy ảnh này trong phiếu sau khi bạn đóng phiếu.</div>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tiến độ</h2>
+<x-import component-from-global-scope="Hien.Card">
+<x-import component-from-global-scope="Hien.Timeline" steps="{{steps}}"></x-import>
+</x-import>
+</section>
+
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 20px 32px; background: var(--surface); box-shadow: var(--shadow-bar);">
+<div style="display: flex; gap: 12px;">
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="lg" on-click="{{noop}}" style="flex: 1 1 0;">Mở lại phiếu</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="check" on-click="{{noop}}" style="flex: 1 1 0;">Đóng phiếu</x-import>
+</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted); text-align: center;">Đóng phiếu xong, cư dân nhận thông báo và được mời đánh giá.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1480}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+iconMd: 24,
+maxFiles: 5,
+none: [],
+noop: function () {},
+steps: [
+{ title: 'Cư dân gửi phiếu', time: '10:20, 08/10', state: 'done' },
+{ title: 'BQL đã tiếp nhận', time: '10:45, 08/10', note: 'Bạn phân công cho Lê Minh Tuấn.', state: 'done' },
+{ title: 'Đang xử lý', time: '14:00, 08/10', note: 'Tìm ra chỗ rò ở căn A-1006 phía trên, hẹn xử lý sáng 09/10.', state: 'done' },
+{ title: 'Kỹ thuật báo hoàn thành', time: '09:10, 09/10', note: 'Có ảnh trước, sau và ghi chú kết quả.', state: 'done' },
+{ title: 'BQL đóng phiếu', note: 'Chờ bạn kiểm tra kết quả.', state: 'current' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

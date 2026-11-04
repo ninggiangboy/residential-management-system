@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỹ thuật: Trang tài liệu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1400px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Quy trình kỹ thuật" subtitle="Tài liệu" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 32px;">
+<header style="display: flex; flex-direction: column; gap: 8px;">
+<nav aria-label="Đường dẫn" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 13px; line-height: 18px; color: var(--ink-muted);">
+<a href="#" style="color: inherit; text-decoration: none;">Tài liệu</a>
+<x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconXs}}"></x-import>
+<a href="#" style="color: inherit; text-decoration: none;">Quy trình kỹ thuật</a>
+<x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconXs}}"></x-import>
+<span aria-current="page" style="color: var(--ink); font-weight: 500;">Xử lý rò rỉ nước</span>
+</nav>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Quy trình xử lý rò rỉ nước</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Ban quản lý cập nhật 05/10/2026, dành cho Kỹ thuật</div>
+</header>
+
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Áp dụng khi nhận phiếu báo rò nước ở căn hộ, trần, hộp kỹ thuật hoặc khu vực chung.</p>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Các bước</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px;">
+<li style="display: flex; gap: 12px;"><span aria-hidden="true" style="flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">1</span><div style="display: flex; flex-direction: column; gap: 2px; padding-top: 2px;"><div style="font-size: 16px; line-height: 24px; font-weight: 600;">Khóa van cấp nước</div><div style="font-size: 15px; line-height: 22px; color: var(--ink-muted);">Khóa van nhánh của căn. Chưa rõ nguồn rò thì khóa van tổng trục theo sơ đồ đính kèm và báo BQL.</div></div></li>
+<li style="display: flex; gap: 12px;"><span aria-hidden="true" style="flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">2</span><div style="display: flex; flex-direction: column; gap: 2px; padding-top: 2px;"><div style="font-size: 16px; line-height: 24px; font-weight: 600;">Ngắt điện khu vực ướt</div><div style="font-size: 15px; line-height: 22px; color: var(--ink-muted);">Ngắt aptomat nhánh nếu nước gần ổ cắm, đèn hoặc thiết bị điện.</div></div></li>
+<li style="display: flex; gap: 12px;"><span aria-hidden="true" style="flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">3</span><div style="display: flex; flex-direction: column; gap: 2px; padding-top: 2px;"><div style="font-size: 16px; line-height: 24px; font-weight: 600;">Tìm điểm rò và chụp ảnh</div><div style="font-size: 15px; line-height: 22px; color: var(--ink-muted);">Kiểm tra ống cấp, ống thoát, mối nối thiết bị vệ sinh. Chụp ảnh trước khi xử lý.</div></div></li>
+<li style="display: flex; gap: 12px;"><span aria-hidden="true" style="flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">4</span><div style="display: flex; flex-direction: column; gap: 2px; padding-top: 2px;"><div style="font-size: 16px; line-height: 24px; font-weight: 600;">Sửa và thử áp</div><div style="font-size: 15px; line-height: 22px; color: var(--ink-muted);">Thay gioăng, đoạn ống hoặc mối nối hỏng. Mở van, theo dõi 15 phút.</div></div></li>
+<li style="display: flex; gap: 12px;"><span aria-hidden="true" style="flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--teal-soft); color: var(--on-teal-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">5</span><div style="display: flex; flex-direction: column; gap: 2px; padding-top: 2px;"><div style="font-size: 16px; line-height: 24px; font-weight: 600;">Cập nhật phiếu</div><div style="font-size: 15px; line-height: 22px; color: var(--ink-muted);">Gửi ảnh sau xử lý lên phiếu và chuyển phiếu sang Hoàn thành.</div></div></li>
+</ol>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Video hướng dẫn</h2>
+<a href="#" aria-label="Phát video Khóa van tổng trục nước lạnh tầng 8–15 trên YouTube" style="display: flex; flex-direction: column; gap: 8px; color: inherit; text-decoration: none;">
+<div style="position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-card); background: var(--plate); color: var(--on-plate); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+<div style="position: absolute; left: 16px; top: 12px; right: 16px; font-size: 13px; line-height: 18px; font-weight: 500; opacity: 0.8;">YouTube</div>
+<div style="width: 64px; height: 64px; border-radius: var(--radius-full); background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-float);"><x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconLg}}" weight="fill"></x-import></div>
+<div style="position: absolute; right: 12px; bottom: 12px; padding: 2px 8px; border-radius: var(--radius-full); background: var(--surface); color: var(--ink); font-size: 12px; line-height: 16px; font-weight: 600; font-variant-numeric: tabular-nums;">4:05</div>
+</div>
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Khóa van tổng trục nước lạnh tầng 8–15</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted); margin-top: -6px;">YouTube, 4 phút 05 giây</div>
+</a>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tệp đính kèm</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="drop" tone="sky" title="Sơ đồ van tổng tòa A.pdf" subtitle="PDF, 2,4 MB">
+<x-import component-from-global-scope="Hien.Button" variant="tonal" size="sm" on-click="{{noop}}">Tải về</x-import>
+</x-import>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', iconXs: 14, iconLg: 32, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

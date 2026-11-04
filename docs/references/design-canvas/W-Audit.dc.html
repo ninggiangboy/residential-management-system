@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Admin: Nhật ký thao tác</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 100%; min-height: 1280px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<aside style="flex: 1 1 248px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; padding: 20px 12px; background: var(--surface); border-right: 1px solid var(--line);">
+<div style="display: flex; align-items: center; gap: 12px; padding: 0 12px;">
+<div style="display: flex; flex-direction: column; min-width: 0;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 700;">Mộc Miên Residence</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Web quản lý</div>
+</div>
+</div>
+<nav style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="house" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tổng quan</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Vận hành</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="chat-circle-dots" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phiếu hỗ trợ</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellTickets}}"></x-import>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="megaphone" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Bản tin</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="note-pencil" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tài liệu</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Cư dân</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="buildings" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Căn hộ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="users-three" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cư dân</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="car" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phương tiện</span>
+<x-import component-from-global-scope="Hien.Badge" count="{{shellVehicles}}"></x-import>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Tài chính</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="receipt" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Đợt phí</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="wallet" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Công nợ</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="qr-code" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Giao dịch online</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="squares-four" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Báo cáo</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="padding: 0 12px 4px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">Hệ thống</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="user-circle" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nhân viên</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="gear" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tòa nhà và cấu hình</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="key" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cổng thanh toán</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; background: var(--teal-soft); color: var(--on-teal-soft); font-weight: 600;">
+<x-import component-from-global-scope="Hien.Icon" name="clock" size="{{shellIcon}}" weight="fill"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nhật ký thao tác</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 12px; border-radius: var(--radius-control); font-size: 15px; line-height: 20px; color: var(--ink); font-weight: 500;">
+<x-import component-from-global-scope="Hien.Icon" name="package" size="{{shellIcon}}"></x-import>
+<span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sao lưu và lưu trữ</span>
+</div>
+</div>
+</nav>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-control); background: var(--fill);">
+<x-import component-from-global-scope="Hien.Avatar" name="Phạm Quốc Việt" size="sm"></x-import>
+<div style="display: flex; flex-direction: column; min-width: 0; flex-grow: 1;">
+<div style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phạm Quốc Việt</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Admin</div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="sign-out" label="Đăng xuất" size="sm" on-click="{{shellNoop}}"></x-import>
+</div>
+</aside>
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+<header style="flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 64px; box-sizing: border-box; padding: 8px 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+<div style="flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);"><span>Hệ thống</span> <span style="color: var(--line-strong);">/</span> <span style="color: var(--ink); font-weight: 600;">Nhật ký thao tác</span></div>
+<div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--radius-full); background: var(--fill); font-size: 13px; line-height: 18px; font-weight: 600;">
+<span style="padding: 4px 10px; border-radius: var(--radius-full); background: var(--plate); color: var(--on-plate);">VI</span>
+<span style="padding: 4px 10px; color: var(--ink-muted);">EN</span>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 4 mục chưa đọc" count="{{shellBell}}" on-click="{{shellNoop}}"></x-import>
+</header>
+<main style="flex-grow: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 28px 32px 40px;">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;">
+<div style="flex: 1 1 320px; min-width: 0;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em;">Nhật ký thao tác</h1>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Mọi thao tác thay đổi dữ liệu của nhân viên, 128 thao tác trong 7 ngày gần nhất</p>
+</div>
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="md" on-click="{{noop}}">Xuất Excel</x-import>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;">
+<div style="flex: 1 1 280px; min-width: 0;"><x-import component-from-global-scope="Hien.SearchField" value="" placeholder="Tìm nội dung, mã căn, mã phiếu, biển số" label="Tìm trong nhật ký"></x-import></div>
+<div style="width: 200px;"><x-import component-from-global-scope="Hien.SelectField" label="Người thao tác" value="Tất cả nhân viên" on-click="{{noop}}"></x-import></div>
+<div style="width: 200px;"><x-import component-from-global-scope="Hien.SelectField" label="Loại thao tác" value="Tất cả loại" on-click="{{noop}}"></x-import></div>
+<div style="width: 200px;"><x-import component-from-global-scope="Hien.SelectField" label="Thời gian" value="7 ngày qua" icon="calendar-blank" on-click="{{noop}}"></x-import></div>
+</div>
+
+<div style="background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden;">
+<div style="overflow-x: auto;">
+<div style="min-width: 960px;">
+<div style="display: grid; grid-template-columns: 96px 200px minmax(0, 1fr) 150px 140px; gap: 16px; align-items: center; padding: 12px 24px; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);">
+<div>Thời gian</div><div>Người thao tác</div><div>Thao tác</div><div>Đối tượng</div><div style="text-align: right;">IP</div>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+<div style="display: grid; grid-template-columns: 96px 200px minmax(0, 1fr) 150px 140px; gap: 16px; align-items: center; padding: 10px 24px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 20px; {{r.rowBg}}">
+<div style="font-variant-numeric: tabular-nums;"><div>{{r.time}}</div><div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">{{r.date}}</div></div>
+<div style="min-width: 0; display: flex; align-items: center; gap: 10px;"><x-import component-from-global-scope="Hien.Avatar" name="{{r.who}}" size="sm"></x-import><div style="min-width: 0;"><div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.who}}</div><div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">{{r.role}}</div></div></div>
+<div style="min-width: 0;"><div style="font-weight: 500;">{{r.action}}</div><div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">{{r.kind}}</div></div>
+<div>
+<sc-if value="{{r.code}}" hint-placeholder-val="{{yes}}"><x-import component-from-global-scope="Hien.Plate" size="sm" tone="{{r.plateTone}}">{{r.code}}</x-import></sc-if>
+<sc-if value="{{r.target}}" hint-placeholder-val="{{no}}"><span style="color: var(--ink-muted);">{{r.target}}</span></sc-if>
+</div>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-variant-numeric: tabular-nums; color: var(--ink-muted);"><span>{{r.ip}}</span><span style="display: flex;"><x-import component-from-global-scope="Hien.Icon" name="{{r.caret}}" size="{{s16}}"></x-import></span></div>
+</div>
+<sc-if value="{{r.open}}" hint-placeholder-val="{{no}}">
+<div style="padding: 4px 24px 20px; border-bottom: 1px solid var(--line); background: var(--teal-soft);">
+<div style="padding: 16px 20px; border-radius: var(--radius-control); background: var(--surface); display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Chi tiết thay đổi</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Hủy ghi nhận lúc 08:58, 09/10, tiền mặt</div>
+</div>
+<div style="font-size: 14px; line-height: 20px;">
+<div style="display: grid; grid-template-columns: 240px 180px 24px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-muted);"><div>Trường</div><div>Trước</div><div></div><div>Sau</div></div>
+<sc-for list="{{diff}}" as="d" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 240px 180px 24px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums;"><div style="color: var(--ink-muted);">{{d.field}}</div><div style="text-decoration: line-through; color: var(--ink-muted);">{{d.before}}</div><div style="display: flex; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{s16}}"></x-import></div><div style="font-weight: 600;">{{d.after}}</div></div>
+</sc-for>
+<div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px; padding: 8px 0 0;"><div style="color: var(--ink-muted);">Lý do</div><div>Ghi trùng căn</div></div>
+</div>
+</div>
+</div>
+</sc-if>
+</sc-for>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; font-size: 13px; line-height: 18px; color: var(--ink-muted);">
+<span>1–10 trên 128 thao tác</span>
+<div style="display: flex; gap: 4px;">
+<x-import component-from-global-scope="Hien.IconButton" icon="caret-left" label="Trang trước" size="sm" disabled="{{yes}}" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.IconButton" icon="caret-right" label="Trang sau" size="sm" on-click="{{noop}}"></x-import>
+</div>
+</div>
+</div></div></div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1280}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', shellIcon: 20, shellTickets: 3, shellVehicles: 3, shellBell: 4, shellNoop: () => {}, 
+yes: true,
+no: false,
+noop: () => {},
+s16: 16,
+diff: [
+{ field: 'Phiếu thu PT-1009-0031', before: 'Hợp lệ', after: 'Đã hủy' },
+{ field: 'Đã thu A-1508, đợt PH-2610-01', before: '2.488.000 đ', after: '0 đ' },
+{ field: 'Công nợ A-1508', before: '350.000 đ', after: '2.838.000 đ' }
+],
+rows: [
+{ time: '09:26', date: '09/10', who: 'Nguyễn Thu Trang', role: 'BQL', action: 'Từ chối xe 51G-234.56: vượt số lượng xe quy định', kind: 'Phương tiện', code: '51G-234.56', plateTone: 'outline', target: '', ip: '113.190.42.18', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '09:12', date: '09/10', who: 'Lý Thanh Mai', role: 'BQL', action: 'Hủy ghi nhận nộp nhầm, lý do: ghi trùng căn', kind: 'Phí', code: 'A-1508', plateTone: 'solid', target: '', ip: '14.232.118.7', rowBg: 'background: var(--teal-soft); border-bottom-color: transparent;', open: true, caret: 'caret-down' },
+{ time: '08:58', date: '09/10', who: 'Lý Thanh Mai', role: 'BQL', action: 'Ghi nhận nộp thủ công 2.488.000 đ', kind: 'Phí', code: 'A-1508', plateTone: 'solid', target: '', ip: '14.232.118.7', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '08:05', date: '09/10', who: 'Nguyễn Thu Trang', role: 'BQL', action: 'Phân công YC-1007-012 cho Đỗ Văn Hùng', kind: 'Phiếu', code: 'YC-1007-012', plateTone: 'solid', target: '', ip: '113.190.42.18', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '16:40', date: '08/10', who: 'Phạm Quốc Việt', role: 'Admin', action: 'Khóa tài khoản Trịnh Văn Sơn', kind: 'Tài khoản', code: '', plateTone: 'solid', target: 'son.trinh@mocmien.vn', ip: '27.72.96.130', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '15:20', date: '08/10', who: 'Nguyễn Thu Trang', role: 'BQL', action: 'Đổi SĐT đăng nhập của Phạm Thu Hà', kind: 'Cư dân', code: 'A-1102', plateTone: 'solid', target: '', ip: '113.190.42.18', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '14:02', date: '08/10', who: 'Nguyễn Thu Trang', role: 'BQL', action: 'Import đợt PH-2609-03: 236/240 dòng hợp lệ, 4 dòng lỗi', kind: 'Phí', code: 'PH-2609-03', plateTone: 'solid', target: '', ip: '113.190.42.18', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '10:30', date: '07/10', who: 'Phạm Quốc Việt', role: 'Admin', action: 'Sửa hạn thanh toán mặc định: 15 → 10 ngày', kind: 'Cấu hình', code: '', plateTone: 'solid', target: 'Cấu hình chung', ip: '27.72.96.130', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '17:15', date: '06/10', who: 'Lý Thanh Mai', role: 'BQL', action: 'Đóng phiếu YC-1006-004', kind: 'Phiếu', code: 'YC-1006-004', plateTone: 'solid', target: '', ip: '14.232.118.7', rowBg: '', open: false, caret: 'caret-right' },
+{ time: '09:00', date: '05/10', who: 'Nguyễn Thu Trang', role: 'BQL', action: 'Phát hành đợt PH-2610-02', kind: 'Phí', code: 'PH-2610-02', plateTone: 'solid', target: '', ip: '113.190.42.18', rowBg: '', open: false, caret: 'caret-right' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

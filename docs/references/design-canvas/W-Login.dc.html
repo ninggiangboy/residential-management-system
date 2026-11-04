@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chung: Đăng nhập</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 100%; min-height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<div style="flex-grow: 1; display: flex; flex-wrap: wrap; align-items: stretch; gap: 32px; padding: 32px; box-sizing: border-box;">
+<section style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: 48px; border-radius: var(--radius-card); background: linear-gradient(160deg, var(--hero-from), var(--hero-to)); color: var(--on-hero);">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 700;">Công ty Quản lý Mộc Miên</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--on-hero-muted);">Hotline 1900 6868, 08:00–17:30, thứ Hai–thứ Bảy</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 32px;">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="font-size: 44px; line-height: 52px; font-weight: 700; letter-spacing: -0.02em;">Mộc Miên Residence</div>
+<div style="font-size: 20px; line-height: 28px; color: var(--on-hero-muted);">Web quản lý cho Admin và Ban quản lý</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 16px; font-size: 16px; line-height: 24px;">
+<sc-for list="{{points}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px;">
+<x-import component-from-global-scope="Hien.Icon" name="{{p.icon}}" size="{{s24}}"></x-import>
+<span>{{p.text}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--on-hero-muted);">128 Nguyễn Văn Huyên, Cầu Giấy, Hà Nội, 1 tòa, 24 tầng, 240 căn</div>
+</section>
+<section style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; justify-content: flex-end;">
+<div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--radius-full); background: var(--fill); font-size: 13px; line-height: 18px; font-weight: 600;">
+<span style="padding: 4px 10px; border-radius: var(--radius-full); background: var(--plate); color: var(--on-plate);">VI</span>
+<span style="padding: 4px 10px; color: var(--ink-muted);">EN</span>
+</div>
+</div>
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+<div style="width: 460px; max-width: 100%; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em;">Đăng nhập</h1>
+<p style="margin: 0; font-size: 15px; line-height: 22px; color: var(--ink-muted);">Dùng email công việc và mật khẩu được cấp khi tạo tài khoản.</p>
+</div>
+<x-import component-from-global-scope="Hien.Banner" tone="danger" icon="warning">Email hoặc mật khẩu chưa đúng. Còn 2 lần thử, sau đó tài khoản tạm khóa 15 phút.</x-import>
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Hien.TextField" label="Email" value="trang.nguyen@mocmien.vn" type="email" placeholder="ten@mocmien.vn" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TextField" label="Mật khẩu" value="mocmien26" type="password" on-change="{{noop}}"></x-import>
+<div style="display: flex; justify-content: flex-end; margin-top: -4px;">
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}" style="margin-right: -12px;">Quên mật khẩu</x-import>
+</div>
+</div>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" block="{{yes}}" on-click="{{noop}}">Đăng nhập</x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted); text-align: center;">Kỹ thuật và Bảo vệ đăng nhập trên App quản lý bằng cùng tài khoản.</p>
+</div>
+</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted); text-align: center;">Tài khoản nhân viên do Admin tạo. Chưa có tài khoản thì liên hệ Admin.</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', shellIcon: 20, shellTickets: 3, shellVehicles: 3, shellBell: 4, shellNoop: () => {}, 
+yes: true,
+s24: 24,
+noop: () => {},
+points: [
+{ icon: 'chat-circle-dots', text: 'Phiếu hỗ trợ, bản tin và tài liệu ở một nơi' },
+{ icon: 'buildings', text: 'Căn hộ, cư dân và phương tiện của 240 căn' },
+{ icon: 'receipt', text: 'Đợt phí, công nợ và giao dịch online' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

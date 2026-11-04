@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Trang chủ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1440px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 32px; padding: 12px 20px 56px;">
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<x-import component-from-global-scope="Hien.GreetingBar" name="Nguyễn Thu Trang" greeting="Chào buổi sáng" on-profile="{{noop}}">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 5 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="margin-top: 4px; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: var(--radius-card); background: linear-gradient(135deg, var(--hero-from), var(--hero-to)); color: var(--on-hero); box-shadow: var(--shadow-card);">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 14px; line-height: 20px; color: var(--on-hero-muted);">Thứ Sáu 09/10/2026, cập nhật 09:30</div>
+<div style="font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Hôm nay ở Mộc Miên</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+<button type="button" aria-label="3 phiếu mới hôm nay, mở danh sách" style="appearance: none; margin: 0; border: 0; padding: 12px; border-radius: var(--radius-control); background: color-mix(in srgb, var(--on-hero) 12%, transparent); color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-family: var(--font-plate); font-size: 44px; line-height: 48px; font-weight: 700;">3</span>
+<span style="display: flex; align-items: center; gap: 2px; font-size: 13px; line-height: 18px; color: var(--on-hero-muted);">Phiếu mới<x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconXs}}"></x-import></span>
+</button>
+<button type="button" aria-label="3 phiếu chưa phân công, mở danh sách" style="appearance: none; margin: 0; border: 0; padding: 12px; border-radius: var(--radius-control); background: color-mix(in srgb, var(--on-hero) 12%, transparent); color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-family: var(--font-plate); font-size: 44px; line-height: 48px; font-weight: 700;">3</span>
+<span style="display: flex; align-items: center; gap: 2px; font-size: 13px; line-height: 18px; color: var(--on-hero-muted);">Chưa phân công<x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconXs}}"></x-import></span>
+</button>
+<button type="button" aria-label="3 phương tiện chờ duyệt, mở danh sách" style="appearance: none; margin: 0; border: 0; padding: 12px; border-radius: var(--radius-control); background: color-mix(in srgb, var(--on-hero) 12%, transparent); color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-family: var(--font-plate); font-size: 44px; line-height: 48px; font-weight: 700;">3</span>
+<span style="display: flex; align-items: center; gap: 2px; font-size: 13px; line-height: 18px; color: var(--on-hero-muted);">Xe chờ duyệt<x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconXs}}"></x-import></span>
+</button>
+</div>
+</div>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Cần phân công</h2>
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}" style="margin-right: -12px;">Tất cả</x-import>
+</div>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-007" title="Ổ cắm phòng khách có mùi khét" category="Sửa chữa, A-1508" time="gửi 07:55, 09/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-003" title="Đèn hành lang tầng 11 nhấp nháy" category="Sửa chữa, A-1102" time="gửi 06:40, 09/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1008-009" title="Rác tồn ở phòng rác tầng 6" category="Vệ sinh, A-0603" time="gửi 20:15, 08/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Lối tắt</h2>
+<x-import component-from-global-scope="Hien.TileGrid">
+<x-import component-from-global-scope="Hien.ServiceTile" icon="megaphone" tone="coral" label="Soạn bản tin" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ServiceTile" icon="buildings" tone="violet" label="Tra cứu căn" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ServiceTile" icon="car" tone="sky" label="Tra biển số" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ServiceTile" icon="squares-four" tone="teal" label="Tài liệu" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Bản tin vừa gửi</h2>
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}" style="margin-right: -12px;">Tất cả</x-import>
+</div>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="drop" tone="coral" title="Ngừng cấp nước tầng 8–15, 09:00–11:00 thứ Bảy 10/10" subtitle="Khẩn cấp, gửi Cư dân 07:45" value="64% đã đọc" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="home" items="{{tabs}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1440}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+unread: 5,
+iconXs: 16,
+noop: function () {},
+tabs: [
+{ key: 'home', icon: 'house', label: 'Trang chủ' },
+{ key: 'tickets', icon: 'chat-circle-dots', label: 'Phiếu', badge: 3 },
+{ key: 'vehicles', icon: 'car', label: 'Phương tiện', badge: 3 },
+{ key: 'units', icon: 'buildings', label: 'Căn hộ' },
+{ key: 'me', icon: 'user-circle', label: 'Tài khoản' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảo vệ: Tra cứu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1200px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 32px; padding: 12px 20px 56px;">
+
+<section style="display: flex; flex-direction: column; gap: 20px;">
+<x-import component-from-global-scope="Hien.GreetingBar" name="Vũ Quang Huy" greeting="Ca sáng, cổng chính" on-profile="{{noop}}">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 2 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<button type="button" aria-label="Quét mã QR cư dân, mở camera" style="all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 16px; padding: 24px 20px 20px; border-radius: var(--radius-card); background: linear-gradient(160deg, var(--hero-from), var(--hero-to)); color: var(--on-hero); box-shadow: var(--shadow-float);">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+<div style="font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--on-hero-muted);">Kiểm tra ra vào</div>
+<div style="font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.01em;">Quét mã QR cư dân</div>
+</div>
+<span style="flex-shrink: 0; width: 72px; height: 72px; box-sizing: border-box; border-radius: 20px; border: 2px solid var(--on-hero-muted); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Hien.Icon" name="qr-code" size="{{iconXl}}" weight="fill"></x-import></span>
+</div>
+<div style="font-size: 15px; line-height: 22px; color: var(--on-hero-muted);">Mã của cư dân là mã động, đổi sau mỗi 15 phút. Kết quả cho biết căn, vai trò và quyền ra vào.</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid var(--on-hero-muted); font-size: 16px; line-height: 24px; font-weight: 600;"><span>Mở camera để quét</span><x-import component-from-global-scope="Hien.Icon" name="caret-right" size="{{iconSm}}"></x-import></div>
+</button>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tra cứu thủ công</h2>
+<x-import component-from-global-scope="Hien.SegmentedControl" label="Tra cứu theo" value="unit" options="{{lookupModes}}" on-change="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.SearchField" label="Tìm căn hoặc cư dân" value="" placeholder="Mã căn hoặc tên, ví dụ A-1508" on-change="{{noop}}"></x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Dùng khi cư dân không mở được mã QR. Kết quả hiện chủ hộ và thành viên để bạn gọi xác minh.</p>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Tra cứu gần đây</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1508" subtitle="Căn hộ, quét mã của Nguyễn Thị Lan, 09:24" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="car" tone="sky" title="30H-112.05" subtitle="Biển số, Mazda CX-5 trắng, căn A-1508, 08:47" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1102" subtitle="Căn hộ, chủ hộ Đặng Quốc Bảo, 07:52" on-click="{{noop}}"></x-import>
+</x-import>
+</section>
+
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="lookup" items="{{tabs}}" center="{{centerAction}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+unread: 2,
+iconXl: 40,
+iconSm: 20,
+noop: function () {},
+lookupModes: [
+{ value: 'unit', label: 'Căn hoặc cư dân' },
+{ value: 'plate', label: 'Biển số' }
+],
+tabs: [
+{ key: 'lookup', icon: 'magnifying-glass', label: 'Tra cứu' },
+{ key: 'jobs', icon: 'chat-circle-dots', label: 'Phiếu', badge: 1 },
+{ key: 'docs', icon: 'squares-four', label: 'Tài liệu' },
+{ key: 'me', icon: 'user-circle', label: 'Tài khoản' }
+],
+centerAction: { icon: 'qr-code', label: 'Quét mã QR cư dân' }
+};
+}
+}
+</script>
+</body>
+</html>

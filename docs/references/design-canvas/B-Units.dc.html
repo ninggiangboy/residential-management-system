@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Tra cứu căn hộ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1060px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 4px 0 24px;">
+<x-import component-from-global-scope="Hien.TopBar" variant="large" title="Căn hộ" subtitle="Mộc Miên Residence">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 5 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.SearchField" label="Tìm căn hoặc cư dân" value="15" placeholder="Mã căn, tên hoặc số điện thoại" on-change="{{noop}}"></x-import>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">8 căn ở tầng 15</div>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1501" subtitle="Chủ hộ Phan Văn Đức" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="success" icon="{{noIcon}}">Đang ở</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="sky" title="A-1502" subtitle="Chủ hộ Lý Thị Hồng, người thuê Cao Minh Đạt" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="info" icon="{{noIcon}}">Cho thuê</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" title="A-1503" subtitle="Chủ hộ Đinh Gia Huy" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="neutral" icon="{{noIcon}}">Trống</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1504" subtitle="Chủ hộ Vương Minh Châu" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="success" icon="{{noIcon}}">Đang ở</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="sky" title="A-1505" subtitle="Chủ hộ Tạ Quang Vinh, người thuê Lâm Thảo My" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="info" icon="{{noIcon}}">Cho thuê</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" title="A-1506" subtitle="Chủ hộ Kiều Anh Tuấn" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="neutral" icon="{{noIcon}}">Trống</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1507" subtitle="Chủ hộ Mai Thùy Dung" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="success" icon="{{noIcon}}">Đang ở</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="A-1508" subtitle="Chủ hộ Trần Minh Anh" on-click="{{noop}}">
+<x-import component-from-global-scope="Hien.Tag" tone="success" icon="{{noIcon}}">Đang ở</x-import>
+</x-import>
+</x-import>
+</div>
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="units" items="{{tabs}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1060}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+unread: 5,
+noIcon: false,
+noop: function () {},
+tabs: [
+{ key: 'home', icon: 'house', label: 'Trang chủ' },
+{ key: 'tickets', icon: 'chat-circle-dots', label: 'Phiếu', badge: 3 },
+{ key: 'vehicles', icon: 'car', label: 'Phương tiện', badge: 3 },
+{ key: 'units', icon: 'buildings', label: 'Căn hộ' },
+{ key: 'me', icon: 'user-circle', label: 'Tài khoản' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

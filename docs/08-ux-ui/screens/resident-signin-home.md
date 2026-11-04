@@ -1,26 +1,28 @@
 # Resident app: sign-in and home
 
-> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-01 (DR-325: the "Thanh toán" tile and the fee card button are P2, not P3) · 2026-10-20 · DOC-57
+> Status: **Approved** (Owner, 2026-10-21) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-11-01 (DR-325: the "Thanh toán" tile and the fee card button are P2, not P3) · 2026-10-20 · DOC-57
 > Depends on: original SDD §7.3, §7.4, §18, [DR](../../00-decision-register.md) (DR-37, 38, 40, 41…47, 59, 60, 69…72, 74, 128), [DOC-56](README.md) (convention, notes N1…N12), [DOC-53](../ux-principles-and-ia.md) §3.4, §5, [DOC-55](../client-architecture.md) §5…§7, §10, §11, [DOC-54](../design-system.md) (components), [DOC-26](../../06-design/identity-and-sessions.md) §5, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-35](../../06-design/audit-privacy-and-terms.md) §9, [DOC-51](../../07-api/api-endpoints.md) (E-03, E-09, E-10, E-13, E-15…E-17, E-22), [DOC-42](../../06-design/error-handling.md) §5
 > Main readers: P1-11 (OTP), P1-17 (resident app shell, Maestro), P1-09 (catalog keys), the writers of DOC-58…60 and DOC-68, whoever builds a home card in P2…P5
 
-This document specifies the eleven screens a resident passes before and on the home: phone, code, terms, unit choice, and the five homes by member type. The visual source of truth is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Fees, requests, notices, QR and account screens that the home links to are DOC-58…60.
+This document specifies the eleven screens a resident passes before and on the home: phone, code, terms, unit choice, and the five homes by member type. The reference for layout and UX is the canvas (<https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj>, design system "Hiên"); this file adds data, interactions, states, copy keys and acceptance criteria (DR-194). Fees, requests, notices, QR and account screens that the home links to are DOC-58…60.
+
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
 
 ## Screens in this file
 
 | Section | Screen | Role or member type | Phase | Prototype |
 | --- | --- | --- | --- | --- |
-| `Login` | Phone number sign-in | Any resident (signed out) | P1 | designed |
-| `Login-Error` | Phone not registered: how to reach the Manager | Any resident (signed out) | P1 | designed |
-| `OTP` | Six-digit code, 5-minute lifetime, resend | Any resident (signed out) | P1 | designed |
-| `Terms` | Terms and privacy consent | Owner, Family member, Tenant, Helper | P1 | designed |
+| [`Login`](../../references/design-canvas/Login.dc.html) | Phone number sign-in | Any resident (signed out) | P1 | designed |
+| [`Login-Error`](../../references/design-canvas/Login-Error.dc.html) | Phone not registered: how to reach the Manager | Any resident (signed out) | P1 | designed |
+| [`OTP`](../../references/design-canvas/OTP.dc.html) | Six-digit code, 5-minute lifetime, resend | Any resident (signed out) | P1 | designed |
+| [`Terms`](../../references/design-canvas/Terms.dc.html) | Terms and privacy consent | Owner, Family member, Tenant, Helper | P1 | designed |
 | `Terms-Update` | Re-consent after a new terms version | Owner, Family member, Tenant, Helper | P1 | to design |
-| `Unit-Pick` | Pick a unit | Owner, Family member, Tenant, Helper | P1 | designed |
-| `Main` | Home of an owner | Owner | P1 (cards P2…P5) | designed |
-| `Home-Member` | Home of a family member | Family member | P1 (cards P2…P5) | designed |
-| `Home-Tenant-Pay` | Home of a tenant allowed to pay | Tenant with `can_pay` | P1 (cards P2…P5) | designed |
-| `Home-Tenant-NoPay` | Home of a tenant not allowed to pay | Tenant without `can_pay` | P1 (cards P2…P5) | designed |
-| `Home-Helper` | Home of a helper | Helper | P1 (cards P4, P5) | designed |
+| [`Unit-Pick`](../../references/design-canvas/Unit-Pick.dc.html) | Pick a unit | Owner, Family member, Tenant, Helper | P1 | designed |
+| [`Main`](../../references/design-canvas/Main.dc.html) | Home of an owner | Owner | P1 (cards P2…P5) | designed |
+| [`Home-Member`](../../references/design-canvas/Home-Member.dc.html) | Home of a family member | Family member | P1 (cards P2…P5) | designed |
+| [`Home-Tenant-Pay`](../../references/design-canvas/Home-Tenant-Pay.dc.html) | Home of a tenant allowed to pay | Tenant with `can_pay` | P1 (cards P2…P5) | designed |
+| [`Home-Tenant-NoPay`](../../references/design-canvas/Home-Tenant-NoPay.dc.html) | Home of a tenant not allowed to pay | Tenant without `can_pay` | P1 (cards P2…P5) | designed |
+| [`Home-Helper`](../../references/design-canvas/Home-Helper.dc.html) | Home of a helper | Helper | P1 (cards P4, P5) | designed |
 
 Test prefix: `UIRA-` (DOC-56 §6.3). Copy keys are `res.<screen>.<element>`; shared keys are listed at the end of this document for DOC-68.
 
@@ -74,7 +76,7 @@ expo-router `/login` in the `(auth)` group, no params. Not deep-linkable: a link
 
 ### 3. Prototype
 
-Canvas artboard `Login` (title "Đăng nhập", 390 × 844). Regions: wordmark row with a ghost language button "English"; building name caption; title; helper paragraph; `TextField` with phone icon; bottom block with primary `Button` "Nhận mã OTP" and a help paragraph.
+Canvas artboard [`Login`](../../references/design-canvas/Login.dc.html) (title "Đăng nhập", 390 × 844). Regions: wordmark row with a ghost language button "English"; building name caption; title; helper paragraph; `TextField` with phone icon; bottom block with primary `Button` "Nhận mã OTP" and a help paragraph.
 
 Do not copy: N8 (the wordmark "Hiên", the building name "Mộc Miên Residence" and the placeholder `[HOTLINE]` are drawn text: the wordmark is `common.app.name`, the building name and the hotline come from E-03); the field is drawn pre-filled with "0912 345 678".
 
@@ -154,7 +156,7 @@ Not a route: it is `Login` in the state "last answer was 404". The state is clea
 
 ### 3. Prototype
 
-Canvas artboard `Login-Error` (title "Đăng nhập, số chưa đăng ký", 390 × 844). Regions: as `Login`; the `TextField` carries an error message; below it a `List` with one `ListItem` (phone icon, tone teal) "Gọi Ban quản lý"; the primary button "Nhận mã OTP" stays.
+Canvas artboard [`Login-Error`](../../references/design-canvas/Login-Error.dc.html) (title "Đăng nhập, số chưa đăng ký", 390 × 844). Regions: as `Login`; the `TextField` carries an error message; below it a `List` with one `ListItem` (phone icon, tone teal) "Gọi Ban quản lý"; the primary button "Nhận mã OTP" stays.
 
 Do not copy: N8 (the hotline `[HOTLINE]` and the hours "08:00–17:30 thứ Hai đến thứ Bảy" are drawn text; they come from `contact.hotline` and `contact.workingHours` of E-03, with `en` falling back to `vi`).
 
@@ -223,7 +225,7 @@ Any resident after E-09 (UC-14 steps 2–3, FR-15.1…15.5). Reached only with a
 
 ### 3. Prototype
 
-Canvas artboard `OTP` (title "Nhập mã OTP", 390 × 844). Regions: `TopBar` with a back button; title; paragraph with the phone; `OtpInput` of 6 cells; two ghost `Button`s ("Gửi lại mã sau 45 giây" disabled, "Đổi số điện thoại"); footer note.
+Canvas artboard [`OTP`](../../references/design-canvas/OTP.dc.html) (title "Nhập mã OTP", 390 × 844). Regions: `TopBar` with a back button; title; paragraph with the phone; `OtpInput` of 6 cells; two ghost `Button`s ("Gửi lại mã sau 45 giây" disabled, "Đổi số điện thoại"); footer note.
 
 Do not copy: the artboard shows 4 of 6 digits typed and a fixed "45 giây"; the countdown is live from `resendAfter` of the answer. The phone in the paragraph is the number as typed.
 
@@ -304,7 +306,7 @@ Any resident whose latest terms or privacy version is not accepted, reached righ
 
 ### 3. Prototype
 
-Canvas artboard `Terms` (title "Đồng ý điều khoản", 390 × 844). Regions: large `TopBar` "Trước khi bắt đầu" with a subtitle; intro sentence; `List` of four `ListItem`s (personal data, push notifications, photos, account deletion); ghost `Button` "Đọc toàn văn điều khoản"; bottom block with a `Checkbox` and the primary `Button` "Đồng ý và tiếp tục".
+Canvas artboard [`Terms`](../../references/design-canvas/Terms.dc.html) (title "Đồng ý điều khoản", 390 × 844). Regions: large `TopBar` "Trước khi bắt đầu" with a subtitle; intro sentence; `List` of four `ListItem`s (personal data, push notifications, photos, account deletion); ghost `Button` "Đọc toàn văn điều khoản"; bottom block with a `Checkbox` and the primary `Button` "Đồng ý và tiếp tục".
 
 Do not copy: the checkbox is drawn **ticked**: consent must start unticked and the button disabled until the user ticks it (FR-39.1 stores an acceptance as evidence). The subtitle "Bước này chỉ hiện ở lần đăng nhập đầu tiên" is false for a returning resident on a new device after a new version: use `res.terms.subtitle`.
 
@@ -472,7 +474,7 @@ A resident with two or more active memberships after sign-in, or any resident wh
 
 ### 3. Prototype
 
-Canvas artboard `Unit-Pick` (title "Chọn căn hộ", 390 × 844). Regions: `Glow`; large `TopBar` "Chọn căn hộ" with a subtitle naming the phone; a column of `Card`s, each with a `Plate` (unit code), a title (member type) and a subtitle, and a caret; an explanatory paragraph.
+Canvas artboard [`Unit-Pick`](../../references/design-canvas/Unit-Pick.dc.html) (title "Chọn căn hộ", 390 × 844). Regions: `Glow`; large `TopBar` "Chọn căn hộ" with a subtitle naming the phone; a column of `Card`s, each with a `Plate` (unit code), a title (member type) and a subtitle, and a caret; an explanatory paragraph.
 
 Do not copy: the subtitles "Tầng 15, 85 m², 3 thành viên" and "Tầng 7, 62 m², …": E-13 returns no floor, area or member count (DR-198); the order (A-1508 first) is sample data, the app lists the units in the order of E-13 (by unit code).
 
@@ -555,7 +557,7 @@ The owner's home after unit choice (UC-14 step 6, UC-26; FR-16, FR-17; PS-owner)
 
 ### 3. Prototype
 
-Canvas artboard `Main` (title "Cư dân: Trang chủ", 390 × 1680, scrolls). Regions top to bottom: `Glow`; `GreetingBar` (avatar, greeting, name) with a bell `IconButton`; `UnitSwitcher` (plate, building, role line); `BillSlip` (hero card, due fees and "Thanh toán N đợt"); "Lối tắt" `TileGrid` of eight `ServiceTile`s; "Bản tin ghim" with two `NoticeCard`s; "Yêu cầu đang xử lý" with a `TicketCard`; `TabBar` with a center QR action.
+Canvas artboard [`Main`](../../references/design-canvas/Main.dc.html) (title "Cư dân: Trang chủ", 390 × 1680, scrolls). Regions top to bottom: `Glow`; `GreetingBar` (avatar, greeting, name) with a bell `IconButton`; `UnitSwitcher` (plate, building, role line); `BillSlip` (hero card, due fees and "Thanh toán N đợt"); "Lối tắt" `TileGrid` of eight `ServiceTile`s; "Bản tin ghim" with two `NoticeCard`s; "Yêu cầu đang xử lý" with a `TicketCard`; `TabBar` with a center QR action.
 
 Do not copy: N10 (every card is drawn; each is built in its own phase, below); N8 (the building name); the floor in the role line (DR-198).
 
@@ -699,7 +701,7 @@ As `Main`: `/`, chosen when the selected membership has `memberType = family`.
 
 ### 3. Prototype
 
-Canvas artboard `Home-Member` (title "Thành viên gia đình: Trang chủ", 390 × 1680). Same regions as `Main`; the role line reads "Tầng 15, bạn là thành viên gia đình"; the sixth tile is "Lịch sử phí" instead of "Thành viên".
+Canvas artboard [`Home-Member`](../../references/design-canvas/Home-Member.dc.html) (title "Thành viên gia đình: Trang chủ", 390 × 1680). Same regions as `Main`; the role line reads "Tầng 15, bạn là thành viên gia đình"; the sixth tile is "Lịch sử phí" instead of "Thành viên".
 
 Do not copy: N10; the floor in the role line (DR-198).
 
@@ -752,7 +754,7 @@ As `Main`: `/`, chosen when `memberType = tenant` and `canPay = true`. The home 
 
 ### 3. Prototype
 
-Canvas artboard `Home-Tenant-Pay` (title "Người thuê được trả phí: Trang chủ", 390 × 1680). As `Home-Member`, plus under the `BillSlip` the paragraph "Chủ hộ đã cho phép bạn thanh toán phí của căn này.".
+Canvas artboard [`Home-Tenant-Pay`](../../references/design-canvas/Home-Tenant-Pay.dc.html) (title "Người thuê được trả phí: Trang chủ", 390 × 1680). As `Home-Member`, plus under the `BillSlip` the paragraph "Chủ hộ đã cho phép bạn thanh toán phí của căn này.".
 
 Do not copy: N10; the floor in the role line.
 
@@ -809,7 +811,7 @@ As `Main`: `/`, chosen when `memberType = tenant` and `canPay = false`.
 
 ### 3. Prototype
 
-Canvas artboard `Home-Tenant-NoPay` (title "Người thuê không trả phí: Trang chủ", 390 × 1600). The fee card is a surface-tone `BillSlip` with status "Chủ hộ thanh toán", the paragraph "Bạn xem được phí của căn. Chủ hộ là người thanh toán các đợt phí này." and an outline button "Xem chi tiết phí"; the first tile is "Phí của căn"; the tab "Phí" has no badge.
+Canvas artboard [`Home-Tenant-NoPay`](../../references/design-canvas/Home-Tenant-NoPay.dc.html) (title "Người thuê không trả phí: Trang chủ", 390 × 1600). The fee card is a surface-tone `BillSlip` with status "Chủ hộ thanh toán", the paragraph "Bạn xem được phí của căn. Chủ hộ là người thanh toán các đợt phí này." and an outline button "Xem chi tiết phí"; the first tile is "Phí của căn"; the tab "Phí" has no badge.
 
 Do not copy: N10; the sixth tile "Thành viên" (a tenant lacks `manage_members`: the tile is "Lịch sử phí"); the floor in the role line.
 
@@ -866,7 +868,7 @@ A helper: only `broadcast_notices` (general notices, the personal QR, contact th
 
 ### 3. Prototype
 
-Canvas artboard `Home-Helper` (title "Giúp việc: Trang chủ", 390 × 1240). Regions: `Glow`; `GreetingBar` with a bell; `UnitSwitcher` ("bạn là giúp việc"); a `Card` "Mã QR ra vào" with the button "Mở mã QR của tôi"; "Bản tin chung" with three `NoticeCard`s; closing paragraph; `TabBar` (Trang chủ, center QR, Tài khoản).
+Canvas artboard [`Home-Helper`](../../references/design-canvas/Home-Helper.dc.html) (title "Giúp việc: Trang chủ", 390 × 1240). Regions: `Glow`; `GreetingBar` with a bell; `UnitSwitcher` ("bạn là giúp việc"); a `Card` "Mã QR ra vào" with the button "Mở mã QR của tôi"; "Bản tin chung" with three `NoticeCard`s; closing paragraph; `TabBar` (Trang chủ, center QR, Tài khoản).
 
 Do not copy: N11 (the bell with an unread count: a helper has no `personal_notifications`, so no bell and no `Inbox`); N10 (the QR card is P5, the notices P4); the floor in the role line.
 

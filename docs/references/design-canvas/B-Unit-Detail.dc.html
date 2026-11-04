@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Chi tiết căn hộ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1540px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Chi tiết căn hộ" subtitle="Mộc Miên Residence" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 32px; padding: 8px 20px 32px;">
+
+<x-import component-from-global-scope="Hien.Card">
+<div style="display: flex; align-items: center; gap: 16px;">
+<x-import component-from-global-scope="Hien.Plate" size="xl">A-1508</x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Tầng 15, 85 m²</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">3 phòng ngủ</div>
+<x-import component-from-global-scope="Hien.Tag" tone="success">Đang ở</x-import>
+</div>
+</div>
+</x-import>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Cư dân</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" avatar="Trần Minh Anh" title="Trần Minh Anh" subtitle="Chủ hộ, 0912 345 678">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Trần Minh Anh, 0912 345 678" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" avatar="Trần Minh Khoa" title="Trần Minh Khoa" subtitle="Thành viên gia đình, 0903 111 222">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Trần Minh Khoa, 0903 111 222" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" avatar="Nguyễn Thị Lan" title="Nguyễn Thị Lan" subtitle="Giúp việc, 0934 555 666">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Nguyễn Thị Lan, 0934 555 666" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+</x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phương tiện</h2>
+<x-import component-from-global-scope="Hien.VehicleCard" plate="30H-112.05" kind="car" model="Ô tô Mazda CX-5, màu trắng" status="active" status-label="Đã duyệt" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.VehicleCard" plate="29B1-456.78" kind="motorcycle" model="Xe máy Honda Vision, màu đen" status="pending" status-label="Chờ duyệt, gửi 06/10" on-click="{{noop}}"></x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phiếu đang mở</h2>
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}" style="margin-right: -12px;">Tất cả phiếu</x-import>
+</div>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1009-007" title="Ổ cắm phòng khách có mùi khét" category="Sửa chữa" time="gửi 07:55, 09/10" status="sent" status-label="Chưa phân công" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1007-012" title="Điều hòa phòng ngủ chảy nước xuống sàn" category="Sửa chữa" time="Đỗ Văn Hùng, hẹn 18:30 hôm nay" status="processing" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.TicketCard" code="YC-1005-020" title="Xe lạ đỗ chắn lối vào ô đỗ B1-042" category="An ninh" time="Vũ Quang Huy phụ trách" status="received" on-click="{{noop}}"></x-import>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1540}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đổi số điện thoại</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Tài khoản" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 24px;">
+<div style="display: flex; align-items: center; gap: 16px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Trần Minh Anh" size="lg"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<div style="font-size: 20px; line-height: 28px; font-weight: 600;">Trần Minh Anh</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">0912 345 678</div>
+</div>
+</div>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="info" title="Ngôn ngữ" value="Tiếng Việt" on-click="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="phone" title="Đổi số điện thoại" on-click="{{noop}}"></x-import>
+</x-import>
+</main>
+<x-import component-from-global-scope="Hien.BottomSheet" open="{{yes}}" contained="{{yes}}" title="Đổi số điện thoại" primary-label="Gọi Ban quản lý" on-primary="{{noop}}" on-close="{{noop}}">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Số 0912 345 678 là tài khoản đăng nhập của bạn ở mọi căn hộ, nên ứng dụng không cho tự đổi.</p>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Bạn liên hệ Ban quản lý. BQL xác minh rồi cập nhật số mới, sau đó bạn đăng nhập bằng số mới và mã OTP.</p>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="phone" tone="teal" title="Hotline" subtitle="[HOTLINE]"></x-import>
+<x-import component-from-global-scope="Hien.ListItem" icon="clock" tone="gold" title="Giờ làm việc" subtitle="08:00–17:30, thứ Hai đến thứ Bảy"></x-import>
+</x-import>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', yes: true, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

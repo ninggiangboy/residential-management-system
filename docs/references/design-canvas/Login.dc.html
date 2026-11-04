@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đăng nhập</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow" height="{{glowHeight}}"></x-import>
+<div style="position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px 0;">
+<div style="font-size: 20px; line-height: 28px; font-weight: 700; color: var(--ink);">Hiên</div>
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="sm" on-click="{{noop}}" style="margin-right: -12px;">English</x-import>
+</div>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 72px 20px 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Mộc Miên Residence</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Đăng nhập</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--ink-muted);">Dùng số điện thoại Ban quản lý đã đăng ký cho bạn. Chúng tôi gửi mã OTP qua tin nhắn.</p>
+</div>
+<x-import component-from-global-scope="Hien.TextField" label="Số điện thoại" value="0912 345 678" icon="phone" input-mode="tel" placeholder="0912 345 678" on-change="{{noop}}"></x-import>
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 12px 20px 32px;">
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" block="{{yes}}" on-click="{{noop}}">Nhận mã OTP</x-import>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted); text-align: center;">Chưa có tài khoản? Tài khoản do Ban quản lý tạo theo số điện thoại. Gọi hotline BQL [HOTLINE] để được hỗ trợ.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'light', yes: true, glowHeight: 360, noop: function () {} };
+}
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Web: residents
 
-> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-11-01 (DR-314, DR-315: `W-Unit-Types`, the type filter, column and field of `W-Units`, the type tag of `W-Unit-Detail`, the column `unit_type` of `W-Import`; UIWR-43…53) · 2026-10-29 (DR-309: the floor and type selects list `summary.floors` and `summary.bedrooms`) · 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
+> Status: **Approved** (Owner, 2026-10-21, for the P1 screens; W-Vehicles is owed to P5) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-11-01 (DR-314, DR-315: `W-Unit-Types`, the type filter, column and field of `W-Units`, the type tag of `W-Unit-Detail`, the column `unit_type` of `W-Import`; UIWR-43…53) · 2026-10-29 (DR-309: the floor and type selects list `summary.floors` and `summary.bedrooms`) · 2026-10-21 (DR-226: recent-imports table on `W-Import`, E-169, UIWR-41, UIWR-42) · DOC-65
 > Depends on: original SDD §18, [DR](../../00-decision-register.md) (DR-21, 22, 39, 40, 48, 58, 72, 74, 84, 128, 137, 138, 139, 141, 149, 226, 314, 315), [DOC-56](README.md) (convention, notes N10, N12), [DOC-53](../ux-principles-and-ia.md) §2 and §4, [DOC-54](../design-system.md) §6.4, [DOC-55](../client-architecture.md) §6–8 and §12, [DOC-27](../../06-design/residency-and-memberships.md) §3–§9, [DOC-18](../../05-data/data-quality-rules.md) §1, [DOC-51](../../07-api/api-endpoints.md) E-36, E-37, E-57…E-74, E-169, E-180…E-182, [DOC-42](../../06-design/error-handling.md) §5, [DOC-04](../../01-product/use-cases.md) UC-13, UC-27, [DOC-03](../../01-product/requirements.md) FR-18
 > Main readers: P1-16 (web CMS shell: sign in, create staff, import units), P1-13, P1-14, DOC-68 (copy), DOC-88 (prefix `UIWR-`)
 
@@ -8,16 +8,18 @@ This document specifies the six web screens that set up the people and the units
 
 Test prefix: `UIWR-` (DOC-56 §6.3; unused before this document; DOC-88 §15 indexes it). UIWR-43…53 are the unit-type cases (DR-314).
 
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
+
 ## Screens in this file
 
 | Screen | Canvas title | Purpose | Roles | Phase | Prototype | Section |
 | --- | --- | --- | --- | --- | --- | --- |
-| `W-Units` | BQL: Danh sách căn hộ | Unit list, filters, add a unit | Admin, Manager | P1 | designed (dialog `Thêm căn` to design) | [W-Units](#w-units) |
-| `W-Unit-Detail` | BQL: Chi tiết căn hộ | Members, history, edit, transfer, phone change, lock, remove | Admin, Manager | P1 (members, history) | designed (dialogs, history tab to design) | [W-Unit-Detail](#w-unit-detail) |
+| [`W-Units`](../../references/design-canvas/W-Units.dc.html) | BQL: Danh sách căn hộ | Unit list, filters, add a unit | Admin, Manager | P1 | designed (dialog `Thêm căn` to design) | [W-Units](#w-units) |
+| [`W-Unit-Detail`](../../references/design-canvas/W-Unit-Detail.dc.html) | BQL: Chi tiết căn hộ | Members, history, edit, transfer, phone change, lock, remove | Admin, Manager | P1 (members, history) | designed (dialogs, history tab to design) | [W-Unit-Detail](#w-unit-detail) |
 | `W-Unit-Types` | (not in the canvas) | The building's unit types and their defaults: list, add, edit, archive, restore | Admin, Manager | P1 (P1-30) | not in the canvas; built from DOC-54 parts like `W-Staff` (DR-314) | [W-Unit-Types](#w-unit-types) |
-| `W-Residents` | BQL: Cư dân | Resident accounts, filters, profile, deletion approval | Admin, Manager | P1 | designed (profile dialog to design) | [W-Residents](#w-residents) |
-| `W-Resident-Add` | BQL: Gán chủ hộ | Create a person for a unit or link an existing account | Admin, Manager | P1 | designed | [W-Resident-Add](#w-resident-add) |
-| `W-Import` | BQL: Nhập căn hộ từ Excel | Upload, validate, preview, save valid rows | Admin, Manager | P1 | designed (steps 1 and 3 to design) | [W-Import](#w-import) |
+| [`W-Residents`](../../references/design-canvas/W-Residents.dc.html) | BQL: Cư dân | Resident accounts, filters, profile, deletion approval | Admin, Manager | P1 | designed (profile dialog to design) | [W-Residents](#w-residents) |
+| [`W-Resident-Add`](../../references/design-canvas/W-Resident-Add.dc.html) | BQL: Gán chủ hộ | Create a person for a unit or link an existing account | Admin, Manager | P1 | designed | [W-Resident-Add](#w-resident-add) |
+| [`W-Import`](../../references/design-canvas/W-Import.dc.html) | BQL: Nhập căn hộ từ Excel | Upload, validate, preview, save valid rows | Admin, Manager | P1 | designed (steps 1 and 3 to design) | [W-Import](#w-import) |
 
 ## Rules shared by the screens
 
@@ -51,7 +53,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 (set up and look up units), FR-18; cap
 
 ### 3. Prototype
 
-Artboard `W-Units` (canvas title "BQL: Danh sách căn hộ", 1440 × 1060). Regions, top to bottom: web shell (sidebar group "Cư dân", entry "Căn hộ" active; top bar with breadcrumb "Cư dân / Căn hộ", language switch, bell); page header (h1 "Căn hộ", summary line, buttons "Nhập từ Excel", "Xuất Excel", "Thêm căn"); filter row (`SearchField`, `SelectField` × 3: Tầng, Loại, Trạng thái); table card with a 960 px minimum width (columns Mã căn `Plate`, Tầng, Loại, Diện tích, Trạng thái `Tag`, Chủ hộ with phone, Thành viên, Phương tiện, caret) and a footer with the range and two icon buttons.
+Artboard [`W-Units`](../../references/design-canvas/W-Units.dc.html) (canvas title "BQL: Danh sách căn hộ", 1440 × 1060). Regions, top to bottom: web shell (sidebar group "Cư dân", entry "Căn hộ" active; top bar with breadcrumb "Cư dân / Căn hộ", language switch, bell); page header (h1 "Căn hộ", summary line, buttons "Nhập từ Excel", "Xuất Excel", "Thêm căn"); filter row (`SearchField`, `SelectField` × 3: Tầng, Loại, Trạng thái); table card with a 960 px minimum width (columns Mã căn `Plate`, Tầng, Loại, Diện tích, Trạng thái `Tag`, Chủ hộ with phone, Thành viên, Phương tiện, caret) and a footer with the range and two icon buttons.
 
 Do not copy:
 
@@ -211,7 +213,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 (flows "transfer ownership" and "chang
 
 ### 3. Prototype
 
-Artboard `W-Unit-Detail` (canvas title "BQL: Chi tiết căn hộ", 1440 × 900). Regions: shell with breadcrumb "Cư dân / Căn hộ / A-1508"; header row (`Plate` large with the code, h1 "Tầng 15, 3 phòng ngủ, 85 m²", status `Tag`, subtitle "Chủ hộ Trần Minh Anh, 0912 345 678", button "Sửa thông tin căn"); `Tabs` (Thành viên 3, Phương tiện 2, Phí và công nợ, Phiếu hỗ trợ); left column: members table (Thành viên with `Avatar` and role, SĐT đăng nhập, Quyền, Trạng thái `Tag`, Thao tác with ghost buttons; a tenant's Quyền cell holds the labelled switch "Được phép thanh toán") and an info line; right column: card "Công nợ hiện tại" (amount, two batches with `Plate` codes) and card "Phương tiện" (two plates with status tags).
+Artboard [`W-Unit-Detail`](../../references/design-canvas/W-Unit-Detail.dc.html) (canvas title "BQL: Chi tiết căn hộ", 1440 × 900). Regions: shell with breadcrumb "Cư dân / Căn hộ / A-1508"; header row (`Plate` large with the code, h1 "Tầng 15, 3 phòng ngủ, 85 m²", status `Tag`, subtitle "Chủ hộ Trần Minh Anh, 0912 345 678", button "Sửa thông tin căn"); `Tabs` (Thành viên 3, Phương tiện 2, Phí và công nợ, Phiếu hỗ trợ); left column: members table (Thành viên with `Avatar` and role, SĐT đăng nhập, Quyền, Trạng thái `Tag`, Thao tác with ghost buttons; a tenant's Quyền cell holds the labelled switch "Được phép thanh toán") and an info line; right column: card "Công nợ hiện tại" (amount, two batches with `Plate` codes) and card "Phương tiện" (two plates with status tags).
 
 Do not copy:
 
@@ -525,7 +527,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 alternative 3b (search), UC-27 (approv
 
 ### 3. Prototype
 
-Artboard `W-Residents` (canvas title "BQL: Cư dân", 1440 × 1060). Regions: shell (group "Cư dân", entry "Cư dân"); header (h1 "Cư dân", subtitle "612 tài khoản", buttons "Nhập từ Excel", "Xuất Excel", "Tạo chủ hộ"); filter row (`SearchField`, `SelectField` "Trạng thái tài khoản"); `Chip` row (Tất cả, Chủ hộ, Người thuê, Thành viên gia đình, Giúp việc); table card (Họ tên with `Avatar`, SĐT đăng nhập, Căn và vai trò with one `Plate` and role per unit, Email, Trạng thái `Tag`, pencil `IconButton` "Sửa hồ sơ {name}"); footer pager; info line "Cư dân đổi số điện thoại thì liên hệ BQL. Mở hồ sơ cư dân, chọn Cập nhật SĐT đăng nhập; tài khoản và các căn giữ nguyên."
+Artboard [`W-Residents`](../../references/design-canvas/W-Residents.dc.html) (canvas title "BQL: Cư dân", 1440 × 1060). Regions: shell (group "Cư dân", entry "Cư dân"); header (h1 "Cư dân", subtitle "612 tài khoản", buttons "Nhập từ Excel", "Xuất Excel", "Tạo chủ hộ"); filter row (`SearchField`, `SelectField` "Trạng thái tài khoản"); `Chip` row (Tất cả, Chủ hộ, Người thuê, Thành viên gia đình, Giúp việc); table card (Họ tên with `Avatar`, SĐT đăng nhập, Căn và vai trò with one `Plate` and role per unit, Email, Trạng thái `Tag`, pencil `IconButton` "Sửa hồ sơ {name}"); footer pager; info line "Cư dân đổi số điện thoại thì liên hệ BQL. Mở hồ sơ cư dân, chọn Cập nhật SĐT đăng nhập; tài khoản và các căn giữ nguyên."
 
 Do not copy:
 
@@ -669,7 +671,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 alternative 3a, FR-18 (E-64), FR-16.5 
 
 ### 3. Prototype
 
-Artboard `W-Resident-Add` (canvas title "BQL: Gán chủ hộ", 1440 × 900): the resident list dimmed behind a panel "Gán chủ hộ cho căn A-2304" with: `TextField` "SĐT đăng nhập" (icon phone), a `Banner` info "SĐT này đã có tài khoản" with the person card (name, phone, current unit and role), `SelectField` "Căn" (helper "Tầng 23, 1PN, đang trống"), disabled `SelectField` "Vai trò ở căn này" (helper "Mỗi căn có đúng một chủ hộ"), a read-only block "Hồ sơ cư dân, lấy từ hồ sơ hiện có" (Họ tên, Email, Số CCCD, Ngày sinh), an info line, and the footer buttons "Hủy" and "Liên kết căn A-2304".
+Artboard [`W-Resident-Add`](../../references/design-canvas/W-Resident-Add.dc.html) (canvas title "BQL: Gán chủ hộ", 1440 × 900): the resident list dimmed behind a panel "Gán chủ hộ cho căn A-2304" with: `TextField` "SĐT đăng nhập" (icon phone), a `Banner` info "SĐT này đã có tài khoản" with the person card (name, phone, current unit and role), `SelectField` "Căn" (helper "Tầng 23, 1PN, đang trống"), disabled `SelectField` "Vai trò ở căn này" (helper "Mỗi căn có đúng một chủ hộ"), a read-only block "Hồ sơ cư dân, lấy từ hồ sơ hiện có" (Họ tên, Email, Số CCCD, Ngày sinh), an info line, and the footer buttons "Hủy" and "Liên kết căn A-2304".
 
 Do not copy:
 
@@ -773,7 +775,7 @@ PS-2 Manager (PS-1 Admin the same); UC-13 main flow "import" steps 1 to 5, FR-01
 
 ### 3. Prototype
 
-Artboard `W-Import` (canvas title "BQL: Nhập căn hộ từ Excel", 1440 × 1060) shows step 2: h1 "Nhập căn hộ từ Excel" with the subtitle "Kiểm tra từng dòng trước khi lưu vào danh sách căn hộ"; a three-step bar (Chọn file ✓, 2 Kiểm tra, 3 Lưu); the file card (name, "240 dòng, tải lên 09:24, 09/10/2026 bởi …", buttons "Tải file mẫu", "Chọn file khác"); three count cards (236 dòng hợp lệ, 4 dòng lỗi, 12 căn đã có, sẽ cập nhật); the section "Dòng lỗi" (table Dòng, Mã căn, Cột, Lỗi và cách sửa); a warning `Banner` "Dòng lỗi sẽ bị bỏ qua nếu bạn lưu ngay"; the action bar "Hủy", "Tải danh sách lỗi", "Lưu 236 dòng hợp lệ".
+Artboard [`W-Import`](../../references/design-canvas/W-Import.dc.html) (canvas title "BQL: Nhập căn hộ từ Excel", 1440 × 1060) shows step 2: h1 "Nhập căn hộ từ Excel" with the subtitle "Kiểm tra từng dòng trước khi lưu vào danh sách căn hộ"; a three-step bar (Chọn file ✓, 2 Kiểm tra, 3 Lưu); the file card (name, "240 dòng, tải lên 09:24, 09/10/2026 bởi …", buttons "Tải file mẫu", "Chọn file khác"); three count cards (236 dòng hợp lệ, 4 dòng lỗi, 12 căn đã có, sẽ cập nhật); the section "Dòng lỗi" (table Dòng, Mã căn, Cột, Lỗi và cách sửa); a warning `Banner` "Dòng lỗi sẽ bị bỏ qua nếu bạn lưu ngay"; the action bar "Hủy", "Tải danh sách lỗi", "Lưu 236 dòng hợp lệ".
 
 Do not copy:
 

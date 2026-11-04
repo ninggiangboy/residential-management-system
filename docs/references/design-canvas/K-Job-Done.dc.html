@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỹ thuật: Xác nhận báo hoàn thành</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1000px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Phiếu đang xử lý" subtitle="Bạn phụ trách" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 24px;">
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1007-012</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="info" icon="wrench">Đang xử lý</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Điều hòa phòng ngủ chảy nước xuống sàn</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, căn A-1508, hẹn 18:30 hôm nay</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Ảnh trước khi xử lý</div>
+<x-import component-from-global-scope="Hien.AttachmentPicker" items="{{before}}" max="{{maxFiles}}" add-label="Thêm ảnh" on-add="{{noop}}" on-remove="{{noop}}"></x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="font-size: 15px; line-height: 20px; font-weight: 600;">Ảnh sau khi xử lý</div>
+<x-import component-from-global-scope="Hien.AttachmentPicker" items="{{after}}" max="{{maxFiles}}" add-label="Chụp ảnh sau" on-add="{{noop}}" on-remove="{{noop}}"></x-import>
+</div>
+</section>
+
+<x-import component-from-global-scope="Hien.TextField" label="Ghi chú kết quả xử lý" value="Ống thoát nước dàn lạnh bị tắc và nứt đoạn sau tường. Đã thông ống, thay đoạn ống 1,5 m, chạy thử 20 phút không còn nhỏ nước." helper="Cư dân xem được ghi chú này." multiline="{{yes}}" rows="{{rows}}" on-change="{{noop}}"></x-import>
+
+</main>
+<div style="position: relative; flex-shrink: 0; padding: 12px 20px 32px; background: var(--surface); box-shadow: var(--shadow-bar);">
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="check-circle" block="{{yes}}" on-click="{{noop}}">Báo hoàn thành</x-import>
+</div>
+<x-import component-from-global-scope="Hien.Dialog" open="{{yes}}" contained="{{yes}}" title="Báo hoàn thành YC-1007-012?" confirm-label="Báo hoàn thành" cancel-label="Xem lại" on-confirm="{{noop}}" on-close="{{noop}}">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<span>Phiếu chuyển sang Hoàn thành và gửi kèm:</span>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px;">
+<li style="display: flex; align-items: center; gap: 8px;"><span style="display: flex; flex-shrink: 0; color: var(--teal);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconSm}}"></x-import></span>2 ảnh trước, 2 ảnh sau khi xử lý</li>
+<li style="display: flex; align-items: center; gap: 8px;"><span style="display: flex; flex-shrink: 0; color: var(--teal);"><x-import component-from-global-scope="Hien.Icon" name="note-pencil" size="{{iconSm}}"></x-import></span>Ghi chú kết quả xử lý</li>
+</ul>
+<span>Cư dân Trần Minh Anh nhận thông báo và có thể đánh giá kết quả. Phiếu chuyển sang mục Lịch sử của bạn.</span>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+rows: 4,
+maxFiles: 4,
+iconSm: 20,
+before: [{ name: 'Ảnh trước: dàn lạnh nhỏ nước' }, { name: 'Ảnh trước: sàn phòng ngủ đọng nước' }],
+after: [{ name: 'Ảnh sau: ống thoát nước mới' }, { name: 'Ảnh sau: dàn lạnh khô ráo' }],
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

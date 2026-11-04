@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảo vệ: Quét mã QR</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #0E1413; color: #FFFFFF; font-family: var(--font-sans); overflow: hidden;">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(120% 60% at 50% 44%, #26332F 0%, #16201E 45%, #0E1413 100%);"></div>
+<div data-theme="dark" style="position: relative; flex-grow: 1; display: flex; flex-direction: column; background: transparent; color: #FFFFFF;">
+<header style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 0;">
+<x-import component-from-global-scope="Hien.IconButton" icon="x" label="Đóng camera" variant="filled" on-click="{{noop}}"></x-import>
+<div style="font-size: 17px; line-height: 24px; font-weight: 600; color: #FFFFFF;">Quét mã QR cư dân</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="lightning" label="Bật đèn pin" variant="filled" on-click="{{noop}}"></x-import>
+</header>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; padding: 0 20px 24px;">
+<div role="img" aria-label="Khung ngắm mã QR" style="position: relative; width: 264px; height: 264px; border-radius: 24px; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.55);">
+<span aria-hidden="true" style="position: absolute; top: -3px; left: -3px; width: 48px; height: 48px; box-sizing: border-box; border-top: 5px solid var(--teal); border-left: 5px solid var(--teal); border-top-left-radius: 24px;"></span>
+<span aria-hidden="true" style="position: absolute; top: -3px; right: -3px; width: 48px; height: 48px; box-sizing: border-box; border-top: 5px solid var(--teal); border-right: 5px solid var(--teal); border-top-right-radius: 24px;"></span>
+<span aria-hidden="true" style="position: absolute; bottom: -3px; left: -3px; width: 48px; height: 48px; box-sizing: border-box; border-bottom: 5px solid var(--teal); border-left: 5px solid var(--teal); border-bottom-left-radius: 24px;"></span>
+<span aria-hidden="true" style="position: absolute; bottom: -3px; right: -3px; width: 48px; height: 48px; box-sizing: border-box; border-bottom: 5px solid var(--teal); border-right: 5px solid var(--teal); border-bottom-right-radius: 24px;"></span>
+<span aria-hidden="true" style="position: absolute; left: 24px; right: 24px; top: 46%; height: 2px; border-radius: 2px; background: var(--teal); box-shadow: 0 0 16px 2px var(--teal); opacity: 0.85;"></span>
+</div>
+<div style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; max-width: 300px;">
+<div style="font-size: 20px; line-height: 28px; font-weight: 600; color: #FFFFFF;">Đưa mã QR của cư dân vào khung</div>
+<div style="font-size: 15px; line-height: 22px; color: rgba(255, 255, 255, 0.72);">Ứng dụng tự nhận mã khi đủ rõ. Mã chỉ có hiệu lực 15 phút kể từ lúc cư dân tạo.</div>
+</div>
+</main>
+<footer style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 20px 40px;">
+<x-import component-from-global-scope="Hien.Button" variant="ghost" size="lg" icon="buildings" on-click="{{noop}}">Nhập mã căn thay thế</x-import>
+</footer>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

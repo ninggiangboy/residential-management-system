@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảo vệ: Tra biển số</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1000px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Tra biển số" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 8px 20px 32px;">
+<x-import component-from-global-scope="Hien.SearchField" label="Tìm biển số" value="30H-112" placeholder="Nhập biển số, ví dụ 30H-112.05" on-change="{{noop}}"></x-import>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">1 phương tiện khớp với “30H-112”</div>
+<x-import component-from-global-scope="Hien.VehicleCard" plate="30H-112.05" kind="car" model="Mazda CX-5, màu trắng" status="active" status-label="Đã duyệt" style="box-shadow: var(--shadow-float);"></x-import>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" icon="buildings" tone="teal" title="Căn hộ" subtitle="Tầng 15">
+<x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.ListItem" avatar="Trần Minh Anh" title="Trần Minh Anh" subtitle="Chủ hộ, 0912 345 678"></x-import>
+</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="phone" block="{{yes}}" on-click="{{noop}}">Gọi chủ hộ</x-import>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: var(--ink-muted);">Chỉ hiện phương tiện đã được BQL duyệt.</p>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Khi không có kết quả</h2>
+<x-import component-from-global-scope="Hien.Card" tone="fill">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<span style="flex-shrink: 0; display: flex; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="magnifying-glass" size="{{iconMd}}"></x-import></span>
+<div style="font-size: 16px; line-height: 24px; font-weight: 600;">Không thấy <x-import component-from-global-scope="Hien.Plate" size="sm" tone="outline">51G-234.56</x-import></div>
+</div>
+<div style="font-size: 14px; line-height: 20px;">Biển số này chưa có trong hệ thống hoặc chưa được BQL duyệt. Xe đang chờ duyệt không hiện ở đây. Cần xác minh thì gọi BQL.</div>
+<x-import component-from-global-scope="Hien.Button" variant="tonal" size="md" icon="phone" on-click="{{noop}}" style="align-self: flex-start;">Gọi BQL</x-import>
+</div>
+</x-import>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+iconMd: 24,
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>

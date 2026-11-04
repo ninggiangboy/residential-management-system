@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>BQL: Chi tiết phiếu chưa phân công</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1700px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Chi tiết phiếu" subtitle="Phiếu hỗ trợ" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 32px; padding: 8px 20px 24px;">
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1009-007</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="warning">Chưa phân công</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Ổ cắm phòng khách có mùi khét</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, phòng khách, gửi 07:55, 09/10/2026</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card);">
+<x-import component-from-global-scope="Hien.Avatar" name="Trần Minh Anh" size="md"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 16px; line-height: 22px; font-weight: 600;">Trần Minh Anh</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Plate" size="sm">A-1508</x-import><span>Chủ hộ, 0912 345 678</span></div>
+</div>
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Trần Minh Anh, 0912 345 678" variant="filled" on-click="{{noop}}"></x-import>
+</div>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Ổ cắm âm tường cạnh tivi bốc mùi khét từ tối qua, quanh lỗ cắm có vết xém đen. Nhà đã rút hết phích cắm và ngắt cầu dao phòng khách.</p>
+<div style="display: flex; gap: 8px;">
+<div role="img" aria-label="Ảnh ổ cắm bị xém" style="width: 88px; height: 88px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconMd}}"></x-import></div>
+<div role="img" aria-label="Ảnh cầu dao phòng khách" style="width: 88px; height: 88px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconMd}}"></x-import></div>
+</div>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Xử lý</h2>
+<x-import component-from-global-scope="Hien.Card">
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<span style="flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--lamp-soft); color: var(--ink); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Hien.Icon" name="user-circle" size="{{iconMd}}"></x-import></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);">Người phụ trách</div>
+<div style="font-size: 17px; line-height: 24px; font-weight: 600;">Chưa có</div>
+</div>
+</div>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Phiếu chờ từ 07:55. Người được phân công nhận thông báo đẩy ngay, cư dân thấy phiếu chuyển sang Đã tiếp nhận.</div>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="users-three" block="{{yes}}" on-click="{{noop}}">Phân công</x-import>
+</div>
+</x-import>
+<x-import component-from-global-scope="Hien.SelectField" label="Trạng thái" value="Chờ tiếp nhận" icon="clock" helper="Cư dân nhận thông báo mỗi khi trạng thái đổi." on-click="{{noop}}"></x-import>
+</section>
+
+<section style="flex-shrink: 0; display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Trao đổi</h2>
+<x-import component-from-global-scope="Hien.Tabs" label="Loại trao đổi" value="internal" items="{{tabsTalk}}" on-change="{{noop}}"></x-import>
+<div style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="key" size="{{iconSm}}"></x-import><span>Ghi chú nội bộ chỉ BQL, kỹ thuật và bảo vệ xem được.</span></div>
+<div style="display: flex; gap: 12px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Nguyễn Thu Trang" size="sm"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);"><span style="font-weight: 600; color: var(--ink);">Bạn</span>, 08:10, 09/10</div>
+<x-import component-from-global-scope="Hien.Tag" tone="warning" icon="key">Cư dân không thấy</x-import>
+</div>
+<div style="padding: 12px 16px; border-radius: var(--radius-control); background: var(--lamp-soft); color: var(--ink); font-size: 16px; line-height: 24px;">Có nguy cơ chập điện, cần ưu tiên trong sáng nay. Đã gọi chị Minh Anh lúc 08:05, nhà có người đến 11:30.</div>
+</div>
+</div>
+</section>
+
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; align-items: flex-end; gap: 8px; padding: 12px 20px 32px; background: var(--surface); box-shadow: var(--shadow-bar);">
+<div style="flex-grow: 1; min-width: 0;"><x-import component-from-global-scope="Hien.TextField" label="Ghi chú nội bộ" value="" placeholder="Viết ghi chú, cư dân không thấy" on-change="{{noop}}"></x-import></div>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" on-click="{{noop}}">Gửi</x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1700}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+iconSm: 20,
+iconMd: 24,
+noop: function () {},
+tabsTalk: [
+{ key: 'public', label: 'Bình luận với cư dân' },
+{ key: 'internal', label: 'Ghi chú nội bộ', count: 1 }
+]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Phí cần thanh toán</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1560px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.Glow"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; padding: 4px 0 56px;">
+<x-import component-from-global-scope="Hien.TopBar" variant="large" title="Phí" subtitle="Căn hộ A-1508">
+<x-import component-from-global-scope="Hien.IconButton" icon="bell" label="Thông báo, 4 mục chưa đọc" variant="filled" count="{{unread}}" on-click="{{noop}}"></x-import>
+</x-import>
+<div style="display: flex; flex-direction: column; gap: 24px; padding: 0 20px;">
+<x-import component-from-global-scope="Hien.SegmentedControl" label="Xem phí" value="due" options="{{segments}}" on-change="{{noop}}"></x-import>
+
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+<div style="font-size: 15px; line-height: 20px; color: var(--ink-muted);">Còn phải thanh toán, 2 đợt</div>
+<div style="font-size: 20px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums;">2.838.000 đ</div>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Phí tháng 10/2026</h2>
+<x-import component-from-global-scope="Hien.BillSlip" period="Đợt 1, phát hành 01/10" due="Hạn thanh toán 15/10/2026" status="due" status-label="Còn 6 ngày" items="{{batch1}}" total="{{total1}}" pay-label="Thanh toán đợt này" on-pay="{{noop}}"></x-import>
+<x-import component-from-global-scope="Hien.BillSlip" tone="surface" period="Đợt 2, phát hành 05/10" due="Hạn thanh toán 25/10/2026" status="upcoming" status-label="Còn 16 ngày" items="{{batch2}}" total="{{total2}}" pay-label="Thanh toán đợt này" on-pay="{{noop}}"></x-import>
+</section>
+
+<x-import component-from-global-scope="Hien.Button" variant="tonal" size="lg" icon="wallet" block="{{yes}}" on-click="{{noop}}">Thanh toán nhiều đợt cùng lúc</x-import>
+<p style="margin: -12px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Mỗi đợt thanh toán đủ số tiền. Muốn nộp tiền mặt hoặc nộp một phần, bạn liên hệ Ban quản lý.</p>
+</div>
+</main>
+<div style="position: relative; flex-shrink: 0;">
+<x-import component-from-global-scope="Hien.TabBar" value="fees" items="{{tabs}}" center="{{centerAction}}"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1560}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+yes: true,
+unread: 4,
+noop: function () {},
+segments: [{ value: 'due', label: 'Cần thanh toán' }, { value: 'history', label: 'Lịch sử' }],
+batch1: [
+{ icon: 'buildings', label: 'Phí quản lý', detail: '85 m² × 12.000 đ', amount: 1020000 },
+{ icon: 'drop', label: 'Nước sinh hoạt', detail: '14 m³', amount: 168000 },
+{ icon: 'car', label: 'Gửi ô tô', detail: '1 xe', amount: 1200000 },
+{ icon: 'motorcycle', label: 'Gửi xe máy', detail: '1 xe', amount: 100000 }
+],
+total1: 2488000,
+batch2: [
+{ icon: 'fire-extinguisher', label: 'Bảo dưỡng hệ thống PCCC', detail: 'Chia theo căn, 85 m²', amount: 350000 }
+],
+total2: 350000,
+centerAction: { icon: 'qr-code', label: 'Mã QR ra vào của tôi' },
+tabs: [
+{ key: 'home', icon: 'house', label: 'Trang chủ' },
+{ key: 'fees', icon: 'receipt', label: 'Phí', badge: 2 },
+{ key: 'requests', icon: 'chat-circle-dots', label: 'Yêu cầu' },
+{ key: 'unit', icon: 'buildings', label: 'Căn hộ' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

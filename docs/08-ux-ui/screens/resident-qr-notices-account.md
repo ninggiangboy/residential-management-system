@@ -1,23 +1,25 @@
 # Resident: QR, notices, account
 
-> Status: **Approved** (Owner, 2026-10-21, for the account group (gate P1); QR, notices and library are owed to P4 and P5) (the P1 sections: the account group) · Updated: 2026-10-28 (DR-279: the usage switch on `Account`) · 2026-10-20 · DOC-60
+> Status: **Approved** (Owner, 2026-10-21, for the account group (gate P1); QR, notices and library are owed to P4 and P5) (the P1 sections: the account group) · Updated: 2026-11-04 (DR-335: links to the artboards) · 2026-10-28 (DR-279: the usage switch on `Account`) · 2026-10-20 · DOC-60
 > Depends on: original SDD §7.4, §18, [DR](../../00-decision-register.md) (DR-38, 40, 48, 52, 59, 69, 70, 71, 72, 73, 74, 128, 146), [DOC-02](../../01-product/personas-and-journeys.md), [DOC-03](../../01-product/requirements.md) (FR-16, FR-39, FR-45), [DOC-04](../../01-product/use-cases.md) (UC-14, UC-26, UC-27), [DOC-26](../../06-design/identity-and-sessions.md) §3.7, [DOC-27](../../06-design/residency-and-memberships.md) §3.2, [DOC-35](../../06-design/audit-privacy-and-terms.md) §10, [DOC-42](../../06-design/error-handling.md), [DOC-51](../../07-api/api-endpoints.md) (E-03, E-12…E-25), [DOC-53](../ux-principles-and-ia.md), [DOC-55](../client-architecture.md), [DOC-56](README.md)
 > Main readers: P1-17 (resident app shell), P1-09 (i18n catalog), P1-00 (doc gate), the writers of DOC-68, P4-00 and P5-00 for the later screens
 
-This document specifies the resident screens of the account group (`Account`, `Account-Phone`, `Account-Helper`, `Account-Deletion`, `Sessions`, `Contact`): **P1 sections, `Review`**. The other nine screens of the area (QR, notices, inbox, library) are only listed in the last section with their phase and endpoints; they are specified in full before P4 and P5 and stay `Draft` until then. It follows the screen-document convention of DOC-56 §6: the prototype (the Owner's canvas, design system "Hiên") is the visual source of truth and is not redrawn here. Tokens and components are DOC-54, navigation DOC-53, client rules DOC-55, error and status copy DOC-68.
+This document specifies the resident screens of the account group (`Account`, `Account-Phone`, `Account-Helper`, `Account-Deletion`, `Sessions`, `Contact`): **P1 sections, `Review`**. The other nine screens of the area (QR, notices, inbox, library) are only listed in the last section with their phase and endpoints; they are specified in full before P4 and P5 and stay `Draft` until then. It follows the screen-document convention of DOC-56 §6: the prototype (the Owner's canvas, design system "Hiên") is the reference for layout and UX and is not redrawn here. Tokens and components are DOC-54, navigation DOC-53, client rules DOC-55, error and status copy DOC-68.
 
 Test prefix: `UIRQ-` (DOC-56 §6.3). Copy keys: `res.<screen>.<element>` (DOC-56 §6.4). The Maestro flows live in `apps/resident-app/.maestro/` (DOC-88).
+
+**The design is a reference (DR-335).** The artboard of a screen, linked from the table below and from its "Prototype" part, is the reference for its layout and UX. Components and visual styling follow the project's design system ([DOC-54](../design-system.md)), not the artboard. See the artboards rendered on the [canvas](https://claude.ai/artifact/PLqx2HGSNuZFiVDaLhtgvj); the files and their index are in [`references/design-canvas/`](../../references/design-canvas/README.md). A "Do not copy" note and [DOC-56 §5](README.md#5-prototype-deviations-what-a-screen-document-must-not-copy) say what not to take from one.
 
 ## Screens in this file
 
 | Section | Screen | Role or member type | Phase | Prototype |
 | --- | --- | --- | --- | --- |
-| `Account` | Account and settings | Owner, Family member, Tenant | P1 | designed |
-| `Account-Phone` | Change login phone: Manager only | Owner, Family member, Tenant, Helper | P1 | designed |
-| `Account-Helper` | Account of a helper | Helper | P1 | designed |
+| [`Account`](../../references/design-canvas/Account.dc.html) | Account and settings | Owner, Family member, Tenant | P1 | designed |
+| [`Account-Phone`](../../references/design-canvas/Account-Phone.dc.html) | Change login phone: Manager only | Owner, Family member, Tenant, Helper | P1 | designed |
+| [`Account-Helper`](../../references/design-canvas/Account-Helper.dc.html) | Account of a helper | Helper | P1 | designed |
 | `Account-Deletion` | Request and cancel account deletion | Owner, Family member, Tenant, Helper | P1 | to design |
 | `Sessions` | Signed-in devices | Owner, Family member, Tenant, Helper | P1 | to design |
-| `Contact` | Contact the Manager | Owner, Family member, Tenant, Helper | P1 | designed |
+| [`Contact`](../../references/design-canvas/Contact.dc.html) | Contact the Manager | Owner, Family member, Tenant, Helper | P1 | designed |
 | (nine more) | QR, notices, inbox, library | | P4, P5 | see the last section |
 
 Which variant of `/account` opens (`Account` or `Account-Helper`) depends on the member type of the **selected** unit (DOC-55 §7): a helper in the selected unit gets `Account-Helper`, everyone else `Account`. The two share their data and interactions; the difference is in §4 of each.
@@ -36,7 +38,7 @@ Route `/account` (stack screen opened from the avatar on Home, DOC-53 §3.4); no
 
 ### 3. Prototype
 
-Artboard `Account` ("Tài khoản và cài đặt", 390 × 1240). Regions, top to bottom: `TopBar` with back · profile row (`Avatar` lg, name, phone, `IconButton` pencil) · section "Căn hộ của bạn" (`List` of `ListItem`, the selected unit in tone teal) · section "Cài đặt" (Ngôn ngữ with its value, Thông báo đẩy with a `Switch`, Đổi số điện thoại) · list (Liên hệ Ban quản lý, Điều khoản sử dụng, Yêu cầu xóa tài khoản) · outline `Button` "Đăng xuất".
+Artboard [`Account`](../../references/design-canvas/Account.dc.html) ("Tài khoản và cài đặt", 390 × 1240). Regions, top to bottom: `TopBar` with back · profile row (`Avatar` lg, name, phone, `IconButton` pencil) · section "Căn hộ của bạn" (`List` of `ListItem`, the selected unit in tone teal) · section "Cài đặt" (Ngôn ngữ with its value, Thông báo đẩy with a `Switch`, Đổi số điện thoại) · list (Liên hệ Ban quản lý, Điều khoản sử dụng, Yêu cầu xóa tài khoản) · outline `Button` "Đăng xuất".
 
 Do not copy:
 - The pencil is labelled "Sửa tên và ảnh đại diện". The name is the Manager's record and `PATCH /me` refuses `displayName` and `phone` (E-14); only the **avatar** is editable (label "Đổi ảnh đại diện").
@@ -146,7 +148,7 @@ Route `/account/phone`, presented as a `BottomSheet` over `Account`; no params.
 
 ### 3. Prototype
 
-Artboard `Account-Phone` ("Đổi số điện thoại", 390 × 900): `Account` behind a scrim and a `BottomSheet` titled "Đổi số điện thoại" with two paragraphs, a `List` (Hotline, Giờ làm việc) and a primary button "Gọi Ban quản lý".
+Artboard [`Account-Phone`](../../references/design-canvas/Account-Phone.dc.html) ("Đổi số điện thoại", 390 × 900): `Account` behind a scrim and a `BottomSheet` titled "Đổi số điện thoại" with two paragraphs, a `List` (Hotline, Giờ làm việc) and a primary button "Gọi Ban quản lý".
 
 Do not copy: the sample hours "08:00–17:30, thứ Hai đến thứ Bảy" and the placeholder `[HOTLINE]` are hard-drawn (N8); both come from E-15.
 
@@ -212,7 +214,7 @@ Route `/account` (the tab "Tài khoản" of the two-tab bar, DOC-53 §3.4); no p
 
 ### 3. Prototype
 
-Artboard `Account-Helper` ("Giúp việc: Tài khoản", 390 × 960): large `TopBar` "Tài khoản" · profile row (name, "0934 555 666, giúp việc căn A-1508", pencil) · list (Ngôn ngữ, Thông báo đẩy "Bản tin chung của Ban quản lý", Đổi số điện thoại) · list (Liên hệ Ban quản lý, Điều khoản sử dụng, Yêu cầu xóa tài khoản) · "Đăng xuất" · `TabBar` (Trang chủ, centre QR, Tài khoản).
+Artboard [`Account-Helper`](../../references/design-canvas/Account-Helper.dc.html) ("Giúp việc: Tài khoản", 390 × 960): large `TopBar` "Tài khoản" · profile row (name, "0934 555 666, giúp việc căn A-1508", pencil) · list (Ngôn ngữ, Thông báo đẩy "Bản tin chung của Ban quản lý", Đổi số điện thoại) · list (Liên hệ Ban quản lý, Điều khoản sử dụng, Yêu cầu xóa tài khoản) · "Đăng xuất" · `TabBar` (Trang chủ, centre QR, Tài khoản).
 
 Do not copy: the same edit label as `Account` ("Sửa hồ sơ" edits the avatar only); the phone subtitle is built from E-13 data, not typed. The hard-coded unit in the subtitle comes from the selected membership.
 
@@ -457,7 +459,7 @@ Route `/contact`; no params. Deep link `rms-resident://contact`.
 
 ### 3. Prototype
 
-Artboard `Contact` ("Liên hệ Ban quản lý", 390 × 900): `TopBar` · header (a plate "MM", "Ban quản lý Mộc Miên Residence", "Công ty Quản lý Mộc Miên") · `List` (Hotline, Giờ làm việc, Email, Văn phòng) · a note about out-of-hours calls · fixed bottom actions "Gọi hotline" and "Tạo yêu cầu hỗ trợ".
+Artboard [`Contact`](../../references/design-canvas/Contact.dc.html) ("Liên hệ Ban quản lý", 390 × 900): `TopBar` · header (a plate "MM", "Ban quản lý Mộc Miên Residence", "Công ty Quản lý Mộc Miên") · `List` (Hotline, Giờ làm việc, Email, Văn phòng) · a note about out-of-hours calls · fixed bottom actions "Gọi hotline" and "Tạo yêu cầu hỗ trợ".
 
 Do not copy (DR-203): the company line and the row "Văn phòng: Tầng 1, cạnh sảnh thang máy" have no source (E-15 returns name, hotline, hours, email only); the plate uses the building's initials, not a logo; the sentence about calling the hotline out of hours to reach the guard is an operating promise not backed by a requirement; the hours and `[HOTLINE]`/`[EMAIL BQL]` are placeholders (N8). "Tạo yêu cầu hỗ trợ" is a P4 button (tickets) and is hidden until then and for a helper (no `tickets`).
 

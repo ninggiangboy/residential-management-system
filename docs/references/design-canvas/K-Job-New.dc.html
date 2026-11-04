@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kỹ thuật: Chi tiết phiếu mới</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/hien/tokens.css">
+<link rel="stylesheet" href="ds/hien/components/bundle.css">
+<script src="ds/hien/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Geologica";src:url("/_blob/48538e6d390280452076b4ca60a952e0") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/647a964de944ee39b7c47a99ea62b135") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/19962546aec1b37d3c336b6071c843e0") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Geologica";src:url("/_blob/bcebc6a6ec6caf21308a4e7de8842749") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Big Shoulders";src:url("/_blob/80aa0a0b30ea0b3a3a522677b8c24ac9") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 1400px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--ground); color: var(--ink); font-family: var(--font-sans);">
+<x-import component-from-global-scope="Hien.TopBar" title="Phiếu mới được giao" subtitle="Giao lúc 09:12, 09/10" on-back="{{noop}}"></x-import>
+<main style="position: relative; flex-grow: 1; display: flex; flex-direction: column; gap: 32px; padding: 8px 20px 24px;">
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate" size="lg">YC-1009-003</x-import>
+<x-import component-from-global-scope="Hien.Tag" tone="warning" icon="clock">Chờ bạn nhận</x-import>
+</div>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em;">Đèn hành lang tầng 11 nhấp nháy</h1>
+<div style="font-size: 14px; line-height: 20px; color: var(--ink-muted);">Sửa chữa, cư dân gửi 06:40, 09/10/2026</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Cư dân mô tả</h2>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Đèn trần hành lang đoạn trước cửa căn A-1102 nhấp nháy liên tục từ tối qua, có lúc tắt hẳn vài giây. Buổi tối đi lại rất chói mắt.</p>
+<div style="display: flex; gap: 8px;">
+<div role="img" aria-label="Ảnh đèn trần hành lang" style="width: 88px; height: 88px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="image" size="{{iconMd}}"></x-import></div>
+<div role="img" aria-label="Video đèn nhấp nháy" style="width: 88px; height: 88px; border-radius: var(--radius-control); background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink-muted);"><x-import component-from-global-scope="Hien.Icon" name="camera" size="{{iconMd}}"></x-import></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Vị trí</h2>
+<x-import component-from-global-scope="Hien.Card">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<x-import component-from-global-scope="Hien.Plate">A-1102</x-import>
+<span style="font-size: 16px; line-height: 24px; font-weight: 600;">Tầng 11, hành lang chung</span>
+</div>
+<div style="display: flex; gap: 8px; font-size: 14px; line-height: 20px; color: var(--ink-muted);">
+<span style="flex-shrink: 0; display: flex; padding-top: 2px;"><x-import component-from-global-scope="Hien.Icon" name="map-pin" size="{{iconSm}}"></x-import></span>
+<span>Đèn trần trước cửa căn, cách sảnh thang máy khoảng 10 m. Khu vực chung, bạn không cần vào căn.</span>
+</div>
+</div>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Người liên hệ</h2>
+<x-import component-from-global-scope="Hien.List">
+<x-import component-from-global-scope="Hien.ListItem" avatar="Phạm Thu Hà" title="Phạm Thu Hà" subtitle="Người thuê căn A-1102, 0938 222 333">
+<x-import component-from-global-scope="Hien.IconButton" icon="phone" label="Gọi Phạm Thu Hà, 0938 222 333" variant="filled" on-click="{{noop}}"></x-import>
+</x-import>
+</x-import>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em;">Ghi chú của BQL</h2>
+<x-import component-from-global-scope="Hien.Card" tone="fill">
+<div style="display: flex; gap: 12px;">
+<x-import component-from-global-scope="Hien.Avatar" name="Nguyễn Thu Trang" size="sm"></x-import>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 13px; line-height: 18px; color: var(--ink-muted);"><span style="font-weight: 600; color: var(--ink);">Nguyễn Thu Trang</span>, BQL, 09:12</div>
+<div style="font-size: 16px; line-height: 24px;">Anh kiểm tra giúp chấn lưu và bóng. Kho tầng hầm B1 còn bóng LED tuýp 1,2 m. Anh xử lý trước 17:00 hôm nay nhé.</div>
+</div>
+</div>
+</x-import>
+</section>
+
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted);">Khi bạn nhận việc, cư dân và BQL thấy phiếu đã có người phụ trách. Nếu từ chối, phiếu trả về BQL để phân công lại.</p>
+</main>
+<div style="position: relative; flex-shrink: 0; display: flex; gap: 12px; padding: 12px 20px 32px; background: var(--surface); box-shadow: var(--shadow-bar);">
+<x-import component-from-global-scope="Hien.Button" variant="outline" size="lg" on-click="{{noop}}" style="flex: 1 1 0;">Từ chối</x-import>
+<x-import component-from-global-scope="Hien.Button" variant="primary" size="lg" icon="check" on-click="{{noop}}" style="flex: 2 1 0;">Nhận việc</x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+theme: this.props.theme ?? 'light',
+iconMd: 24,
+iconSm: 20,
+noop: function () {}
+};
+}
+}
+</script>
+</body>
+</html>
