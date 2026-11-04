@@ -271,6 +271,59 @@ A quantity is printed with the language's decimal separator (`12,345` in Vietnam
 
 A receipt is rendered in `feeNoticeLanguage` **as it is at its first render** and keeps that language: the cached PDF is served even if the setting changes later (DOC-36 §5.2, "a PDF already rendered keeps its language"). The void copy is rendered at the void with the setting of that moment. The title and the tax statement are bilingual in every mode, because they are the document's legal identity (DR-17).
 
+### 7.4 The `pdf.*` copy
+
+Owned here (DOC-68 §1); the catalog files are `packages/i18n-catalog/src/pdf/vi.ts` and `en.ts` and the parity test covers every row. A bilingual mode prints the Vietnamese line with the English one under it (§5), except where a row says otherwise. *Written 2026-11-04 (P2-13).*
+
+| Key | `vi` | `en` |
+| --- | --- | --- |
+| `pdf.common.page` | Trang {page}/{total} | Page {page} of {total} |
+| `pdf.common.unit` | Căn hộ | Unit |
+| `pdf.common.batch` | Đợt phí | Batch |
+| `pdf.common.item` | Khoản phí | Item |
+| `pdf.common.amount` | Thành tiền | Amount |
+| `pdf.common.hotline` | Hotline {hotline} | Hotline {hotline} |
+| `pdf.common.quantity_price` | {quantity} × {unitPrice} | {quantity} × {unitPrice} |
+| `pdf.common.adjustment` | Điều chỉnh | Adjustment |
+| `pdf.fee_notice.title` | Thông báo phí tháng {month} | Fee notice for {month} |
+| `pdf.fee_notice.owner` | Chủ hộ | Owner |
+| `pdf.fee_notice.issue_date` | Ngày phát hành | Issue date |
+| `pdf.fee_notice.basis` | Cách tính | Basis |
+| `pdf.fee_notice.total` | Tổng cộng | Total |
+| `pdf.fee_notice.due_date` | Hạn thanh toán | Due date |
+| `pdf.fee_notice.how_to_pay` | Hướng dẫn nộp phí | How to pay |
+| `pdf.fee_notice.pay_app` | Thanh toán trên App cư dân bằng mã QR, gạch nợ ngay khi thanh toán thành công. | Pay in the resident app by QR code. Your balance updates as soon as the payment succeeds. |
+| `pdf.fee_notice.pay_office` | Nộp tại văn phòng Ban quản lý, {workingHours}. | Pay at the management office, {workingHours}. |
+| `pdf.fee_notice.questions` | Thắc mắc về phí, bạn gọi hotline {hotline} hoặc gửi yêu cầu trên App cư dân. | Questions about fees: call {hotline} or send a request in the resident app. |
+| `pdf.fee_notice.questions_no_hotline` | Thắc mắc về phí, bạn gửi yêu cầu trên App cư dân. | Questions about fees: send a request in the resident app. |
+| `pdf.fee_notice.draft_mark` | BẢN NHÁP | DRAFT |
+| `pdf.receipt.title` | BIÊN LAI THU TIỀN | PAYMENT RECEIPT |
+| `pdf.receipt.number` | Số | No. |
+| `pdf.receipt.date` | Ngày | Date |
+| `pdf.receipt.payer` | Người nộp | Payer |
+| `pdf.receipt.member_owner` | Chủ hộ | Owner |
+| `pdf.receipt.member_member` | Thành viên | Member |
+| `pdf.receipt.member_tenant` | Người thuê | Tenant |
+| `pdf.receipt.fee_month` | Kỳ phí | Fee month |
+| `pdf.receipt.quantity_price` | Số lượng × Đơn giá | Quantity × unit price |
+| `pdf.receipt.total` | Số tiền | Amount |
+| `pdf.receipt.in_words` | Bằng chữ | In words |
+| `pdf.receipt.method` | Hình thức | Method |
+| `pdf.receipt.method_online` | Thanh toán trực tuyến | Online |
+| `pdf.receipt.method_cash` | Tiền mặt | Cash |
+| `pdf.receipt.method_bank_transfer` | Chuyển khoản | Bank transfer |
+| `pdf.receipt.method_other` | Khác | Other |
+| `pdf.receipt.reference` | Mã giao dịch | Reference |
+| `pdf.receipt.paid_at` | Thời điểm thanh toán | Paid at |
+| `pdf.receipt.statement` | Biên lai này xác nhận khoản đã thu, không phải hóa đơn giá trị gia tăng. | This receipt confirms a payment received. It is not a VAT invoice. |
+| `pdf.receipt.issued_by` | Người lập | Issued by |
+| `pdf.receipt.signature_payer` | Người nộp tiền | Payer |
+| `pdf.receipt.signature_collector` | Người thu tiền | Collector |
+| `pdf.receipt.void_stamp` | ĐÃ HỦY | VOID |
+| `pdf.receipt.voided_on` | ĐÃ HỦY ngày {date} | Voided on {date} |
+| `pdf.receipt.void_reason` | Lý do hủy | Void reason |
+| `pdf.receipt.void_date` | Ngày hủy | Void date |
+
 ## 8. Caching and files
 
 Every PDF and ZIP is a `file_object` written by `FilesApi.storeGenerated` as the system account (DOC-37 §9, DR-119); the quota never refuses it (DR-123). The **logical key** goes in `owner_ref` (DR-86) and finds the file again through `ix_file_object_building_owner` with the new call `FilesApi.findByOwnerRef(buildingId, { module, purpose, ownerRef }) → FileDto | null` (DR-293; DOC-37 §3 owes the signature).
