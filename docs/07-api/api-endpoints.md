@@ -142,9 +142,9 @@ Method and path are relative to `/api/v1`. `Detail` is the section that specifie
 | E-73 | `GET /staff/imports/{id}` | `getImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 | E-74 | `POST /staff/imports/{id}/commit` | `commitImport` | staff: admin, manager | | | UC-13, UC-01 | §10 |
 | E-169 | `GET /staff/imports` | `listImports` | staff: admin, manager | | | UC-13, UC-01 | §10 |
-| E-170 | `POST /staff/fee-batches/{id}/charges` | `addDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
-| E-171 | `DELETE /staff/charges/{id}` | `removeDraftCharge` | staff: admin, manager | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
-| E-172 | `DELETE /staff/fee-batches/{id}` | `discardFeeBatch` | staff: admin, manager | | UC-01 | DOC-21 §3.8 (DR-265, P2) |
+| E-170 | `POST /staff/fee-batches/{id}/charges` | `addDraftCharge` | staff: admin, manager | | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
+| E-171 | `DELETE /staff/charges/{id}` | `removeDraftCharge` | staff: admin, manager | | | UC-01 | DOC-21 §3.2 (DR-265, P2) |
+| E-172 | `DELETE /staff/fee-batches/{id}` | `discardFeeBatch` | staff: admin, manager | | | UC-01 | DOC-21 §3.8 (DR-265, P2) |
 | E-173 | `POST /me/usage-events` | `recordMyUsageEvents` | unit: broadcast_notices | | | | §10A |
 | E-174 | `POST /staff/usage-events` | `recordStaffUsageEvents` | staff: any | | | | §10A |
 | E-175 | `POST /staff/payments/intents/{id}/cancel` | `cancelPaymentIntentByStaff` | staff: admin, manager | | | UC-03 | DOC-23 §5.3 (DR-282, P3) |
