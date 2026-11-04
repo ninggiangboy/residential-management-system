@@ -1,10 +1,4 @@
-import {
-  ConflictError,
-  DomainError,
-  NotFoundError,
-  RuleViolationError,
-  ValidationError,
-} from '@core/kernel'
+import { ConflictError, NotFoundError, RuleViolationError, ValidationError } from '@core/kernel'
 import type { ChargeLineIssue } from './charge-line'
 
 /** 409 `invalid_transition`: the batch or charge is not in the state the action needs (DOC-21 §8, DR-127). */
