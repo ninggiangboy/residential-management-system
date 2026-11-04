@@ -27,9 +27,12 @@ interface RawJobRow {
   zip_file: string | null
   attempts: number
   error: unknown
-  created_at: Date
-  finished_at: Date | null
+  created_at: Date | string
+  finished_at: Date | string | null
 }
+
+/** A raw `execute` returns `timestamptz` as text (as the money-log adapter reads it). */
+const toDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value))
 
 const toRow = (row: RawJobRow): FeeNoticeJobRow => ({
   id: row.id,
@@ -40,8 +43,8 @@ const toRow = (row: RawJobRow): FeeNoticeJobRow => ({
   unitDone: row.unit_done,
   zipFile: row.zip_file,
   error: row.error,
-  createdAt: row.created_at,
-  finishedAt: row.finished_at,
+  createdAt: toDate(row.created_at),
+  finishedAt: row.finished_at === null ? null : toDate(row.finished_at),
 })
 
 const toClaim = (row: RawJobRow): ClaimedJob => ({
