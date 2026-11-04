@@ -2,12 +2,13 @@ import { type Database, inBuilding } from '@core/db'
 import type { BuildingScope } from '@rms/shared-types'
 import { and, eq, sql } from 'drizzle-orm'
 import type {
+  ReceiptDownloadRow,
   ReceiptPdfRepository,
   ReceiptPdfRow,
   SwapReceiptPdfInput,
 } from '../../domain/receipt-pdf-repository'
 import type { ReceiptSnapshot } from '../../domain/receipt-snapshot'
-import { receipt } from './schema'
+import { payment, receipt } from './schema'
 
 /**
  * The Drizzle adapter of `ReceiptPdfRepository` (DOC-34 §8.2, DR-295). The read carries the building scope like every
@@ -42,6 +43,27 @@ export class DrizzleReceiptPdfRepository implements ReceiptPdfRepository {
       voidedAt: row.voidedAt,
       // `finance.receipt` has no void-reason column (schema.ts): the void line prints without a reason.
       voidReason: null,
+    }
+  }
+
+  async findDownload(scope: BuildingScope, receiptId: string): Promise<ReceiptDownloadRow | null> {
+    const [row] = await this.database.executor
+      .select({
+        number: receipt.number,
+        status: receipt.status,
+        unitId: receipt.unitId,
+        receivedAt: payment.receivedAt,
+      })
+      .from(receipt)
+      .innerJoin(payment, and(inBuilding(payment, scope), eq(payment.id, receipt.paymentId)))
+      .where(and(inBuilding(receipt, scope), eq(receipt.id, receiptId)))
+      .limit(1)
+    if (!row) return null
+    return {
+      number: row.number,
+      status: row.status as ReceiptDownloadRow['status'],
+      unitId: row.unitId,
+      receivedAt: row.receivedAt,
     }
   }
 
