@@ -6,6 +6,8 @@ import { PageFooter } from './page-footer'
 import { PageFrame } from './page-frame'
 
 registerFonts()
+// The position check starts `uv run` (pypdf), about 2 s; the 5 s default is too tight on a cold cache.
+setDefaultTimeout(30_000)
 
 /** The five-byte `%PDF-` marker that opens a rendered PDF (DOC-34 §5). */
 function header(bytes: Uint8Array): string {
@@ -31,7 +33,6 @@ test('PageFooter renders inside the PageFrame footer slot (DOC-34 §5)', async (
 })
 
 test('the footer prints inside the page on every page, with the page count (DOC-34 §5)', async () => {
-  setDefaultTimeout(30_000)
   const bytes = await renderToBuffer(
     <Document>
       {['Trang đầu', 'Trang hai'].map((body) => (
