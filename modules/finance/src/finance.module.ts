@@ -394,7 +394,7 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
     requestFeeNoticeZip,
   }
   const queries: FinanceQueries = {
-    feeBatches: new FeeBatchQueries(batches),
+    feeBatches: new FeeBatchQueries(batches, noticeContext),
     feeImports: feeImportQueries,
     debts: new DebtQueries(debts, deps.calendar, clock),
     moneyLog: new MoneyLogQueries(moneyLog),
@@ -415,6 +415,9 @@ export function createFinanceModule(deps: FinanceModuleDeps): FinanceModule {
           ...useCases,
           moneyLog: queries.moneyLog,
           residentFees: queries.residentFees,
+          feeBatches: queries.feeBatches,
+          feeNotice: queries.feeNotice,
+          receiptPdf: queries.receiptPdf,
           guards,
           idempotent,
         })

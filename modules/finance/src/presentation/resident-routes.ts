@@ -1,6 +1,7 @@
-import { type RouteInfo, routePlugin, strictObject, unitRoute } from '@core/http'
+import { IdParams, type RouteInfo, routePlugin, strictObject, unitRoute } from '@core/http'
 import { type Guards, unitOf } from '@rms/shared-types'
 import { type Static, Type } from '@sinclair/typebox'
+import type { ReceiptPdfQueries } from '../application/queries/receipt-pdf-queries'
 import type { ResidentFeeQueries } from '../application/queries/resident-fee-queries'
 import type {
   ResidentChargeLine,
@@ -10,9 +11,11 @@ import type {
 } from '../domain/resident-fee-reader'
 import { amountOf } from './bodies'
 import { cursorDate, decodeCursor, encodeCursor, wholeParam } from './http'
+import { pdfResponse } from './pdf-routes'
 
 export interface ResidentRouteDeps {
   residentFees: ResidentFeeQueries
+  receiptPdf: ReceiptPdfQueries
   guards: Guards
 }
 
@@ -133,6 +136,11 @@ export function residentRoutes(d: ResidentRouteDeps) {
     }
   }
 
+  const receiptPdf = async (context: { params: Static<typeof IdParams> }) => {
+    const out = await d.receiptPdf.forUnit(unitOf(context), context.params.id)
+    return pdfResponse(out.bytes, out.fileName)
+  }
+
   return routePlugin({ prefix: '/me' })
     .get('/fees', open, {
       ...read({
@@ -172,5 +180,15 @@ export function residentRoutes(d: ResidentRouteDeps) {
           "Receipts, newest first, from the start of the caller's membership (DR-40). A voided receipt is listed with `status: void`.",
       }),
       query: PageQuery,
+    })
+    .get('/receipts/:id/pdf', receiptPdf, {
+      ...read({
+        endpoint: 'E-84',
+        operationId: 'downloadMyReceipt',
+        summary: 'Download a receipt as a PDF',
+        description:
+          "A receipt of the unit, from the start of the caller's membership (DR-40); any other is 404. Rendered on demand when no stored copy exists; a busy renderer answers 503 with `Retry-After`.",
+      }),
+      params: IdParams,
     })
 }
