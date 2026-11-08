@@ -82,6 +82,6 @@
     "@rms/test-support": "workspace:*",
     "@types/bun": "1.4.4",
     "drizzle-kit": "0.31.11",
-    "postgres": "3.4.9"
+    "postgres": "4.0.0"
   }
 }
