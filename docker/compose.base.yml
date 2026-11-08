@@ -147,7 +147,7 @@ services:
       - prometheus-data:/prometheus
   alertmanager:
     <<: *third
-    image: prom/alertmanager:v0.34.1
+    image: prom/alertmanager:v0.34.2
     command: --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
     secrets: [telegram-bot-token, alertmanager-smtp-password]
     environment: { RMS_CONFIG_HASH: '${RMS_CFG_ALERTMANAGER:-}' }
@@ -195,7 +195,7 @@ services:
   alloy:
     <<: *third
     profiles: [logs]
-    image: grafana/alloy:v1.21.2
+    image: grafana/alloy:v1.21.3
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     environment: { RMS_ENV: '${RMS_ENV}', RMS_CONFIG_HASH: '${RMS_CFG_ALLOY:-}' }
     volumes:

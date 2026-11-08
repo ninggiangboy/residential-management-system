@@ -48,7 +48,7 @@ services:
 
   # One-shot: creates the bucket and its CORS rule, then exits 0. Safe to run again.
   objectstore-init:
-    image: amazon/aws-cli:2.38.6
+    image: amazon/aws-cli:2.39.3
     depends_on:
       objectstore:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
     restart: 'no'
 
   mailpit:
-    image: axllent/mailpit:v1.32.0
+    image: axllent/mailpit:v1.33.0
     environment:
       # Do not reverse-DNS the SMTP client: slow by default on Docker Desktop and OrbStack.
       MP_SMTP_DISABLE_RDNS: 'true'
@@ -108,7 +108,7 @@ services:
 
   alertmanager:
     profiles: [monitoring]
-    image: prom/alertmanager:v0.34.1
+    image: prom/alertmanager:v0.34.2
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -155,7 +155,7 @@ services:
   # (and the image of `docker/Dockerfile.api`, when run in this project) reach Loki.
   alloy:
     profiles: [monitoring]
-    image: grafana/alloy:v1.21.2
+    image: grafana/alloy:v1.21.3
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     environment:
       RMS_ENV: local
