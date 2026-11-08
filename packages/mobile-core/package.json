@@ -15,7 +15,7 @@
     "test": "bun test src --pass-with-no-tests"
   },
   "dependencies": {
-    "@formatjs/intl-pluralrules": "6.3.16",
+    "@formatjs/intl-pluralrules": "7.0.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "12.0.1",
     "@rms/client-core": "workspace:*",
