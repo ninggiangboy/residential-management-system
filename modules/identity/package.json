@@ -55,8 +55,8 @@
     "@rms/shared-types": "workspace:*",
     "@sinclair/typebox": "0.34.52",
     "drizzle-orm": "0.45.4",
-    "elysia": "1.4.30",
-    "jose": "6.2.13",
+    "elysia": "1.4.31",
+    "jose": "6.2.16",
     "libphonenumber-js": "1.13.15"
   },
   "devDependencies": {
