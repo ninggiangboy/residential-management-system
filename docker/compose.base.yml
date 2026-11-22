@@ -81,7 +81,7 @@ services:
     secrets: [db-migrator-url]
   caddy:
     <<: *third
-    image: caddy:2.11.7
+    image: caddy:2.11.8
     user: '10001:10001'
     read_only: true
     cap_drop: [ALL]
@@ -136,7 +136,7 @@ services:
     depends_on: [caddy, seaweedfs]
   prometheus:
     <<: *third
-    image: prom/prometheus:v3.15.1
+    image: prom/prometheus:v3.16.0
     command: >
       --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus
       --storage.tsdb.retention.time=15d --storage.tsdb.retention.size=1800MB --web.enable-lifecycle
@@ -147,7 +147,7 @@ services:
       - prometheus-data:/prometheus
   alertmanager:
     <<: *third
-    image: prom/alertmanager:v0.34.1
+    image: prom/alertmanager:v0.35.0
     command: --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
     secrets: [telegram-bot-token, alertmanager-smtp-password]
     environment: { RMS_CONFIG_HASH: '${RMS_CFG_ALERTMANAGER:-}' }
@@ -156,7 +156,7 @@ services:
       - alertmanager-data:/alertmanager
   grafana:
     <<: *third
-    image: grafana/grafana:13.3.0
+    image: grafana/grafana:13.3.1
     secrets: [grafana-admin-password]
     environment:
       GF_SECURITY_ADMIN_USER: admin
@@ -174,7 +174,7 @@ services:
       - grafana-data:/var/lib/grafana
   postgres-exporter:
     <<: *third
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1
     extra_hosts: ['host.docker.internal:172.30.0.1']
     secrets: [db-readonly-url]
     # The exporter's driver asks for SSL unless told otherwise, and PostgreSQL has none: the hop is the Docker bridge (DOC-70 §8.3).
@@ -188,14 +188,14 @@ services:
   loki:
     <<: *third
     profiles: [logs]
-    image: grafana/loki:3.7.9
+    image: grafana/loki:3.7.10
     command: -config.file=/etc/loki/config.yml
     environment: { RMS_CONFIG_HASH: '${RMS_CFG_LOKI:-}' }
     volumes: ['/opt/rms/current/ops/loki:/etc/loki:ro', 'loki-data:/loki']
   alloy:
     <<: *third
     profiles: [logs]
-    image: grafana/alloy:v1.21.2
+    image: grafana/alloy:v1.22.0
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     environment: { RMS_ENV: '${RMS_ENV}', RMS_CONFIG_HASH: '${RMS_CFG_ALLOY:-}' }
     volumes:
