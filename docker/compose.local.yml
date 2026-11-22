@@ -48,7 +48,7 @@ services:
 
   # One-shot: creates the bucket and its CORS rule, then exits 0. Safe to run again.
   objectstore-init:
-    image: amazon/aws-cli:2.38.6
+    image: amazon/aws-cli:2.40.3
     depends_on:
       objectstore:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
     restart: 'no'
 
   mailpit:
-    image: axllent/mailpit:v1.32.0
+    image: axllent/mailpit:v1.33.1
     environment:
       # Do not reverse-DNS the SMTP client: slow by default on Docker Desktop and OrbStack.
       MP_SMTP_DISABLE_RDNS: 'true'
@@ -83,7 +83,7 @@ services:
   # API on the host as the scrape target and Mailpit in place of the SMTP relay. Ports are on 127.0.0.1 only.
   prometheus:
     profiles: [monitoring]
-    image: prom/prometheus:v3.15.1
+    image: prom/prometheus:v3.16.0
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -108,7 +108,7 @@ services:
 
   alertmanager:
     profiles: [monitoring]
-    image: prom/alertmanager:v0.34.1
+    image: prom/alertmanager:v0.35.0
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -129,7 +129,7 @@ services:
   # same images as staging). On Docker Desktop and OrbStack `node-exporter` reports the Linux VM, not the Mac.
   postgres-exporter:
     profiles: [monitoring]
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1
     environment:
       DATA_SOURCE_NAME: postgres://rms_readonly:${RMS_READONLY_PASSWORD:?run bun run keys:generate}@postgres:5432/rms?sslmode=disable
     depends_on:
@@ -145,7 +145,7 @@ services:
 
   loki:
     profiles: [monitoring]
-    image: grafana/loki:3.7.9
+    image: grafana/loki:3.7.10
     command: -config.file=/etc/loki/config.yml
     volumes:
       - ../ops/loki:/etc/loki:ro
@@ -155,7 +155,7 @@ services:
   # (and the image of `docker/Dockerfile.api`, when run in this project) reach Loki.
   alloy:
     profiles: [monitoring]
-    image: grafana/alloy:v1.21.2
+    image: grafana/alloy:v1.22.0
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     environment:
       RMS_ENV: local
@@ -167,7 +167,7 @@ services:
 
   grafana:
     profiles: [monitoring]
-    image: grafana/grafana:13.3.0
+    image: grafana/grafana:13.3.1
     environment:
       # Local only: no sign-in. Staging and production keep the sign-in behind Cloudflare Access (DR-88).
       GF_AUTH_ANONYMOUS_ENABLED: 'true'
