@@ -20,8 +20,8 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@formatjs/icu-messageformat-parser": "3.5.22",
+    "@formatjs/icu-messageformat-parser": "3.5.23",
     "@rms/shared-types": "workspace:*",
-    "intl-messageformat": "12.1.4"
+    "intl-messageformat": "12.1.5"
   }
 }
